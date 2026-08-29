@@ -1,50 +1,48 @@
-# Welcome to your Expo app 👋
+# HealthBridge
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Cyprus-first healthcare workforce marketplace — Phase 1 professional mobile app.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- Expo SDK 54 (Expo Go compatible)
+- React Native + TypeScript
+- Expo Router
+- Supabase (`@supabase/supabase-js` + `expo-sqlite` session storage)
+- Zustand (local state)
+- Inter + Plus Jakarta Sans
+- Brand: Navy `#071A2F` · Blue `#1769E0` · Yellow `#F5B000`
 
-   ```bash
-   npm install
-   ```
+## Environment
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Copy `.env.example` to `.env` and set:
 
 ```bash
-npm run reset-project
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Restart Expo after changing env vars (`npx expo start -c`).
 
-## Learn more
+## Auth setup (required once)
 
-To learn more about developing your project with Expo, look at the following resources:
+1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/eeyoafswkhncojfqixsb/sql)
+2. If this is a fresh project, run `supabase/SETUP.sql` first.
+3. Then run **`supabase/migrations/003_account_architecture.sql`** (account types, professional_profiles, organizations, members).
+4. Optional for testing: **Authentication → Providers → Email → Confirm email → Off**
+5. Open the app Welcome screen and continue as Professional or Organization.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Sessions persist via AsyncStorage / web localStorage. Sign out is on Profile / Org settings.
 
-## Join the community
+## Start
 
-Join our community of developers creating universal apps.
+```bash
+npx expo start
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Scan the QR code with **Expo Go** (App Store / Play Store — SDK 54).
+
+## Phase status
+
+- Auth: Supabase email/password + `profiles` table (RLS)
+- App data (shifts, community, finances): still local mock until migrated
+- Profile UI reads the authenticated member / profile row

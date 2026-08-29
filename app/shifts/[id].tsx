@@ -16,7 +16,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { clinical } from '@/constants/clinical';
 import { colors, radii, spacing, typography } from '@/constants/theme';
-import { getOrganization } from '@/data/mock';
+import { getOrganization, initialShifts } from '@/data/mock';
 import { useLayout } from '@/hooks/useLayout';
 import { useAuth } from '@/providers/AuthProvider';
 import { useShiftStore } from '@/store/shiftStore';
@@ -26,6 +26,11 @@ import {
   formatDuration,
   formatTimeRange,
 } from '@/utils/format';
+
+/** Pre-render known shift detail URLs for static web hosting. */
+export function generateStaticParams(): { id: string }[] {
+  return initialShifts.map((shift) => ({ id: shift.id }));
+}
 
 type Snapshot = {
   icon: keyof typeof Ionicons.glyphMap;

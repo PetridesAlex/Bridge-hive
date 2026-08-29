@@ -12,6 +12,7 @@ import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { colors, spacing, typography } from '@/constants/theme';
+import { initialShifts } from '@/data/mock';
 import type { ReplacementCandidate } from '@/types';
 import { useShiftStore } from '@/store/shiftStore';
 import {
@@ -20,6 +21,11 @@ import {
   formatDuration,
   formatTimeRange,
 } from '@/utils/format';
+
+/** Transfer screens are keyed by shift id; pre-render for static web hosting. */
+export function generateStaticParams(): { id: string }[] {
+  return initialShifts.map((shift) => ({ id: shift.id }));
+}
 
 export default function TransferScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

@@ -14,6 +14,11 @@ import { mockInvoices } from '@/data/mock';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatCurrency, formatDate } from '@/utils/format';
 
+/** Pre-render known invoice detail URLs for static web hosting. */
+export function generateStaticParams(): { id: string }[] {
+  return mockInvoices.map((invoice) => ({ id: invoice.id }));
+}
+
 export default function InvoiceDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { member } = useAuth();

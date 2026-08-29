@@ -41,6 +41,30 @@ npx expo start
 
 Scan the QR code with **Expo Go** (App Store / Play Store — SDK 54).
 
+## Web preview (Vercel)
+
+Keep this as an Expo + React Native app (not Next.js). Static web export:
+
+```bash
+npx expo export --platform web
+npx expo serve
+```
+
+Vercel project settings:
+
+| Setting | Value |
+| --- | --- |
+| Framework Preset | Other |
+| Build Command | `npx expo export --platform web` |
+| Output Directory | `dist` |
+
+Set these **public** env vars in Vercel (never add a service-role key):
+
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+`vercel.json` mirrors the same build/output settings and rewrites unknown paths to `/` for Expo Router client navigation.
+
 ## Phase status
 
 - Auth: Supabase email/password + `profiles` table (RLS)

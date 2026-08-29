@@ -17,6 +17,25 @@ import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 import { useProfileStore } from '@/store/profileStore';
 
+const PROFILE_SECTIONS = [
+  'personal',
+  'professional',
+  'experience',
+  'qualifications',
+  'locations',
+  'departments',
+  'payment',
+  'emergency',
+  'settings',
+  'calendar',
+  'support',
+] as const;
+
+/** Pre-render profile section URLs for static web hosting. */
+export function generateStaticParams(): { section: string }[] {
+  return PROFILE_SECTIONS.map((section) => ({ section }));
+}
+
 function EditHeaderButton({ label }: { label: string }) {
   return (
     <Pressable

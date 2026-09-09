@@ -33,6 +33,7 @@
 | `generate_payment_instructions` | 012 |
 | `report_organization_payment` | 012 |
 | `reconcile_direct_transfer` / `mark_payout_overdue` | 012 |
+| `get_worker_shift_details` | 014 |
 
 ## Storage buckets (003)
 

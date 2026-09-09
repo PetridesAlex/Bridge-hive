@@ -14,8 +14,9 @@
     "supabase:status": "npx supabase status",
     "db:types": "npx supabase gen types typescript --local > packages/supabase-types/src/database.generated.ts",
     "test:db": "npx supabase test db",
-    "typecheck": "npx tsc -p tsconfig.json",
-    "lint": "npx tsc -p tsconfig.json --noEmit"
+    "typecheck": "npx tsc -p tsconfig.json && npm run typecheck -w @bridge-hive/worker-mobile",
+    "lint": "npx tsc -p tsconfig.json --noEmit && npm run lint -w @bridge-hive/worker-mobile",
+    "mobile": "npm run start -w @bridge-hive/worker-mobile"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

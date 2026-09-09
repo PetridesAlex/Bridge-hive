@@ -1,5 +1,5 @@
 import { useLocalSearchParams, router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,16 +14,16 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
+import { getMyAssignments, type ShiftAssignment } from '@/lib/queries';
 import {
-  submitTimesheet,
-  updateAssignmentStatus,
-  getMyAssignments,
-  type ShiftAssignment,
-} from '@/lib/queries';
-import {
+  assignmentActionErrorMessage,
+  checkInAssignment,
+  checkOutAssignment,
   claimErrorMessage,
   claimShift,
+  getCheckInWindow,
   getWorkerShiftDetails,
+  submitTimesheetRpc,
   type WorkerShiftDetails,
 } from '@/lib/rpcs';
 import { useAuth } from '@/providers/AuthProvider';
@@ -43,6 +43,7 @@ export default function ShiftDetailScreen() {
   const [claiming, setClaiming] = useState(false);
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string>();
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -69,6 +70,18 @@ export default function ShiftDetailScreen() {
     void refresh();
   }, [refresh]);
 
+  // Refresh check-in window affordance while waiting to open.
+  useEffect(() => {
+    if (!shift || assignment?.status !== 'accepted') return;
+    const idTimer = setInterval(() => setNowTick(Date.now()), 30_000);
+    return () => clearInterval(idTimer);
+  }, [shift, assignment?.status]);
+
+  const checkInWindow = useMemo(() => {
+    if (!shift) return null;
+    return getCheckInWindow(shift.starts_at, shift.ends_at, new Date(nowTick));
+  }, [shift, nowTick]);
+
   const onClaim = async () => {
     if (!id || !isVerified) return;
     setClaiming(true);
@@ -84,58 +97,54 @@ export default function ShiftDetailScreen() {
 
   const onCheckIn = async () => {
     if (!assignment) return;
+    if (checkInWindow && !checkInWindow.isOpen) {
+      const opensLabel = new Intl.DateTimeFormat(undefined, {
+        weekday: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).format(checkInWindow.opensAt);
+      Alert.alert(
+        'Check-in not available',
+        checkInWindow.isTooEarly
+          ? `Check-in opens 30 minutes before the shift starts (${opensLabel}).`
+          : 'This shift has already ended.',
+      );
+      return;
+    }
     setActing(true);
-    const result = await updateAssignmentStatus(assignment.id, {
-      status: 'checked_in',
-      check_in_at: new Date().toISOString(),
-    });
+    const result = await checkInAssignment(assignment.id);
     setActing(false);
     if (result.error) {
-      Alert.alert('Check-in failed', result.error);
+      Alert.alert('Check-in failed', assignmentActionErrorMessage(result.error));
       return;
     }
     void refresh();
   };
 
   const onCheckOut = async () => {
-    if (!assignment || !shift) return;
+    if (!assignment) return;
     setActing(true);
-    const checkOutAt = new Date().toISOString();
-    const statusResult = await updateAssignmentStatus(assignment.id, {
-      status: 'checked_out',
-      check_out_at: checkOutAt,
-    });
+    const statusResult = await checkOutAssignment(assignment.id);
     if (statusResult.error) {
       setActing(false);
-      Alert.alert('Check-out failed', statusResult.error);
+      Alert.alert('Check-out failed', assignmentActionErrorMessage(statusResult.error));
       return;
     }
 
-    const start = new Date(assignment.check_in_at ?? shift.starts_at).getTime();
-    const end = new Date(checkOutAt).getTime();
-    const submittedMinutes = Math.max(
-      0,
-      Math.round((end - start) / 60000) - shift.break_minutes,
-    );
-
-    const ts = await submitTimesheet({
-      assignmentId: assignment.id,
-      submittedMinutes,
-      breakMinutes: shift.break_minutes,
-    });
-    if (ts.error) {
-      setActing(false);
-      Alert.alert('Timesheet error', ts.error);
-      return;
-    }
-
-    const submitted = await updateAssignmentStatus(assignment.id, { status: 'submitted' });
+    const ts = await submitTimesheetRpc(assignment.id);
     setActing(false);
-    if (submitted.error) {
-      Alert.alert('Timesheet saved', 'Assignment status could not be updated: ' + submitted.error);
-    } else {
-      Alert.alert('Timesheet submitted', `${submittedMinutes} minutes submitted for review.`);
+    if (ts.error) {
+      Alert.alert('Timesheet error', assignmentActionErrorMessage(ts.error));
+      return;
     }
+
+    const minutes = ts.data?.submitted_minutes;
+    Alert.alert(
+      'Timesheet submitted',
+      minutes != null
+        ? `${minutes} minutes submitted for review.`
+        : 'Your timesheet was submitted for review.',
+    );
     void refresh();
   };
 
@@ -161,6 +170,10 @@ export default function ShiftDetailScreen() {
     WORKER_ROLE_LABELS[shift.required_role as keyof typeof WORKER_ROLE_LABELS] ??
     shift.required_role;
   const canClaim = isVerified && shift.status === 'published' && !assignment;
+  const canCheckIn =
+    assignment?.status === 'accepted' && Boolean(checkInWindow?.isOpen);
+  const showCheckInWaiting =
+    assignment?.status === 'accepted' && Boolean(checkInWindow?.isTooEarly);
 
   return (
     <AppScreen>
@@ -192,6 +205,27 @@ export default function ShiftDetailScreen() {
             <Text style={styles.value}>{assignment.status.replace(/_/g, ' ')}</Text>
           </>
         ) : null}
+        {showCheckInWaiting && checkInWindow ? (
+          <>
+            <Text style={styles.label}>Check-in</Text>
+            <Text style={styles.hint}>
+              Opens 30 minutes before the shift starts (
+              {formatDayLabel(isoDateFromTimestamp(checkInWindow.opensAt.toISOString()))}{' '}
+              at{' '}
+              {new Intl.DateTimeFormat(undefined, {
+                hour: '2-digit',
+                minute: '2-digit',
+              }).format(checkInWindow.opensAt)}
+              ).
+            </Text>
+          </>
+        ) : null}
+        {assignment?.status === 'accepted' && checkInWindow?.isTooLate ? (
+          <>
+            <Text style={styles.label}>Check-in</Text>
+            <Text style={styles.hint}>This shift has ended. Check-in is no longer available.</Text>
+          </>
+        ) : null}
       </View>
 
       <View style={styles.actions}>
@@ -199,7 +233,13 @@ export default function ShiftDetailScreen() {
           <Button label="Claim shift" variant="brand" loading={claiming} onPress={onClaim} />
         ) : null}
         {assignment?.status === 'accepted' ? (
-          <Button label="Check in" variant="brand" loading={acting} onPress={onCheckIn} />
+          <Button
+            label="Check in"
+            variant="brand"
+            loading={acting}
+            disabled={!canCheckIn}
+            onPress={onCheckIn}
+          />
         ) : null}
         {assignment?.status === 'checked_in' ? (
           <Button
@@ -238,6 +278,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     textTransform: 'capitalize',
+  },
+  hint: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    color: colors.textMuted,
+    lineHeight: 20,
+    textTransform: 'none',
   },
   actions: { gap: spacing.sm, marginTop: spacing.xl },
 });

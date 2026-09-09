@@ -1,72 +1,70 @@
-# HealthBridge
+# Bridge Hive
 
-Cyprus-first healthcare workforce marketplace — Phase 1 professional mobile app.
+Healthcare shift marketplace platform.
 
-## Stack
+- **Worker mobile app** — Expo (Phase 3+)
+- **Web** — Next.js public site, organization dashboard, platform admin (Phase 2+)
+- **Backend** — Supabase (Auth, Postgres, Storage, Realtime, Edge Functions)
 
-- Expo SDK 54 (Expo Go compatible)
-- React Native + TypeScript
-- Expo Router
-- Supabase (`@supabase/supabase-js` + `expo-sqlite` session storage)
-- Zustand (local state)
-- Inter + Plus Jakarta Sans
-- Brand: Navy `#071A2F` · Blue `#1769E0` · Yellow `#F5B000`
+## Repository layout
 
-## Environment
-
-Copy `.env.example` to `.env` and set:
-
-```bash
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+```
+apps/
+  worker-mobile/   # Expo React Native app
+  web/             # Next.js (public + org + admin)
+packages/
+  domain/          # Shared types, Zod schemas, money/time helpers
+  supabase-types/  # Generated database types
+supabase/
+  migrations/      # SQL migrations (apply in order)
+  tests/           # Database / RLS tests
+  functions/       # Edge Functions (later phases)
+docs/
+  product-decisions.md
 ```
 
-Restart Expo after changing env vars (`npx expo start -c`).
+## Phase 1 (current)
 
-## Auth setup (required once)
+Database foundation: schema, RLS, claim/publish/review RPCs, financial pilot tables, indexes, and SQL tests. No product UI yet.
 
-1. Open [Supabase SQL Editor](https://supabase.com/dashboard/project/eeyoafswkhncojfqixsb/sql)
-2. If this is a fresh project, run `supabase/SETUP.sql` first.
-3. Then run **`supabase/migrations/003_account_architecture.sql`** (account types, professional_profiles, organizations, members).
-4. Optional for testing: **Authentication → Providers → Email → Confirm email → Off**
-5. Open the app Welcome screen and continue as Professional or Organization.
+Migrations: `001`–`013` under `supabase/migrations/`.
 
-Sessions persist via AsyncStorage / web localStorage. Sign out is on Profile / Org settings.
+### Prerequisites
 
-## Start
+- [Supabase CLI](https://supabase.com/docs/guides/cli)
+- Docker (for local Supabase)
 
-```bash
-npx expo start
-```
-
-Scan the QR code with **Expo Go** (App Store / Play Store — SDK 54).
-
-## Web preview (Vercel)
-
-Keep this as an Expo + React Native app (not Next.js). Static web export:
+### Local setup
 
 ```bash
-npx expo export --platform web
-npx expo serve
+# Start local stack
+npx supabase start
+
+# Apply migrations
+npx supabase db reset
+
+# Generate types from the live schema
+npm run db:types
+
+# Run SQL tests
+npm run test:db
+
+# Package typecheck / lint
+npm run typecheck
+npm run lint
 ```
 
-Vercel project settings:
+### Platform admin bootstrap
 
-| Setting | Value |
-| --- | --- |
-| Framework Preset | Other |
-| Build Command | `npx expo export --platform web` |
-| Output Directory | `dist` |
+After creating an Auth user, grant a platform role with the service role / SQL editor:
 
-Set these **public** env vars in Vercel (never add a service-role key):
+```sql
+insert into public.platform_admin_roles (user_id, role)
+values ('<auth-user-uuid>', 'platform_super_admin');
+```
 
-- `EXPO_PUBLIC_SUPABASE_URL`
-- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+### Environment
 
-`vercel.json` mirrors the same build/output settings and rewrites unknown paths to `/` for Expo Router client navigation.
+Copy `.env.example` and fill values from `npx supabase status` (local) or the Supabase dashboard (hosted).
 
-## Phase status
-
-- Auth: Supabase email/password + `profiles` table (RLS)
-- App data (shifts, community, finances): still local mock until migrated
-- Profile UI reads the authenticated member / profile row
+Never put the service-role key in client apps.

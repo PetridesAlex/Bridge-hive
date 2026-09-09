@@ -1,0 +1,2 @@
+-- Optional seed data for local development.
+-- Kept empty for Phase 1; use supabase/tests for isolation fixtures.

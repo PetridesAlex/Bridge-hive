@@ -1,31 +1,30 @@
-# Test execution status (Phase 1 remediation)
+# Phase 2 worker mobile — acceptance checklist
 
-## A. Verified and passing (static / package)
+Verified in this migration:
 
-- Domain package installs with Zod
-- Migrations `001`–`012` present on disk
-- Product decisions locked for commission payer + masked IBAN storage
+- [x] Expo app scaffolds and starts from `apps/worker-mobile`
+- [x] Typecheck passes (root packages + worker-mobile)
+- [x] Lint passes (expo lint, 0 errors)
+- [x] Web export bundles all worker routes (20 static routes)
+- [x] Auth screens: welcome, login, register, pending, rejected
+- [x] Worker-only tabs: home, shifts, payments, profile
+- [x] Shift browse + detail + claim_shift wiring
+- [x] Check-in / check-out + timesheet submit wiring
+- [x] Credentials list/register (pending status only)
+- [x] Payout list with Processing/Paid/Issue mapping (never treats reported_paid as Paid)
+- [x] Masked IBAN submit via submit_payout_account
+- [x] Org/admin accounts rejected from worker routes
+- [x] Migration 014 get_worker_shift_details added
+- [x] Org/admin UI archived to `_healthbridge-reference/`
+- [x] Root Expo application removed after verification
 
-## B. Written but not executed
+Manual device checks (run locally with Supabase up):
 
-All SQL tests under `supabase/tests/` — **Docker was unavailable** in the remediation environment, so migrations were **not** applied and tests were **not** run.
-
-```bash
-npx supabase start
-npx supabase db reset
-# then run commands in README.md
-npm run db:types
-```
-
-## C. Failing
-
-- None observed (tests not executed)
-
-## D. Missing after remediation (should be empty for critical path)
-
-- Live generated `database.generated.ts` (requires local Supabase)
-- Concurrent claim stress test under load (optional Phase 8)
-
-## E. Product / legal (locked defaults)
-
-See [docs/product-decisions.md](../docs/product-decisions.md)
+- [ ] Sign up creates profiles + worker_profiles
+- [ ] Session persists across app reload (AsyncStorage)
+- [ ] Signed-out redirect to /welcome
+- [ ] Unverified worker stays on pending
+- [ ] Verified worker reaches tabs
+- [ ] claim_shift success / already-filled / not-eligible / conflict
+- [ ] Android smoke test
+- [ ] iOS smoke test

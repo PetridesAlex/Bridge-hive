@@ -2,16 +2,16 @@
 
 Healthcare shift marketplace platform.
 
-- **Worker mobile app** — Expo (Phase 3+)
-- **Web** — Next.js public site, organization dashboard, platform admin (Phase 2+)
+- **Worker mobile app** — Expo React Native (`apps/worker-mobile`)
+- **Web** — Next.js public site, organization dashboard, platform admin (`apps/web`, upcoming)
 - **Backend** — Supabase (Auth, Postgres, Storage, Realtime, Edge Functions)
 
 ## Repository layout
 
 ```
 apps/
-  worker-mobile/   # Expo React Native app
-  web/             # Next.js (public + org + admin)
+  worker-mobile/   # Expo React Native worker app
+  web/             # Next.js (public + org + admin) — placeholder
 packages/
   domain/          # Shared types, Zod schemas, money/time helpers
   supabase-types/  # Generated database types
@@ -19,20 +19,31 @@ supabase/
   migrations/      # SQL migrations (apply in order)
   tests/           # Database / RLS tests
   functions/       # Edge Functions (later phases)
+_healthbridge-reference/  # Archived HealthBridge org/admin UX reference
 docs/
   product-decisions.md
+  schema.md
 ```
 
-## Phase 1 (current)
+## Phase 2 (current)
 
-Database foundation: schema, RLS, claim/publish/review RPCs, financial pilot tables, indexes, and SQL tests. No product UI yet.
+Worker mobile app migrated into `apps/worker-mobile`, connected to Phase 1 schema:
 
-Migrations: `001`–`013` under `supabase/migrations/`.
+- Worker auth (sign up / sign in / session persistence)
+- Verification-gated marketplace
+- Shift browse + `claim_shift`
+- Credentials metadata
+- Check-in / check-out + timesheet submit
+- Payout status + masked IBAN payout account
+
+Migrations: `001`–`014` under `supabase/migrations/`.
 
 ### Prerequisites
 
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
 - Docker (for local Supabase)
+- Node.js 20+
+- Expo Go or iOS/Android simulator
 
 ### Local setup
 
@@ -52,6 +63,12 @@ npm run test:db
 # Package typecheck / lint
 npm run typecheck
 npm run lint
+
+# Worker mobile
+cp .env.example apps/worker-mobile/.env
+# Fill EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY from `npx supabase status`
+cd apps/worker-mobile
+npm start
 ```
 
 ### Platform admin bootstrap
@@ -68,3 +85,11 @@ values ('<auth-user-uuid>', 'platform_super_admin');
 Copy `.env.example` and fill values from `npx supabase status` (local) or the Supabase dashboard (hosted).
 
 Never put the service-role key in client apps.
+
+### App identifiers (decision)
+
+| Setting | Value |
+| --- | --- |
+| iOS bundle ID | `com.bridgehive.worker` |
+| Android package | `com.bridgehive.worker` |
+| URL scheme | `bridgehive` |

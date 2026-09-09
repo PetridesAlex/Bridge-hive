@@ -3,7 +3,7 @@
 Healthcare shift marketplace platform.
 
 - **Worker mobile app** — Expo React Native (`apps/worker-mobile`)
-- **Web** — Next.js public site, organization dashboard, platform admin (`apps/web`, upcoming)
+- **Web** — Next.js organization dashboard (`apps/web`)
 - **Backend** — Supabase (Auth, Postgres, Storage, Realtime, Edge Functions)
 
 ## Repository layout
@@ -11,7 +11,7 @@ Healthcare shift marketplace platform.
 ```
 apps/
   worker-mobile/   # Expo React Native worker app
-  web/             # Next.js (public + org + admin) — placeholder
+  web/             # Next.js organization dashboard
 packages/
   domain/          # Shared types, Zod schemas, money/time helpers
   supabase-types/  # Generated database types
@@ -25,16 +25,15 @@ docs/
   schema.md
 ```
 
-## Phase 2 (current)
+## Phase 3 (current)
 
-Worker mobile app migrated into `apps/worker-mobile`, connected to Phase 1 schema:
+Organization web dashboard in `apps/web`:
 
-- Worker auth (sign up / sign in / session persistence)
-- Verification-gated marketplace
-- Shift browse + `claim_shift`
-- Credentials metadata
-- Check-in / check-out + timesheet submit
-- Payout status + masked IBAN payout account
+- Organization sign-in with SSR cookie sessions (`@supabase/ssr`)
+- Multi-organization selection
+- Locations and wards management (role-gated)
+- Shift draft create/edit, publish via `publish_shift` RPC
+- Shift detail with assignments and timesheet review via `review_timesheet`
 
 Migrations: `001`–`014` under `supabase/migrations/`.
 
@@ -43,7 +42,7 @@ Migrations: `001`–`014` under `supabase/migrations/`.
 - [Supabase CLI](https://supabase.com/docs/guides/cli)
 - Docker (for local Supabase)
 - Node.js 20+
-- Expo Go or iOS/Android simulator
+- Expo Go or iOS/Android simulator (worker app)
 
 ### Local setup
 
@@ -69,6 +68,11 @@ cp .env.example apps/worker-mobile/.env
 # Fill EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY from `npx supabase status`
 cd apps/worker-mobile
 npm start
+
+# Organization web
+cp apps/web/.env.local.example apps/web/.env.local
+# Fill NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from `npx supabase status`
+npm run web
 ```
 
 ### Platform admin bootstrap
@@ -78,6 +82,18 @@ After creating an Auth user, grant a platform role with the service role / SQL e
 ```sql
 insert into public.platform_admin_roles (user_id, role)
 values ('<auth-user-uuid>', 'platform_super_admin');
+```
+
+### Organization membership bootstrap
+
+Org creation and invites are not client-writable (RLS). Seed pilot memberships via SQL:
+
+```sql
+insert into public.organizations (legal_name, display_name, slug, status)
+values ('Test Hospital', 'Test Hospital', 'test-hospital', 'active');
+
+insert into public.organization_members (organization_id, user_id, role, status, accepted_at)
+values ('<org-id>', '<auth-user-uuid>', 'org_admin', 'active', now());
 ```
 
 ### Environment

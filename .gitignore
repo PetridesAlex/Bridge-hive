@@ -12,6 +12,7 @@ node_modules/
 supabase/.branches
 supabase/.temp
 supabase/.env
+supabase/snippets/
 
 # Build / cache
 dist/

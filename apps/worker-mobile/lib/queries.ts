@@ -111,56 +111,28 @@ export async function getTimesheetForAssignment(assignmentId: string) {
   return { data: data as Timesheet | null, error: error?.message };
 }
 
+/** @deprecated Direct assignment status writes are locked. Use checkInAssignment / checkOutAssignment RPCs. */
 export async function updateAssignmentStatus(
-  assignmentId: string,
-  patch: Partial<Pick<ShiftAssignment, 'status' | 'check_in_at' | 'check_out_at' | 'cancellation_reason'>>,
+  _assignmentId: string,
+  _patch: Partial<Pick<ShiftAssignment, 'status' | 'check_in_at' | 'check_out_at' | 'cancellation_reason'>>,
 ) {
-  const { data, error } = await supabase
-    .from('shift_assignments')
-    .update(patch)
-    .eq('id', assignmentId)
-    .select('*')
-    .single();
-
-  return { data: data as ShiftAssignment | null, error: error?.message };
+  return {
+    data: null as ShiftAssignment | null,
+    error:
+      'Direct assignment updates are blocked. Use check_in_assignment / check_out_assignment RPCs.',
+  };
 }
 
-export async function submitTimesheet(params: {
+/** @deprecated Client-chosen minutes are blocked. Use submitTimesheetRpc. */
+export async function submitTimesheet(_params: {
   assignmentId: string;
   submittedMinutes: number;
   breakMinutes: number;
 }) {
-  const existing = await getTimesheetForAssignment(params.assignmentId);
-  if (existing.error) return { data: null, error: existing.error };
-
-  if (existing.data) {
-    const { data, error } = await supabase
-      .from('timesheets')
-      .update({
-        submitted_minutes: params.submittedMinutes,
-        break_minutes: params.breakMinutes,
-        status: 'submitted',
-        submitted_at: new Date().toISOString(),
-      })
-      .eq('id', existing.data.id)
-      .select('*')
-      .single();
-    return { data: data as Timesheet | null, error: error?.message };
-  }
-
-  const { data, error } = await supabase
-    .from('timesheets')
-    .insert({
-      assignment_id: params.assignmentId,
-      submitted_minutes: params.submittedMinutes,
-      break_minutes: params.breakMinutes,
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-    })
-    .select('*')
-    .single();
-
-  return { data: data as Timesheet | null, error: error?.message };
+  return {
+    data: null as Timesheet | null,
+    error: 'Direct timesheet submission is blocked. Use submit_timesheet RPC.',
+  };
 }
 
 export async function createCredential(params: {

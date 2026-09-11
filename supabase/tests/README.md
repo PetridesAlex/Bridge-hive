@@ -22,6 +22,12 @@ npx supabase test db
 | `claim_shift.test.sql` | Claim eligibility, deadline, fill, conflict |
 | `review_timesheet.test.sql` | Approval snapshot + report ≠ reconciled |
 | `financial_workflow.test.sql` | Payout account submit/verify |
+| `check_in_out.test.sql` | Assignment check-in / check-out RPCs |
+| `timezone_conversion.test.sql` | Timezone storage helpers |
+| `worker_shift_details_rpc.test.sql` | Worker shift detail RPC |
+| `admin_oversight.test.sql` | Platform admin roles, verification, suspension |
+| `credential_requirements.test.sql` | Role credential checklists and payout gating |
+| `verification_applications.test.sql` | Worker-centric application queue and package approve |
 
 Shared helper reference (not executed by pg_prove): [`../test_support/helpers.sql`](../test_support/helpers.sql)
 

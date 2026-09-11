@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(6);
+select plan(10);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -35,8 +35,18 @@ values ('aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa', 'ward_assistant')
 on conflict (user_id) do nothing;
 
 insert into public.platform_admin_roles (user_id, role)
-values ('99999999-9999-9999-9999-999999999999', 'platform_finance')
+values ('99999999-9999-9999-9999-999999999999', 'platform_super_admin')
 on conflict (user_id) do update set role = excluded.role;
+
+-- Dummy private proof object for local submit tests.
+insert into storage.objects (bucket_id, name, owner, metadata)
+values (
+  'payout-proofs',
+  'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa/proof_local.pdf',
+  'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa',
+  '{"mimetype":"application/pdf","size":12}'::jsonb
+)
+on conflict do nothing;
 
 -- Financial tables have RLS
 select ok(
@@ -75,9 +85,26 @@ select set_config('request.jwt.claim.sub', 'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa
 select set_config('request.jwt.claim.role', 'authenticated', true);
 set local role authenticated;
 
+select throws_ok(
+  $$ select public.submit_payout_account(
+       'CY', 'EUR', 'CY00902000010000000000000000',
+       'Test Worker',
+       'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa/proof_local.pdf',
+       'application/pdf'
+     ) $$,
+  'P0001',
+  'INVALID_IBAN',
+  'invalid IBAN checksum is rejected server-side'
+);
+
 select lives_ok(
-  $$ select public.submit_payout_account('CY', 'EUR', 'CY••••1234') $$,
-  'worker can submit payout account'
+  $$ select public.submit_payout_account(
+       'CY', 'EUR', 'CY17 0020 0128 0000 0012 0052 7600',
+       'Test Worker',
+       'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa/proof_local.pdf',
+       'application/pdf'
+     ) $$,
+  'worker can submit payout account with valid IBAN and proof'
 );
 
 select is(
@@ -90,7 +117,31 @@ select is(
   'submitted payout account is pending'
 );
 
--- Finance verifies
+select is(
+  (
+    select masked_iban
+    from public.payout_accounts
+    where worker_id = 'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa'
+  ),
+  'CY••••7600',
+  'only masked IBAN is persisted'
+);
+
+select ok(
+  not exists (
+    select 1 from public.audit_events
+    where entity_type = 'payout_account'
+      and (
+        after ? 'iban'
+        or after ? 'masked_iban'
+        or after ? 'account_holder_name'
+        or after ? 'proof_storage_path'
+      )
+  ),
+  'submit audit metadata contains no IBAN or proof path'
+);
+
+-- Super admin verifies (Phase 4: finance cannot approve payout accounts)
 reset role;
 select set_config(
   'request.jwt.claims',
@@ -106,10 +157,10 @@ select lives_ok(
     select public.verify_payout_account(
       (select id from public.payout_accounts where worker_id = 'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa'),
       'approve',
-      null
+      'Local test approval for platform use'
     )
   $$,
-  'platform finance can verify payout account'
+  'platform super admin can verify payout account'
 );
 
 select is(
@@ -120,6 +171,13 @@ select is(
   ),
   'verified'::public.payout_account_status,
   'payout account becomes verified'
+);
+
+select lives_ok(
+  $$ select public.audit_payout_proof_document_view(
+       (select id from public.payout_accounts where worker_id = 'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa')
+     ) $$,
+  'super admin can audit payout proof document view'
 );
 
 -- Worker cannot reconcile arbitrary payout

@@ -87,12 +87,18 @@ export async function submitTimesheetRpc(assignmentId: string) {
 export async function submitPayoutAccount(params: {
   country: string;
   currency: string;
-  maskedIban: string;
+  iban: string;
+  accountHolderName: string;
+  proofStoragePath: string;
+  proofMimeType: string;
 }) {
   const { data, error } = await supabase.rpc('submit_payout_account', {
     p_country: params.country,
     p_currency: params.currency,
-    p_masked_iban: params.maskedIban,
+    p_iban: params.iban,
+    p_account_holder_name: params.accountHolderName,
+    p_proof_storage_path: params.proofStoragePath,
+    p_proof_mime_type: params.proofMimeType,
   });
 
   return {

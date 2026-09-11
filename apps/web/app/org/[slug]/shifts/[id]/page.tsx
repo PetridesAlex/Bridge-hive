@@ -327,6 +327,11 @@ export default async function ShiftDetailPage({
                 )}
               </p>
             </div>
+            <p className="sm:col-span-2 text-xs text-slate-500">
+              Payment instructions and bank-account details are not available until secure
+              payment setup. Phase 4 shows amounts only — production bank transfer / IBAN
+              reveal is unavailable.
+            </p>
           </CardContent>
         </Card>
       ) : null}

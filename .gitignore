@@ -35,3 +35,6 @@ npm-debug.log*
 
 # Generated (keep stubs, ignore large dumps if any)
 packages/supabase-types/src/database.generated.ts
+
+# Local-only helper scripts (never ship bypass tools)
+scripts/local/

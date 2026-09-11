@@ -21,14 +21,20 @@ Capture launch-critical choices before production finance go-live.
 
 ## Credential rules (MVP)
 
-| Worker role | Minimum credentials (MVP) |
-| --- | --- |
-| `registered_nurse` | Active nursing licence / registration evidence; identity document |
-| `ward_assistant` | Identity document; any site-required training certificates |
+| Worker role | Required documents | Optional | Separate workflow |
+| --- | --- | --- | --- |
+| `registered_nurse` | National identity card front + back; nursing licence; nursing degree/diploma (πτυχίο); tax identification proof; social insurance proof | CV | Payout account / masked IBAN |
+| `ward_assistant` | National identity card front + back; employment certificate (Βεβαίωση από εργασία – τίτλος θέσης); tax identification proof; social insurance proof | — | Payout account / masked IBAN |
 
+- Terminology: use “National identity card” / “Δελτίο ταυτότητας” (never “Police ID”)
+- Tax and social-insurance requirements are **proof documents** in this phase; raw identifier collection/encryption is deferred
 - Workers cannot self-mark `verification_status = verified`
-- Credential files: private Storage `credentials/{user_id}/...`
+- Credential files: private Storage `credentials/{user_id}/{credential_type}/...`
 - Platform verifiers use `verify_credential` / `set_worker_verification` RPCs
+- Final verification also requires `worker_has_satisfied_payout_account` (**verified** payout account only — pending is not enough)
+- Marketplace eligibility (`check_worker_eligibility` / `claim_shift`) also requires verified payout + valid role-required credentials
+- Platform super admins suspend/reactivate via `suspend_worker_account` / `reactivate_worker_account`
+- Suspended accounts (`profiles.account_status`) cannot claim shifts
 
 ## Acceptance policy
 
@@ -57,12 +63,19 @@ Capture launch-critical choices before production finance go-live.
 
 ## Payout account storage (LOCKED)
 
-- **Pilot storage:** Masked IBAN only (`masked_iban`, e.g. `CY••••6789`)
-- **Do not** store raw full IBAN in application tables for MVP
+- **Pilot storage:** Masked IBAN only (`masked_iban`, e.g. `CY••••6789`) after server-side IBAN checksum validation
+- **Do not** store raw full IBAN in application tables for MVP (no vault / encryption claimed)
+- **Masked-only storage cannot support production bank transfers** — Phase 5 vault/tokenization is required before org payment instructions or IBAN reveal
+- Private **payout-proof** document (`payout-proofs` bucket) supports local administrative review only
+- Account holder name may be stored for admin matching against proof; never placed in audit/notification metadata
 - Provider field defaults to `manual_bank`
 - Account statuses: `pending` → `verified` / `rejected` / `failed` / `suspended` / `expired`
-- Platform finance verifies via `verify_payout_account`
-- Future option: provider-hosted tokenization (Stripe / bank partner) — deferred
+- Phase 4: only `platform_super_admin` may view proof / approve/reject via `verify_payout_account` (internal approval for platform use — not bank ownership proof)
+- Worker discovers payout setup from **Account Setup** (`/auth/worker/pending`) or verified **Profile → Payout account** only — never by typing a URL
+- Org Phase 4: Financial snapshot shows amounts + payout-approved Yes/No where applicable; **no full IBAN, masked IBAN, proof, or credentials** to organizations; bank transfer / IBAN reveal unavailable until secure payment setup
+- Provider-backed bank ownership verification / full IBAN vault remain deferred (Phase 5)
+- **Production bank transfers remain blocked** until secure IBAN vault/tokenization and access controls exist
+- Audit and notification metadata must not include IBAN, masked IBAN, account holder name, proof paths, or signed URLs
 
 ## Payout timing / pilot payment model (LOCKED)
 

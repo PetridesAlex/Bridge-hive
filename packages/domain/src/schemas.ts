@@ -61,7 +61,10 @@ export const reviewTimesheetSchema = z.object({
 export const submitPayoutAccountSchema = z.object({
   country: z.string().length(2),
   currency: currencyCodeSchema,
-  maskedIban: z.string().min(4).max(64),
+  iban: z.string().min(15).max(34),
+  accountHolderName: z.string().min(2).max(120),
+  proofStoragePath: z.string().min(1).max(500),
+  proofMimeType: z.enum(['application/pdf', 'image/jpeg', 'image/png']),
 });
 
 export const reportOrganizationPaymentSchema = z.object({
@@ -143,6 +146,62 @@ export const credentialCreateSchema = z.object({
   storagePath: z.string().min(1).max(500).optional(),
 });
 
+export const reviewCredentialSchema = z.object({
+  credentialId: z.string().uuid(),
+  decision: z.enum(['approve', 'reject']),
+  rejectionReason: z.string().max(2000).optional(),
+});
+
+export const reviewPayoutAccountSchema = z.object({
+  payoutAccountId: z.string().uuid(),
+  decision: z.enum(['approve', 'reject']),
+  reason: z.string().min(1).max(2000),
+});
+
+export const setWorkerVerificationSchema = z.object({
+  workerId: z.string().uuid(),
+  status: verificationStatusSchema,
+  reason: z.string().max(2000).optional(),
+});
+
+export const suspendWorkerAccountSchema = z.object({
+  workerId: z.string().uuid(),
+  reason: z.string().min(1).max(2000),
+});
+
+export const reactivateWorkerAccountSchema = z.object({
+  workerId: z.string().uuid(),
+  reason: z.string().min(1).max(2000),
+});
+
+export const submitCredentialForReviewSchema = z.object({
+  credentialId: z.string().uuid(),
+});
+
+export const approveReviewedCredentialsSchema = z.object({
+  workerId: z.string().uuid(),
+  credentialIds: z.array(z.string().uuid()).min(1).max(50),
+  confirmReviewed: z.literal(true),
+  expectedLastActivity: z.string().datetime({ offset: true }).optional(),
+});
+
+export const markCredentialsUnderReviewSchema = z.object({
+  workerId: z.string().uuid(),
+  credentialIds: z.array(z.string().uuid()).min(1).max(50),
+});
+
+export const listVerificationApplicationsSchema = z.object({
+  search: z.string().max(200).optional(),
+  role: workerRoleSchema.optional(),
+  applicationStatus: z.string().max(80).optional(),
+  payoutStatus: payoutAccountStatusSchema.optional(),
+  sort: z
+    .enum(['submitted_at', 'oldest_waiting', 'last_activity'])
+    .default('last_activity'),
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(100).default(20),
+});
+
 export type CreateShiftDraftInput = z.infer<typeof createShiftDraftSchema>;
 export type ClaimShiftInput = z.infer<typeof claimShiftInputSchema>;
 export type CreateLocationInput = z.infer<typeof createLocationSchema>;
@@ -150,4 +209,17 @@ export type ReviewTimesheetInput = z.infer<typeof reviewTimesheetSchema>;
 export type SubmitPayoutAccountInput = z.infer<typeof submitPayoutAccountSchema>;
 export type ReportOrganizationPaymentInput = z.infer<
   typeof reportOrganizationPaymentSchema
+>;
+export type ReviewCredentialInput = z.infer<typeof reviewCredentialSchema>;
+export type ReviewPayoutAccountInput = z.infer<typeof reviewPayoutAccountSchema>;
+export type SetWorkerVerificationInput = z.infer<typeof setWorkerVerificationSchema>;
+export type SuspendWorkerAccountInput = z.infer<typeof suspendWorkerAccountSchema>;
+export type ReactivateWorkerAccountInput = z.infer<
+  typeof reactivateWorkerAccountSchema
+>;
+export type ApproveReviewedCredentialsInput = z.infer<
+  typeof approveReviewedCredentialsSchema
+>;
+export type ListVerificationApplicationsInput = z.infer<
+  typeof listVerificationApplicationsSchema
 >;

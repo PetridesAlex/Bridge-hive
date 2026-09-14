@@ -14,6 +14,7 @@ const NAV_ITEMS: Array<{
   exact?: boolean;
 }> = [
   { href: '/admin', label: 'Dashboard', exact: true },
+  { href: '/admin/organizations', label: 'Organizations' },
   { href: '/admin/applications', label: 'Verification applications' },
   { href: '/admin/workers', label: 'Workers' },
   { href: '/admin/credentials', label: 'Credential queue' },

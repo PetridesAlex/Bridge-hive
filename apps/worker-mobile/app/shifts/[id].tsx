@@ -83,15 +83,18 @@ export default function ShiftDetailScreen() {
   }, [shift, nowTick]);
 
   const onClaim = async () => {
-    if (!id || !isVerified) return;
+    if (!id || !isVerified || claiming) return;
     setClaiming(true);
     const result = await claimShift(id);
     setClaiming(false);
     if (result.error) {
-      Alert.alert('Claim failed', claimErrorMessage(result.error));
+      Alert.alert(
+        'Claim failed',
+        claimErrorMessage(result.error, shift?.required_role),
+      );
       return;
     }
-    Alert.alert('Shift claimed', 'This shift is now on your schedule.');
+    Alert.alert('Shift accepted.', 'This shift is now on your schedule.');
     void refresh();
   };
 
@@ -230,7 +233,22 @@ export default function ShiftDetailScreen() {
 
       <View style={styles.actions}>
         {canClaim ? (
-          <Button label="Claim shift" variant="brand" loading={claiming} onPress={onClaim} />
+          <Button
+            label={claiming ? 'Claiming shift…' : 'Claim shift'}
+            variant="brand"
+            loading={claiming}
+            disabled={claiming}
+            onPress={onClaim}
+          />
+        ) : null}
+        {assignment?.status === 'accepted' ||
+        assignment?.status === 'checked_in' ||
+        assignment?.status === 'checked_out' ||
+        assignment?.status === 'submitted' ||
+        assignment?.status === 'approved' ? (
+          <View style={styles.acceptedBanner}>
+            <Text style={styles.acceptedText}>Shift accepted.</Text>
+          </View>
         ) : null}
         {assignment?.status === 'accepted' ? (
           <Button
@@ -285,6 +303,18 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 20,
     textTransform: 'none',
+  },
+  acceptedBanner: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: spacing.md,
+  },
+  acceptedText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    color: colors.text,
   },
   actions: { gap: spacing.sm, marginTop: spacing.xl },
 });

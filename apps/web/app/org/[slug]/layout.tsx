@@ -17,6 +17,7 @@ export default async function OrgLayout({
         slug={slug}
         orgName={ctx.org.display_name}
         role={ctx.membership.role}
+        canOperate={ctx.capabilities.canOperate}
       />
       <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
     </div>

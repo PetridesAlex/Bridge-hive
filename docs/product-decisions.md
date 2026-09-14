@@ -89,6 +89,16 @@ Capture launch-critical choices before production finance go-live.
   6. `overdue` / `disputed` / `failed` / `cancelled` — exception paths
 - **Rule:** Platform must **never** show worker “paid” solely because an organization reported a transfer
 
+## Organization onboarding
+
+- Organizations provisioned by `platform_super_admin` only (no public hospital self-registration)
+- Lifecycle: `pending` → `under_review` → `active` / `rejected`; `active` ↔ `suspended`; `closed` is legacy terminal only
+- Individual Auth users + `organization_members` (never a shared hospital password)
+- Invitations: 72h expiry, hashed tokens only (raw token returned once), local invite link only (no production email claimed)
+- Operational org features (locations, shifts, publish, timesheets, finance actions) require organization `status = active` in the database
+- Tax/VAT optional plaintext field (`tax_vat_number`); not encrypted; never in list RPCs, notifications, or audit metadata
+- Registration number may also be stored as an ordinary column; same list/notification/audit exclusion applies
+
 ## Platform admin bootstrap
 
 - Table: `platform_admin_roles`

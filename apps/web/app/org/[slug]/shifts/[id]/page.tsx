@@ -1,4 +1,4 @@
-import { formatMoneyMinor } from '@bridge-hive/domain';
+import { credentialTypeLabel, formatMoneyMinor } from '@bridge-hive/domain';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -16,6 +16,7 @@ import {
 import { createClient } from '@/lib/supabase/server';
 
 import { PublishShiftButton } from '../_components/publish-shift-button';
+import { ExtendAcceptanceDeadlineForm } from '../_components/extend-acceptance-deadline-form';
 import { ShiftForm } from '../_components/shift-form';
 import { TimesheetReviewForm } from '../_components/timesheet-review-form';
 
@@ -89,6 +90,16 @@ export default async function ShiftDetailPage({
       ? shift.ward
       : null;
   const requirements = Array.isArray(shift.requirements) ? shift.requirements : [];
+  const acceptanceClosed = Boolean(
+    shift.status === 'published' &&
+      shift.acceptance_deadline &&
+      new Date(shift.acceptance_deadline) <= new Date(),
+  );
+  const canExtendAcceptance =
+    ctx.capabilities.canManageShifts &&
+    shift.status === 'published' &&
+    !assignment &&
+    new Date(shift.starts_at) > new Date();
 
   return (
     <div className="space-y-8">
@@ -162,7 +173,7 @@ export default async function ShiftDetailPage({
               <p className="text-slate-500">Requirements</p>
               <ul className="mt-1 list-inside list-disc font-medium">
                 {requirements.map((r) => (
-                  <li key={r.id}>{r.requirement_type}</li>
+                  <li key={r.id}>{credentialTypeLabel(r.requirement_type)}</li>
                 ))}
               </ul>
             </div>
@@ -175,6 +186,16 @@ export default async function ShiftDetailPage({
           ) : null}
         </CardContent>
       </Card>
+
+      <PermissionGuard allowed={canExtendAcceptance}>
+        <ExtendAcceptanceDeadlineForm
+          slug={slug}
+          shiftId={shift.id}
+          startsAt={shift.starts_at}
+          currentDeadline={shift.acceptance_deadline}
+          acceptanceClosed={acceptanceClosed}
+        />
+      </PermissionGuard>
 
       <PermissionGuard
         allowed={ctx.capabilities.canManageShifts && shift.status === 'draft'}

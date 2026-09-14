@@ -1,36 +1,81 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getPublishedShifts, type Shift } from '@/lib/queries';
+import { useAuth } from '@/providers/AuthProvider';
 
 export function useShifts() {
+  const { user, workerProfile, isVerified } = useAuth();
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [offline, setOffline] = useState(false);
+  const requestId = useRef(0);
 
   const refresh = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError(undefined);
+
+    if (!user?.id) {
+      setShifts([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await getPublishedShifts();
+      if (currentRequest !== requestId.current) return;
+
       if (result.error) {
-        setError(result.error);
-        setOffline(/network|fetch|failed/i.test(result.error));
+        setShifts([]);
+        setError(
+          /network|fetch|failed|offline/i.test(result.error)
+            ? 'We couldn’t load shifts. Check your connection and try again.'
+            : 'We couldn’t load shifts. Check your connection and try again.',
+        );
+        setOffline(/network|fetch|failed|offline/i.test(result.error));
       } else {
-        setShifts(result.data);
+        // Marketplace RLS already enforces role/org/deadline. Keep enum-safe client filter.
+        const role = workerProfile?.worker_role;
+        const filtered = role
+          ? result.data.filter((shift) => shift.required_role === role)
+          : result.data;
+        setShifts(filtered);
         setOffline(false);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load shifts');
+    } catch {
+      if (currentRequest !== requestId.current) return;
+      setShifts([]);
+      setError('We couldn’t load shifts. Check your connection and try again.');
       setOffline(true);
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) {
+        setLoading(false);
+      }
     }
-  }, []);
+  }, [user?.id, workerProfile?.worker_role]);
 
+  // Clear worker-scoped marketplace state on auth/role change.
   useEffect(() => {
+    setShifts([]);
+    setError(undefined);
     void refresh();
-  }, [refresh]);
+  }, [user?.id, workerProfile?.worker_role, isVerified, refresh]);
 
-  return { shifts, loading, error, offline, refresh };
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
+  return {
+    shifts,
+    loading,
+    error,
+    offline,
+    refresh,
+    workerRole: workerProfile?.worker_role ?? null,
+    isVerified,
+  };
 }

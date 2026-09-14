@@ -1,4 +1,5 @@
 import type { Tables } from '@bridge-hive/supabase-types';
+import { claimErrorMessage as mapClaimError } from '@bridge-hive/domain';
 
 import { supabase } from '@/lib/supabase';
 
@@ -156,25 +157,11 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
 }
 
 /** Map claim_shift errors to worker-friendly messages. */
-export function claimErrorMessage(error?: string): string {
-  if (!error) return 'Unable to claim this shift.';
-  const upper = error.toUpperCase();
-  if (upper.includes('SHIFT_ALREADY_FILLED') || upper.includes('SHIFT_NOT_AVAILABLE')) {
-    return 'This shift was just filled by another worker.';
-  }
-  if (upper.includes('NOT_ELIGIBLE') || upper.includes('NOT_VERIFIED')) {
-    return 'You are not eligible for this shift yet. Check verification and credentials.';
-  }
-  if (upper.includes('SCHEDULE_CONFLICT')) {
-    return 'This shift conflicts with another assignment on your schedule.';
-  }
-  if (upper.includes('ROLE_MISMATCH')) {
-    return 'This shift requires a different worker role.';
-  }
-  if (upper.includes('MISSING_CREDENTIAL') || upper.includes('EXPIRED')) {
-    return 'A required credential is missing or expired.';
-  }
-  return error;
+export function claimErrorMessage(
+  error?: string,
+  requiredRole?: string | null,
+): string {
+  return mapClaimError(error, { requiredRole });
 }
 
 /** Map check-in / check-out / timesheet RPC errors to worker-friendly messages. */

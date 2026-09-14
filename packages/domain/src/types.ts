@@ -13,6 +13,11 @@ export const WORKER_ROLES = [
 ] as const;
 export type WorkerRole = (typeof WORKER_ROLES)[number];
 
+export const WORKER_ROLE_LABELS: Record<WorkerRole, string> = {
+  registered_nurse: 'Registered Nurse',
+  ward_assistant: 'Ward Assistant',
+};
+
 export const VERIFICATION_STATUSES = [
   'draft',
   'submitted',
@@ -33,11 +38,21 @@ export type OnboardingStatus = (typeof ONBOARDING_STATUSES)[number];
 
 export const ORG_STATUSES = [
   'pending',
+  'under_review',
   'active',
+  'rejected',
   'suspended',
   'closed',
 ] as const;
 export type OrgStatus = (typeof ORG_STATUSES)[number];
+
+export const ORGANIZATION_TYPES = [
+  'hospital',
+  'clinic',
+  'nursing_home',
+  'other',
+] as const;
+export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 
 export const ORG_ROLES = [
   'org_admin',

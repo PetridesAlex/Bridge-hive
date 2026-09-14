@@ -28,6 +28,9 @@ npx supabase test db
 | `admin_oversight.test.sql` | Platform admin roles, verification, suspension |
 | `credential_requirements.test.sql` | Role credential checklists and payout gating |
 | `verification_applications.test.sql` | Worker-centric application queue and package approve |
+| `organization_onboarding.test.sql` | Org provisioning, invitations, lifecycle, tenant isolation |
+| `shift_role_claim.test.sql` | Required role storage, publish lock, cross-role claim, org-active claim gate |
+| `marketplace_visibility.test.sql` | Marketplace RLS visibility by role, deadline, and non-membership |
 
 Shared helper reference (not executed by pg_prove): [`../test_support/helpers.sql`](../test_support/helpers.sql)
 

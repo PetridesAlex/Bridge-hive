@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { WORKER_ROLES, WORKER_ROLE_LABELS } from '@bridge-hive/domain';
 
 import { EmptyState } from '@/components/empty-state';
 import { PermissionGuard } from '@/components/permission-guard';
@@ -10,20 +11,41 @@ import { createClient } from '@/lib/supabase/server';
 
 export default async function ShiftsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ role?: string }>;
 }) {
   const { slug } = await params;
+  const { role: roleFilter } = await searchParams;
   const ctx = await requireOrgMembership(slug);
   const supabase = await createClient();
 
-  const { data: shifts } = await supabase
+  let query = supabase
     .from('shifts')
     .select(
       'id, title, status, starts_at, ends_at, required_role, rate_minor, currency, location:locations(name)',
     )
     .eq('organization_id', ctx.org.id)
     .order('starts_at', { ascending: false });
+
+  if (
+    roleFilter === 'registered_nurse' ||
+    roleFilter === 'ward_assistant'
+  ) {
+    query = query.eq('required_role', roleFilter);
+  }
+
+  const { data: shifts } = await query;
+
+  if (!ctx.capabilities.canOperate) {
+    return (
+      <EmptyState
+        title="Organization not active"
+        description="Shifts are available after Bridge Hive activates this organization."
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -39,6 +61,32 @@ export default async function ShiftsPage({
             <Link href={`/org/${slug}/shifts/new`}>New draft shift</Link>
           </Button>
         </PermissionGuard>
+      </div>
+
+      <div className="flex flex-wrap gap-2 text-sm">
+        <Link
+          href={`/org/${slug}/shifts`}
+          className={`rounded-md px-3 py-1.5 ${
+            !roleFilter
+              ? 'bg-slate-900 text-white'
+              : 'border border-slate-200 bg-white text-slate-700'
+          }`}
+        >
+          All roles
+        </Link>
+        {WORKER_ROLES.map((role) => (
+          <Link
+            key={role}
+            href={`/org/${slug}/shifts?role=${role}`}
+            className={`rounded-md px-3 py-1.5 ${
+              roleFilter === role
+                ? 'bg-slate-900 text-white'
+                : 'border border-slate-200 bg-white text-slate-700'
+            }`}
+          >
+            {WORKER_ROLE_LABELS[role]}
+          </Link>
+        ))}
       </div>
 
       {!shifts?.length ? (
@@ -59,6 +107,7 @@ export default async function ShiftsPage({
             <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-3 font-medium">Shift</th>
+                <th className="px-4 py-3 font-medium">Role</th>
                 <th className="px-4 py-3 font-medium">When</th>
                 <th className="px-4 py-3 font-medium">Rate</th>
                 <th className="px-4 py-3 font-medium">Status</th>
@@ -81,9 +130,10 @@ export default async function ShiftsPage({
                       >
                         {shift.title || roleLabel(shift.required_role)}
                       </Link>
-                      <p className="text-xs text-slate-500">
-                        {locationName} · {roleLabel(shift.required_role)}
-                      </p>
+                      <p className="text-xs text-slate-500">{locationName}</p>
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {roleLabel(shift.required_role)}
                     </td>
                     <td className="px-4 py-3 text-slate-700">
                       {formatDateTime(shift.starts_at, ctx.org.timezone)}

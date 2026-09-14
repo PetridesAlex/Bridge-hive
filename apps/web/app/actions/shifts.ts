@@ -32,13 +32,15 @@ async function parseShiftForm(
   organizationId: string,
   supabase: Awaited<ReturnType<typeof createClient>>,
 ) {
-  const requirementsRaw = String(formData.get('requirements') ?? '').trim();
-  const requirements = requirementsRaw
-    ? requirementsRaw
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((requirementType) => ({ requirementType, required: true }))
+  const requirementTypes = formData
+    .getAll('requirementTypes')
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const requirements = requirementTypes.length
+    ? requirementTypes.map((requirementType) => ({
+        requirementType,
+        required: true,
+      }))
     : undefined;
 
   const wardIdRaw = String(formData.get('wardId') ?? '');
@@ -98,6 +100,16 @@ async function parseShiftForm(
     return {
       success: false as const,
       error: { message: 'Acceptance deadline must be before shift start time.' },
+    };
+  }
+
+  if (acceptanceDeadlineIso && new Date(acceptanceDeadlineIso) <= new Date()) {
+    return {
+      success: false as const,
+      error: {
+        message:
+          'Acceptance deadline must be in the future so workers can still claim this shift.',
+      },
     };
   }
 
@@ -167,7 +179,7 @@ export async function createShiftDraftAction(
     .single();
 
   if (error) {
-    return { error: error.message };
+    return { error: 'Unable to save this shift. Please check your inputs and try again.' };
   }
 
   if (v.requirements?.length) {
@@ -179,7 +191,7 @@ export async function createShiftDraftAction(
       })),
     );
     if (reqError) {
-      return { error: reqError.message };
+      return { error: 'Unable to save shift requirements. Please try again.' };
     }
   }
 
@@ -210,7 +222,10 @@ export async function updateShiftDraftAction(
     return { error: 'Shift not found.' };
   }
   if (existing.status !== 'draft') {
-    return { error: 'Only draft shifts can be edited.' };
+    return {
+      error:
+        'The required worker role cannot be changed after a shift is published.',
+    };
   }
 
   const parsed = await parseShiftForm(formData, ctx.org.id, supabase);
@@ -242,7 +257,13 @@ export async function updateShiftDraftAction(
     .eq('organization_id', ctx.org.id);
 
   if (error) {
-    return { error: error.message };
+    if (error.message?.includes('SHIFT_ROLE_LOCKED')) {
+      return {
+        error:
+          'The required worker role cannot be changed after a shift is published.',
+      };
+    }
+    return { error: 'Unable to update this shift. Please try again.' };
   }
 
   await supabase.from('shift_requirements').delete().eq('shift_id', shiftId);
@@ -255,7 +276,7 @@ export async function updateShiftDraftAction(
       })),
     );
     if (reqError) {
-      return { error: reqError.message };
+      return { error: 'Unable to save shift requirements. Please try again.' };
     }
   }
 
@@ -275,17 +296,149 @@ export async function publishShiftAction(
   }
 
   const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from('shifts')
+    .select('id, status, acceptance_deadline, starts_at')
+    .eq('id', shiftId)
+    .eq('organization_id', ctx.org.id)
+    .maybeSingle();
+
+  if (!existing) {
+    return { error: 'Shift not found.' };
+  }
+  if (existing.status !== 'draft') {
+    return { error: 'Only draft shifts can be published.' };
+  }
+  if (
+    existing.acceptance_deadline &&
+    new Date(existing.acceptance_deadline) <= new Date()
+  ) {
+    return {
+      error:
+        'Acceptance deadline is already past. Update the deadline before publishing so workers can claim this shift.',
+    };
+  }
+
   const { error } = await supabase.rpc('publish_shift', {
     p_shift_id: shiftId,
   });
 
   if (error) {
-    return { error: error.message };
+    if (error.message?.includes('ORG_NOT_ACTIVE')) {
+      return { error: 'This organization is not active.' };
+    }
+    if (error.message?.includes('SHIFT_DEADLINE_IN_PAST')) {
+      return {
+        error:
+          'Acceptance deadline is already past. Update the deadline before publishing so workers can claim this shift.',
+      };
+    }
+    return { error: 'Unable to publish this shift. Please try again.' };
   }
 
   revalidatePath(`/org/${slug}/shifts`);
   revalidatePath(`/org/${slug}/shifts/${shiftId}`);
   revalidatePath(`/org/${slug}/dashboard`);
+  return { success: true };
+}
+
+export async function extendShiftAcceptanceDeadlineAction(
+  slug: string,
+  shiftId: string,
+  _prev: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireOrgMembership(slug);
+  if (!ctx.capabilities.canManageShifts) {
+    return { error: 'You do not have permission to update shifts.' };
+  }
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from('shifts')
+    .select('id, status, starts_at, location_id, organization_id')
+    .eq('id', shiftId)
+    .eq('organization_id', ctx.org.id)
+    .maybeSingle();
+
+  if (!existing) {
+    return { error: 'Shift not found.' };
+  }
+  if (existing.status !== 'published') {
+    return {
+      error: 'Only published shifts can reopen the acceptance window this way.',
+    };
+  }
+  if (new Date(existing.starts_at) <= new Date()) {
+    return { error: 'This shift has already started and cannot accept claims.' };
+  }
+
+  const { count } = await supabase
+    .from('shift_assignments')
+    .select('id', { count: 'exact', head: true })
+    .eq('shift_id', shiftId)
+    .in('status', ['accepted', 'checked_in', 'checked_out', 'submitted', 'approved']);
+
+  if ((count ?? 0) > 0) {
+    return { error: 'This shift already has an assignment.' };
+  }
+
+  const { data: location } = await supabase
+    .from('locations')
+    .select('id, timezone')
+    .eq('id', existing.location_id)
+    .eq('organization_id', ctx.org.id)
+    .maybeSingle();
+
+  if (!location) {
+    return { error: 'Location not found for this shift.' };
+  }
+
+  const deadlineLocal = String(formData.get('acceptanceDeadline') ?? '').trim();
+  if (!deadlineLocal) {
+    return { error: 'Choose a new acceptance deadline.' };
+  }
+
+  let acceptanceDeadlineIso: string;
+  try {
+    acceptanceDeadlineIso = localInputToIsoWithTimezone(
+      deadlineLocal,
+      location.timezone,
+    );
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Invalid datetime or timezone format.',
+    };
+  }
+
+  if (new Date(acceptanceDeadlineIso) <= new Date()) {
+    return {
+      error: 'Acceptance deadline must be in the future.',
+    };
+  }
+  if (new Date(acceptanceDeadlineIso) >= new Date(existing.starts_at)) {
+    return {
+      error: 'Acceptance deadline must be before the shift start time.',
+    };
+  }
+
+  const { error } = await supabase
+    .from('shifts')
+    .update({ acceptance_deadline: acceptanceDeadlineIso })
+    .eq('id', shiftId)
+    .eq('organization_id', ctx.org.id)
+    .eq('status', 'published');
+
+  if (error) {
+    return { error: 'Unable to update the acceptance deadline. Please try again.' };
+  }
+
+  revalidatePath(`/org/${slug}/shifts`);
+  revalidatePath(`/org/${slug}/shifts/${shiftId}`);
   return { success: true };
 }
 

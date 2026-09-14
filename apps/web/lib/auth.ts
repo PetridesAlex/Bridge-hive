@@ -1,4 +1,9 @@
-import type { OrgRole } from '@bridge-hive/domain';
+import type { OrgRole, OrgStatus } from '@bridge-hive/domain';
+import {
+  canEditOrgProfile,
+  canSubmitOrgForReview,
+  isOrgOperational,
+} from '@bridge-hive/domain';
 import type { Tables } from '@bridge-hive/supabase-types';
 import type { User } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
@@ -21,6 +26,9 @@ export type AuthBundle = {
 
 export type OrgCapabilities = {
   role: OrgRole;
+  canOperate: boolean;
+  canEditProfile: boolean;
+  canSubmitForReview: boolean;
   canManageLocations: boolean;
   canManageWards: boolean;
   canManageShifts: boolean;
@@ -38,19 +46,26 @@ export type OrgContext = {
   profile: Profile | null;
 };
 
-function capabilitiesForRole(role: OrgRole): OrgCapabilities {
+function capabilitiesForRole(
+  role: OrgRole,
+  orgStatus: OrgStatus,
+): OrgCapabilities {
   const isAdmin = role === 'org_admin';
   const isScheduler = role === 'org_scheduler';
   const isBilling = role === 'org_billing';
+  const operational = isOrgOperational(orgStatus);
 
   return {
     role,
-    canManageLocations: isAdmin || isScheduler,
-    canManageWards: isAdmin || isScheduler,
-    canManageShifts: isAdmin || isScheduler,
-    canPublishShifts: isAdmin || isScheduler,
-    canReviewTimesheets: isAdmin || isScheduler,
-    canAccessBilling: isAdmin || isBilling,
+    canOperate: operational,
+    canEditProfile: isAdmin && canEditOrgProfile(orgStatus),
+    canSubmitForReview: isAdmin && canSubmitOrgForReview(orgStatus),
+    canManageLocations: operational && (isAdmin || isScheduler),
+    canManageWards: operational && (isAdmin || isScheduler),
+    canManageShifts: operational && (isAdmin || isScheduler),
+    canPublishShifts: operational && (isAdmin || isScheduler),
+    canReviewTimesheets: operational && (isAdmin || isScheduler),
+    canAccessBilling: operational && (isAdmin || isBilling),
     canEditOrgSettings: isAdmin,
   };
 }
@@ -113,14 +128,13 @@ export async function requireOrgMembership(slug: string): Promise<OrgContext> {
     redirect('/dashboard');
   }
 
-  if (match.organization.status === 'suspended' || match.organization.status === 'closed') {
-    redirect('/dashboard');
-  }
-
   return {
     org: match.organization,
     membership: match,
-    capabilities: capabilitiesForRole(match.role as OrgRole),
+    capabilities: capabilitiesForRole(
+      match.role as OrgRole,
+      match.organization.status as OrgStatus,
+    ),
     user: bundle.user,
     profile: bundle.profile,
   };

@@ -9,20 +9,22 @@ import { roleLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
-  { href: 'dashboard', label: 'Dashboard' },
-  { href: 'locations', label: 'Locations' },
-  { href: 'shifts', label: 'Shifts' },
-  { href: 'settings', label: 'Settings' },
+  { href: 'dashboard', label: 'Dashboard', requiresOperational: false },
+  { href: 'locations', label: 'Locations', requiresOperational: true },
+  { href: 'shifts', label: 'Shifts', requiresOperational: true },
+  { href: 'settings', label: 'Settings', requiresOperational: false },
 ] as const;
 
 export function OrgNav({
   slug,
   orgName,
   role,
+  canOperate,
 }: {
   slug: string;
   orgName: string;
   role: string;
+  canOperate: boolean;
 }) {
   const pathname = usePathname();
 
@@ -49,7 +51,9 @@ export function OrgNav({
           </div>
         </div>
         <nav className="flex flex-wrap gap-1">
-          {NAV_ITEMS.map((item) => {
+          {NAV_ITEMS.filter(
+            (item) => !item.requiresOperational || canOperate,
+          ).map((item) => {
             const href = `/org/${slug}/${item.href}`;
             const active =
               pathname === href || pathname.startsWith(`${href}/`);

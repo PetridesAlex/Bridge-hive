@@ -1,4 +1,7 @@
-import type { PlatformAdminRole } from '@bridge-hive/domain';
+import {
+  translateOrgProfileIncompleteError,
+  type PlatformAdminRole,
+} from '@bridge-hive/domain';
 
 export type PlatformCapabilities = {
   role: PlatformAdminRole;
@@ -12,6 +15,7 @@ export type PlatformCapabilities = {
   canSuspendAccounts: boolean;
   canViewAudit: boolean;
   canViewFinancePlaceholder: boolean;
+  canManageOrganizations: boolean;
 };
 
 /**
@@ -41,6 +45,7 @@ export function capabilitiesForPlatformRole(
     canSuspendAccounts: isSuper,
     canViewAudit: isSupport || isVerifier || isFinance || isSuper,
     canViewFinancePlaceholder: isFinance || isSuper,
+    canManageOrganizations: isSuper,
   };
 }
 
@@ -93,7 +98,26 @@ export function rpcErrorMessage(error: { message?: string } | null): string {
     CREDENTIAL_EXPIRED: 'One or more selected documents are expired.',
     WORKER_REQUIRED: 'Worker application is required.',
     INVALID_SORT: 'Invalid sort option.',
+    ORGANIZATION_NOT_FOUND: 'Organization not found.',
+    ORG_STATUS_LOCKED: 'Organization status cannot be changed right now.',
+    INVITATION_NOT_FOUND: 'Invitation not found.',
+    INVITATION_EXPIRED: 'This invitation has expired.',
+    INVITATION_ALREADY_ACCEPTED: 'This invitation has already been accepted.',
+    INVITATION_REVOKED: 'This invitation has been revoked.',
+    SLUG_TAKEN: 'This organization slug is already taken.',
+    NOT_ORG_ADMIN: 'Only organization admins can perform this action.',
+    ORG_NOT_EDITABLE: 'Organization profile cannot be edited in current status.',
+    ORG_NOT_SUBMITTABLE: 'Organization cannot be submitted for review in current status.',
+    ORG_PROFILE_LOCKED: 'Organization profile cannot be edited while under review.',
+    ORG_NOT_FOUND: 'Organization not found.',
+    PROFILE_INCOMPLETE: 'Complete all required profile fields before submitting.',
+    ORG_PROFILE_INCOMPLETE:
+      'Complete the following required fields before submitting for review: Legal name, Display name, Contact name, Contact email.',
   };
+
+  if (raw.startsWith('ORG_PROFILE_INCOMPLETE')) {
+    return translateOrgProfileIncompleteError(raw);
+  }
 
   if (raw.startsWith('MISSING_REQUIRED_CREDENTIAL:')) {
     const type = raw.split(':')[1] ?? 'credential';

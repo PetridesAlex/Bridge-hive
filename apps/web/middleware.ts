@@ -2,7 +2,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 
 import { updateSession } from '@/lib/supabase/middleware';
 
-const PUBLIC_PATHS = ['/', '/sign-in', '/sign-up', '/admin/sign-in'];
+const PUBLIC_PATHS = [
+  '/',
+  '/sign-in',
+  '/sign-up',
+  '/admin/sign-in',
+  '/organization-invitations/accept',
+];
 
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
@@ -25,8 +31,19 @@ export async function middleware(request: NextRequest) {
 
   if (user && (pathname === '/sign-in' || pathname === '/sign-up')) {
     const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/dashboard';
-    redirectUrl.search = '';
+    const next = request.nextUrl.searchParams.get('next');
+    if (next && next.startsWith('/')) {
+      redirectUrl.pathname = next.split('?')[0];
+      const nextParams = next.split('?')[1];
+      if (nextParams) {
+        redirectUrl.search = `?${nextParams}`;
+      } else {
+        redirectUrl.search = '';
+      }
+    } else {
+      redirectUrl.pathname = '/dashboard';
+      redirectUrl.search = '';
+    }
     return NextResponse.redirect(redirectUrl);
   }
 

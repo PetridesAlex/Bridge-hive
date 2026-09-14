@@ -26,6 +26,15 @@ export default async function LocationsPage({
     .eq('organization_id', ctx.org.id)
     .order('name');
 
+  if (!ctx.capabilities.canOperate) {
+    return (
+      <EmptyState
+        title="Organization not active"
+        description="Locations can be managed after Bridge Hive activates this organization."
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

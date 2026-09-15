@@ -28,7 +28,7 @@ npm run build -w @bridge-hive/web
    - `supabase/functions/.env.local` (from `.env.local.example`)
    - root/web `.env.local` placeholders if needed for tooling
 3. Serve functions: `npx supabase functions serve --env-file supabase/functions/.env.local`
-4. Forward webhooks (if Stripe CLI already installed):  
+4. Forward webhooks (if Stripe CLI already installed):
    `stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook`
 5. Worker taps **Pay invoice** → hosted Checkout. Apple Pay appears only when Stripe + device/browser/Wallet are eligible. Expo Go cannot prove native Apple Pay.
 6. Return URL shows **Payment confirmation pending** until the webhook marks paid.
@@ -47,7 +47,7 @@ Or use ignored `scripts/local/simulate-worker-invoice-paid.sql` for payment simu
 
 ## pg_cron
 
-If `pg_cron` is available, migration 018 schedules `process-worker-commission-overdue` hourly.  
+If `pg_cron` is available, migration 018 schedules `process-worker-commission-overdue` hourly.
 If not, claim-time eligibility remains the safety net; schedule via Supabase Cron later.
 
 ## Deferred

@@ -42,8 +42,9 @@ export function commissionFromGross(
 }
 
 /**
- * Pilot settlement: worker receives gross; org also owes commission separately.
- * organizationTotalDue = gross + commission.
+ * Phase 6 settlement: worker receives gross from hospital.
+ * Organization total due = gross only.
+ * Commission is a separate Bridge Hive invoice owed by the worker.
  */
 export function buildOrganizationPaysGrossSnapshot(
   grossMinor: number,
@@ -56,11 +57,27 @@ export function buildOrganizationPaysGrossSnapshot(
     commissionRateBps,
     commissionAmountMinor,
     workerTransferAmountMinor: grossMinor,
-    organizationTotalDueMinor: grossMinor + commissionAmountMinor,
+    organizationTotalDueMinor: grossMinor,
     currency,
   };
 }
 
+/** Round-half-up integer cents: round(gross × bps / 10000). */
+export function commissionFromGrossHalfUp(
+  grossMinor: number,
+  commissionRateBps: number = DEFAULT_COMMISSION_RATE_BPS,
+): number {
+  if (commissionRateBps < 0 || commissionRateBps > 10000) {
+    throw new Error('commissionRateBps out of range');
+  }
+  // Match PostgreSQL round(numeric): half away from zero for positive amounts.
+  return Math.round((grossMinor * commissionRateBps) / 10000);
+}
+
+/**
+ * @deprecated Prefer commissionFromGross / buildOrganizationPaysGrossSnapshot.
+ * Legacy helper that subtracts commission from gross — not used for Phase 6 settlement.
+ */
 export function workerNetFromGross(
   grossMinor: number,
   commissionRateBps: number = DEFAULT_COMMISSION_RATE_BPS,

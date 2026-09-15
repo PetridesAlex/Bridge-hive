@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(8);
+select plan(10);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -155,16 +155,38 @@ select is(
     from public.commission_obligations
     where assignment_id = 'dddddddd-dddd-dddd-dddd-dddddddd0003'
   ),
-  'organization'::public.commission_payer_type,
-  'commission payer is organization'
+  'worker'::public.commission_payer_type,
+  'commission payer is worker (Phase 6 worker-funded model)'
 );
 
--- Snapshot immutability (privileged role; RLS would otherwise hide the update)
+select is(
+  (
+    select organization_total_due_minor = gross_amount_minor
+    from public.payouts
+    where assignment_id = 'dddddddd-dddd-dddd-dddd-dddddddd0003'
+  ),
+  true,
+  'hospital owes worker gross only (commission separate)'
+);
+
+-- Invoice RLS: org cannot see worker invoices; assert as privileged role.
 reset role;
 select set_config('request.jwt.claims', '', true);
 select set_config('request.jwt.claim.sub', '', true);
 select set_config('request.jwt.claim.role', '', true);
 
+select is(
+  (
+    select count(*)::integer
+    from public.worker_commission_invoices
+    where assignment_id = 'dddddddd-dddd-dddd-dddd-dddddddd0003'
+      and status = 'open'
+  ),
+  1,
+  'worker commission invoice created on approval'
+);
+
+-- Snapshot immutability (privileged role; RLS would otherwise hide the update)
 select throws_ok(
   $$
     update public.payouts

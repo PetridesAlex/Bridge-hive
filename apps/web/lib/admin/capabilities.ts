@@ -15,6 +15,7 @@ export type PlatformCapabilities = {
   canSuspendAccounts: boolean;
   canViewAudit: boolean;
   canViewFinancePlaceholder: boolean;
+  canViewFinance: boolean;
   canManageOrganizations: boolean;
 };
 
@@ -45,6 +46,7 @@ export function capabilitiesForPlatformRole(
     canSuspendAccounts: isSuper,
     canViewAudit: isSupport || isVerifier || isFinance || isSuper,
     canViewFinancePlaceholder: isFinance || isSuper,
+    canViewFinance: isFinance || isSuper,
     canManageOrganizations: isSuper,
   };
 }

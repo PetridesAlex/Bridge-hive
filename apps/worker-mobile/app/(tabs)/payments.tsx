@@ -44,6 +44,11 @@ export default function PaymentsScreen() {
           variant="brand"
           onPress={() => router.push('/payout-setup')}
         />
+        <Button
+          label="View commission invoices"
+          variant="secondary"
+          onPress={() => router.push('/(tabs)/invoices')}
+        />
       </View>
 
       {loading && payouts.length === 0 ? (

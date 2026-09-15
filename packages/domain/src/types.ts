@@ -159,6 +159,26 @@ export type CommissionStatus = (typeof COMMISSION_STATUSES)[number];
 /** Default pilot commission: 16% (band 15–17%). */
 export const DEFAULT_COMMISSION_RATE_BPS = 1600;
 
+/** Calendar days from invoice issue to due date. */
+export const WORKER_COMMISSION_DUE_DAYS = 10;
+
+export const WORKER_INVOICE_STATUSES = [
+  'draft',
+  'open',
+  'payment_processing',
+  'paid',
+  'past_due',
+  'void',
+  'uncollectible',
+] as const;
+export type WorkerInvoiceStatus = (typeof WORKER_INVOICE_STATUSES)[number];
+
+export const WORKER_BILLING_STANDINGS = [
+  'good_standing',
+  'restricted',
+] as const;
+export type WorkerBillingStanding = (typeof WORKER_BILLING_STANDINGS)[number];
+
 export type MoneyMinor = {
   amountMinor: number;
   currency: string;
@@ -171,6 +191,26 @@ export type FinancialSnapshot = {
   workerTransferAmountMinor: number;
   organizationTotalDueMinor: number;
   currency: string;
+};
+
+export type WorkerCommissionInvoice = {
+  id: string;
+  invoiceNumber: string;
+  workerId: string;
+  assignmentId: string;
+  timesheetId: string;
+  organizationId: string;
+  currency: string;
+  approvedMinutes: number;
+  rateMinor: number;
+  grossAmountMinor: number;
+  commissionRateBps: number;
+  commissionAmountMinor: number;
+  status: WorkerInvoiceStatus;
+  issuedAt: string;
+  dueAt: string;
+  paidAt: string | null;
+  pastDueAt: string | null;
 };
 
 export type Profile = {

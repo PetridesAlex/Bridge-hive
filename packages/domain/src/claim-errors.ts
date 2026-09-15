@@ -85,6 +85,10 @@ export function claimErrorMessage(
     return 'Your payout account must be approved.';
   }
 
+  if (reason === 'billing_restricted' || upper.includes('BILLING_RESTRICTED')) {
+    return 'New shift access is paused because a commission invoice is overdue.';
+  }
+
   if (
     reason.startsWith('missing_credential') ||
     upper.includes('MISSING_CREDENTIAL') ||

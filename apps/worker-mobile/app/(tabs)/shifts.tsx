@@ -10,11 +10,13 @@ import {
 import { router } from 'expo-router';
 import { WORKER_ROLE_LABELS } from '@bridge-hive/domain';
 
+import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
 import { ShiftCard } from '@/components/shifts/ShiftCard';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { colors, spacing, typography } from '@/constants/theme';
+import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useShifts } from '@/hooks/useShifts';
 
 export default function ShiftsScreen() {
@@ -27,11 +29,17 @@ export default function ShiftsScreen() {
     workerRole,
     isVerified,
   } = useShifts();
+  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(isVerified);
 
   const roleLabel =
     workerRole && workerRole in WORKER_ROLE_LABELS
       ? WORKER_ROLE_LABELS[workerRole]
       : 'Worker';
+
+  const onRefresh = () => {
+    void refresh();
+    void refreshBilling();
+  };
 
   return (
     <AppScreen scroll={false} edges={['top']}>
@@ -41,6 +49,8 @@ export default function ShiftsScreen() {
           <Text style={styles.bannerText}>You appear to be offline. Pull to retry.</Text>
         </View>
       ) : null}
+
+      {isRestricted && summary ? <BillingRestrictionBanner summary={summary} /> : null}
 
       {loading && shifts.length === 0 ? (
         <View style={styles.loading}>
@@ -52,27 +62,34 @@ export default function ShiftsScreen() {
           title="We couldn’t load shifts"
           description={error}
           actionLabel="Retry"
-          onAction={refresh}
+          onAction={onRefresh}
         />
       ) : !isVerified ? (
         <EmptyState
           title="Marketplace access pending"
           description="Complete verification, required credentials, and payout approval before open shifts appear."
           actionLabel="Retry"
-          onAction={refresh}
+          onAction={onRefresh}
+        />
+      ) : isRestricted ? (
+        <EmptyState
+          title="New shift access paused"
+          description="New shift access is paused because a commission invoice is overdue. You can still open already accepted assignments from Home."
+          actionLabel="View invoices"
+          onAction={() => router.push('/(tabs)/invoices')}
         />
       ) : (
         <FlatList
           data={shifts}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <EmptyState
               title={`No open ${roleLabel} shifts are available right now.`}
               description="Published shifts disappear from this list when their acceptance window closes, they start, or they are filled."
               actionLabel="Retry"
-              onAction={refresh}
+              onAction={onRefresh}
             />
           }
           renderItem={({ item }) => (

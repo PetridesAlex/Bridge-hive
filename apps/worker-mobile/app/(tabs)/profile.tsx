@@ -77,6 +77,12 @@ export default function ProfileScreen() {
         tint="green"
       />
       <ProfileMenuRow
+        icon="receipt-outline"
+        label="Commission invoices"
+        onPress={() => router.push('/(tabs)/invoices')}
+        tint="indigo"
+      />
+      <ProfileMenuRow
         icon="notifications-outline"
         label="Notifications"
         onPress={() => router.push('/notifications')}

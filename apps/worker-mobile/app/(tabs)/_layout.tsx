@@ -104,6 +104,23 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="invoices"
+        options={{
+          title: 'Invoices',
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              title="Invoices"
+              shortTitle="Inv"
+              compact={isCompact}
+              icon="receipt-outline"
+              iconFocused="receipt"
+              accent={TAB_ACCENTS.community}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',

@@ -113,6 +113,9 @@ describe('claimErrorMessage', () => {
     expect(claimErrorMessage('NOT_ELIGIBLE:payout_account_required')).toBe(
       'Your payout account must be approved.',
     );
+    expect(claimErrorMessage('NOT_ELIGIBLE:billing_restricted')).toBe(
+      'New shift access is paused because a commission invoice is overdue.',
+    );
     expect(claimErrorMessage('NOT_ELIGIBLE:not_verified')).toBe(
       'Your worker verification is incomplete.',
     );

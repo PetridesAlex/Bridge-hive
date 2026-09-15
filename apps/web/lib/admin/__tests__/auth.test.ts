@@ -37,6 +37,7 @@ describe('capabilitiesForPlatformRole', () => {
   it('grants finance placeholder access without verification powers', () => {
     const caps = capabilitiesForPlatformRole('platform_finance');
     expect(caps.canViewFinancePlaceholder).toBe(true);
+    expect(caps.canViewFinance).toBe(true);
     expect(caps.canReviewCredentials).toBe(false);
     expect(caps.canVerifyWorkers).toBe(false);
     expect(caps.canApprovePayoutAccounts).toBe(false);
@@ -55,6 +56,7 @@ describe('capabilitiesForPlatformRole', () => {
     expect(caps.canSuspendAccounts).toBe(true);
     expect(caps.canViewAudit).toBe(true);
     expect(caps.canViewFinancePlaceholder).toBe(true);
+    expect(caps.canViewFinance).toBe(true);
   });
 
   it('covers every platform role', () => {

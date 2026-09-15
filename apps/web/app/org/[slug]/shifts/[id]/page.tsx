@@ -318,20 +318,13 @@ export default async function ShiftDetailPage({
           </CardHeader>
           <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
             <div>
-              <p className="text-slate-500">Gross</p>
+              <p className="text-slate-500">Approved gross pay</p>
               <p className="font-medium">
                 {formatMoneyMinor(payout.gross_amount_minor, payout.currency)}
               </p>
             </div>
             <div>
-              <p className="text-slate-500">Commission</p>
-              <p className="font-medium">
-                {formatMoneyMinor(payout.commission_amount_minor, payout.currency)}{' '}
-                ({(payout.commission_rate_bps / 100).toFixed(1)}%)
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500">Worker transfer</p>
+              <p className="text-slate-500">Hospital payment to worker</p>
               <p className="font-medium">
                 {formatMoneyMinor(
                   payout.worker_transfer_amount_minor,
@@ -349,9 +342,10 @@ export default async function ShiftDetailPage({
               </p>
             </div>
             <p className="sm:col-span-2 text-xs text-slate-500">
-              Payment instructions and bank-account details are not available until secure
-              payment setup. Phase 4 shows amounts only — production bank transfer / IBAN
-              reveal is unavailable.
+              The hospital pays the worker the approved gross shift amount. Bridge Hive
+              commission is a separate worker invoice and is not shown here. Payment
+              instructions and bank-account details remain unavailable until secure payment
+              setup.
             </p>
           </CardContent>
         </Card>

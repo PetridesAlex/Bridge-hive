@@ -61,7 +61,10 @@ select ok(
       'payment_adjustments',
       'pay_runs',
       'platform_admin_roles',
-      'platform_settings'
+      'platform_settings',
+      'worker_commission_invoices',
+      'worker_invoice_events',
+      'commission_rate_rules'
     ]) as t(relname)
     where not exists (
       select 1

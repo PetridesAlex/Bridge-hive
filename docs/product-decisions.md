@@ -41,18 +41,18 @@ Capture launch-critical choices before production finance go-live.
 - **MVP:** First eligible verified worker who successfully calls `claim_shift` wins
 - Concurrent claims: exactly one assignment; others get `SHIFT_NOT_AVAILABLE` / `SHIFT_ALREADY_FILLED`
 
-## Pricing and commission (LOCKED)
+## Pricing and commission (LOCKED — Phase 6)
 
 - Shift stores immutable `rate_minor` + `currency` at publish time
-- **Default commission rate:** `1600` basis points (**16%**), configurable via `platform_settings.default_commission_rate_bps` (allowed band 15–17% / 1500–1700 for commercial policy)
-- Snapshot fields stored on every payout:
+- **Default commission rate:** `1600` basis points (**16%**), effective-dated via `commission_rate_rules` (fallback `platform_settings.default_commission_rate_bps`)
+- Snapshot fields stored on every payout **and** worker commission invoice:
   - `gross_amount_minor`
   - `commission_rate_bps`
   - `commission_amount_minor`
-  - `worker_transfer_amount_minor`
-  - `organization_total_due_minor`
-- **LOCKED settlement model:** Organization pays worker **gross**; organization pays platform commission via separate `commission_obligations` (`payer_type = organization`)
-- Worker-funded commission is **not** used for the pilot
+  - `worker_transfer_amount_minor` (= gross)
+  - `organization_total_due_minor` (= gross; hospital does not pay commission)
+- **LOCKED settlement model (Phase 6):** Organization pays worker **gross**; worker pays Bridge Hive commission via `worker_commission_invoices` (Stripe Checkout test integration)
+- Due date: issued_at + **10 calendar days**; overdue restricts new shift claims only
 - Changing later rates must not rewrite historical snapshots (DB triggers enforce immutability)
 
 ## Attendance proof
@@ -120,7 +120,7 @@ Multi-slot shifts, shift swapping, ratings, in-app chat, route tracking, advance
 | --- | --- | --- |
 | Jurisdiction / compliance | Product + legal | Draft (Cyprus) |
 | Workforce classification | Product + legal | Draft (marketplace) |
-| Commission payer | Product + finance | **LOCKED: organization** |
+| Commission payer | Product + finance | **LOCKED: worker (Phase 6)** |
 | Commission rate bps | Product + finance | **LOCKED default 1600 (16%)** |
 | Payout account storage | Product + legal | **LOCKED: masked IBAN only** |
 | Credential checklist | Ops / clinical lead | Draft |

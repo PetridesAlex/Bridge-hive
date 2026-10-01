@@ -1,11 +1,10 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
-import { brandGradient, colors, spacing, typography } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function WelcomeScreen() {
@@ -16,7 +15,7 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <LinearGradient colors={[...brandGradient]} style={styles.gradient}>
+    <View style={styles.root}>
       <SafeAreaView style={styles.safe}>
         <View style={styles.hero}>
           <View style={styles.mark}>
@@ -33,7 +32,7 @@ export default function WelcomeScreen() {
         <View style={styles.actions}>
           <Button
             label="Sign in"
-            variant="brand"
+            variant="primary"
             size="lg"
             onPress={() => router.push('/auth/worker/login')}
           />
@@ -48,15 +47,15 @@ export default function WelcomeScreen() {
           </Text>
         </View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
+  root: { flex: 1, backgroundColor: colors.background },
   safe: {
     flex: 1,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: 20,
     justifyContent: 'space-between',
     paddingBottom: spacing.xxxl,
   },
@@ -65,43 +64,42 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   mark: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: colors.yellow,
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },
   markLetter: {
     fontFamily: typography.fonts.displayExtra,
-    fontSize: 30,
-    color: colors.navy,
+    fontSize: 26,
+    color: colors.yellow,
   },
   brand: {
     fontFamily: typography.fonts.semibold,
     fontSize: 13,
-    color: colors.yellow,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
+    color: colors.navy,
+    letterSpacing: 0.8,
   },
   title: {
-    fontFamily: typography.fonts.displayExtra,
-    fontSize: 34,
-    lineHeight: 40,
-    color: colors.white,
+    fontFamily: typography.fonts.display,
+    fontSize: 30,
+    lineHeight: 36,
+    color: colors.text,
   },
   subtitle: {
     fontFamily: typography.fonts.regular,
     fontSize: 16,
     lineHeight: 24,
-    color: 'rgba(255,255,255,0.72)',
+    color: colors.textSecondary,
     maxWidth: 340,
   },
   actions: { gap: spacing.md },
   note: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.textMuted,
     textAlign: 'center',
     marginTop: spacing.sm,
   },

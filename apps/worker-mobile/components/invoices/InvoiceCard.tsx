@@ -6,14 +6,31 @@ import {
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing, typography } from '@/constants/theme';
+import { MoneyAmount } from '@/components/ui/MoneyAmount';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import type { WorkerInvoiceListItem } from '@/lib/invoices';
-import { formatMoney, formatShortDate } from '@/utils/format';
+import { formatShortDate } from '@/utils/format';
 
 type Props = {
   invoice: WorkerInvoiceListItem;
   onPress: () => void;
 };
+
+function toneForStatus(status: WorkerInvoiceStatus): StatusTone {
+  if (status === 'past_due') return 'danger';
+  if (status === 'paid') return 'success';
+  if (status === 'payment_processing') return 'warning';
+  if (status === 'void' || status === 'uncollectible') return 'neutral';
+  return 'info';
+}
+
+function iconForStatus(status: WorkerInvoiceStatus) {
+  if (status === 'past_due') return 'alert-circle' as const;
+  if (status === 'paid') return 'checkmark-circle' as const;
+  if (status === 'payment_processing') return 'time' as const;
+  return 'document-text' as const;
+}
 
 export function InvoiceCard({ invoice, onPress }: Props) {
   const orgName =
@@ -23,24 +40,38 @@ export function InvoiceCard({ invoice, onPress }: Props) {
   const shift = invoice.shift_assignments?.shifts;
   const title = shift?.title?.trim() || 'Shift';
   const status = invoice.status as WorkerInvoiceStatus;
+  const pastDue = status === 'past_due';
 
   return (
-    <Pressable onPress={onPress} style={styles.card}>
+    <Pressable
+      onPress={onPress}
+      style={[styles.card, pastDue && styles.cardPastDue]}
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${workerInvoiceStatusLabel(status)}`}
+    >
       <View style={styles.row}>
-        <Text style={styles.title} numberOfLines={1}>
+        <Text style={styles.title} numberOfLines={2}>
           {title}
         </Text>
-        <Text style={styles.amount}>
-          {formatMoney(invoice.commission_amount_minor, invoice.currency)}
-        </Text>
+        <MoneyAmount
+          amountMinor={invoice.commission_amount_minor}
+          currency={invoice.currency}
+          emphasize
+        />
       </View>
-      <Text style={styles.meta}>{orgName}</Text>
+      <Text style={styles.meta} numberOfLines={2}>
+        {orgName}
+      </Text>
       {shift?.starts_at ? (
         <Text style={styles.meta}>Shift · {formatShortDate(shift.starts_at)}</Text>
       ) : null}
       <View style={styles.footer}>
-        <Text style={styles.status}>{workerInvoiceStatusLabel(status)}</Text>
-        <Text style={[styles.due, status === 'past_due' ? styles.dueOverdue : null]}>
+        <StatusBadge
+          label={workerInvoiceStatusLabel(status)}
+          tone={toneForStatus(status)}
+          icon={iconForStatus(status)}
+        />
+        <Text style={[styles.due, pastDue ? styles.dueOverdue : null]}>
           {dueDateCopy(invoice.due_at)}
         </Text>
       </View>
@@ -51,11 +82,15 @@ export function InvoiceCard({ invoice, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: spacing.lg,
-    borderWidth: 1,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    gap: spacing.xs,
+    gap: 4,
+  },
+  cardPastDue: {
+    borderColor: colors.error,
+    backgroundColor: colors.errorLight,
   },
   row: {
     flexDirection: 'row',
@@ -64,15 +99,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   title: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    color: colors.navy,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    color: colors.text,
     flex: 1,
-  },
-  amount: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    color: colors.navy,
   },
   meta: {
     fontFamily: typography.fonts.regular,
@@ -80,20 +110,18 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
   footer: {
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  status: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    color: colors.navy,
+    gap: spacing.sm,
   },
   due: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,
     color: colors.textMuted,
+    flexShrink: 1,
+    textAlign: 'right',
   },
   dueOverdue: {
     color: colors.error,

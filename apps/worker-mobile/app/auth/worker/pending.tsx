@@ -1,5 +1,6 @@
 import {
   accountSetupNextStep,
+  canSubmitWorkerVerificationPackage,
   documentProgressCounts,
   documentsSummaryLabel,
   finalApprovalSummaryLabel,
@@ -10,11 +11,14 @@ import {
   type WorkerRole,
 } from '@bridge-hive/domain';
 import { Redirect, router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AuthShell } from '@/components/auth/AuthShell';
+import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
+import { ProgressBar } from '@/components/ui/ProgressRing';
+import { ProgressStep, type ProgressStepState } from '@/components/ui/ProgressStep';
 import { APP_CONFIG } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +32,37 @@ type PayoutStatus =
   | 'suspended'
   | 'expired'
   | null;
+
+function docsState(label: string): ProgressStepState {
+  const lower = label.toLowerCase();
+  if (lower.includes('approved') || lower.includes('complete')) return 'approved';
+  if (lower.includes('reject') || lower.includes('action')) return 'action_required';
+  if (lower.includes('review')) return 'under_review';
+  if (lower.includes('submitted') || lower.includes('progress')) return 'in_progress';
+  if (lower.includes('missing') || lower.includes('not started') || lower.includes('required')) {
+    return 'not_started';
+  }
+  return 'in_progress';
+}
+
+function payoutState(status: PayoutStatus): ProgressStepState {
+  if (status === 'verified') return 'approved';
+  if (status === 'pending') return 'under_review';
+  if (status === 'rejected' || status === 'failed' || status === 'suspended' || status === 'expired') {
+    return 'action_required';
+  }
+  return 'not_started';
+}
+
+function finalState(label: string): ProgressStepState {
+  const lower = label.toLowerCase();
+  if (lower.includes('approved') || lower.includes('verified')) return 'approved';
+  if (lower.includes('reject')) return 'rejected';
+  if (lower.includes('review') || lower.includes('submitted') || lower.includes('administrative')) {
+    return 'under_review';
+  }
+  return 'not_started';
+}
 
 export default function WorkerAccountSetupScreen() {
   const {
@@ -43,8 +78,10 @@ export default function WorkerAccountSetupScreen() {
   } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string>();
+  const [error, setError] = useState<string>();
   const [credentials, setCredentials] = useState<CredentialSummary[]>([]);
   const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>(null);
+  const submitLock = useRef(false);
 
   const loadSetupState = useCallback(async () => {
     if (!user?.id) return;
@@ -89,7 +126,13 @@ export default function WorkerAccountSetupScreen() {
 
   const role = workerProfile?.worker_role as WorkerRole | null;
   const verificationStatus = workerProfile?.verification_status ?? 'draft';
-  const onboardingDone = workerProfile?.onboarding_status === 'completed';
+  const packageSubmitted =
+    verificationStatus === 'submitted' || verificationStatus === 'under_review';
+  const canSubmitPackage = canSubmitWorkerVerificationPackage({
+    role,
+    credentials,
+    verificationStatus,
+  });
   const docsLabel = documentsSummaryLabel({ role, credentials });
   const progress = documentProgressCounts({ role, credentials });
   const payoutLabel = payoutSummaryLabel(payoutStatus);
@@ -103,18 +146,30 @@ export default function WorkerAccountSetupScreen() {
     documentsLabel: docsLabel,
     payoutStatus,
     finalLabel,
+    canSubmitPackage,
+    verificationStatus,
   });
   const payoutButtonLabel = payoutAccountActionLabel(payoutStatus);
+  const profileDone = Boolean(workerProfile?.worker_role);
 
-  const onSubmitReview = async () => {
+  const onSubmitPackage = async () => {
+    if (submitLock.current || submitting) return;
+    submitLock.current = true;
     setSubmitting(true);
-    const result = await submitForReview();
-    setSubmitting(false);
-    if (result.error) {
-      setMessage(result.error);
-      return;
+    setError(undefined);
+    setMessage(undefined);
+    try {
+      const result = await submitForReview();
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setMessage('Package submitted for platform review. Final approval is an administrator action.');
+      await loadSetupState();
+    } finally {
+      setSubmitting(false);
+      submitLock.current = false;
     }
-    setMessage('Onboarding marked complete. Continue with documents and payout setup.');
   };
 
   const onRefresh = async () => {
@@ -125,64 +180,95 @@ export default function WorkerAccountSetupScreen() {
   return (
     <AuthShell
       title="Account Setup"
-      subtitle="Complete documents and payout account before marketplace access."
+      subtitle="Complete each step before marketplace access. Final approval is an administrator action."
       showBack={false}
       centered={false}
     >
-      <View style={styles.nextCard}>
-        <Text style={styles.nextLabel}>Next step</Text>
-        <Text style={styles.nextValue}>{nextStep}</Text>
-      </View>
+      <Banner variant="info" title="Next step" body={nextStep} />
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Documents</Text>
-        <Text style={styles.cardStatus}>{docsLabel}</Text>
-        <Text style={styles.cardMeta}>
-          {progress.approved} of {progress.requiredTotal} approved
-        </Text>
-        <Text style={styles.cardMeta}>
-          Missing {progress.missing} · Submitted {progress.submitted} · Under review{' '}
-          {progress.underReview} · Rejected {progress.rejected}
-        </Text>
-        <Button
-          label="Manage credentials"
-          variant="brand"
-          onPress={() => router.push('/documents')}
+      {(() => {
+        const doneCount = [
+          profileDone,
+          docsState(docsLabel) === 'approved' || packageSubmitted,
+          payoutState(payoutStatus) === 'approved',
+          finalState(finalLabel) === 'approved',
+        ].filter(Boolean).length;
+        return (
+          <ProgressBar
+            progress={doneCount / 4}
+            label={`${doneCount} of 4 steps complete`}
+          />
+        );
+      })()}
+
+      <View style={styles.steps}>
+        <ProgressStep
+          step={1}
+          title="Personal profile"
+          description="Confirm your worker role and basic profile details."
+          statusLabel={profileDone ? 'Complete' : 'In progress'}
+          state={profileDone ? 'complete' : 'in_progress'}
+          isCurrent={!profileDone}
+        />
+        <ProgressStep
+          step={2}
+          title="Required credentials"
+          description={`${progress.approved} of ${progress.requiredTotal} approved. Missing ${progress.missing}.`}
+          statusLabel={docsLabel}
+          state={docsState(docsLabel)}
+          isCurrent={profileDone && docsState(docsLabel) !== 'approved' && !packageSubmitted}
+          actionLabel="Manage credentials"
+          onAction={() => router.push('/documents')}
+        />
+        <ProgressStep
+          step={3}
+          title="Payout account"
+          description="Needed so organizations can pay approved gross shift amounts. Only a masked IBAN is stored."
+          statusLabel={payoutLabel}
+          state={payoutState(payoutStatus)}
+          isCurrent={
+            profileDone &&
+            (docsState(docsLabel) === 'approved' || packageSubmitted || canSubmitPackage) &&
+            payoutState(payoutStatus) !== 'approved'
+          }
+          actionLabel={payoutButtonLabel}
+          onAction={() => router.push(WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE)}
+        />
+        <ProgressStep
+          step={4}
+          title="Final platform review"
+          description="Marketplace access requires approved documents, an approved payout account, and a separate administrator action."
+          statusLabel={finalLabel}
+          state={finalState(finalLabel)}
+          isCurrent={packageSubmitted || finalState(finalLabel) === 'under_review'}
+          isLast
         />
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Payout account</Text>
-        <Text style={styles.cardStatus}>{payoutLabel}</Text>
-        <Text style={styles.cardMeta}>
-          Required for marketplace approval. Separate from professional credentials.
+      {message ? (
+        <Text style={styles.message} accessibilityLiveRegion="polite">
+          {message}
         </Text>
-        <Button
-          label={payoutButtonLabel}
-          variant="secondary"
-          onPress={() => router.push(WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE)}
-        />
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Final approval</Text>
-        <Text style={styles.cardStatus}>{finalLabel}</Text>
-        <Text style={styles.cardMeta}>
-          Marketplace access requires approved documents, an approved payout account, and a
-          separate administrator action.
+      ) : null}
+      {error ? (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
         </Text>
-      </View>
-
-      {message ? <Text style={styles.message}>{message}</Text> : null}
+      ) : null}
 
       <View style={styles.actions}>
-        {!onboardingDone ? (
+        {canSubmitPackage ? (
           <Button
-            label="Mark onboarding complete"
-            variant="secondary"
+            label="Submit for review"
+            variant="primary"
             loading={submitting}
-            onPress={() => void onSubmitReview()}
+            onPress={() => void onSubmitPackage()}
           />
+        ) : null}
+        {packageSubmitted ? (
+          <Text style={styles.hint}>
+            Package is in the admin review queue. You can still update payout details while waiting.
+          </Text>
         ) : null}
         <Button
           label="View notifications"
@@ -198,57 +284,29 @@ export default function WorkerAccountSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-  nextCard: {
-    backgroundColor: colors.blueLight,
-    borderRadius: 14,
-    padding: spacing.md,
-    gap: 4,
-    marginBottom: spacing.sm,
-  },
-  nextLabel: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    color: colors.navyLift,
-    textTransform: 'uppercase',
-  },
-  nextValue: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 15,
-    color: colors.navy,
-    lineHeight: 21,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: spacing.lg,
+  steps: {
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.sm,
-  },
-  cardTitle: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    color: colors.text,
-  },
-  cardStatus: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 15,
-    color: colors.navyLift,
-  },
-  cardMeta: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 13,
-    color: colors.textMuted,
-    lineHeight: 18,
+    marginTop: spacing.sm,
   },
   message: {
     fontFamily: typography.fonts.medium,
     fontSize: 14,
     color: colors.success,
-    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
   },
-  actions: { gap: spacing.sm, marginTop: spacing.xs },
+  error: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 14,
+    color: colors.error,
+    marginTop: spacing.sm,
+  },
+  hint: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  actions: { gap: spacing.sm, marginTop: spacing.md },
   support: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,

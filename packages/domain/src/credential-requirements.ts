@@ -552,6 +552,15 @@ export function finalApprovalSummaryLabel(params: {
   if (params.verificationStatus === 'verified') {
     return 'Approved for marketplace access';
   }
+  if (
+    params.verificationStatus === 'submitted' ||
+    params.verificationStatus === 'under_review'
+  ) {
+    return 'Ready for final administrative approval';
+  }
+  if (params.verificationStatus === 'rejected') {
+    return 'Waiting for document review';
+  }
   const docsComplete = params.documentsLabel === 'Complete';
   const payoutVerified = params.payoutStatus === 'verified';
   if (docsComplete && payoutVerified) {
@@ -569,11 +578,38 @@ export function finalApprovalSummaryLabel(params: {
   return 'Not ready';
 }
 
+/**
+ * True when the worker has uploaded every required document file and the
+ * package is not already in (or past) the admin review queue.
+ */
+export function canSubmitWorkerVerificationPackage(params: {
+  role: WorkerRole | null | undefined;
+  credentials: CredentialSummary[];
+  verificationStatus: string;
+}): boolean {
+  if (!params.role) return false;
+  if (
+    params.verificationStatus === 'verified' ||
+    params.verificationStatus === 'suspended' ||
+    params.verificationStatus === 'submitted' ||
+    params.verificationStatus === 'under_review'
+  ) {
+    return false;
+  }
+  const progress = documentProgressCounts({
+    role: params.role,
+    credentials: params.credentials,
+  });
+  return progress.requiredTotal > 0 && progress.missing === 0 && progress.rejected === 0;
+}
+
 /** Plain-language next action for the Account Setup dashboard. */
 export function accountSetupNextStep(params: {
   documentsLabel: DocumentsSummaryLabel;
   payoutStatus: PayoutAccountStatusInput;
   finalLabel: FinalApprovalSummaryLabel;
+  canSubmitPackage?: boolean;
+  verificationStatus?: string;
 }): string {
   if (params.finalLabel === 'Approved for marketplace access') {
     return 'You are approved for marketplace access.';
@@ -586,6 +622,9 @@ export function accountSetupNextStep(params: {
   }
   if (params.documentsLabel === 'Missing' || params.documentsLabel === 'Partially uploaded') {
     return 'Upload your required documents.';
+  }
+  if (params.canSubmitPackage) {
+    return 'Submit your document package for platform review.';
   }
   if (
     (params.documentsLabel === 'Under review' || params.documentsLabel === 'Submitted') &&

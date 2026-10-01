@@ -1,25 +1,24 @@
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import {
   AnimatedTabButton,
   AnimatedTabIcon,
+  AnimatedTabLabel,
   TAB_ACCENTS,
   TabBarBackground,
 } from '@/components/navigation/AnimatedTabBar';
 import { colors } from '@/constants/theme';
-import { useLayout } from '@/hooks/useLayout';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabsLayout() {
   const { loading, session, isVerified, accountRejectionReason, homeRoute } = useAuth();
-  const { isCompact } = useLayout();
 
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.navy} />
+        <ActivityIndicator color={colors.teal} />
       </View>
     );
   }
@@ -40,13 +39,18 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
         tabBarStyle: {
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
+          backgroundColor: colors.white,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.border,
           elevation: 0,
-          height: isCompact ? 64 : 72,
+          height: 68,
           paddingBottom: 8,
+          paddingTop: 4,
+        },
+        tabBarItemStyle: {
+          paddingHorizontal: 0,
         },
         tabBarBackground: () => <TabBarBackground />,
         tabBarButton: (props) => <AnimatedTabButton {...props} />,
@@ -56,12 +60,15 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Home',
+          tabBarAccessibilityLabel: 'Home',
+          tabBarLabel: ({ focused }) => (
+            <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.home}>
+              Home
+            </AnimatedTabLabel>
+          ),
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              title="Home"
-              shortTitle="Home"
-              compact={isCompact}
               icon="home-outline"
               iconFocused="home"
               accent={TAB_ACCENTS.home}
@@ -73,12 +80,15 @@ export default function TabsLayout() {
         name="shifts"
         options={{
           title: 'Shifts',
+          tabBarAccessibilityLabel: 'Shifts',
+          tabBarLabel: ({ focused }) => (
+            <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.shifts}>
+              Shifts
+            </AnimatedTabLabel>
+          ),
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              title="Shifts"
-              shortTitle="Shifts"
-              compact={isCompact}
               icon="calendar-outline"
               iconFocused="calendar"
               accent={TAB_ACCENTS.shifts}
@@ -87,15 +97,38 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="payments"
+        name="work"
         options={{
-          title: 'Payments',
+          title: 'Work',
+          tabBarAccessibilityLabel: 'Work',
+          tabBarLabel: ({ focused }) => (
+            <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.work}>
+              Work
+            </AnimatedTabLabel>
+          ),
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              title="Payments"
-              shortTitle="Pay"
-              compact={isCompact}
+              icon="briefcase-outline"
+              iconFocused="briefcase"
+              accent={TAB_ACCENTS.work}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="payments"
+        options={{
+          title: 'Money',
+          tabBarAccessibilityLabel: 'Money',
+          tabBarLabel: ({ focused }) => (
+            <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.finances}>
+              Money
+            </AnimatedTabLabel>
+          ),
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
               icon="wallet-outline"
               iconFocused="wallet"
               accent={TAB_ACCENTS.finances}
@@ -106,33 +139,26 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="invoices"
         options={{
+          href: null,
           title: 'Invoices',
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              focused={focused}
-              title="Invoices"
-              shortTitle="Inv"
-              compact={isCompact}
-              icon="receipt-outline"
-              iconFocused="receipt"
-              accent={TAB_ACCENTS.community}
-            />
-          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'More',
+          tabBarAccessibilityLabel: 'More',
+          tabBarLabel: ({ focused }) => (
+            <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.more}>
+              More
+            </AnimatedTabLabel>
+          ),
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              title="Profile"
-              shortTitle="Me"
-              compact={isCompact}
-              icon="person-outline"
-              iconFocused="person"
-              accent={TAB_ACCENTS.profile}
+              icon="menu-outline"
+              iconFocused="menu"
+              accent={TAB_ACCENTS.more}
             />
           ),
         }}

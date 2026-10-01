@@ -1,4 +1,4 @@
-import { AdminNav } from '@/components/admin/admin-nav';
+import { AdminShell } from '@/components/admin/admin-shell';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { createClient } from '@/lib/supabase/server';
 
@@ -13,6 +13,8 @@ export default async function AdminConsoleLayout({
 
   let credentialCount = 0;
   let applicationCount = 0;
+  let organizationsAwaitingReview = 0;
+  let unreadOrgNotices = 0;
 
   if (ctx.capabilities.canViewCredentialMetadata) {
     if (useFunction) {
@@ -45,17 +47,38 @@ export default async function AdminConsoleLayout({
     }
   }
 
+  if (ctx.capabilities.canManageOrganizations) {
+    const [{ data }, { count }] = await Promise.all([
+      supabase.rpc('list_admin_organizations', {
+        p_status: 'under_review',
+        p_sort: 'oldest',
+        p_limit: 1,
+        p_offset: 0,
+      }),
+      supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', 'org_submitted')
+        .is('read_at', null),
+    ]);
+    const rows = (data ?? []) as Array<{ total_count?: number }>;
+    organizationsAwaitingReview = Number(rows[0]?.total_count ?? 0);
+    unreadOrgNotices = count ?? 0;
+  }
+
   return (
-    <div className="min-h-screen">
-      <AdminNav
-        role={ctx.adminRole}
-        displayName={ctx.profile?.full_name ?? ctx.user.email ?? 'Admin'}
-        queueCounts={{
-          credentials: credentialCount,
-          applications: applicationCount,
-        }}
-      />
-      <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
-    </div>
+    <AdminShell
+      capabilities={ctx.capabilities}
+      displayName={ctx.profile?.full_name ?? ctx.user.email ?? 'Admin'}
+      email={ctx.user.email}
+      queueCounts={{
+        credentials: credentialCount,
+        applications: applicationCount,
+        organizations: organizationsAwaitingReview,
+        unreadOrgNotices,
+      }}
+    >
+      {children}
+    </AdminShell>
   );
 }

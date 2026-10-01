@@ -1,10 +1,9 @@
-import { BILLING_RESTRICTED_BANNER } from '@bridge-hive/domain';
 import { router } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { Button } from '@/components/ui/Button';
-import { colors, spacing, typography } from '@/constants/theme';
+import { Banner } from '@/components/ui/Banner';
+import { spacing } from '@/constants/theme';
 import type { BillingRestrictionSummary } from '@/lib/invoices';
 import { formatMoney, formatShortDate } from '@/utils/format';
 
@@ -12,56 +11,32 @@ type Props = {
   summary: BillingRestrictionSummary;
 };
 
+/**
+ * High-priority billing restriction banner.
+ * Existing assignments remain visible — this only pauses new marketplace access.
+ */
 export function BillingRestrictionBanner({ summary }: Props) {
+  const amount = formatMoney(summary.overdue_amount_minor);
+  const due = summary.oldest_due_at
+    ? ` Oldest due ${formatShortDate(summary.oldest_due_at)}.`
+    : '';
+
   return (
-    <View style={styles.banner} accessibilityRole="alert">
-      <Text style={styles.title}>{BILLING_RESTRICTED_BANNER}</Text>
-      <Text style={styles.body}>
-        Amount due: {formatMoney(summary.overdue_amount_minor)}
-        {summary.oldest_due_at
-          ? ` · Oldest due ${formatShortDate(summary.oldest_due_at)}`
-          : ''}
-      </Text>
-      <View style={styles.actions}>
-        <Button
-          label="View invoices"
-          variant="secondary"
-          size="sm"
-          onPress={() => router.push('/(tabs)/invoices')}
-        />
-        <Button
-          label="Pay now"
-          variant="brand"
-          size="sm"
-          onPress={() => router.push('/(tabs)/invoices')}
-        />
-      </View>
-    </View>
+    <Banner
+      variant="danger"
+      title="New shift access is paused"
+      body={`A Bridge Hive commission invoice is overdue. Pay the outstanding invoice to restore marketplace access. Amount due: ${amount}.${due}`}
+      actionLabel="View invoices"
+      onAction={() => router.push('/(tabs)/invoices')}
+      secondaryActionLabel="Pay now"
+      onSecondaryAction={() => router.push('/(tabs)/invoices')}
+      style={styles.wrap}
+    />
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    marginHorizontal: spacing.lg,
+  wrap: {
     marginBottom: spacing.md,
-    backgroundColor: colors.warningLight,
-    borderRadius: 12,
-    padding: spacing.md,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.warning,
-  },
-  title: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 14,
-    color: colors.navy,
-  },
-  body: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  actions: {
-    gap: spacing.sm,
   },
 });

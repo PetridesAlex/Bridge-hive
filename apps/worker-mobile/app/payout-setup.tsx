@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { TextInput } from '@/components/ui/TextInput';
 import { APP_CONFIG } from '@/constants/config';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import { usePayouts } from '@/hooks/usePayouts';
 import {
   pickPayoutProofFile,
@@ -236,7 +236,7 @@ export default function PayoutSetupScreen() {
               ? 'Submitted and waiting for administrative approval. You can correct details only if this submission is rejected.'
               : 'This payout account is locked while approved for platform use.'}
             {isVerified
-              ? ' Payment history is available under Payments on your Profile.'
+              ? ' Earnings history is available under Money.'
               : ''}
           </Text>
         )}
@@ -248,12 +248,11 @@ export default function PayoutSetupScreen() {
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: spacing.lg,
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: radii.md,
     padding: spacing.lg,
     gap: spacing.sm,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   label: {

@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BackLink } from '@/components/org/back-link';
+import { PageHeader } from '@/components/org/page-header';
+import { ShiftLocationSetupGate } from '@/components/org/shift-location-setup-gate';
 import { requireOrgMembership } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
@@ -27,53 +27,27 @@ export default async function NewShiftPage({
     .eq('organization_id', ctx.org.id)
     .order('name');
 
-  const locationIds = (locations ?? []).map((l) => l.id);
-  const { data: wards } = locationIds.length
-    ? await supabase
-        .from('wards')
-        .select('*')
-        .in('location_id', locationIds)
-        .order('name')
-    : { data: [] };
+  const hasLocations = Boolean(locations?.length);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-          <Link href={`/org/${slug}/shifts`}>← Shifts</Link>
-        </Button>
-        <h2 className="text-2xl font-semibold text-slate-900">New draft shift</h2>
-        <p className="text-sm text-slate-600">
-          Drafts stay private until you publish them.
-        </p>
+    <div className="space-y-6 bh-fade-up">
+      <div className="space-y-3">
+        <BackLink href={`/org/${slug}/shifts`} label="Shifts" />
+        <PageHeader
+          eyebrow="Shifts"
+          title={hasLocations ? 'Create shift' : 'Prepare to create shifts'}
+          subtitle={
+            hasLocations
+              ? 'Four short steps. Save as a private draft, then publish when staffing is ready.'
+              : 'Bridge Hive schedules are location-first. Complete this one setup step to unlock drafting and publishing.'
+          }
+        />
       </div>
 
-      {!locations?.length ? (
-        <Card>
-          <CardContent className="py-8 text-sm text-slate-600">
-            Create a location before adding shifts.{' '}
-            <Link
-              href={`/org/${slug}/locations?new=1`}
-              className="font-medium text-slate-900 underline"
-            >
-              Add location
-            </Link>
-          </CardContent>
-        </Card>
+      {!hasLocations ? (
+        <ShiftLocationSetupGate slug={slug} context="single" />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Shift details</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ShiftForm
-              slug={slug}
-              locations={locations}
-              wards={wards ?? []}
-              mode="create"
-            />
-          </CardContent>
-        </Card>
+        <ShiftForm slug={slug} locations={locations!} mode="create" />
       )}
     </div>
   );

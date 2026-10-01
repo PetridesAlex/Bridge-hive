@@ -4,8 +4,13 @@ import {
   isOrgOperational,
   ORG_STATUS_LABELS,
   orgOperationalBlockedMessage,
+  orgPendingSubmitMessage,
+  orgProfileCompleteness,
+  orgSubmitCtaLabel,
   ORGANIZATION_TYPE_LABELS,
 } from '@bridge-hive/domain';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 describe('Organization onboarding domain helpers', () => {
   describe('ORG_STATUS_LABELS', () => {
@@ -73,6 +78,84 @@ describe('Organization onboarding domain helpers', () => {
       expect(orgOperationalBlockedMessage('suspended')).toContain('suspended');
       expect(orgOperationalBlockedMessage('closed')).toContain('closed');
     });
+  });
+
+  describe('completeness is not approval', () => {
+    it('4 of 4 complete still allows submit while pending', () => {
+      const complete = orgProfileCompleteness({
+        legalName: 'White Tiger Ltd',
+        displayName: 'White Tiger',
+        primaryContactName: 'Admin',
+        primaryContactEmail: 'admin@example.com',
+      });
+      expect(complete.complete).toBe(4);
+      expect(complete.percent).toBe(100);
+      expect(canSubmitOrgForReview('pending')).toBe(true);
+      expect(isOrgOperational('pending')).toBe(false);
+      expect(
+        orgPendingSubmitMessage({ status: 'pending', profileComplete: true }),
+      ).toMatch(/not approval/i);
+      expect(
+        orgSubmitCtaLabel({ status: 'pending', profileComplete: true }),
+      ).toBe('Submit for review');
+    });
+
+    it('incomplete profile keeps Complete setup CTA', () => {
+      expect(
+        orgSubmitCtaLabel({ status: 'pending', profileComplete: false }),
+      ).toBe('Complete setup');
+      expect(
+        orgPendingSubmitMessage({ status: 'under_review', profileComplete: true }),
+      ).toBeNull();
+    });
+  });
+});
+
+describe('submit action admin revalidation contract', () => {
+  it('revalidates admin organization paths after submit RPC', async () => {
+    const src = await fs.readFile(
+      path.join(process.cwd(), 'app/actions/organization-onboarding.ts'),
+      'utf8',
+    );
+    expect(src).toMatch(/submit_organization_for_review/);
+    expect(src).toMatch(/revalidatePath\('\/admin'\)/);
+    expect(src).toMatch(/revalidatePath\('\/admin\/organizations'\)/);
+    expect(src).toMatch(
+      /revalidatePath\(`\/admin\/organizations\/\$\{parsed\.data\.organizationId\}`\)/,
+    );
+  });
+
+  it('admin dashboard separates org review from worker under_review', async () => {
+    const src = await fs.readFile(
+      path.join(process.cwd(), 'app/admin/(console)/page.tsx'),
+      'utf8',
+    );
+    expect(src).toMatch(/Orgs awaiting review/);
+    expect(src).toMatch(/status=under_review/);
+    expect(src).toMatch(/list_admin_organizations/);
+    expect(src).toMatch(/Applications ready/);
+    expect(src).toMatch(/verification_application_dashboard_counts/);
+    expect(src).toMatch(/Organization queue — not worker applications/);
+    expect(src).toMatch(/Mark notices read/);
+  });
+
+  it('mark-read action does not approve organizations', async () => {
+    const src = await fs.readFile(
+      path.join(process.cwd(), 'app/actions/admin-org-notifications.ts'),
+      'utf8',
+    );
+    expect(src).toMatch(/org_submitted/);
+    expect(src).toMatch(/read_at/);
+    expect(src).not.toMatch(/approve_organization/);
+  });
+
+  it('keeps migrations 001–023 untouched and adds worker package 024 separately', async () => {
+    const dir = await fs.readdir(
+      path.join(process.cwd(), '../../supabase/migrations'),
+    );
+    expect(dir).toContain('023_organization_account_activation.sql');
+    expect(dir).toContain('024_worker_package_submit_and_profile_bootstrap.sql');
+    expect(dir.filter((f) => f.startsWith('023')).length).toBe(1);
   });
 });
 

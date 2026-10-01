@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
@@ -14,7 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radii, typography } from '@/constants/theme';
+import { colors, motion, radii, typography } from '@/constants/theme';
 
 export type TabAccent = {
   solid: string;
@@ -22,67 +21,47 @@ export type TabAccent = {
   indicator: string;
 };
 
-/** Accents tuned for the dark navy tab surface — navy + yellow only */
+/** Selected = teal icon/text + small honey/navy indicator (not color alone). */
+const TEAL_ACCENT: TabAccent = {
+  solid: colors.tealStrong,
+  soft: colors.tealSoft,
+  indicator: colors.yellow,
+};
+
 export const TAB_ACCENTS = {
-  home: { solid: colors.yellow, soft: 'rgba(245,176,0,0.16)', indicator: colors.yellow },
-  shifts: { solid: '#E8EEF6', soft: 'rgba(255,255,255,0.1)', indicator: colors.yellow },
-  community: { solid: colors.yellow, soft: 'rgba(245,176,0,0.14)', indicator: colors.yellow },
-  finances: { solid: '#E8EEF6', soft: 'rgba(255,255,255,0.1)', indicator: colors.yellow },
-  profile: { solid: '#E8EEF6', soft: 'rgba(255,255,255,0.1)', indicator: colors.yellow },
+  home: TEAL_ACCENT,
+  shifts: TEAL_ACCENT,
+  work: TEAL_ACCENT,
+  finances: TEAL_ACCENT,
+  more: TEAL_ACCENT,
 } as const;
 
-const INACTIVE = 'rgba(255,255,255,0.42)';
+const INACTIVE = colors.textMuted;
 
 type AnimatedTabIconProps = {
   focused: boolean;
-  title: string;
-  shortTitle: string;
-  compact: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   iconFocused: keyof typeof Ionicons.glyphMap;
   accent: TabAccent;
 };
 
-const FOCUS_TIMING = { duration: 180, easing: Easing.out(Easing.cubic) };
+const FOCUS_TIMING = {
+  duration: motion.duration.normal,
+  easing: Easing.out(Easing.cubic),
+};
 
 export function TabBarBackground() {
   return (
     <View style={styles.bgRoot} pointerEvents="none">
-      <LinearGradient
-        colors={['#071A2F', '#0E2A47', '#123A5C']}
-        locations={[0, 0.45, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Soft wash */}
-      <LinearGradient
-        colors={['rgba(245,176,0,0.12)', 'rgba(18,58,92,0)', 'rgba(245,176,0,0.08)']}
-        locations={[0, 0.5, 1]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Premium hairline + gold accent edge */}
-      <View style={styles.topEdge}>
-        <LinearGradient
-          colors={['transparent', 'rgba(245,176,0,0.55)', 'rgba(255,255,255,0.2)', 'rgba(245,176,0,0.45)', 'transparent']}
-          locations={[0, 0.25, 0.5, 0.75, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.goldLine}
-        />
-      </View>
-      <View style={styles.innerSheen} />
+      <View style={styles.bgFill} />
+      <View style={styles.topEdge} />
     </View>
   );
 }
 
+/** Icon + indicator — labels use tabBarLabel so RN allocates width correctly. */
 export function AnimatedTabIcon({
   focused,
-  title,
-  shortTitle,
-  compact,
   icon,
   iconFocused,
   accent,
@@ -94,39 +73,57 @@ export function AnimatedTabIcon({
   }, [focused, progress]);
 
   const shellStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(progress.value, [0, 1], [1, 1.04], Extrapolation.CLAMP) }],
     backgroundColor: focused ? accent.soft : 'transparent',
   }));
 
   const indicatorStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ scaleX: interpolate(progress.value, [0, 1], [0.4, 1], Extrapolation.CLAMP) }],
+    transform: [
+      { scaleX: interpolate(progress.value, [0, 1], [0.4, 1], Extrapolation.CLAMP) },
+    ],
   }));
 
   return (
-    <View style={[styles.tabItem, compact && styles.tabItemCompact]}>
-      <Animated.View style={[styles.iconShell, compact && styles.iconShellCompact, shellStyle]}>
+    <View
+      style={styles.tabItem}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Animated.View style={[styles.iconShell, shellStyle]}>
         <Ionicons
           name={focused ? iconFocused : icon}
-          size={compact ? 18 : 20}
+          size={20}
           color={focused ? accent.solid : INACTIVE}
         />
       </Animated.View>
-      <Text
-        style={[
-          styles.label,
-          compact && styles.labelCompact,
-          { color: focused ? accent.solid : INACTIVE },
-          focused && styles.labelActive,
-        ]}
-        numberOfLines={1}
-      >
-        {compact ? shortTitle : title}
-      </Text>
       <Animated.View
         style={[styles.indicator, { backgroundColor: accent.indicator }, indicatorStyle]}
       />
     </View>
+  );
+}
+
+export function AnimatedTabLabel({
+  focused,
+  children,
+  accent,
+}: {
+  focused: boolean;
+  children: string;
+  accent: TabAccent;
+}) {
+  return (
+    <Text
+      style={[
+        styles.label,
+        { color: focused ? accent.solid : INACTIVE },
+        focused && styles.labelActive,
+      ]}
+      numberOfLines={1}
+      allowFontScaling={false}
+    >
+      {children}
+    </Text>
   );
 }
 
@@ -136,12 +133,18 @@ export function AnimatedTabButton({
   onLongPress,
   style,
   href,
+  accessibilityLabel,
+  accessibilityRole,
+  accessibilityState,
   ...rest
 }: BottomTabBarButtonProps) {
   return (
     <PlatformPressable
       {...rest}
       href={href}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole ?? 'button'}
+      accessibilityState={accessibilityState}
       onPress={(e) => {
         if (Platform.OS !== 'web') {
           Haptics.selectionAsync().catch(() => undefined);
@@ -163,67 +166,52 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',
   },
+  bgFill: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.white,
+  },
   topEdge: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 1,
-  },
-  goldLine: {
-    flex: 1,
-  },
-  innerSheen: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 28,
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
-    maxWidth: 96,
-    gap: 3,
-  },
-  tabItemCompact: {
-    maxWidth: 76,
-    gap: 2,
+    gap: 1,
+    minHeight: 26,
   },
   iconShell: {
-    width: 44,
-    height: 30,
-    borderRadius: radii.full,
+    width: 36,
+    height: 24,
+    borderRadius: radii.sm,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconShellCompact: {
-    width: 36,
   },
   label: {
     fontFamily: typography.fonts.medium,
     fontSize: 10,
-    letterSpacing: 0.2,
+    lineHeight: 12,
+    letterSpacing: 0,
     textAlign: 'center',
-  },
-  labelCompact: {
-    fontSize: 9,
+    marginTop: 1,
   },
   labelActive: {
     fontFamily: typography.fonts.semibold,
   },
   indicator: {
-    height: 3,
-    width: 16,
-    borderRadius: 2,
-    marginTop: 1,
+    height: 2,
+    width: 14,
+    borderRadius: 1,
   },
   tabButtonInner: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
+    minHeight: 48,
   },
 });

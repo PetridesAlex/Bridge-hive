@@ -128,3 +128,31 @@ export function orgOperationalBlockedMessage(status: OrgStatus): string | null {
       return 'Organization is not operational.';
   }
 }
+
+/**
+ * Completeness is not approval. When required fields are filled and status
+ * still allows submit, surface an explicit next action.
+ */
+export function orgPendingSubmitMessage(params: {
+  status: OrgStatus;
+  profileComplete: boolean;
+}): string | null {
+  if (!canSubmitOrgForReview(params.status)) return null;
+  if (!params.profileComplete) {
+    return orgOperationalBlockedMessage(params.status);
+  }
+  if (params.status === 'rejected') {
+    return 'Required profile details are complete. Resubmit for Bridge Hive review — completeness is not approval.';
+  }
+  return 'Required profile details are complete. Submit for Bridge Hive review — a complete profile is not approval.';
+}
+
+export function orgSubmitCtaLabel(params: {
+  status: OrgStatus;
+  profileComplete: boolean;
+}): string {
+  if (canSubmitOrgForReview(params.status) && params.profileComplete) {
+    return params.status === 'rejected' ? 'Resubmit for review' : 'Submit for review';
+  }
+  return 'Complete setup';
+}

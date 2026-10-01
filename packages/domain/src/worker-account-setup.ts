@@ -7,10 +7,17 @@ export const WORKER_ACCOUNT_SETUP_ROUTE_PREFIXES = [
   '/auth/worker/rejected',
   '/auth/worker/login',
   '/auth/worker/register',
+  '/auth/worker/reset-password',
+  '/auth/worker/check-email',
+  '/auth/worker/choose-role',
+  '/auth/callback',
   '/documents',
   '/payout-setup',
   '/notifications',
   '/profile/account',
+  '/profile/personal-information',
+  '/profile/app-information',
+  '/support',
   '/welcome',
 ] as const;
 

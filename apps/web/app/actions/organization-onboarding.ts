@@ -139,5 +139,8 @@ export async function submitOrganizationForReviewAction(
   }
 
   revalidatePath('/org');
+  revalidatePath('/admin');
+  revalidatePath('/admin/organizations');
+  revalidatePath(`/admin/organizations/${parsed.data.organizationId}`);
   return { success: true };
 }

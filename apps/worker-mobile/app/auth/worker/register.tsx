@@ -1,23 +1,26 @@
 import type { WorkerRole } from '@bridge-hive/domain';
-import { Redirect, router } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthShell, AuthStepBar } from '@/components/auth/AuthShell';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
-import { Chip } from '@/components/ui/Chip';
 import { TextInput } from '@/components/ui/TextInput';
 import { APP_CONFIG, WORKER_ROLE_LABELS } from '@/constants/config';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
+import { setPendingConfirmEmail } from '@/lib/pending-confirm-email';
 import { useAuth } from '@/providers/AuthProvider';
 
 const STEPS = ['Account', 'Role', 'Review'] as const;
 
 export default function WorkerRegisterScreen() {
   const { signUpWorker, session, loading, homeRoute } = useAuth();
+  const params = useLocalSearchParams<{ email?: string }>();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
+  const submitLock = useRef(false);
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,6 +28,11 @@ export default function WorkerRegisterScreen() {
   const [password, setPassword] = useState('');
   const [workerRole, setWorkerRole] = useState<WorkerRole>('registered_nurse');
   const [bio, setBio] = useState('');
+
+  useEffect(() => {
+    const fromQuery = typeof params.email === 'string' ? params.email.trim() : '';
+    if (fromQuery) setEmail(fromQuery);
+  }, [params.email]);
 
   if (!loading && session) {
     return <Redirect href={homeRoute as never} />;
@@ -35,6 +43,15 @@ export default function WorkerRegisterScreen() {
     if (step === 1) {
       if (!fullName.trim() || !email.trim() || password.length < 6) {
         setError('Enter your name, email, and a password of at least 6 characters.');
+        return false;
+      }
+      if (!email.includes('@')) {
+        setError('Enter a valid email address.');
+        return false;
+      }
+      const digits = phone.replace(/\D/g, '');
+      if (digits.length < 8) {
+        setError('Enter a valid phone number including country code.');
         return false;
       }
     }
@@ -56,32 +73,38 @@ export default function WorkerRegisterScreen() {
 
   const onSubmit = async () => {
     if (!validateStep()) return;
+    if (submitLock.current || submitting) return;
+    submitLock.current = true;
     setSubmitting(true);
-    const result = await signUpWorker({
-      email,
-      password,
-      fullName,
-      phone,
-      workerRole,
-      bio,
-    });
-    setSubmitting(false);
-    if (result.error) {
-      setError(result.error);
-      return;
+    try {
+      const result = await signUpWorker({
+        email,
+        password,
+        fullName,
+        phone,
+        workerRole,
+        bio,
+      });
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.needsEmailConfirm) {
+        setPendingConfirmEmail(email.trim().toLowerCase());
+        router.replace('/auth/worker/check-email');
+        return;
+      }
+      router.replace('/auth/worker/pending');
+    } finally {
+      setSubmitting(false);
+      submitLock.current = false;
     }
-    if (result.needsEmailConfirm) {
-      Alert.alert('Confirm your email', 'Check your inbox to activate your account, then sign in.');
-      router.replace('/auth/worker/login');
-      return;
-    }
-    router.replace('/auth/worker/pending');
   };
 
   return (
     <AuthShell
-      title="Create worker account"
-      subtitle="Nurses and ward assistants only."
+      title="Join Bridge Hive"
+      subtitle="Create a worker account for Registered Nurses and Ward Assistants across Cyprus."
       centered={false}
       footer={
         <View style={styles.footer}>
@@ -118,22 +141,54 @@ export default function WorkerRegisterScreen() {
 
       {step === 2 ? (
         <View style={styles.fields}>
-          <Text style={styles.section}>Your role</Text>
-          <View style={styles.chips}>
-            {(Object.keys(WORKER_ROLE_LABELS) as WorkerRole[]).map((role) => (
-              <Chip
-                key={role}
-                label={WORKER_ROLE_LABELS[role]}
-                selected={workerRole === role}
-                onPress={() => setWorkerRole(role)}
-              />
-            ))}
-          </View>
+          <Text style={styles.section}>Choose your professional role</Text>
+          <Text style={styles.hint}>
+            Selection uses a clear label and description — not color alone. This value is sent to
+            the server unchanged.
+          </Text>
+          {(
+            [
+              {
+                role: 'registered_nurse' as WorkerRole,
+                title: WORKER_ROLE_LABELS.registered_nurse,
+                description:
+                  'Licensed nursing professionals eligible for RN-rated clinical shifts.',
+              },
+              {
+                role: 'ward_assistant' as WorkerRole,
+                title: WORKER_ROLE_LABELS.ward_assistant,
+                description:
+                  'Ward assistants supporting patient care on eligible assistant shifts.',
+              },
+            ] as const
+          ).map((option) => {
+            const selected = workerRole === option.role;
+            return (
+              <Pressable
+                key={option.role}
+                onPress={() => setWorkerRole(option.role)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+                accessibilityLabel={option.title}
+                accessibilityHint={option.description}
+                style={[styles.roleCard, selected && styles.roleCardSelected]}
+              >
+                <View style={[styles.roleIcon, selected && styles.roleIconSelected]}>
+                  <Text style={styles.roleCheck}>{selected ? '✓' : ''}</Text>
+                </View>
+                <View style={styles.roleCopy}>
+                  <Text style={styles.roleTitle}>{option.title}</Text>
+                  <Text style={styles.roleBody}>{option.description}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
           <TextInput
             label="Short bio (optional)"
             value={bio}
             onChangeText={setBio}
             multiline
+            helpText="Optional context for organizations reviewing your profile."
           />
         </View>
       ) : null}
@@ -153,12 +208,20 @@ export default function WorkerRegisterScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <View style={styles.actions}>
-        <Button label="Back" variant="secondary" onPress={back} />
+        <Button label="Back" variant="secondary" onPress={back} disabled={submitting} />
         {step < STEPS.length ? (
-          <Button label="Continue" variant="brand" onPress={next} />
+          <Button label="Continue" variant="primary" onPress={next} />
         ) : (
-          <Button label="Create account" variant="brand" loading={submitting} onPress={onSubmit} />
+          <Button
+            label="Create account"
+            variant="primary"
+            loading={submitting}
+            onPress={() => void onSubmit()}
+          />
         )}
+        {step === 1 ? (
+          <GoogleSignInButton onSuccess={() => router.replace('/')} />
+        ) : null}
       </View>
     </AuthShell>
   );
@@ -178,7 +241,52 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  roleCard: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    backgroundColor: colors.card,
+    minHeight: 88,
+    alignItems: 'flex-start',
+  },
+  roleCardSelected: {
+    borderColor: colors.tealStrong,
+    backgroundColor: colors.tealSoft,
+  },
+  roleIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  roleIconSelected: {
+    backgroundColor: colors.tealStrong,
+    borderColor: colors.tealStrong,
+  },
+  roleCheck: {
+    color: colors.white,
+    fontFamily: typography.fonts.bold,
+    fontSize: 14,
+  },
+  roleCopy: { flex: 1, gap: 4, minWidth: 0 },
+  roleTitle: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 16,
+    color: colors.text,
+  },
+  roleBody: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
   hint: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
@@ -204,11 +312,11 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: typography.fonts.regular,
     fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
+    color: colors.textMuted,
   },
   footerLink: {
     fontFamily: typography.fonts.semibold,
     fontSize: 16,
-    color: colors.yellow,
+    color: colors.tealStrong,
   },
 });

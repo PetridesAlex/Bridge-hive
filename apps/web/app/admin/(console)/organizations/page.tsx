@@ -61,10 +61,25 @@ export default async function OrganizationsPage({
     ...(params.q?.trim() ? { p_search: params.q.trim() } : {}),
     ...(statusFilter ? { p_status: statusFilter } : {}),
     ...(typeFilter ? { p_organization_type: typeFilter } : {}),
-    p_sort: sort === 'oldest' ? 'oldest' : 'newest',
+    p_sort:
+      statusFilter === 'under_review'
+        ? 'oldest'
+        : sort === 'oldest'
+          ? 'oldest'
+          : 'newest',
     p_limit: PAGE_SIZE,
     p_offset: (page - 1) * PAGE_SIZE,
   });
+
+  const awaitingResult =
+    !statusFilter && page === 1
+      ? await supabase.rpc('list_admin_organizations', {
+          p_status: 'under_review',
+          p_sort: 'oldest',
+          p_limit: 10,
+          p_offset: 0,
+        })
+      : { data: null, error: null };
 
   if (error) {
     return (
@@ -89,6 +104,9 @@ export default async function OrganizationsPage({
     last_activity: string;
     total_count: number;
   }>;
+
+  const awaitingRows = (awaitingResult.data ?? []) as typeof rows;
+  const awaitingCount = Number(awaitingRows[0]?.total_count ?? 0);
 
   const total = rows[0]?.total_count ?? 0;
   const totalPages = Math.max(1, Math.ceil(Number(total) / PAGE_SIZE));
@@ -115,6 +133,58 @@ export default async function OrganizationsPage({
           Create organization
         </Link>
       </div>
+
+      {awaitingCount > 0 && !statusFilter ? (
+        <section className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">
+                Organizations awaiting review ({awaitingCount})
+              </h3>
+              <p className="text-sm text-slate-600">
+                Oldest submissions first. Opening a notice does not approve.
+              </p>
+            </div>
+            <Link
+              href="/admin/organizations?status=under_review&sort=oldest"
+              className="text-sm font-medium text-amber-800 hover:underline"
+            >
+              View full queue
+            </Link>
+          </div>
+          <ul className="divide-y divide-amber-100 rounded-lg border border-amber-100 bg-white">
+            {awaitingRows.map((row) => (
+              <li
+                key={row.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+              >
+                <div>
+                  <p className="font-medium text-slate-900">{row.display_name}</p>
+                  <p className="text-xs text-slate-500">
+                    {ORGANIZATION_TYPE_LABELS[row.organization_type] ??
+                      row.organization_type}{' '}
+                    · activity {formatDateTime(row.last_activity)}
+                  </p>
+                </div>
+                <Link
+                  href={`/admin/organizations/${row.id}`}
+                  className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white"
+                >
+                  Review
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {statusFilter === 'under_review' ? (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          Showing organizations with status under_review (oldest first). Approve
+          or reject from the organization detail page — reading a notice never
+          activates an organization.
+        </p>
+      ) : null}
 
       <form className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-sm">
@@ -200,7 +270,9 @@ export default async function OrganizationsPage({
                             ? 'danger'
                             : row.status === 'rejected'
                               ? 'danger'
-                              : 'muted'
+                              : row.status === 'under_review'
+                                ? 'warning'
+                                : 'muted'
                       }
                     >
                       {ORG_STATUS_LABELS[row.status as OrgStatus] ?? row.status}
@@ -233,6 +305,9 @@ export default async function OrganizationsPage({
               </div>
               <div className="mt-3 text-sm text-slate-500">
                 Created {formatDateTime(row.created_at)}
+                {row.status === 'under_review'
+                  ? ` · Last activity ${formatDateTime(row.last_activity)}`
+                  : ''}
               </div>
             </article>
           ))}

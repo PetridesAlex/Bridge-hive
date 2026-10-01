@@ -8,6 +8,18 @@ const nextConfig: NextConfig = {
   },
   // Monorepo: resolve workspace packages from the repo root.
   outputFileTracingRoot: path.join(__dirname, '../..'),
+  async headers() {
+    return [
+      {
+        source: '/auth/confirm',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, max-age=0' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

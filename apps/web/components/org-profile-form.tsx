@@ -414,6 +414,14 @@ export function OrgProfileForm({
             </div>
           </div>
 
+          {canSubmitForReview ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+              Completing required fields is not approval. Click{' '}
+              <strong>Submit for review</strong> when ready — Bridge Hive must
+              review before your organization becomes active.
+            </div>
+          ) : null}
+
           {safeError ? (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
               {safeError}
@@ -421,7 +429,8 @@ export function OrgProfileForm({
           ) : null}
           {updateState.success && !submitState.success ? (
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-900">
-              Profile updated successfully.
+              Profile updated successfully. Completeness is not approval —
+              submit for review when ready.
             </div>
           ) : null}
           {submitState.success ? (
@@ -431,9 +440,6 @@ export function OrgProfileForm({
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            <Button type="submit" formAction={updateAction} disabled={busy}>
-              {isUpdating ? 'Saving...' : 'Save changes'}
-            </Button>
             {canSubmitForReview ? (
               <Button
                 type="submit"
@@ -444,6 +450,14 @@ export function OrgProfileForm({
                 {isSubmitting ? 'Submitting...' : 'Submit for review'}
               </Button>
             ) : null}
+            <Button
+              type="submit"
+              formAction={updateAction}
+              disabled={busy}
+              variant={canSubmitForReview ? 'outline' : 'default'}
+            >
+              {isUpdating ? 'Saving...' : 'Save changes'}
+            </Button>
           </div>
         </CardContent>
       </Card>

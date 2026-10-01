@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { BackLink } from '@/components/org/back-link';
 import { EmptyState } from '@/components/empty-state';
+import { PageHeader } from '@/components/org/page-header';
 import { PermissionGuard } from '@/components/permission-guard';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { requireOrgMembership } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -35,18 +35,40 @@ export default async function LocationDetailPage({
     .eq('location_id', location.id)
     .order('name');
 
+  let existingImageUrl: string | null = null;
+  const imagePath =
+    location && 'image_path' in location
+      ? (location.image_path as string | null)
+      : null;
+  if (imagePath) {
+    const { data: signed } = await supabase.storage
+      .from('location-images')
+      .createSignedUrl(imagePath, 60 * 15);
+    existingImageUrl = signed?.signedUrl ?? null;
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <Button variant="ghost" size="sm" asChild className="mb-2 -ml-2">
-          <Link href={`/org/${slug}/locations`}>← Locations</Link>
-        </Button>
-        <h2 className="text-2xl font-semibold text-slate-900">{location.name}</h2>
-        <p className="text-sm text-slate-600">
-          {[location.address_line1, location.city, location.postal_code]
-            .filter(Boolean)
-            .join(', ') || 'No address set'}
-        </p>
+      <div className="space-y-3">
+        <BackLink href={`/org/${slug}/locations`} label="Locations" />
+        <div className="flex flex-wrap items-start gap-4">
+          {existingImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={existingImageUrl}
+              alt=""
+              className="h-20 w-28 shrink-0 rounded-2xl object-cover shadow-sm ring-1 ring-bh-border"
+            />
+          ) : null}
+          <PageHeader
+            title={location.name}
+            subtitle={
+              [location.address_line1, location.city, location.postal_code]
+                .filter(Boolean)
+                .join(', ') || 'No address set'
+            }
+          />
+        </div>
       </div>
 
       <PermissionGuard allowed={ctx.capabilities.canManageLocations}>
@@ -55,13 +77,19 @@ export default async function LocationDetailPage({
             <CardTitle>Edit location</CardTitle>
           </CardHeader>
           <CardContent>
-            <LocationForm slug={slug} location={location} mode="edit" />
+            <LocationForm
+              slug={slug}
+              organizationId={ctx.org.id}
+              location={location}
+              mode="edit"
+              existingImageUrl={existingImageUrl}
+            />
           </CardContent>
         </Card>
       </PermissionGuard>
 
       <section className="space-y-4">
-        <h3 className="text-lg font-semibold text-slate-900">Wards</h3>
+        <h3 className="text-lg font-semibold text-bh-text">Wards</h3>
 
         {!wards?.length ? (
           <EmptyState
@@ -73,17 +101,21 @@ export default async function LocationDetailPage({
             {wards.map((ward) => (
               <li
                 key={ward.id}
-                className="rounded-xl border border-slate-200 bg-white p-4"
+                className="rounded-xl border border-bh-border bg-bh-surface p-4"
               >
                 <div className="mb-3">
-                  <p className="font-medium text-slate-900">{ward.name}</p>
+                  <p className="font-medium text-bh-text">{ward.name}</p>
                   {ward.instructions ? (
-                    <p className="mt-1 text-sm text-slate-600">{ward.instructions}</p>
+                    <p className="mt-1 text-sm text-bh-text-muted">
+                      {ward.instructions}
+                    </p>
                   ) : null}
                 </div>
                 <PermissionGuard allowed={ctx.capabilities.canManageWards}>
                   <details className="text-sm">
-                    <summary className="cursor-pointer text-slate-600">Edit ward</summary>
+                    <summary className="cursor-pointer text-bh-text-muted">
+                      Edit ward
+                    </summary>
                     <div className="mt-3">
                       <WardForm
                         slug={slug}

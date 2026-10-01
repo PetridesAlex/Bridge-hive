@@ -1,9 +1,19 @@
-import { ORG_STATUS_LABELS, orgOperationalBlockedMessage } from '@bridge-hive/domain';
+import { Suspense } from 'react';
 
-import { OrgProfileForm } from '@/components/org-profile-form';
+import {
+  ORG_STATUS_LABELS,
+  orgOperationalBlockedMessage,
+  orgPendingSubmitMessage,
+  orgProfileCompleteness,
+  type OrgRole,
+  type OrgStatus,
+} from '@bridge-hive/domain';
+import { isOwnedOrganizationLogoPath } from '@bridge-hive/domain';
+
+import { OrganizationSettingsView } from '@/components/org/organization-settings-view';
+import { PageHeader } from '@/components/org/page-header';
+import { StatusBanner } from '@/components/org/dashboard-widgets';
 import { requireOrgMembership } from '@/lib/auth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { roleLabel } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function OrgSettingsPage({
@@ -32,87 +42,80 @@ export default async function OrgSettingsPage({
     billing_email: string | null;
     primary_contact_name: string | null;
     primary_contact_email: string | null;
+    registration_number?: string | null;
+    timezone?: string | null;
+    logo_path?: string | null;
+    submitted_at?: string | null;
+    reviewed_at?: string | null;
+    status_reason?: string | null;
   } | null;
 
-  const statusMessage = orgOperationalBlockedMessage(ctx.org.status);
+  const logoPath = orgDetail?.logo_path ?? ctx.org.logo_path ?? null;
+  let logoUrl: string | null = null;
+  if (logoPath && isOwnedOrganizationLogoPath(ctx.org.id, logoPath)) {
+    const { data: signed } = await supabase.storage
+      .from('organization-logos')
+      .createSignedUrl(logoPath, 60 * 15);
+    logoUrl = signed?.signedUrl ?? null;
+  }
+
+  const profileComplete =
+    orgProfileCompleteness({
+      legalName: orgDetail?.legal_name ?? ctx.org.legal_name,
+      displayName: orgDetail?.display_name ?? ctx.org.display_name,
+      primaryContactName:
+        orgDetail?.primary_contact_name ?? ctx.org.primary_contact_name,
+      primaryContactEmail:
+        orgDetail?.primary_contact_email ?? ctx.org.primary_contact_email,
+    }).complete === 4;
+  const statusMessage =
+    orgPendingSubmitMessage({
+      status: ctx.org.status,
+      profileComplete,
+    }) ?? orgOperationalBlockedMessage(ctx.org.status);
   const canEdit = ctx.capabilities.canEditProfile;
+  const canManageBranding = ctx.membership.role === 'org_admin';
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">Settings</h2>
-        <p className="text-sm text-slate-600">
-          {canEdit
-            ? 'Update your organization profile and submit for review.'
-            : 'Organization profile information.'}
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        eyebrow="Organization"
+        title="Settings"
+        subtitle="Profile, branding, access, billing contact, and verification — in one place."
+      />
 
       {statusMessage ? (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
-          <p className="font-medium">
-            Status: {ORG_STATUS_LABELS[ctx.org.status]}
-          </p>
-          <p className="mt-1">{statusMessage}</p>
-          {ctx.org.status === 'under_review' ? (
-            <p className="mt-1">Organization submitted for review.</p>
-          ) : null}
-        </div>
+        <StatusBanner
+          title={`Status: ${ORG_STATUS_LABELS[ctx.org.status]}`}
+          body={
+            ctx.org.status === 'rejected' && orgDetail?.status_reason
+              ? `${statusMessage} ${orgDetail.status_reason}`
+              : statusMessage
+          }
+          tone={
+            ctx.org.status === 'rejected'
+              ? 'warning'
+              : ctx.org.status === 'suspended' || ctx.org.status === 'closed'
+                ? 'danger'
+                : 'info'
+          }
+        />
       ) : null}
 
-      {orgDetail ? (
-        <OrgProfileForm
+      <Suspense fallback={<p className="text-sm text-bh-text-secondary">Loading settings…</p>}>
+        <OrganizationSettingsView
+          slug={slug}
           organizationId={ctx.org.id}
-          initialData={{
-            legal_name: orgDetail.legal_name,
-            display_name: orgDetail.display_name,
-            organization_type: orgDetail.organization_type,
-            address_line1: orgDetail.address_line1,
-            address_line2: orgDetail.address_line2,
-            city: orgDetail.city,
-            postal_code: orgDetail.postal_code,
-            country_code: orgDetail.country_code,
-            tax_vat_number: orgDetail.tax_vat_number,
-            billing_email: orgDetail.billing_email,
-            primary_contact_name: orgDetail.primary_contact_name,
-            primary_contact_email: orgDetail.primary_contact_email,
-          }}
+          status={ctx.org.status as OrgStatus}
+          role={ctx.membership.role as OrgRole}
+          timezone={ctx.org.timezone}
+          orgDetail={orgDetail}
+          logoUrl={logoUrl}
+          canEditProfile={canEdit}
           canSubmitForReview={ctx.capabilities.canSubmitForReview}
-          readOnly={!canEdit}
+          canManageBranding={canManageBranding}
         />
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Organization</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <p className="text-slate-500">Display name</p>
-              <p className="font-medium">{ctx.org.display_name}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Legal name</p>
-              <p className="font-medium">{ctx.org.legal_name}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Slug</p>
-              <p className="font-medium">{ctx.org.slug}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Timezone</p>
-              <p className="font-medium">{ctx.org.timezone}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Billing email</p>
-              <p className="font-medium">{ctx.org.billing_email ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Your role</p>
-              <p className="font-medium">{roleLabel(ctx.membership.role)}</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      </Suspense>
     </div>
   );
 }

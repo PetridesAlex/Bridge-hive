@@ -1,4 +1,5 @@
 import {
+  daysUntilDue,
   dueDateCopy,
   isWorkerInvoicePayable,
   normalizeRouteParam,
@@ -19,6 +20,7 @@ import {
   AppState,
   type AppStateStatus,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,9 +28,17 @@ import {
 } from 'react-native';
 
 import { AppScreen } from '@/components/ui/AppScreen';
+import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { KeyValueRow } from '@/components/ui/KeyValueRow';
+import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
+import { MoneySummary } from '@/components/ui/MoneySummary';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { StickyActionBar } from '@/components/ui/StickyActionBar';
+import { Surface } from '@/components/ui/Surface';
+import { type StatusTone } from '@/components/ui/StatusBadge';
+import { APP_CONFIG } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
 import { useInvoice } from '@/hooks/useInvoice';
 import { startWorkerInvoiceCheckout } from '@/lib/invoices';
@@ -40,6 +50,36 @@ function hoursFromMinutes(minutes: number): string {
   const m = minutes % 60;
   if (m === 0) return `${h}h`;
   return `${h}h ${m}m`;
+}
+
+function toneForStatus(status: WorkerInvoiceStatus): StatusTone {
+  if (status === 'past_due') return 'danger';
+  if (status === 'paid') return 'success';
+  if (status === 'payment_processing') return 'warning';
+  if (status === 'void' || status === 'uncollectible') return 'neutral';
+  return 'info';
+}
+
+function iconForStatus(status: WorkerInvoiceStatus) {
+  if (status === 'past_due') return 'alert-circle' as const;
+  if (status === 'paid') return 'checkmark-circle' as const;
+  if (status === 'payment_processing') return 'time' as const;
+  return 'document-text' as const;
+}
+
+function invoiceStateLine(
+  status: WorkerInvoiceStatus,
+  dueAt: string,
+  paidAt: string | null | undefined,
+): string {
+  if (status === 'paid' && paidAt) {
+    return `Paid on ${formatShortDate(paidAt)}`;
+  }
+  if (status === 'past_due') {
+    const days = Math.abs(daysUntilDue(dueAt));
+    return days === 1 ? 'Past due by 1 day' : `Past due by ${days} days`;
+  }
+  return `Due ${formatShortDate(dueAt)} · ${dueDateCopy(dueAt)}`;
 }
 
 export default function InvoiceDetailScreen() {
@@ -74,7 +114,6 @@ export default function InvoiceDetailScreen() {
     }
   }, [invoice?.status]);
 
-  // Bounded pending confirmation poll (webhook remains authoritative).
   useEffect(() => {
     if (!pendingHint || !user?.id) return;
     if (!invoice?.id) return;
@@ -159,7 +198,6 @@ export default function InvoiceDetailScreen() {
       return;
     }
     if (Platform.OS === 'web') {
-      // Same-tab navigation preserves auth session for the return URL.
       window.location.assign(result.url);
     } else {
       await Linking.openURL(result.url);
@@ -171,8 +209,8 @@ export default function InvoiceDetailScreen() {
 
   if (uiState === 'auth_loading' || uiState === 'invoice_loading') {
     return (
-      <AppScreen edges={['top']}>
-        <ScreenHeader title="Invoice" showBack onBack={() => router.back()} />
+      <AppScreen edges={['top']} contentKind="detail">
+        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
         <ActivityIndicator color={colors.navy} style={{ marginTop: spacing.xl }} />
       </AppScreen>
     );
@@ -180,8 +218,8 @@ export default function InvoiceDetailScreen() {
 
   if (uiState === 'sign_in_required') {
     return (
-      <AppScreen edges={['top']}>
-        <ScreenHeader title="Invoice" showBack onBack={() => router.back()} />
+      <AppScreen edges={['top']} contentKind="detail">
+        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
         <EmptyState
           title="Sign in again"
           description="Your session is not available on this page. Sign in to view your invoice and payment status."
@@ -194,8 +232,8 @@ export default function InvoiceDetailScreen() {
 
   if (uiState === 'query_error' || uiState === 'offline') {
     return (
-      <AppScreen edges={['top']}>
-        <ScreenHeader title="Invoice" showBack onBack={() => router.back()} />
+      <AppScreen edges={['top']} contentKind="detail">
+        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
         <EmptyState
           title="Could not load invoice"
           description={error ?? 'Check your connection and try again.'}
@@ -212,8 +250,8 @@ export default function InvoiceDetailScreen() {
     !invoice
   ) {
     return (
-      <AppScreen edges={['top']}>
-        <ScreenHeader title="Invoice" showBack onBack={() => router.back()} />
+      <AppScreen edges={['top']} contentKind="detail">
+        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
         <EmptyState
           title="Invoice not found"
           description="This invoice is unavailable."
@@ -235,211 +273,230 @@ export default function InvoiceDetailScreen() {
     (uiState === 'payment_confirmation_pending' ||
       (pendingHint && status !== 'paid' && pollTimedOut)) &&
     status !== 'paid';
+  const payLabel = `Pay ${formatMoney(invoice.commission_amount_minor, invoice.currency)}`;
+  const commissionContext = `${(invoice.commission_rate_bps / 100).toFixed(0)}% of ${formatMoney(
+    invoice.gross_amount_minor,
+    invoice.currency,
+  )} approved gross pay`;
 
   return (
-    <AppScreen scroll={false} edges={['top']}>
+    <AppScreen scroll={false} edges={['top']} contentKind="detail">
       <ScreenHeader
-        title={invoice.invoice_number}
-        subtitle="Bridge Hive commission invoice"
+        title="Invoice details"
+        subtitle={invoice.invoice_number}
         showBack
         onBack={() => router.back()}
+        titleSize="detail"
       />
-      <ScrollView contentContainerStyle={styles.content}>
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          payable ? styles.contentWithSticky : null,
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         {showPendingBanner ? (
-          <View style={styles.pending}>
-            <Text style={styles.pendingText}>
-              {pollTimedOut
+          <Banner
+            variant="warning"
+            title={PAYMENT_CONFIRMATION_PENDING}
+            body={
+              pollTimedOut
                 ? PAYMENT_CONFIRMATION_SLOW
-                : PAYMENT_CONFIRMATION_PENDING}
-            </Text>
-            <Text style={styles.hint}>
-              Status updates after payment confirmation. This page does not mark the
-              invoice paid from the return link alone.
-            </Text>
-            <Button
-              label="Refresh status"
-              variant="secondary"
-              onPress={() => void refresh()}
-            />
-            {pollTimedOut ? (
-              <Button
-                label="Back to invoices"
-                variant="ghost"
-                onPress={() => router.replace('/(tabs)/invoices')}
-              />
-            ) : null}
-          </View>
+                : 'Status updates after payment confirmation. This page does not mark the invoice paid from the return link alone.'
+            }
+            actionLabel="Refresh status"
+            onAction={() => void refresh()}
+            secondaryActionLabel={pollTimedOut ? 'Back to invoices' : undefined}
+            onSecondaryAction={
+              pollTimedOut ? () => router.replace('/(tabs)/invoices') : undefined
+            }
+          />
         ) : null}
 
-        <View style={styles.card}>
-          <Text style={styles.section}>Shift</Text>
-          <Text style={styles.value}>{shift?.title?.trim() || 'Shift'}</Text>
-          <Text style={styles.meta}>{orgName}</Text>
-          {shift?.starts_at ? (
-            <Text style={styles.meta}>{formatDate(shift.starts_at)}</Text>
-          ) : null}
+        <MoneySummary
+          label="Bridge Hive commission"
+          amountMinor={invoice.commission_amount_minor}
+          currency={invoice.currency}
+          statusLabel={workerInvoiceStatusLabel(status)}
+          statusTone={toneForStatus(status)}
+          statusIcon={iconForStatus(status)}
+          context={commissionContext}
+          stateLine={invoiceStateLine(status, invoice.due_at, invoice.paid_at)}
+        />
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Shift</Text>
+          <ListGroup>
+            <View style={styles.groupPad}>
+              <KeyValueRow label="Shift" value={shift?.title?.trim() || 'Shift'} />
+            </View>
+            <ListGroupSeparator />
+            <View style={styles.groupPad}>
+              <KeyValueRow label="Organization" value={orgName} />
+            </View>
+            <ListGroupSeparator />
+            <View style={styles.groupPad}>
+              <KeyValueRow
+                label="Shift date"
+                value={shift?.starts_at ? formatDate(shift.starts_at) : '—'}
+              />
+            </View>
+            <ListGroupSeparator />
+            <View style={styles.groupPad}>
+              <KeyValueRow
+                label="Approved hours"
+                value={hoursFromMinutes(invoice.approved_minutes)}
+              />
+            </View>
+            <ListGroupSeparator />
+            <View style={styles.groupPad}>
+              <KeyValueRow
+                label="Hourly rate"
+                value={`${formatMoney(invoice.rate_minor, invoice.currency)} / hour`}
+              />
+            </View>
+          </ListGroup>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.section}>Amounts</Text>
-          <Row label="Approved hours" value={hoursFromMinutes(invoice.approved_minutes)} />
-          <Row
-            label="Shift rate"
-            value={`${formatMoney(invoice.rate_minor, invoice.currency)} / hour`}
-          />
-          <Row
-            label="Approved gross pay"
-            value={formatMoney(invoice.gross_amount_minor, invoice.currency)}
-          />
-          <Row
-            label="Commission rate"
-            value={`${(invoice.commission_rate_bps / 100).toFixed(2)}%`}
-          />
-          <Row
-            label="Bridge Hive commission"
-            value={formatMoney(invoice.commission_amount_minor, invoice.currency)}
-            emphasize
-          />
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Calculation</Text>
+          <ListGroup>
+            <View style={styles.groupPad}>
+              <KeyValueRow
+                label="Approved gross pay"
+                value={formatMoney(invoice.gross_amount_minor, invoice.currency)}
+              />
+            </View>
+            <ListGroupSeparator />
+            <View style={styles.groupPad}>
+              <KeyValueRow
+                label="Commission rate"
+                value={`${(invoice.commission_rate_bps / 100).toFixed(2)}%`}
+              />
+            </View>
+            <View style={styles.finalDivider} />
+            <View style={styles.groupPad}>
+              <KeyValueRow
+                label="Bridge Hive commission"
+                value={formatMoney(invoice.commission_amount_minor, invoice.currency)}
+                emphasize
+              />
+            </View>
+          </ListGroup>
         </View>
 
-        <View style={styles.info}>
-          <Text style={styles.infoText}>{WORKER_COMMISSION_EXPLAINER}</Text>
+        <Surface variant="tinted">
+          <Text style={styles.explainer}>{WORKER_COMMISSION_EXPLAINER}</Text>
+        </Surface>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Invoice timeline</Text>
+          <ListGroup>
+            <View style={styles.groupPad}>
+              <KeyValueRow label="Issued" value={formatShortDate(invoice.issued_at)} />
+            </View>
+            <ListGroupSeparator />
+            <View style={styles.groupPad}>
+              <KeyValueRow label="Due" value={formatShortDate(invoice.due_at)} />
+            </View>
+            {invoice.paid_at ? (
+              <>
+                <ListGroupSeparator />
+                <View style={styles.groupPad}>
+                  <KeyValueRow label="Paid" value={formatShortDate(invoice.paid_at)} />
+                </View>
+              </>
+            ) : null}
+          </ListGroup>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.section}>Status</Text>
-          <Row label="Issued" value={formatShortDate(invoice.issued_at)} />
-          <Row
-            label="Due"
-            value={`${formatShortDate(invoice.due_at)} · ${dueDateCopy(invoice.due_at)}`}
-          />
-          <Row label="Status" value={workerInvoiceStatusLabel(status)} />
-          {invoice.paid_at ? (
-            <Row label="Paid" value={formatShortDate(invoice.paid_at)} />
-          ) : null}
-        </View>
+        <Pressable
+          style={styles.helpRow}
+          onPress={() =>
+            Linking.openURL(
+              `mailto:${APP_CONFIG.supportEmail}?subject=${encodeURIComponent('Commission invoice')}`,
+            )
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Contact support"
+        >
+          <View style={styles.helpCopy}>
+            <Text style={styles.helpTitle}>Need help with this invoice?</Text>
+            <Text style={styles.helpAction}>Contact support</Text>
+          </View>
+        </Pressable>
 
-        {payError ? <Text style={styles.error}>{payError}</Text> : null}
+        {payError && !payable ? <Text style={styles.error}>{payError}</Text> : null}
+      </ScrollView>
 
-        {payable ? (
+      {payable ? (
+        <StickyActionBar>
+          {payError ? <Text style={styles.error}>{payError}</Text> : null}
           <Button
-            label="Pay invoice"
-            variant="brand"
+            label={payLabel}
+            variant="primary"
             loading={paying}
             onPress={() => void onPay()}
           />
-        ) : null}
-
-        <Button
-          label="Contact support"
-          variant="ghost"
-          onPress={() =>
-            Linking.openURL('mailto:support@bridgehive.local?subject=Commission%20invoice')
-          }
-        />
-      </ScrollView>
+        </StickyActionBar>
+      ) : null}
     </AppScreen>
-  );
-}
-
-function Row({
-  label,
-  value,
-  emphasize,
-}: {
-  label: string;
-  value: string;
-  emphasize?: boolean;
-}) {
-  return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={[styles.rowValue, emphasize ? styles.emphasize : null]}>{value}</Text>
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
   content: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.huge,
-    gap: spacing.md,
+    paddingBottom: spacing.xxxl,
+    gap: spacing.lg,
   },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
+  contentWithSticky: {
+    paddingBottom: spacing.huge,
   },
   section: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  value: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    color: colors.navy,
-  },
-  meta: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  rowLabel: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    color: colors.textMuted,
-    flex: 1,
-  },
-  rowValue: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    color: colors.navy,
-    textAlign: 'right',
-    flexShrink: 1,
-  },
-  emphasize: {
-    fontFamily: typography.fonts.bold,
-  },
-  info: {
-    backgroundColor: colors.blueLight,
-    borderRadius: 12,
-    padding: spacing.md,
-  },
-  infoText: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.navy,
-  },
-  pending: {
-    backgroundColor: colors.warningLight,
-    borderRadius: 12,
-    padding: spacing.md,
     gap: spacing.sm,
   },
-  pendingText: {
+  sectionLabel: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 14,
-    color: colors.navy,
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
+    paddingHorizontal: 2,
   },
-  hint: {
+  groupPad: {
+    paddingHorizontal: spacing.lg,
+  },
+  finalDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.borderStrong,
+    marginTop: spacing.xs,
+  },
+  explainer: {
     fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.textMuted,
+    fontSize: typography.size.sm,
+    lineHeight: typography.lineHeight.sm,
+    color: colors.textSecondary,
+  },
+  helpRow: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+    minHeight: 44,
+  },
+  helpCopy: {
+    gap: 4,
+  },
+  helpTitle: {
+    fontFamily: typography.fonts.regular,
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
+  },
+  helpAction: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: typography.size.md,
+    color: colors.tealStrong,
   },
   error: {
     fontFamily: typography.fonts.regular,
-    fontSize: 12,
+    fontSize: typography.size.sm,
     color: colors.error,
   },
 });

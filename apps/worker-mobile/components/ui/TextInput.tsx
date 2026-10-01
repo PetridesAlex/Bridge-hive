@@ -14,22 +14,44 @@ import { colors, radii, spacing, typography } from '@/constants/theme';
 type Props = RNTextInputProps & {
   label: string;
   error?: string;
+  helpText?: string;
+  required?: boolean;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
-export function TextInput({ label, error, containerStyle, style, ...props }: Props) {
+/** Text field with visible label, optional help, and error message. */
+export function TextInput({
+  label,
+  error,
+  helpText,
+  required,
+  containerStyle,
+  style,
+  ...props
+}: Props) {
+  const labelText = required ? `${label} (required)` : label;
   return (
     <View style={[styles.wrap, containerStyle]}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label}>{labelText}</Text>
       <RNTextInput
         placeholderTextColor={colors.textMuted}
         style={[styles.input, error ? styles.inputError : null, style]}
+        accessibilityLabel={labelText}
         {...props}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : helpText ? (
+        <Text style={styles.help}>{helpText}</Text>
+      ) : null}
     </View>
   );
 }
+
+/** Preferred Phase 7A name. */
+export const TextField = TextInput;
 
 const styles = StyleSheet.create({
   wrap: {
@@ -38,7 +60,7 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: typography.fonts.semibold,
     fontSize: typography.size.sm,
-    color: colors.navy,
+    color: colors.text,
   },
   input: {
     minHeight: 48,
@@ -49,7 +71,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     fontFamily: typography.fonts.regular,
     fontSize: typography.size.md,
-    color: colors.navy,
+    color: colors.text,
     backgroundColor: colors.white,
   },
   inputError: {
@@ -59,5 +81,10 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.regular,
     fontSize: typography.size.xs,
     color: colors.error,
+  },
+  help: {
+    fontFamily: typography.fonts.regular,
+    fontSize: typography.size.xs,
+    color: colors.textMuted,
   },
 });

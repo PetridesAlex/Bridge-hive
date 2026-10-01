@@ -20,6 +20,7 @@ build/
 .next/
 .expo/
 .turbo/
+.tmp-jest/
 *.tsbuildinfo
 
 # OS / editor

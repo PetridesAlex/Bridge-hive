@@ -11,5 +11,9 @@
     "isolatedModules": true,
     "types": []
   },
-  "include": ["packages/domain/src/**/*.ts", "packages/supabase-types/src/**/*.ts"]
+  "include": [
+    "packages/domain/src/**/*.ts",
+    "packages/supabase-types/src/**/*.ts",
+    "packages/design-tokens/src/**/*.ts"
+  ]
 }

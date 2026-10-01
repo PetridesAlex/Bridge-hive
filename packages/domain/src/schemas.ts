@@ -242,7 +242,7 @@ export type ListVerificationApplicationsInput = z.infer<
 export const createOrganizationWithAdminInviteSchema = z.object({
   legalName: z.string().min(1).max(200),
   displayName: z.string().min(1).max(200),
-  slug: orgSlugSchema,
+  slug: orgSlugSchema.optional(),
   organizationType: organizationTypeSchema,
   timezone: z.string().min(1).default('Europe/Nicosia'),
   addressLine1: z.string().max(200).optional(),
@@ -254,6 +254,8 @@ export const createOrganizationWithAdminInviteSchema = z.object({
   billingEmail: z.string().email().optional(),
   contactPhone: z.string().max(40).optional(),
   adminEmail: z.string().email(),
+  adminFullName: z.string().trim().min(1).max(200).optional(),
+  requestKey: z.string().trim().min(8).max(128).optional(),
 });
 
 export const createOrganizationInvitationSchema = z.object({

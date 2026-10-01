@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import {
@@ -21,7 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { brandGradient, colors, spacing, typography } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
 import { layout, useLayout } from '@/hooks/useLayout';
 
 type Props = {
@@ -33,6 +32,7 @@ type Props = {
   centered?: boolean;
 };
 
+/** Light premium auth chrome — keep opacity animation non-essential. */
 export function AuthShell({
   title,
   subtitle,
@@ -42,21 +42,22 @@ export function AuthShell({
   centered = true,
 }: Props) {
   const { gutter } = useLayout();
-  const reveal = useSharedValue(0);
+  const reveal = useSharedValue(1);
 
   useEffect(() => {
+    reveal.value = 0.98;
     reveal.value = withDelay(40, withSpring(1, { damping: 16, stiffness: 160 }));
   }, [reveal]);
 
   const motion = useAnimatedStyle(() => ({
     opacity: reveal.value,
     transform: [
-      { translateY: interpolate(reveal.value, [0, 1], [18, 0], Extrapolation.CLAMP) },
+      { translateY: interpolate(reveal.value, [0.98, 1], [6, 0], Extrapolation.CLAMP) },
     ],
   }));
 
   return (
-    <LinearGradient colors={[...brandGradient]} style={styles.gradient}>
+    <View style={styles.root}>
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -71,7 +72,7 @@ export function AuthShell({
               accessibilityLabel="Go back"
             >
               <View style={styles.backBtn}>
-                <Ionicons name="chevron-back" size={20} color={colors.white} />
+                <Ionicons name="chevron-back" size={20} color={colors.navy} />
               </View>
             </Pressable>
           ) : null}
@@ -82,7 +83,7 @@ export function AuthShell({
               centered && styles.scrollCentered,
               !showBack && styles.scrollNoBack,
               {
-                paddingHorizontal: gutter,
+                paddingHorizontal: Math.max(gutter, 20),
                 maxWidth: layout.contentMaxWidth,
                 alignSelf: 'center',
                 width: '100%',
@@ -105,7 +106,7 @@ export function AuthShell({
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -127,7 +128,7 @@ export function AuthStepBar({ current, total }: { current: number; total: number
 }
 
 const styles = StyleSheet.create({
-  gradient: { flex: 1 },
+  root: { flex: 1, backgroundColor: colors.background },
   safe: { flex: 1 },
   flex: { flex: 1 },
   scroll: {
@@ -146,62 +147,60 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surfaceSubdued,
     alignItems: 'center',
     justifyContent: 'center',
   },
   hero: {
     marginBottom: spacing.xl,
     gap: spacing.sm,
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   mark: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: colors.yellow,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   markLetter: {
     fontFamily: typography.fonts.displayExtra,
-    fontSize: 26,
-    color: colors.navy,
+    fontSize: 22,
+    color: colors.yellow,
     letterSpacing: -0.5,
   },
   brand: {
     fontFamily: typography.fonts.semibold,
     fontSize: 12,
-    color: colors.yellow,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
+    color: colors.navy,
+    letterSpacing: 0.8,
   },
   title: {
-    fontFamily: typography.fonts.displayExtra,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.8,
-    color: colors.white,
-    textAlign: 'center',
+    fontFamily: typography.fonts.display,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.4,
+    color: colors.text,
   },
   subtitle: {
     fontFamily: typography.fonts.regular,
     fontSize: 15,
     lineHeight: 22,
-    color: 'rgba(255,255,255,0.68)',
-    maxWidth: 320,
-    textAlign: 'center',
+    color: colors.textSecondary,
+    maxWidth: 340,
   },
   card: {
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderRadius: 22,
+    backgroundColor: colors.card,
+    borderRadius: 16,
     padding: spacing.xl,
     gap: spacing.md,
-    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
   },
   stepBar: {
     flexDirection: 'row',
@@ -210,7 +209,7 @@ const styles = StyleSheet.create({
   },
   stepSeg: {
     flex: 1,
-    height: 4,
+    height: 3,
     borderRadius: 2,
     backgroundColor: colors.border,
   },
@@ -218,6 +217,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
   },
   stepSegActive: {
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.navy,
   },
 });

@@ -53,7 +53,7 @@ export const BILLING_RESTRICTED_BANNER =
   'New shift access is paused because a commission invoice is overdue.';
 
 export const WORKER_COMMISSION_EXPLAINER =
-  'The hospital pays you the approved gross shift amount. This separate invoice is the 16% Bridge Hive platform commission.';
+  'The organization pays your approved gross shift amount separately. This invoice is the Bridge Hive platform commission.';
 
 export const PAYMENT_CONFIRMATION_PENDING =
   'Payment confirmation pending';

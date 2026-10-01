@@ -1,18 +1,25 @@
 import {
   accountSetupNextStep,
+  canSubmitWorkerVerificationPackage,
   credentialRequirementsForRole,
   credentialTypeLabel,
   documentProgressCounts,
   documentsSummaryLabel,
   finalApprovalSummaryLabel,
+  isOwnedAvatarPath,
   isWorkerAccountSetupRouteAllowed,
   isWorkerMarketplaceRoute,
+  invoicesMenuTrailingStatus,
+  personalInformationTrailingStatus,
   payoutAccountActionLabel,
   payoutSummaryLabel,
+  profileInitials,
   requiredCredentialTypesForRole,
   validateCredentialUpload,
   WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE,
   workerDocumentPackageLabel,
+  credentialsMenuTrailingStatus,
+  notificationsMenuTrailingStatus,
 } from '@bridge-hive/domain';
 
 describe('credential requirements', () => {
@@ -209,6 +216,50 @@ describe('Account Setup status labels', () => {
         payoutStatus: 'verified',
       }),
     ).toBe('Approved for marketplace access');
+    expect(
+      finalApprovalSummaryLabel({
+        verificationStatus: 'submitted',
+        documentsLabel: 'Under review',
+        payoutStatus: 'pending',
+      }),
+    ).toBe('Ready for final administrative approval');
+  });
+
+  it('gates package submit on uploaded required files and draft/rejected status', () => {
+    const withFiles = required.map((credentialType) => ({
+      credentialType,
+      status: 'pending' as const,
+      hasFile: true,
+    }));
+    expect(
+      canSubmitWorkerVerificationPackage({
+        role: 'registered_nurse',
+        credentials: withFiles,
+        verificationStatus: 'draft',
+      }),
+    ).toBe(true);
+    expect(
+      canSubmitWorkerVerificationPackage({
+        role: 'registered_nurse',
+        credentials: withFiles,
+        verificationStatus: 'submitted',
+      }),
+    ).toBe(false);
+    expect(
+      canSubmitWorkerVerificationPackage({
+        role: 'ward_assistant',
+        credentials: [],
+        verificationStatus: 'draft',
+      }),
+    ).toBe(false);
+    expect(
+      accountSetupNextStep({
+        documentsLabel: 'Submitted',
+        payoutStatus: null,
+        finalLabel: 'Waiting for document review',
+        canSubmitPackage: true,
+      }),
+    ).toMatch(/Submit your document package/i);
   });
 
   it('counts document progress by status', () => {
@@ -244,6 +295,8 @@ describe('Account Setup status labels', () => {
     expect(isWorkerAccountSetupRouteAllowed('/payout-setup')).toBe(true);
     expect(isWorkerAccountSetupRouteAllowed('/documents')).toBe(true);
     expect(isWorkerAccountSetupRouteAllowed('/auth/worker/pending')).toBe(true);
+    expect(isWorkerAccountSetupRouteAllowed('/auth/worker/reset-password')).toBe(true);
+    expect(isWorkerAccountSetupRouteAllowed('/auth/worker/check-email')).toBe(true);
     expect(isWorkerMarketplaceRoute('/(tabs)')).toBe(true);
     expect(isWorkerMarketplaceRoute('/shifts/abc')).toBe(true);
     expect(isWorkerAccountSetupRouteAllowed('/(tabs)/payments')).toBe(false);
@@ -266,5 +319,87 @@ describe('Account Setup status labels', () => {
     ].join(' ');
     expect(labels).not.toMatch(/CY\d{2}[A-Z0-9]+/i);
     expect(labels).not.toContain('IBAN');
+  });
+});
+
+describe('account hub helpers', () => {
+  const uid = 'a1111111-1111-4111-8111-111111111111';
+
+  it('validates owned avatar paths', () => {
+    expect(isOwnedAvatarPath(uid, `${uid}/v1.jpg`)).toBe(true);
+    expect(isOwnedAvatarPath(uid, `${uid}/photo.jpeg`)).toBe(true);
+    expect(isOwnedAvatarPath(uid, 'other/v1.jpg')).toBe(false);
+    expect(isOwnedAvatarPath(uid, `${uid}/../x.jpg`)).toBe(false);
+    expect(isOwnedAvatarPath(uid, `${uid}/v1.png`)).toBe(false);
+    expect(isOwnedAvatarPath(uid, null)).toBe(false);
+  });
+
+  it('builds initials and personal info trailing copy', () => {
+    expect(profileInitials('Alex Petrides')).toBe('AP');
+    expect(profileInitials('')).toBe('BH');
+    expect(personalInformationTrailingStatus('+357 99')).toBe('Complete');
+    expect(personalInformationTrailingStatus('')).toBe('Add phone');
+  });
+
+  it('builds credentials and invoice trailing statuses', () => {
+    expect(
+      credentialsMenuTrailingStatus({
+        role: 'registered_nurse',
+        credentials: [],
+      }),
+    ).toBe('Action required');
+    expect(
+      credentialsMenuTrailingStatus({
+        role: 'registered_nurse',
+        credentials: [
+          {
+            credentialType: 'identity_document_front',
+            status: 'verified',
+            hasFile: true,
+          },
+          {
+            credentialType: 'identity_document_back',
+            status: 'verified',
+            hasFile: true,
+          },
+          {
+            credentialType: 'nursing_licence',
+            status: 'verified',
+            hasFile: true,
+          },
+          {
+            credentialType: 'nursing_degree',
+            status: 'verified',
+            hasFile: true,
+          },
+          {
+            credentialType: 'tax_identification_proof',
+            status: 'verified',
+            hasFile: true,
+          },
+          {
+            credentialType: 'social_insurance_proof',
+            status: 'verified',
+            hasFile: true,
+          },
+        ],
+      }),
+    ).toMatch(/approved/);
+    expect(
+      invoicesMenuTrailingStatus([
+        { status: 'past_due', commission_amount_minor: 1600, currency: 'EUR' },
+      ]),
+    ).toContain('Past due');
+    expect(invoicesMenuTrailingStatus([{ status: 'paid', commission_amount_minor: 0 }])).toBe(
+      'All paid',
+    );
+    expect(notificationsMenuTrailingStatus(3)).toBe('3 unread');
+    expect(notificationsMenuTrailingStatus(0)).toBeNull();
+  });
+
+  it('allows personal information and support during account setup', () => {
+    expect(isWorkerAccountSetupRouteAllowed('/profile/personal-information')).toBe(true);
+    expect(isWorkerAccountSetupRouteAllowed('/support')).toBe(true);
+    expect(isWorkerAccountSetupRouteAllowed('/profile/app-information')).toBe(true);
   });
 });

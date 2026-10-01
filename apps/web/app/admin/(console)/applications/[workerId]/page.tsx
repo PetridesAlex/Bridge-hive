@@ -409,8 +409,19 @@ export default async function VerificationApplicationWorkspacePage({
           <CardContent className="space-y-3 text-sm">
             <p>
               Marketplace access requires approved required documents, an approved
-              payout account, and this separate action.
+              payout account, and this separate server action (
+              <code className="text-xs">set_worker_verification</code>
+              ). UI buttons cannot bypass those gates.
             </p>
+            {worker.verification_status === 'submitted' ||
+            worker.verification_status === 'under_review' ? (
+              <p className="text-slate-600">
+                Worker package status:{' '}
+                <span className="font-medium">{worker.verification_status}</span>
+                . Review credentials and payout below, then approve only when
+                the checklist is green.
+              </p>
+            ) : null}
             {canFinalVerify ? (
               <p className="font-medium text-emerald-700">
                 Ready for final approval

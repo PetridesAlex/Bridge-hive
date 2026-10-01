@@ -18,7 +18,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useCredentials } from '@/hooks/useCredentials';
 import {
   buildCredentialChecklist,
@@ -328,16 +328,15 @@ export default function DocumentsScreen() {
 
 const styles = StyleSheet.create({
   list: {
-    paddingHorizontal: spacing.lg,
     paddingBottom: spacing.huge,
     gap: spacing.md,
   },
   intro: {
     gap: spacing.sm,
     backgroundColor: colors.card,
-    borderRadius: 16,
+    borderRadius: radii.md,
     padding: spacing.lg,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   introTitle: {
@@ -353,11 +352,11 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: spacing.lg,
-    borderWidth: 1,
+    borderRadius: 12,
+    padding: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    gap: spacing.md,
+    gap: spacing.sm,
   },
   cardHeader: {
     flexDirection: 'row',

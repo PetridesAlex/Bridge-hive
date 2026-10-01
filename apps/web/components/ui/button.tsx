@@ -5,21 +5,23 @@ import { Slot } from '@radix-ui/react-slot';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-slate-900 text-white hover:bg-slate-800',
-        secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200',
-        outline: 'border border-slate-300 bg-white hover:bg-slate-50',
-        destructive: 'bg-red-600 text-white hover:bg-red-700',
-        ghost: 'hover:bg-slate-100',
-        link: 'text-slate-900 underline-offset-4 hover:underline',
+        default: 'bg-bh-sidebar text-white hover:bg-bh-sidebar-raised',
+        honey:
+          'bg-bh-honey text-bh-text hover:bg-bh-honey-strong focus-visible:ring-bh-honey shadow-sm',
+        secondary: 'bg-bh-subtle text-bh-text hover:bg-bh-border/60',
+        outline: 'border border-bh-border bg-bh-surface hover:bg-bh-subtle',
+        destructive: 'bg-bh-danger text-white hover:bg-bh-danger/90',
+        ghost: 'hover:bg-bh-subtle',
+        link: 'text-bh-teal-strong underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-4 py-2',
         sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-11 rounded-md px-8',
+        lg: 'h-11 rounded-xl px-6',
         icon: 'h-10 w-10',
       },
     },

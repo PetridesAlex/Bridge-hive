@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   '/sign-up',
   '/admin/sign-in',
   '/organization-invitations/accept',
+  '/activate-organization-account',
 ];
 
 function isPublicPath(pathname: string): boolean {
@@ -19,6 +20,12 @@ function isPublicPath(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request);
   const { pathname } = request.nextUrl;
+
+  if (pathname === '/auth/confirm' || pathname.startsWith('/auth/confirm/')) {
+    supabaseResponse.headers.set('Cache-Control', 'no-store, max-age=0');
+    supabaseResponse.headers.set('Referrer-Policy', 'no-referrer');
+    supabaseResponse.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  }
 
   if (!user && !isPublicPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();

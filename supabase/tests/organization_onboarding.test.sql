@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(58);
+select plan(66);
 
 -- ---------------------------------------------------------------------------
 -- Seed users
@@ -1027,6 +1027,132 @@ select ok(
       and not (after ? 'tax_vat')
   ),
   'organization_created audit exists without token/tax keys'
+);
+
+-- ---------------------------------------------------------------------------
+-- 18. Newly created pending org (no accepted member) appears in admin list
+-- ---------------------------------------------------------------------------
+
+create temporary table oo_pending_list (
+  organization_id uuid,
+  invitation_id uuid
+) on commit drop;
+
+select lives_ok(
+  $$ insert into oo_pending_list (organization_id, invitation_id)
+     select
+       (j->>'organization_id')::uuid,
+       (j->>'invitation_id')::uuid
+     from (
+       select public.create_organization_with_admin_invite(
+         p_legal_name := 'Pending List Hospital Ltd',
+         p_display_name := 'Pending List Hospital',
+         p_slug := 'pending-list-hospital',
+         p_organization_type := 'hospital'::public.organization_type,
+         p_admin_email := 'other@test.local'
+       ) as j
+     ) s $$,
+  'super admin can create a second pending organization for list coverage'
+);
+
+select ok(
+  (
+    select
+      r.status::text = 'pending'
+      and r.member_count = 0
+      and r.display_name = 'Pending List Hospital'
+    from public.list_admin_organizations(
+      null, null, null, 'newest', 50, 0
+    ) r
+    where r.id = (select organization_id from oo_pending_list)
+  ),
+  'newly created pending org with zero members appears in unfiltered admin list'
+);
+
+select ok(
+  exists (
+    select 1
+    from public.list_admin_organizations(
+      null, 'pending', null, 'newest', 50, 0
+    ) r
+    where r.id = (select organization_id from oo_pending_list)
+  ),
+  'status=pending filter includes the unsubmitted draft organization'
+);
+
+select ok(
+  not exists (
+    select 1
+    from public.list_admin_organizations(
+      null, 'under_review', null, 'newest', 50, 0
+    ) r
+    where r.id = (select organization_id from oo_pending_list)
+  ),
+  'unsubmitted pending org does not appear in under_review filter'
+);
+
+select ok(
+  exists (
+    select 1
+    from public.list_admin_organizations(
+      'pending-list-hospital', null, null, 'newest', 50, 0
+    ) r
+    where r.id = (select organization_id from oo_pending_list)
+  )
+  and not exists (
+    select 1
+    from public.list_admin_organizations(
+      'no-such-org-zzzz', null, null, 'newest', 50, 0
+    ) r
+  ),
+  'search finds the org by slug and empty-result search does not hide via error'
+);
+
+-- ---------------------------------------------------------------------------
+-- 19. Non–platform-super-admin cannot list admin organizations
+-- ---------------------------------------------------------------------------
+
+reset role;
+select pg_temp.auth_as('b2000001-0000-4000-8000-000000000206');
+
+select throws_ok(
+  $$ select * from public.list_admin_organizations(
+       null, null, null, 'newest', 20, 0
+     ) $$,
+  'P0001',
+  'NOT_AUTHORIZED',
+  'organization admin cannot call list_admin_organizations'
+);
+
+reset role;
+select pg_temp.auth_as('b2000001-0000-4000-8000-000000000208');
+
+select throws_ok(
+  $$ select * from public.list_admin_organizations(
+       null, null, null, 'newest', 20, 0
+     ) $$,
+  'P0001',
+  'NOT_AUTHORIZED',
+  'other organization member cannot call list_admin_organizations'
+);
+
+-- ---------------------------------------------------------------------------
+-- 20. Client cannot insert organizations (must use platform provisioning)
+-- ---------------------------------------------------------------------------
+
+reset role;
+select pg_temp.auth_as('b2000001-0000-4000-8000-000000000207');
+
+-- No INSERT grant to authenticated; direct inserts must fail.
+select throws_ok(
+  $$ insert into public.organizations (
+       legal_name, display_name, slug, status
+     ) values (
+       'Self Serve Ltd', 'Self Serve', 'self-serve-hospital', 'pending'
+     ) $$,
+  '42501',
+  'permission denied for table organizations',
+  'authenticated non-admin cannot insert organization rows'
 );
 
 select * from finish();

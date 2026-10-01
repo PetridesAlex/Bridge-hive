@@ -1,5 +1,9 @@
 import Link from 'next/link';
 
+import {
+  ReplaceAdminInviteForm,
+  ResendActivationButton,
+} from '@/components/admin/activation-controls';
 import { OrganizationActionsForm } from '@/components/admin/organization-actions-form';
 import { OrganizationInvitationForm } from '@/components/admin/organization-invitation-form';
 import { EmptyState } from '@/components/empty-state';
@@ -11,6 +15,9 @@ import { createClient } from '@/lib/supabase/server';
 import {
   ORG_STATUS_LABELS,
   ORGANIZATION_TYPE_LABELS,
+  administratorAccessLabel,
+  organizationLifecycleLabel,
+  organizationProfileLabel,
   type OrgStatus,
   type OrganizationType,
 } from '@bridge-hive/domain';
@@ -88,15 +95,32 @@ export default async function OrganizationDetailPage({
       revoked_at: string | null;
       created_at: string;
       status: string;
+      delivery_status?: string;
+      access_status?: string;
+      last_sent_at?: string | null;
+      send_attempt_count?: number;
+      last_delivery_error_category?: string | null;
     }>;
     counts: {
       locations: number;
       wards: number;
-      shifts: number;
+      shifts_published?: number;
+      shifts_total?: number;
+      shifts?: number;
     };
   };
 
   const org = detail.organization;
+  const latestInvite = detail.invitations[0];
+  const accessStatus =
+    latestInvite?.access_status ??
+    latestInvite?.delivery_status ??
+    (latestInvite?.status === 'open' ? 'pending' : latestInvite?.status);
+  const profileLabel = organizationProfileLabel({
+    status: org.status,
+    submittedAt: org.submitted_at,
+    hasContact: Boolean(org.primary_contact_name || org.primary_contact_email),
+  });
 
   return (
     <div className="space-y-6">
@@ -121,7 +145,7 @@ export default async function OrganizationDetailPage({
                     : 'muted'
               }
             >
-              {ORG_STATUS_LABELS[org.status as OrgStatus] ?? org.status}
+              {organizationLifecycleLabel(org.status)}
             </Badge>
             {org.organization_type ? (
               <span className="text-sm text-slate-500">
@@ -138,6 +162,41 @@ export default async function OrganizationDetailPage({
           </p>
           <p className="mt-1 text-xs text-slate-500">Ref {org.short_reference}</p>
         </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Organization</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm font-medium">
+            {organizationLifecycleLabel(org.status)}
+            <p className="mt-1 text-xs font-normal text-slate-500">
+              {ORG_STATUS_LABELS[org.status as OrgStatus] ?? org.status}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Administrator access</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm font-medium">
+            {administratorAccessLabel(accessStatus)}
+            {latestInvite?.expires_at ? (
+              <p className="mt-1 text-xs font-normal text-slate-500">
+                Expires {formatDateTime(latestInvite.expires_at)}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs font-normal text-slate-500">No invitation yet</p>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Organization profile</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm font-medium">{profileLabel}</CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -275,7 +334,9 @@ export default async function OrganizationDetailPage({
           </div>
           <div>
             <p className="text-slate-500">Shifts</p>
-            <p className="text-2xl font-semibold">{detail.counts.shifts}</p>
+            <p className="text-2xl font-semibold">
+              {detail.counts.shifts_total ?? detail.counts.shifts ?? 0}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -320,6 +381,14 @@ export default async function OrganizationDetailPage({
         </CardHeader>
         <CardContent className="space-y-4">
           <OrganizationInvitationForm organizationId={org.id} />
+          <ReplaceAdminInviteForm
+            organizationId={org.id}
+            invitationId={
+              latestInvite && latestInvite.status === 'open'
+                ? latestInvite.id
+                : undefined
+            }
+          />
           {detail.invitations.length === 0 ? (
             <p className="text-sm text-slate-500">No invitations sent.</p>
           ) : (
@@ -327,21 +396,40 @@ export default async function OrganizationDetailPage({
               {detail.invitations.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex items-center justify-between rounded-md border border-slate-200 p-3"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3"
                 >
                   <div>
                     <p className="font-medium text-slate-900">{inv.email_hint}</p>
                     <p className="text-sm text-slate-500">
-                      {roleLabel(inv.role)} · {inv.status}
+                      {roleLabel(inv.role)} · {inv.status} ·{' '}
+                      {administratorAccessLabel(
+                        inv.access_status ?? inv.delivery_status ?? inv.status,
+                      )}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      Expires {formatDateTime(inv.expires_at)}
+                      {inv.last_sent_at
+                        ? ` · Last sent ${formatDateTime(inv.last_sent_at)}`
+                        : ''}
+                      {typeof inv.send_attempt_count === 'number'
+                        ? ` · Attempts ${inv.send_attempt_count}`
+                        : ''}
                     </p>
                   </div>
-                  <div className="text-right">
+                  <div className="flex flex-wrap items-center justify-end gap-2">
                     {inv.status === 'open' ? (
-                      <OrganizationActionsForm
-                        action="revoke_invitation"
-                        invitationId={inv.id}
-                        buttonText="Revoke"
-                      />
+                      <>
+                        <ResendActivationButton
+                          invitationId={inv.id}
+                          organizationId={org.id}
+                          lastSentAt={inv.last_sent_at}
+                        />
+                        <OrganizationActionsForm
+                          action="revoke_invitation"
+                          invitationId={inv.id}
+                          buttonText="Revoke"
+                        />
+                      </>
                     ) : (
                       <p className="text-xs text-slate-500">
                         {inv.accepted_at

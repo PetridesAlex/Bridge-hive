@@ -51,6 +51,26 @@ describe('marketing site contracts', () => {
     }
   });
 
+  it('middleware allows SEO discovery files without auth and keeps private portals protected', async () => {
+    const src = await readWeb('middleware.ts');
+    const publicPathsBlock = src.match(
+      /const PUBLIC_PATHS = \[([\s\S]*?)\];/,
+    )?.[1];
+    expect(publicPathsBlock).toBeTruthy();
+    const publicPaths = [...publicPathsBlock!.matchAll(/'([^']+)'/g)].map(
+      (match) => match[1],
+    );
+    expect(publicPaths).toEqual(
+      expect.arrayContaining(['/robots.txt', '/sitemap.xml']),
+    );
+    expect(publicPaths).not.toContain('/admin');
+    expect(publicPaths).not.toContain('/dashboard');
+    expect(publicPaths).not.toContain('/organisation');
+    expect(publicPaths.some((pathName) => pathName.startsWith('/org/'))).toBe(
+      false,
+    );
+  });
+
   it('homepage CTAs use org sign-in and worker continuation, not open signup', async () => {
     const src = await readWeb('app/(marketing)/page.tsx');
     const hero = await readWeb('components/marketing/Hero.tsx');

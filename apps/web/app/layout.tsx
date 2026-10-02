@@ -15,8 +15,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Bridge Hive — Organization',
-  description: 'Organization dashboard for Bridge Hive healthcare staffing',
+  metadataBase: new URL('https://bridgehive.app'),
+  title: {
+    default: 'Bridge Hive',
+    template: '%s | Bridge Hive',
+  },
+  description:
+    'Bridge Hive connects healthcare organizations with verified registered nurses and ward assistants.',
 };
 
 export default function RootLayout({

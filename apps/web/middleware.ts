@@ -9,6 +9,11 @@ const PUBLIC_PATHS = [
   '/admin/sign-in',
   '/organization-invitations/accept',
   '/activate-organization-account',
+  '/organizations',
+  '/professionals',
+  '/how-it-works',
+  '/about',
+  '/contact',
 ];
 
 function isPublicPath(pathname: string): boolean {

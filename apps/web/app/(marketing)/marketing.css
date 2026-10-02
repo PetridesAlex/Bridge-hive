@@ -1,0 +1,136 @@
+/* Marketing-only styles. Imported from (marketing)/layout — does not restyle org/admin. */
+
+.marketing {
+  --m-display: clamp(2.35rem, 4.8vw, 3.85rem);
+  --m-lede: clamp(1.0625rem, 1.55vw, 1.275rem);
+  --m-section-y: clamp(4.25rem, 9vw, 7.75rem);
+  color: var(--bh-text);
+  background:
+    radial-gradient(ellipse 70% 40% at 100% 0%, rgba(22, 166, 182, 0.05), transparent 55%),
+    var(--bh-canvas);
+}
+
+.marketing a:focus-visible,
+.marketing button:focus-visible,
+.marketing summary:focus-visible {
+  outline: 2px solid var(--bh-teal-strong, #087f8c);
+  outline-offset: 3px;
+}
+
+.marketing-hero-grid {
+  position: relative;
+  background-color: #f4f7f9;
+  background-image:
+    radial-gradient(ellipse 75% 50% at 92% 8%, rgba(22, 166, 182, 0.18), transparent 58%),
+    radial-gradient(ellipse 50% 42% at 4% 92%, rgba(224, 170, 24, 0.14), transparent 52%),
+    linear-gradient(165deg, #e8f0f3 0%, #f4f7f9 38%, #f7f9fb 100%);
+  background-repeat: no-repeat;
+  border-bottom: 1px solid rgba(220, 232, 238, 0.7);
+}
+
+.marketing-motif {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  border: 1px solid rgba(220, 232, 238, 0.28);
+  background:
+    radial-gradient(circle at 78% 12%, rgba(22, 166, 182, 0.32), transparent 42%),
+    radial-gradient(circle at 12% 88%, rgba(224, 170, 24, 0.18), transparent 40%),
+    linear-gradient(155deg, #0d2f4a 0%, #071d30 58%, #061726 100%);
+  box-shadow:
+    0 28px 64px rgba(7, 29, 48, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  aspect-ratio: 5 / 4;
+}
+
+.marketing-motif::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(220, 232, 238, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(220, 232, 238, 0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse at 40% 45%, black 22%, transparent 72%);
+  pointer-events: none;
+}
+
+.marketing-motif::after {
+  content: '';
+  position: absolute;
+  inset: auto -10% -20% auto;
+  width: 55%;
+  height: 55%;
+  background: radial-gradient(circle, rgba(22, 166, 182, 0.2), transparent 70%);
+  pointer-events: none;
+}
+
+.marketing-panel {
+  border-radius: 1.25rem;
+  border: 1px solid var(--bh-border);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(244, 247, 249, 0.88)),
+    var(--bh-surface);
+  padding: 2rem;
+  box-shadow: 0 12px 40px rgba(7, 29, 48, 0.04);
+}
+
+@media (min-width: 640px) {
+  .marketing-panel {
+    padding: 2.5rem;
+  }
+}
+
+.marketing-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--bh-border-strong), transparent);
+}
+
+.marketing-value {
+  transition: border-color 0.25s ease;
+}
+
+.marketing-value:hover {
+  border-color: rgba(22, 166, 182, 0.45);
+}
+
+@keyframes marketing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.marketing-rise {
+  animation: marketing-rise 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.marketing-rise-delay-1 {
+  animation-delay: 0.07s;
+}
+
+.marketing-rise-delay-2 {
+  animation-delay: 0.14s;
+}
+
+.marketing-rise-delay-3 {
+  animation-delay: 0.22s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marketing-rise,
+  .marketing-rise-delay-1,
+  .marketing-rise-delay-2,
+  .marketing-rise-delay-3 {
+    animation: none;
+  }
+
+  .marketing-value {
+    transition: none;
+  }
+}

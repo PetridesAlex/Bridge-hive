@@ -2,9 +2,11 @@ import {
   allowlistedActivationNext,
   buildActivationRedirectTo,
   classifyWorkerSignUpResponse,
+  describeActivationRedirectTo,
   friendlyAuthLinkError,
   isActivationEmailOtpType,
   isAuthConfirmEmailOtpType,
+  isLoopbackAppOrigin,
   isWorkerSignupConfirmNext,
   administratorAccessLabel,
   buildActivationCallbackUrl,
@@ -66,6 +68,34 @@ describe('organization activation helpers', () => {
     expect(buildActivationRedirectTo('http://localhost:3000')).not.toMatch(
       /localhost:3000\/activate-organization-account$/,
     );
+  });
+
+  it('describes redirectTo without secrets and flags loopback', () => {
+    const preview =
+      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/auth/confirm?next=%2Factivate-organization-account';
+    expect(describeActivationRedirectTo(preview)).toEqual({
+      redirectTo: preview,
+      origin: 'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app',
+      pathname: '/auth/confirm',
+      search: '?next=%2Factivate-organization-account',
+      isLoopback: false,
+    });
+    expect(isLoopbackAppOrigin('http://localhost:3000')).toBe(true);
+    expect(
+      isLoopbackAppOrigin(
+        'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app',
+      ),
+    ).toBe(false);
+  });
+
+  it('byte-matches the Preview allowlist confirm URL', () => {
+    const expected =
+      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/auth/confirm?next=%2Factivate-organization-account';
+    expect(
+      buildActivationRedirectTo(
+        'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app',
+      ),
+    ).toBe(expected);
   });
 
   it('legacy callback helper still builds relative next only', () => {

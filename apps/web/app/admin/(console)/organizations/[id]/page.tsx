@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import {
+  CheckActivationRedirectButton,
   ReplaceAdminInviteForm,
   ResendActivationButton,
 } from '@/components/admin/activation-controls';
@@ -380,6 +381,7 @@ export default async function OrganizationDetailPage({
           <CardTitle>Invitations ({detail.invitations.length})</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <CheckActivationRedirectButton />
           <OrganizationInvitationForm organizationId={org.id} />
           <ReplaceAdminInviteForm
             organizationId={org.id}

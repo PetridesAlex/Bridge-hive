@@ -254,6 +254,44 @@ export function isAllowlistedRedirectOrigin(
   }
 }
 
+/** True for localhost / 127.0.0.1 / [::1] origins (local Next only). */
+export function isLoopbackAppOrigin(urlOrOrigin: string): boolean {
+  try {
+    const raw = urlOrOrigin.trim();
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    const host = new URL(withProtocol).hostname.toLowerCase();
+    return (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '[::1]' ||
+      host === '::1'
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Safe, non-secret summary of the Auth redirectTo that will appear in emails
+ * as {{ .RedirectTo }} when the URL is allow-listed. Never includes tokens.
+ */
+export function describeActivationRedirectTo(redirectTo: string): {
+  redirectTo: string;
+  origin: string;
+  pathname: string;
+  search: string;
+  isLoopback: boolean;
+} {
+  const u = new URL(redirectTo);
+  return {
+    redirectTo: u.toString(),
+    origin: u.origin,
+    pathname: u.pathname,
+    search: u.search,
+    isLoopback: isLoopbackAppOrigin(u.origin),
+  };
+}
+
 /**
  * Prefetch-safe Auth confirm URL used as `redirectTo` for invite/recovery.
  * Email templates append `&token_hash={{ .TokenHash }}&type=…` — do not put

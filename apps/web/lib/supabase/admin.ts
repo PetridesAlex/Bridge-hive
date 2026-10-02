@@ -5,16 +5,19 @@ import type { Database } from '@bridge-hive/supabase-types';
 
 import {
   buildActivationRedirectTo,
+  describeActivationRedirectTo,
   isAllowlistedRedirectOrigin,
+  isLoopbackAppOrigin,
   mapAuthInviteErrorCategory,
   normalizeAdminEmail,
   type DeliveryErrorCategory,
 } from '@bridge-hive/domain';
+import { headers } from 'next/headers';
 
 import {
-  getAppPublicUrl,
   getSupabaseEnv,
   getSupabaseServiceRoleEnv,
+  resolveAppPublicUrl,
 } from '@/lib/supabase/env';
 
 export function createServiceRoleClient() {
@@ -28,8 +31,45 @@ export function createServiceRoleClient() {
 }
 
 export type InviteOrRecoverResult =
-  | { ok: true; mode: 'invite' | 'recovery' }
-  | { ok: false; category: DeliveryErrorCategory; message: string };
+  | {
+      ok: true;
+      mode: 'invite' | 'recovery';
+      /** Non-secret Auth redirectTo that must match Supabase Redirect URLs. */
+      redirectTo: string;
+    }
+  | {
+      ok: false;
+      category: DeliveryErrorCategory;
+      message: string;
+      redirectTo?: string;
+    };
+
+/**
+ * Safe diagnostic for Preview invite redirect configuration.
+ * Never includes emails, tokens, or keys.
+ */
+export async function diagnoseOrganizationActivationRedirect(): Promise<{
+  redirectTo: string;
+  origin: string;
+  pathname: string;
+  search: string;
+  isLoopback: boolean;
+  source: string;
+  onVercel: boolean;
+}> {
+  const h = await headers();
+  const resolved = resolveAppPublicUrl({
+    requestHost: h.get('x-forwarded-host') ?? h.get('host'),
+    requestProto: h.get('x-forwarded-proto'),
+  });
+  const redirectTo = buildActivationRedirectTo(resolved.origin);
+  const described = describeActivationRedirectTo(redirectTo);
+  return {
+    ...described,
+    source: resolved.source,
+    onVercel: process.env.VERCEL === '1' || process.env.VERCEL === 'true',
+  };
+}
 
 async function findAuthUserIdByEmail(
   admin: ReturnType<typeof createServiceRoleClient>,
@@ -63,15 +103,46 @@ export async function inviteOrRecoverOrganizationAdmin(params: {
   fullName?: string | null;
 }): Promise<InviteOrRecoverResult> {
   const email = normalizeAdminEmail(params.email);
-  const appPublicUrl = getAppPublicUrl();
-  const redirectTo = buildActivationRedirectTo(appPublicUrl);
+
+  let appPublicUrl: string;
+  let redirectTo: string;
+  try {
+    const h = await headers();
+    const resolved = resolveAppPublicUrl({
+      requestHost: h.get('x-forwarded-host') ?? h.get('host'),
+      requestProto: h.get('x-forwarded-proto'),
+    });
+    appPublicUrl = resolved.origin;
+    redirectTo = buildActivationRedirectTo(appPublicUrl);
+  } catch (err) {
+    return {
+      ok: false,
+      category: 'unknown',
+      message:
+        err instanceof Error
+          ? err.message
+          : 'Activation redirect origin is not configured for this host.',
+    };
+  }
+
   const redirectOrigin = new URL(redirectTo).origin;
+
+  if (isLoopbackAppOrigin(redirectOrigin) && (process.env.VERCEL === '1' || process.env.VERCEL === 'true')) {
+    return {
+      ok: false,
+      category: 'unknown',
+      message:
+        'Refusing to send activation email: redirectTo resolved to localhost on Vercel. Set APP_PUBLIC_URL to the Preview branch origin and redeploy.',
+      redirectTo,
+    };
+  }
 
   if (!isAllowlistedRedirectOrigin(redirectOrigin, appPublicUrl)) {
     return {
       ok: false,
       category: 'unknown',
       message: 'Activation redirect is not allow-listed.',
+      redirectTo,
     };
   }
 
@@ -88,7 +159,7 @@ export async function inviteOrRecoverOrganizationAdmin(params: {
   });
 
   if (!inviteError) {
-    return { ok: true, mode: 'invite' };
+    return { ok: true, mode: 'invite', redirectTo };
   }
 
   const inviteMsg = inviteError.message ?? '';
@@ -99,6 +170,7 @@ export async function inviteOrRecoverOrganizationAdmin(params: {
       ok: false,
       category: mapAuthInviteErrorCategory(inviteMsg),
       message: 'Unable to send activation email.',
+      redirectTo,
     };
   }
 
@@ -109,6 +181,7 @@ export async function inviteOrRecoverOrganizationAdmin(params: {
       ok: false,
       category: 'auth_error',
       message: 'Unable to send activation email.',
+      redirectTo,
     };
   }
 
@@ -119,6 +192,7 @@ export async function inviteOrRecoverOrganizationAdmin(params: {
       ok: false,
       category: 'auth_error',
       message: 'Unable to send activation email.',
+      redirectTo,
     };
   }
 
@@ -135,6 +209,7 @@ export async function inviteOrRecoverOrganizationAdmin(params: {
       ok: false,
       category: mapAuthInviteErrorCategory(updateError.message),
       message: 'Unable to send activation email.',
+      redirectTo,
     };
   }
 
@@ -152,8 +227,9 @@ export async function inviteOrRecoverOrganizationAdmin(params: {
       ok: false,
       category: mapAuthInviteErrorCategory(recoverError.message),
       message: 'Unable to send activation email.',
+      redirectTo,
     };
   }
 
-  return { ok: true, mode: 'recovery' };
+  return { ok: true, mode: 'recovery', redirectTo };
 }

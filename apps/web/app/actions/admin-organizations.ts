@@ -15,7 +15,10 @@ import {
 import { revalidatePath } from 'next/cache';
 
 import { requirePlatformAdmin, rpcErrorMessage } from '@/lib/admin/auth';
-import { inviteOrRecoverOrganizationAdmin } from '@/lib/supabase/admin';
+import {
+  diagnoseOrganizationActivationRedirect,
+  inviteOrRecoverOrganizationAdmin,
+} from '@/lib/supabase/admin';
 import { allowLocalInviteLinkCopy } from '@/lib/supabase/env';
 import { createClient } from '@/lib/supabase/server';
 
@@ -60,7 +63,12 @@ async function sendActivationAndMark(
     email: string;
     fullName?: string | null;
   },
-): Promise<{ deliveryStatus: 'sent' | 'failed'; error?: string }> {
+): Promise<{
+  deliveryStatus: 'sent' | 'failed';
+  error?: string;
+  redirectTo?: string;
+  mode?: 'invite' | 'recovery';
+}> {
   const send = await inviteOrRecoverOrganizationAdmin({
     email: params.email,
     invitationId: params.invitationId,
@@ -78,9 +86,15 @@ async function sendActivationAndMark(
       return {
         deliveryStatus: 'failed',
         error: 'Activation email may have been sent but status could not be recorded.',
+        redirectTo: send.redirectTo,
+        mode: send.mode,
       };
     }
-    return { deliveryStatus: 'sent' };
+    return {
+      deliveryStatus: 'sent',
+      redirectTo: send.redirectTo,
+      mode: send.mode,
+    };
   }
 
   await supabase.rpc('mark_organization_invitation_delivery', {
@@ -92,8 +106,37 @@ async function sendActivationAndMark(
   return {
     deliveryStatus: 'failed',
     error:
+      send.message ||
       'Organization was created, but the activation email could not be sent. Use Retry on the organization page.',
+    redirectTo: send.redirectTo,
   };
+}
+
+/** Non-secret Preview diagnostic: what redirectTo invite emails will use. */
+export async function diagnoseOrganizationActivationRedirectAction(): Promise<AdminActionResult> {
+  const ctx = await requirePlatformAdmin('platform_super_admin');
+  if (!ctx.capabilities.canManageOrganizations) {
+    return { error: 'You do not have permission to manage organizations.' };
+  }
+
+  try {
+    const diagnosis = await diagnoseOrganizationActivationRedirect();
+    if (diagnosis.isLoopback) {
+      return {
+        error:
+          'Activation redirectTo is localhost. Set Preview APP_PUBLIC_URL to the branch host and redeploy before sending invites.',
+        data: diagnosis,
+      };
+    }
+    return { success: true, data: diagnosis };
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err.message
+          : 'Could not resolve activation redirect origin.',
+    };
+  }
 }
 
 export async function createOrganizationWithAdminInviteAction(
@@ -170,6 +213,8 @@ export async function createOrganizationWithAdminInviteAction(
     slug: result.slug,
     delivery_status: delivery.deliveryStatus,
     expires_at: result.expires_at,
+    ...(delivery.redirectTo ? { activation_redirect_to: delivery.redirectTo } : {}),
+    ...(delivery.mode ? { activation_email_mode: delivery.mode } : {}),
   };
 
   if (allowLocalInviteLinkCopy() && result.raw_token) {
@@ -228,12 +273,22 @@ export async function resendOrganizationActivationAction(
   revalidateOrganizationAdmin(organizationId || inv.organization_id);
 
   if (delivery.deliveryStatus === 'failed') {
-    return { error: delivery.error ?? 'Activation email could not be sent.' };
+    return {
+      error: delivery.error ?? 'Activation email could not be sent.',
+      data: {
+        ...(delivery.redirectTo ? { activation_redirect_to: delivery.redirectTo } : {}),
+      },
+    };
   }
 
   return {
     success: true,
-    data: { delivery_status: 'sent', invitation_id: inv.id },
+    data: {
+      delivery_status: 'sent',
+      invitation_id: inv.id,
+      ...(delivery.redirectTo ? { activation_redirect_to: delivery.redirectTo } : {}),
+      ...(delivery.mode ? { activation_email_mode: delivery.mode } : {}),
+    },
   };
 }
 
@@ -290,6 +345,8 @@ export async function replaceOrganizationAdminInviteAction(
   const safeData: Record<string, unknown> = {
     invitation_id: created.invitation_id,
     delivery_status: delivery.deliveryStatus,
+    ...(delivery.redirectTo ? { activation_redirect_to: delivery.redirectTo } : {}),
+    ...(delivery.mode ? { activation_email_mode: delivery.mode } : {}),
   };
   if (allowLocalInviteLinkCopy() && created.raw_token) {
     safeData.raw_token = created.raw_token;
@@ -351,6 +408,8 @@ export async function createOrganizationInvitationAction(
   const safeData: Record<string, unknown> = {
     invitation_id: result.invitation_id,
     delivery_status: delivery.deliveryStatus,
+    ...(delivery.redirectTo ? { activation_redirect_to: delivery.redirectTo } : {}),
+    ...(delivery.mode ? { activation_email_mode: delivery.mode } : {}),
   };
   if (allowLocalInviteLinkCopy() && result.raw_token) {
     safeData.raw_token = result.raw_token;

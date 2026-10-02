@@ -3,6 +3,7 @@
 import { useActionState } from 'react';
 
 import {
+  diagnoseOrganizationActivationRedirectAction,
   replaceOrganizationAdminInviteAction,
   resendOrganizationActivationAction,
 } from '@/app/actions/admin-organizations';
@@ -24,6 +25,14 @@ export function ResendActivationButton({
   );
 
   const sentLabel = formatSentAt(lastSentAt);
+  const redirectTo =
+    state.data &&
+    typeof state.data === 'object' &&
+    'activation_redirect_to' in state.data &&
+    typeof (state.data as { activation_redirect_to?: unknown }).activation_redirect_to ===
+      'string'
+      ? (state.data as { activation_redirect_to: string }).activation_redirect_to
+      : null;
 
   return (
     <div className="space-y-1">
@@ -49,12 +58,56 @@ export function ResendActivationButton({
           <p className="mt-0.5 text-bh-text-secondary">
             Use the newest email. Previous activation emails are no longer valid.
           </p>
+          {redirectTo ? (
+            <p className="mt-0.5 break-all font-mono text-[11px] text-bh-text-secondary">
+              redirectTo: {redirectTo}
+            </p>
+          ) : null}
         </div>
       ) : sentLabel ? (
         <p className="text-xs text-bh-text-secondary">
           Activation email sent at {sentLabel}. Use the newest email. Previous
           activation emails are no longer valid.
         </p>
+      ) : null}
+    </div>
+  );
+}
+
+/** Shows the Auth redirectTo this deployment would send — no email, no tokens. */
+export function CheckActivationRedirectButton() {
+  const [state, action, pending] = useActionState(
+    diagnoseOrganizationActivationRedirectAction,
+    {},
+  );
+
+  const data =
+    state.data && typeof state.data === 'object'
+      ? (state.data as {
+          redirectTo?: string;
+          source?: string;
+          isLoopback?: boolean;
+        })
+      : null;
+
+  return (
+    <div className="space-y-1">
+      <form action={action}>
+        <Button type="submit" size="sm" variant="outline" disabled={pending}>
+          {pending ? 'Checking…' : 'Check activation redirect'}
+        </Button>
+      </form>
+      {state.error ? (
+        <p className="text-xs text-red-700">{state.error}</p>
+      ) : null}
+      {data?.redirectTo ? (
+        <div className="text-xs text-bh-text-secondary">
+          <p className="break-all font-mono text-[11px]">{data.redirectTo}</p>
+          <p className="mt-0.5">
+            source={data.source ?? 'unknown'}
+            {data.isLoopback ? ' · loopback (do not send)' : ''}
+          </p>
+        </div>
       ) : null}
     </div>
   );

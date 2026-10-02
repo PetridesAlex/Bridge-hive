@@ -56,12 +56,15 @@ describe('organization activation helpers', () => {
     ).toBe(false);
   });
 
-  it('builds activation redirectTo without token material', () => {
+  it('builds activation redirectTo as confirm URL with next (no tokens)', () => {
     expect(buildActivationRedirectTo('http://localhost:3000')).toBe(
-      'http://localhost:3000/activate-organization-account',
+      'http://localhost:3000/auth/confirm?next=%2Factivate-organization-account',
     );
     expect(buildActivationRedirectTo('http://localhost:3000')).not.toMatch(
-      /token|hash|code/i,
+      /token|hash|code=/i,
+    );
+    expect(buildActivationRedirectTo('http://localhost:3000')).not.toMatch(
+      /localhost:3000\/activate-organization-account$/,
     );
   });
 

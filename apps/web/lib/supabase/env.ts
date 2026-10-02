@@ -29,15 +29,17 @@ export function getSupabaseServiceRoleEnv() {
 
 /**
  * Public web origin for Auth redirectTo / activation emails.
- * Prefer explicit APP_PUBLIC_URL. On Vercel, fall back to https://$VERCEL_URL
- * so preview deploys never silently email localhost:3000.
+ * Prefer explicit APP_PUBLIC_URL. On Vercel Preview, prefer the stable branch
+ * alias (VERCEL_BRANCH_URL) over the per-deployment VERCEL_URL.
  */
 export function getAppPublicUrl(): string {
-  const vercelHost = process.env.VERCEL_URL?.replace(/^https?:\/\//, '').trim();
+  const branchHost = process.env.VERCEL_BRANCH_URL?.replace(/^https?:\/\//, '').trim();
+  const deployHost = process.env.VERCEL_URL?.replace(/^https?:\/\//, '').trim();
   const raw =
     process.env.APP_PUBLIC_URL?.trim() ||
     process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-    (vercelHost ? `https://${vercelHost}` : '') ||
+    (branchHost ? `https://${branchHost}` : '') ||
+    (deployHost ? `https://${deployHost}` : '') ||
     'http://localhost:3000';
   try {
     const u = new URL(raw);

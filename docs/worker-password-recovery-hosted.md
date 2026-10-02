@@ -21,13 +21,22 @@ Site URL may remain the web app origin. Do not force Site URL to `/activate-orga
 
 Authentication → Email Templates → **Reset Password**.
 
-Preferred Confirm URL pattern (token_hash + explicit worker next):
+Preferred Confirm URL pattern after Preview redirect fix (RedirectTo already includes
+`/auth/confirm?next=…` from the app — see [`org-activation-email-preview.md`](./org-activation-email-preview.md)):
+
+```html
+<a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">Reset password</a>
+```
+
+Legacy SiteURL-only pattern (breaks when Site URL is localhost but the web app is on Vercel):
 
 ```html
 <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/worker/reset-password">Reset password</a>
 ```
 
-If the template still uses `{{ .ConfirmationURL }}`, ensure Redirect URLs include the worker deep link / Expo path that the mobile app passes as `redirectTo` (`bridgehive://…` or Expo web origin). Do **not** hard-code `next=/activate-organization-account` for worker resets.
+Set `EXPO_PUBLIC_WEB_APP_URL` to the web Preview/production origin so mobile
+`resetPasswordForEmail` passes a web `/auth/confirm?next=/auth/worker/reset-password`
+RedirectTo. Do **not** hard-code `next=/activate-organization-account` for worker resets.
 
 ## Invite / org activation templates
 

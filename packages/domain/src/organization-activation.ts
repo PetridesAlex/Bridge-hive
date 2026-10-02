@@ -255,19 +255,36 @@ export function isAllowlistedRedirectOrigin(
 }
 
 /**
- * Auth `redirectTo` for invite/recovery emails.
- * Email templates should link to `/auth/confirm?token_hash=…` (prefetch-safe);
- * this URL is the allow-listed post-activation destination, not the verify hop.
+ * Prefetch-safe Auth confirm URL used as `redirectTo` for invite/recovery.
+ * Email templates append `&token_hash={{ .TokenHash }}&type=…` — do not put
+ * tokens here. `next` must be a same-app relative path (activation or worker).
+ */
+export function buildAuthConfirmRedirectTo(
+  appPublicUrl: string,
+  nextPath: string,
+): string {
+  const raw = appPublicUrl.trim();
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  const origin = new URL(withProtocol).origin;
+  const next = nextPath.startsWith('/') ? nextPath : `/${nextPath}`;
+  return `${origin}/auth/confirm?next=${encodeURIComponent(next)}`;
+}
+
+/**
+ * Auth `redirectTo` for organization invite / existing-user recovery emails.
+ * Points at `/auth/confirm?next=/activate-organization-account` (allow-listed).
+ * Templates must not use SiteURL alone for the host when SiteURL is localhost.
  */
 export function buildActivationRedirectTo(appPublicUrl: string): string {
-  const base = appPublicUrl.replace(/\/$/, '');
-  return `${base}${DEFAULT_ACTIVATION_NEXT}`;
+  return buildAuthConfirmRedirectTo(appPublicUrl, DEFAULT_ACTIVATION_NEXT);
 }
 
 /** @deprecated Prefer buildActivationRedirectTo — kept for any legacy callback links. */
 export function buildActivationCallbackUrl(appPublicUrl: string): string {
-  const base = appPublicUrl.replace(/\/$/, '');
-  return `${base}/auth/callback?next=${encodeURIComponent(DEFAULT_ACTIVATION_NEXT)}`;
+  const raw = appPublicUrl.trim();
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  const origin = new URL(withProtocol).origin;
+  return `${origin}/auth/callback?next=${encodeURIComponent(DEFAULT_ACTIVATION_NEXT)}`;
 }
 
 export function friendlyAuthLinkError(

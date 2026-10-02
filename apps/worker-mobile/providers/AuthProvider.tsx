@@ -4,6 +4,7 @@ import {
   classifyWorkerSignUpResponse,
   DEFAULT_WORKER_RECOVERY_NEXT,
   DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT,
+  buildAuthConfirmRedirectTo,
   workerExistingAccountMessage,
   type WorkerRole,
 } from '@bridge-hive/domain';
@@ -143,11 +144,30 @@ function workerAppRedirectTo(path: string): string {
   }
 }
 
+/** Web origin used in Auth emails (`/auth/confirm?next=…`). Required when Reset Password template uses RedirectTo. */
+function workerWebAppOrigin(): string | null {
+  const raw = process.env.EXPO_PUBLIC_WEB_APP_URL?.trim();
+  if (!raw) return null;
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+}
+
 function workerSignupConfirmRedirectTo(): string {
+  const webOrigin = workerWebAppOrigin();
+  if (webOrigin) {
+    return buildAuthConfirmRedirectTo(webOrigin, DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT);
+  }
   return workerAppRedirectTo(DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT);
 }
 
 function workerRecoveryRedirectTo(): string {
+  const webOrigin = workerWebAppOrigin();
+  if (webOrigin) {
+    return buildAuthConfirmRedirectTo(webOrigin, DEFAULT_WORKER_RECOVERY_NEXT);
+  }
   return workerAppRedirectTo(DEFAULT_WORKER_RECOVERY_NEXT);
 }
 

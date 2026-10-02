@@ -50,8 +50,10 @@ async function findAuthUserIdByEmail(
 
 /**
  * Send one Auth activation email through hosted Supabase (Resend SMTP).
- * - New email → inviteUserByEmail (template must use /auth/confirm?token_hash&type=invite)
- * - Existing Auth user → metadata merge + resetPasswordForEmail once (type=recovery)
+ * - New email → inviteUserByEmail (redirectTo = /auth/confirm?next=activation;
+ *   Invite template must append token_hash + type=invite)
+ * - Existing Auth user → metadata merge + resetPasswordForEmail once
+ *   (Reset Password template must append token_hash + type=recovery)
  * Never returns links or tokens.
  */
 export async function inviteOrRecoverOrganizationAdmin(params: {

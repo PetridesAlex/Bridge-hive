@@ -50,6 +50,14 @@ export function MarketingFooter() {
             </li>
             <li>
               <Link
+                href="/organisation"
+                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
+              >
+                Organization portal
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/auth/worker/login"
                 className="text-bh-sidebar-text/90 transition-colors hover:text-white"
               >

@@ -65,17 +65,43 @@ describe('marketing site contracts', () => {
     expect(src).not.toMatch(/Request access/);
   });
 
-  it('nav and footer do not advertise invitation-only signup as open registration', async () => {
+  it('nav and footer distinguish marketing organizations from the organization portal', async () => {
     const nav = await readWeb('components/marketing/MarketingNav.tsx');
     const footer = await readWeb('components/marketing/MarketingFooter.tsx');
+    const navConfig = await readWeb('components/marketing/nav-config.ts');
     expect(nav).toMatch(/Organization sign in/);
     expect(nav).toMatch(/\/auth\/worker\/login/);
     expect(nav).not.toMatch(/\/sign-up/);
+    expect(navConfig).toMatch(/href: '\/organizations'/);
+    expect(navConfig).not.toMatch(/href: '\/organisation'/);
     expect(footer).not.toMatch(/\/sign-up/);
     expect(footer).toMatch(/\/admin\/sign-in/);
     expect(footer).not.toMatch(/Coming soon/);
     expect(footer).toMatch(/\/contact#partnerships/);
     expect(footer).toMatch(/\/contact#support/);
+    expect(footer).toMatch(/\/organisation/);
+    expect(footer).toMatch(/Organization portal/);
+    expect(footer).toMatch(/MARKETING_NAV/);
+    expect(navConfig).toMatch(/label: 'Organizations'/);
+  });
+
+  it('organisation portal aliases to dashboard and stays private', async () => {
+    const page = await readWeb('app/organisation/page.tsx');
+    const middleware = await readWeb('middleware.ts');
+    const robots = await readWeb('app/robots.ts');
+    const sitemap = await readWeb('app/sitemap.ts');
+    const marketingPaths = await readWeb('components/marketing/nav-config.ts');
+    expect(page).toMatch(/redirect\('\/dashboard'\)/);
+    expect(page).toMatch(/index:\s*false/);
+    expect(middleware).toContain("'/organizations'");
+    expect(middleware).not.toContain("'/organisation'");
+    expect(robots).toMatch(/\/organisation/);
+    expect(robots).toMatch(/\/dashboard/);
+    expect(sitemap).not.toMatch(/organisation/);
+    expect(marketingPaths).not.toMatch(/\/organisation/);
+    await expect(
+      fs.access(path.join(webRoot, 'app/organisation/page.tsx')),
+    ).resolves.toBeUndefined();
   });
 
   it('contact page routes partnerships and support to the correct public mailboxes', async () => {
@@ -101,16 +127,21 @@ describe('marketing site contracts', () => {
     expect(email).toMatch(/Copy address/);
   });
 
-  it('professionals page distinguishes wage bank transfer from commission invoicing', async () => {
+  it('professionals page distinguishes wage bank transfer from commission without published fee percentages', async () => {
     const src = await readWeb('app/(marketing)/professionals/page.tsx');
     const how = await readWeb('app/(marketing)/how-it-works/page.tsx');
+    const home = await readWeb('app/(marketing)/page.tsx');
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
     expect(src).toMatch(/bank transfer/);
-    expect(src).toMatch(/16%/);
-    expect(src).toMatch(/10 calendar days/);
+    expect(src).toMatch(/separate Bridge Hive commission invoice/i);
+    expect(src).toMatch(/on its own schedule/i);
+    expect(src).not.toMatch(/16%/);
+    expect(src).not.toMatch(/10 calendar days/);
+    expect(home).not.toMatch(/16%/);
+    expect(home).not.toMatch(/10 calendar days/);
     expect(src).toMatch(/does not hold or disburse/);
-    expect(src).toMatch(/does not use them to collect platform fees|not used to collect commission/i);
+    expect(src).toMatch(/does not use them to collect platform fees|not used to collect commission|does not collect commission/i);
     expect(src).not.toMatch(/bank details Bridge Hive needs for commission invoicing/i);
     expect(src).not.toMatch(/subject to legal/);
     expect(src).toMatch(/\/contact#support/);
@@ -164,6 +195,8 @@ describe('marketing site contracts', () => {
     expect(src).toMatch(/\/admin/);
     expect(src).toMatch(/\/org\//);
     expect(src).toMatch(/\/auth\//);
+    expect(src).toMatch(/\/dashboard/);
+    expect(src).toMatch(/\/organisation/);
     expect(src).toMatch(/sitemap\.xml/);
   });
 

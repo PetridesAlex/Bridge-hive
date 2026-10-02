@@ -13,3 +13,11 @@ Local captures from `next start` (not Production). Vercel Preview remains SSO-pr
 | `sign-in-1440.png` | Org sign-in smoke |
 | `admin-sign-in-1440.png` | Platform admin sign-in smoke |
 | `contact-partnerships-375.png` / `contact-support-1440.png` | Contact section anchors |
+
+## Cutover review (`/organisation` alias)
+| File | Notes |
+|------|-------|
+| `cutover-home-1440.png` / `cutover-home-375.png` | Marketing home |
+| `cutover-organizations-1440.png` | Marketing `/organizations` (plural) |
+| `cutover-contact-1440.png` | Contact mailboxes |
+| `cutover-organisation-unauth-1440.png` | Unauthenticated `/organisation` → sign-in |

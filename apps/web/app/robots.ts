@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
           '/admin/',
           '/org/',
           '/dashboard',
+          '/organisation',
           '/auth/',
           '/activate-organization-account',
           '/organization-invitations/',

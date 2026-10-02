@@ -105,7 +105,7 @@ export default function ProfessionalsPage() {
             },
             {
               title: 'Separate platform commission invoice',
-              body: 'Workers settle a separate Bridge Hive commission invoice — 16% of approved gross shift pay — due 10 calendar days after the invoice is issued. Commission is not deducted from the organization wage transfer.',
+              body: 'Workers settle a separate Bridge Hive commission invoice on its own schedule after approved work. Commission is not deducted from the organization wage transfer.',
             },
           ]}
         />

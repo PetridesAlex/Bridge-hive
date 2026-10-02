@@ -142,7 +142,7 @@ export default function HomePage() {
             },
             {
               q: 'Who pays my wages — and what about commission?',
-              a: 'The healthcare organization pays approved wages by bank transfer. Bridge Hive does not hold or disburse hospital wages. Separately, workers settle a Bridge Hive platform commission invoice — 16% of approved gross shift pay, due 10 calendar days after issuance. Bank details support wage transfer; they are not used to collect commission.',
+              a: 'The healthcare organization pays approved wages by bank transfer. Bridge Hive does not hold or disburse hospital wages. Separately, workers settle a Bridge Hive platform commission invoice on its own schedule. Bank details support wage transfer; they are not used to collect commission.',
             },
             {
               q: 'What does “Worker app continuation” open?',

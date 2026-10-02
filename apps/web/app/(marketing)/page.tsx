@@ -121,7 +121,20 @@ export default function HomePage() {
           items={[
             {
               q: 'Can my hospital create an account online?',
-              a: 'Not via open self-registration. Organization accounts are provisioned by Bridge Hive. Existing admins use Organization sign in; new partners should prepare an inquiry on the Contact page.',
+              a: (
+                <>
+                  Not via open self-registration. Organization accounts are provisioned
+                  by Bridge Hive. Existing admins use Organization sign in; new partners
+                  should{' '}
+                  <a
+                    href="/contact#partnerships"
+                    className="font-medium text-bh-teal-strong underline-offset-2 hover:underline"
+                  >
+                    prepare a partnership inquiry
+                  </a>
+                  .
+                </>
+              ),
             },
             {
               q: 'Does confirming my email make me eligible for shifts?',
@@ -133,7 +146,20 @@ export default function HomePage() {
             },
             {
               q: 'What does “Worker app continuation” open?',
-              a: 'A web page that helps you return to the Bridge Hive worker app after email confirmation, including deep-link guidance. It is not a full browser version of the app, and public app-store listings are not advertised from this website.',
+              a: (
+                <>
+                  A web page that helps you return to the Bridge Hive worker app after
+                  email confirmation, including deep-link guidance. It is not a full
+                  browser version of the app. For account help, contact{' '}
+                  <a
+                    href="/contact#support"
+                    className="font-medium text-bh-teal-strong underline-offset-2 hover:underline"
+                  >
+                    platform support
+                  </a>
+                  .
+                </>
+              ),
             },
           ]}
         />

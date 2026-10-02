@@ -58,10 +58,18 @@ export function MarketingFooter() {
             </li>
             <li>
               <Link
-                href="/contact"
+                href="/contact#partnerships"
                 className="text-bh-sidebar-text/90 transition-colors hover:text-white"
               >
                 Partnership inquiry
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/contact#support"
+                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
+              >
+                Support
               </Link>
             </li>
             <li>

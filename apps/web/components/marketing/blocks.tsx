@@ -132,7 +132,7 @@ export function InquiryCta() {
           Organization sign in
         </a>
         <a
-          href="/contact"
+          href="/contact#partnerships"
           className="inline-flex rounded-md border border-white/25 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           Partnership inquiry
@@ -151,7 +151,7 @@ export function InquiryCta() {
 export function FaqAccordion({
   items,
 }: {
-  items: Array<{ q: string; a: string }>;
+  items: Array<{ q: string; a: React.ReactNode }>;
 }) {
   return (
     <div className="mt-10 divide-y divide-bh-border border-y border-bh-border">
@@ -164,9 +164,9 @@ export function FaqAccordion({
               <span className="hidden text-bh-text-muted group-open:inline">−</span>
             </span>
           </summary>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-bh-text-secondary">
+          <div className="mt-3 max-w-2xl text-sm leading-relaxed text-bh-text-secondary">
             {item.a}
-          </p>
+          </div>
         </details>
       ))}
     </div>

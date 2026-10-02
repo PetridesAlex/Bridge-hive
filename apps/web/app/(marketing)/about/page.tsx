@@ -55,7 +55,7 @@ export default function AboutPage() {
         </div>
         <div className="mt-12 flex flex-wrap gap-3">
           <MarketingButton href="/how-it-works">How it works</MarketingButton>
-          <MarketingButton href="/contact" variant="secondary">
+          <MarketingButton href="/contact#partnerships" variant="secondary">
             Partnership inquiry
           </MarketingButton>
         </div>

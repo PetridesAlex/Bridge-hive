@@ -16,10 +16,14 @@ const MARKETING_SOURCE_GLOBS = [
   'app/(marketing)/how-it-works/page.tsx',
   'app/(marketing)/about/page.tsx',
   'app/(marketing)/contact/page.tsx',
+  'app/(marketing)/layout.tsx',
   'components/marketing/Hero.tsx',
   'components/marketing/MarketingFooter.tsx',
   'components/marketing/MarketingNav.tsx',
   'components/marketing/blocks.tsx',
+  'components/marketing/ContactEmail.tsx',
+  'app/robots.ts',
+  'app/sitemap.ts',
 ] as const;
 
 describe('marketing site contracts', () => {
@@ -52,6 +56,7 @@ describe('marketing site contracts', () => {
     const hero = await readWeb('components/marketing/Hero.tsx');
     expect(hero).toMatch(/href="\/sign-in"/);
     expect(hero).toMatch(/href="\/auth\/worker\/login"/);
+    expect(hero).toMatch(/\/contact#partnerships/);
     expect(hero).toMatch(/Prepare an inquiry|Send an inquiry/);
     expect(hero).toMatch(/not a full web app/i);
     expect(hero).not.toMatch(/href="\/sign-up"/);
@@ -69,14 +74,22 @@ describe('marketing site contracts', () => {
     expect(footer).not.toMatch(/\/sign-up/);
     expect(footer).toMatch(/\/admin\/sign-in/);
     expect(footer).not.toMatch(/Coming soon/);
-    expect(footer).toMatch(/\/contact/);
+    expect(footer).toMatch(/\/contact#partnerships/);
+    expect(footer).toMatch(/\/contact#support/);
   });
 
-  it('contact page is an honest partnership inquiry surface without fake submit UX', async () => {
+  it('contact page routes partnerships and support to the correct public mailboxes', async () => {
     const src = await readWeb('app/(marketing)/contact/page.tsx');
+    const email = await readWeb('components/marketing/ContactEmail.tsx');
+    expect(src).toMatch(/id="partnerships"/);
+    expect(src).toMatch(/id="support"/);
+    expect(src).toMatch(/info@bridgehive\.app/);
+    expect(src).toMatch(/support@bridgehive\.app/);
     expect(src).toMatch(/Partnership inquiry/);
-    expect(src).toMatch(/not a substitute for organization sign-in/i);
-    expect(src).toMatch(/Organization name/);
+    expect(src).toMatch(/Bridge Hive support/);
+    expect(src).toMatch(/not a substitute\s+for organization sign-in/i);
+    expect(src).toMatch(/Do not email identity documents, IBANs/);
+    expect(src).not.toMatch(/will be published later/i);
     expect(src).not.toMatch(/TODO/);
     expect(src).not.toMatch(/Submission endpoint not configured/);
     expect(src).not.toMatch(/Coming soon/);
@@ -84,6 +97,8 @@ describe('marketing site contracts', () => {
     expect(src).not.toMatch(/<form/i);
     expect(src).toMatch(/href="\/sign-in"/);
     expect(src).toMatch(/href="\/auth\/worker\/login"/);
+    expect(email).toMatch(/mailto:\$\{address\}/);
+    expect(email).toMatch(/Copy address/);
   });
 
   it('professionals page distinguishes wage bank transfer from commission invoicing', async () => {
@@ -98,6 +113,7 @@ describe('marketing site contracts', () => {
     expect(src).toMatch(/does not use them to collect platform fees|not used to collect commission/i);
     expect(src).not.toMatch(/bank details Bridge Hive needs for commission invoicing/i);
     expect(src).not.toMatch(/subject to legal/);
+    expect(src).toMatch(/\/contact#support/);
     expect(how).not.toMatch(/payout details for Bridge Hive commission invoicing/i);
     expect(how).toMatch(/bank details for wage payouts/i);
   });
@@ -111,6 +127,19 @@ describe('marketing site contracts', () => {
       expect(src).not.toMatch(/Submission endpoint not configured/);
       expect(src).not.toMatch(/Licensed clinical photography/);
     }
+  });
+
+  it('public marketing surfaces never expose the super-admin mailbox', async () => {
+    const forbidden = ['a', 'd', 'm', 'i', 'n', '@', 'b', 'r', 'i', 'd', 'g', 'e', 'h', 'i', 'v', 'e', '.', 'a', 'p', 'p'].join('');
+    // Reconstruct without embedding the full address literally in this assertion string
+    // beyond the joined parts above — tests absence of admin@bridgehive.app.
+    expect(forbidden).toBe('admin@bridgehive.app');
+    for (const file of MARKETING_SOURCE_GLOBS) {
+      const src = await readWeb(file);
+      expect(src).not.toContain(forbidden);
+    }
+    const og = await readWeb('public/marketing/og-default.svg');
+    expect(og).not.toContain(forbidden);
   });
 
   it('marketing metadata is not organization-dashboard copy', async () => {

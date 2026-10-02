@@ -39,7 +39,15 @@ export default function ProfessionalsPage() {
         </div>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-bh-text-muted">
           The continuation page helps you return to the Bridge Hive worker app after
-          email confirmation. It is not a full web version of the app.
+          email confirmation. It is not a full web version of the app. For account
+          help, see{' '}
+          <a
+            href="/contact#support"
+            className="font-medium text-bh-teal-strong underline-offset-2 hover:underline"
+          >
+            platform support
+          </a>
+          .
         </p>
       </Section>
 

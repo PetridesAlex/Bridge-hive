@@ -100,7 +100,7 @@ export function Hero() {
           <p className="mt-5 text-sm text-bh-text-muted">
             New organization?{' '}
             <a
-              href="/contact"
+              href="/contact#partnerships"
               className="font-medium text-bh-teal-strong underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal-strong"
             >
               Prepare an inquiry

@@ -12,3 +12,4 @@ Local captures from `next start` (not Production). Vercel Preview remains SSO-pr
 | `contact-375.png` / `contact-1440.png` | Contact |
 | `sign-in-1440.png` | Org sign-in smoke |
 | `admin-sign-in-1440.png` | Platform admin sign-in smoke |
+| `contact-partnerships-375.png` / `contact-support-1440.png` | Contact section anchors |

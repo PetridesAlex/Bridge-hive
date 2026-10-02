@@ -32,7 +32,7 @@ export default function OrganizationsPage() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <MarketingButton href="/sign-in">Organization sign in</MarketingButton>
-          <MarketingButton href="/contact" variant="secondary">
+          <MarketingButton href="/contact#partnerships" variant="secondary">
             Partnership inquiry
           </MarketingButton>
         </div>

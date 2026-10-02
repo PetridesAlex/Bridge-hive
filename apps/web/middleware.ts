@@ -14,6 +14,8 @@ const PUBLIC_PATHS = [
   '/how-it-works',
   '/about',
   '/contact',
+  '/robots.txt',
+  '/sitemap.xml',
 ];
 
 function isPublicPath(pathname: string): boolean {

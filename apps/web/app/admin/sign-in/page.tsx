@@ -1,7 +1,8 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { AuthFooterLink, AuthShell } from '@/components/auth/AuthShell';
 import { getPlatformAdminContext } from '@/lib/admin/auth';
+import { safeAdminNext } from '@/lib/auth-redirect';
 
 import { AdminSignInForm } from './admin-sign-in-form';
 
@@ -16,30 +17,26 @@ export default async function AdminSignInPage({
   }
 
   const params = await searchParams;
-  const next = params.next?.startsWith('/admin') ? params.next : '/admin';
+  const next = safeAdminNext(params.next);
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-8 px-6 py-12">
-      <div>
-        <p className="text-sm font-medium uppercase tracking-wide text-amber-600">
-          Bridge Hive
-        </p>
-        <h1 className="mt-1 text-3xl font-semibold text-slate-900">
-          Platform admin sign in
-        </h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Access is limited to granted platform administrators. Admin accounts
-          are provisioned by DevOps — there is no public registration.
-        </p>
-      </div>
-
+    <AuthShell
+      variant="admin"
+      title="Platform admin sign in"
+      description="Access is limited to granted platform administrators. Accounts are provisioned by Bridge Hive — there is no public registration for this console."
+      panelEyebrow="Platform administration"
+      panelTitle="Operate the Bridge Hive platform"
+      panelBody="Use this portal only if you hold a platform admin role. Organization teams should sign in through the organization portal instead."
+      footer={
+        <>
+          <p>
+            Looking for your hospital workspace?{' '}
+            <AuthFooterLink href="/sign-in">Organization sign in</AuthFooterLink>
+          </p>
+        </>
+      }
+    >
       <AdminSignInForm next={next} />
-
-      <p className="text-center text-sm text-slate-500">
-        <Link href="/sign-in" className="underline-offset-2 hover:underline">
-          Organization sign in
-        </Link>
-      </p>
-    </main>
+    </AuthShell>
   );
 }

@@ -19,6 +19,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { colors } from '@/constants/theme';
 import { AuthProvider } from '@/providers/AuthProvider';
+import { UnverifiedRouteGuard } from '@/components/auth/UnverifiedRouteGuard';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -47,27 +48,38 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <AuthProvider>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="welcome" />
-            <Stack.Screen name="auth/worker/login" />
-            <Stack.Screen name="auth/worker/register" />
-            <Stack.Screen name="auth/worker/pending" />
-            <Stack.Screen name="auth/worker/rejected" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="shifts/[id]" />
-            <Stack.Screen name="shifts/calendar" />
-            <Stack.Screen name="notifications" />
-            <Stack.Screen name="documents" />
-            <Stack.Screen name="profile/account" />
-          </Stack>
+          <UnverifiedRouteGuard>
+            <StatusBar style="light" />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.background },
+                animation: 'slide_from_right',
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="welcome" />
+              <Stack.Screen name="auth/worker/login" />
+              <Stack.Screen name="auth/worker/register" />
+              <Stack.Screen name="auth/worker/check-email" />
+              <Stack.Screen name="auth/worker/choose-role" />
+              <Stack.Screen name="auth/worker/reset-password" />
+              <Stack.Screen name="auth/worker/pending" />
+              <Stack.Screen name="auth/worker/rejected" />
+              <Stack.Screen name="auth/callback" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="shifts/[id]" />
+              <Stack.Screen name="shifts/calendar" />
+              <Stack.Screen name="invoices/[id]" />
+              <Stack.Screen name="notifications" />
+              <Stack.Screen name="documents" />
+              <Stack.Screen name="payout-setup" />
+              <Stack.Screen name="profile/account" />
+              <Stack.Screen name="profile/personal-information" />
+              <Stack.Screen name="profile/app-information" />
+              <Stack.Screen name="support" />
+            </Stack>
+          </UnverifiedRouteGuard>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

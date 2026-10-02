@@ -1,8 +1,7 @@
 /**
- * Hand-maintained Database type mirror for Phase 1 (+ finance remediation).
- * Prefer regenerating after `npx supabase db reset`:
- *   npm run db:types
- * Then export from database.generated.ts instead of this file.
+ * Hand-maintained Database type mirror (legacy fallback / partial docs).
+ * Apps import via `src/index.ts` → `database.generated.ts` (committed).
+ * Prefer regenerating: `npm run db:types`
  */
 
 export type Json =
@@ -67,6 +66,7 @@ export type Database = {
         contact_name: string | null;
         contact_phone: string | null;
         contact_email: string | null;
+        image_path: string | null;
         created_at: string;
         updated_at: string;
       }>;
@@ -412,6 +412,17 @@ export type Database = {
           p_roles: ('org_admin' | 'org_scheduler' | 'org_billing')[];
         };
         Returns: boolean;
+      };
+      ensure_my_worker_profile: {
+        Args: {
+          p_worker_role?: 'registered_nurse' | 'ward_assistant' | null;
+          p_bio?: string | null;
+        };
+        Returns: Database['public']['Tables']['worker_profiles']['Row'];
+      };
+      submit_worker_verification_package: {
+        Args: Record<string, never>;
+        Returns: Database['public']['Tables']['worker_profiles']['Row'];
       };
     };
     Enums: {

@@ -5,7 +5,8 @@
     "paths": {
       "@/*": ["./*"],
       "@bridge-hive/domain": ["../../packages/domain/src"],
-      "@bridge-hive/supabase-types": ["../../packages/supabase-types/src"]
+      "@bridge-hive/supabase-types": ["../../packages/supabase-types/src"],
+      "@bridge-hive/design-tokens": ["../../packages/design-tokens/src"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],

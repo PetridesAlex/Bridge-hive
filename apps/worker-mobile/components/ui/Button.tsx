@@ -10,7 +10,7 @@ import {
 
 import { colors, radii, spacing, touchTarget, typography } from '@/constants/theme';
 
-export type ButtonVariant = 'primary' | 'brand' | 'secondary' | 'dark' | 'danger' | 'ghost';
+export type ButtonVariant = 'primary' | 'secondary' | 'destructive' | 'ghost' | 'brand' | 'dark' | 'danger';
 export type ButtonSize = 'md' | 'lg' | 'sm';
 
 type Props = {
@@ -22,8 +22,13 @@ type Props = {
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
   fullWidth?: boolean;
+  accessibilityHint?: string;
 };
 
+/**
+ * Primary actions use dark ink. Honey/brand is accent highlight only.
+ * Loading prevents duplicate submissions.
+ */
 export function Button({
   label,
   onPress,
@@ -33,22 +38,26 @@ export function Button({
   loading = false,
   style,
   fullWidth = true,
+  accessibilityHint,
 }: Props) {
   const isDisabled = disabled || loading;
-  const palette = variantStyles[variant];
+  const resolved = variant === 'danger' ? 'destructive' : variant;
+  const palette = variantStyles[resolved];
 
   return (
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled }}
+      accessibilityLabel={label}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       style={({ pressed }) => [
         styles.base,
         sizeStyles[size],
         { backgroundColor: palette.bg, borderColor: palette.border },
         fullWidth && styles.fullWidth,
-        pressed && !isDisabled && styles.pressed,
+        pressed && !isDisabled && { backgroundColor: palette.pressed ?? palette.bg, opacity: 0.92 },
         isDisabled && styles.disabled,
         style,
       ]}
@@ -64,17 +73,47 @@ export function Button({
   );
 }
 
-const variantStyles: Record<ButtonVariant, { bg: string; fg: string; border: string }> = {
-  primary: { bg: colors.navy, fg: colors.white, border: colors.navy },
-  brand: { bg: colors.yellow, fg: colors.navy, border: colors.yellow },
-  secondary: { bg: colors.white, fg: colors.navy, border: colors.border },
-  dark: { bg: colors.navySoft, fg: colors.white, border: colors.navySoft },
-  danger: { bg: colors.errorLight, fg: colors.error, border: colors.errorLight },
-  ghost: { bg: 'transparent', fg: colors.navy, border: 'transparent' },
+const variantStyles: Record<
+  Exclude<ButtonVariant, 'danger'>,
+  { bg: string; fg: string; border: string; pressed?: string }
+> = {
+  primary: {
+    bg: colors.navy,
+    fg: colors.white,
+    border: colors.navy,
+    pressed: colors.navySoft,
+  },
+  brand: {
+    bg: colors.yellow,
+    fg: colors.navy,
+    border: colors.yellow,
+    pressed: colors.honeyStrong,
+  },
+  secondary: {
+    bg: colors.white,
+    fg: colors.navy,
+    border: colors.border,
+    pressed: colors.surfaceSubdued,
+  },
+  dark: {
+    bg: colors.navySoft,
+    fg: colors.white,
+    border: colors.navySoft,
+  },
+  destructive: {
+    bg: colors.errorLight,
+    fg: colors.error,
+    border: colors.errorLight,
+  },
+  ghost: {
+    bg: 'transparent',
+    fg: colors.navy,
+    border: 'transparent',
+  },
 };
 
 const sizeStyles = StyleSheet.create({
-  sm: { minHeight: 36, paddingHorizontal: spacing.md },
+  sm: { minHeight: 40, paddingHorizontal: spacing.md },
   md: { minHeight: touchTarget, paddingHorizontal: spacing.lg },
   lg: { minHeight: 52, paddingHorizontal: spacing.xl },
 });
@@ -95,10 +134,6 @@ const styles = StyleSheet.create({
   },
   labelSm: {
     fontSize: typography.size.sm,
-  },
-  pressed: {
-    opacity: 0.88,
-    transform: [{ scale: 0.99 }],
   },
   disabled: {
     opacity: 0.5,

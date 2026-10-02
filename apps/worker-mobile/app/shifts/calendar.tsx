@@ -12,10 +12,6 @@ import { isoDateFromTimestamp } from '@/utils/format';
 export default function ShiftCalendarScreen() {
   const { shifts, loading, error, refresh } = useShifts();
   const cells = useMemo(() => buildMonthGrid(new Date()), []);
-  const yearMonth = useMemo(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() + 1 };
-  }, []);
 
   const datesWithShifts = useMemo(() => {
     const set = new Set<string>();
@@ -28,9 +24,10 @@ export default function ShiftCalendarScreen() {
   return (
     <AppScreen>
       <ScreenHeader
-        title="Calendar"
+        title="Shift calendar"
         showBack
-        subtitle={`Published shifts · ${yearMonth.year}-${String(yearMonth.month).padStart(2, '0')}`}
+        subtitle="Published marketplace shifts this month"
+        titleSize="detail"
       />
       {error ? (
         <EmptyState
@@ -90,8 +87,8 @@ const styles = StyleSheet.create({
   },
   cellMuted: { opacity: 0.35 },
   cellActive: {
-    backgroundColor: colors.yellowLight,
-    borderColor: colors.yellow,
+    backgroundColor: colors.tealSoft,
+    borderColor: colors.teal,
   },
   day: {
     fontFamily: typography.fonts.medium,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
 
 type Props = {
   title: string;
@@ -14,18 +14,15 @@ export function SectionHeader({ title, eyebrow, actionLabel, onAction }: Props) 
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
-        <View style={styles.left}>
-          <View style={styles.accent} />
-          <View style={styles.copy}>
-            {eyebrow ? (
-              <Text style={styles.eyebrow} numberOfLines={1}>
-                {eyebrow}
-              </Text>
-            ) : null}
-            <Text style={styles.title} numberOfLines={1}>
-              {title}
+        <View style={styles.copy}>
+          {eyebrow ? (
+            <Text style={styles.eyebrow} numberOfLines={1}>
+              {eyebrow}
             </Text>
-          </View>
+          ) : null}
+          <Text style={styles.title} numberOfLines={1}>
+            {title}
+          </Text>
         </View>
         {actionLabel && onAction ? (
           <Pressable
@@ -46,7 +43,7 @@ export function SectionHeader({ title, eyebrow, actionLabel, onAction }: Props) 
 
 const styles = StyleSheet.create({
   wrap: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
     marginTop: spacing.md,
   },
   row: {
@@ -55,48 +52,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
   },
-  left: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  accent: {
-    width: 3,
-    height: 22,
-    borderRadius: radii.full,
-    backgroundColor: colors.yellow,
-  },
   copy: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
+    gap: 2,
   },
   eyebrow: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    fontFamily: typography.fonts.medium,
+    fontSize: typography.size.xs,
     color: colors.textMuted,
   },
   title: {
-    fontFamily: typography.fonts.displayExtra,
-    fontSize: 22,
-    lineHeight: 28,
-    letterSpacing: -0.5,
-    color: colors.navy,
+    fontFamily: typography.fonts.semibold,
+    fontSize: typography.size.xl,
+    lineHeight: typography.lineHeight.xl,
+    color: colors.text,
   },
   actionBtn: {
     flexShrink: 0,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.sm,
-    borderRadius: radii.full,
-    backgroundColor: colors.blueLight,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   action: {
     fontFamily: typography.fonts.semibold,
     fontSize: typography.size.sm,
-    color: colors.blue,
+    color: colors.navy,
   },
 });

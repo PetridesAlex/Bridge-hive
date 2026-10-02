@@ -1,13 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* Bridge Hive design tokens (web) — org workspace */
+  --bh-sidebar: #071d30;
+  --bh-sidebar-raised: #0b2a43;
+  --bh-sidebar-hover: #103b58;
+  --bh-sidebar-text: #dce8ee;
+  --bh-sidebar-muted: #91a8b5;
+  --bh-canvas: #f4f7f9;
+  --bh-surface: #ffffff;
+  --bh-subtle: #edf3f5;
+  --bh-text: #102331;
+  --bh-text-secondary: #5f6f79;
+  --bh-text-muted: #7d8a92;
+  --bh-border: #dce5e9;
+  --bh-border-strong: #c8d5db;
+  --bh-teal: #16a6b6;
+  --bh-teal-strong: #087f8c;
+  --bh-teal-soft: #e4f7f9;
+  --bh-honey: #e0aa18;
+  --bh-honey-strong: #c9920f;
+  --bh-honey-soft: #fff5d6;
+  --bh-accent-blue: #2563eb;
+  --bh-accent-blue-soft: #eff6ff;
+  --bh-accent-violet-soft: #f3e8ff;
+  --bh-success: #198754;
+  --bh-success-soft: #e7f6ed;
+  --bh-warning: #a56800;
+  --bh-warning-soft: #fff2cc;
+  --bh-danger: #b42318;
+  --bh-danger-soft: #fdecea;
+  --bh-info: #1769aa;
+  --bh-info-soft: #e8f2fc;
+  --bh-focus: #16a6b6;
+  --background: var(--bh-canvas);
+  --foreground: var(--bh-text);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-bh-sidebar: var(--bh-sidebar);
+  --color-bh-sidebar-raised: var(--bh-sidebar-raised);
+  --color-bh-sidebar-hover: var(--bh-sidebar-hover);
+  --color-bh-sidebar-text: var(--bh-sidebar-text);
+  --color-bh-sidebar-muted: var(--bh-sidebar-muted);
+  --color-bh-canvas: var(--bh-canvas);
+  --color-bh-surface: var(--bh-surface);
+  --color-bh-subtle: var(--bh-subtle);
+  --color-bh-text: var(--bh-text);
+  --color-bh-text-secondary: var(--bh-text-secondary);
+  --color-bh-text-muted: var(--bh-text-muted);
+  --color-bh-border: var(--bh-border);
+  --color-bh-border-strong: var(--bh-border-strong);
+  --color-bh-teal: var(--bh-teal);
+  --color-bh-teal-strong: var(--bh-teal-strong);
+  --color-bh-teal-soft: var(--bh-teal-soft);
+  --color-bh-honey: var(--bh-honey);
+  --color-bh-honey-strong: var(--bh-honey-strong);
+  --color-bh-honey-soft: var(--bh-honey-soft);
+  --color-bh-accent-blue: var(--bh-accent-blue);
+  --color-bh-accent-blue-soft: var(--bh-accent-blue-soft);
+  --color-bh-accent-violet-soft: var(--bh-accent-violet-soft);
+  --color-bh-success: var(--bh-success);
+  --color-bh-success-soft: var(--bh-success-soft);
+  --color-bh-warning: var(--bh-warning);
+  --color-bh-warning-soft: var(--bh-warning-soft);
+  --color-bh-danger: var(--bh-danger);
+  --color-bh-danger-soft: var(--bh-danger-soft);
+  --color-bh-info: var(--bh-info);
+  --color-bh-info-soft: var(--bh-info-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -16,4 +78,91 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--bh-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes bh-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bh-soft-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.04);
+    opacity: 0.92;
+  }
+}
+
+@keyframes bh-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.bh-fade-up {
+  animation: bh-fade-up 180ms ease-out both;
+}
+
+.bh-fade-up-delay-1 {
+  animation: bh-fade-up 280ms ease-out 60ms both;
+}
+
+.bh-fade-up-delay-2 {
+  animation: bh-fade-up 280ms ease-out 120ms both;
+}
+
+.bh-fade-up-delay-3 {
+  animation: bh-fade-up 280ms ease-out 180ms both;
+}
+
+.bh-soft-pulse {
+  animation: bh-soft-pulse 2.8s ease-in-out infinite;
+}
+
+.bh-gradient-sheen {
+  background-size: 200% 200%;
+  animation: bh-shimmer 8s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bh-fade-up,
+  .bh-fade-up-delay-1,
+  .bh-fade-up-delay-2,
+  .bh-fade-up-delay-3,
+  .bh-soft-pulse,
+  .bh-gradient-sheen {
+    animation: none;
+  }
+}
+
+.bh-tabular {
+  font-variant-numeric: tabular-nums;
 }

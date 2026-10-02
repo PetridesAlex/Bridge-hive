@@ -13,6 +13,11 @@ export const WORKER_ROLES = [
 ] as const;
 export type WorkerRole = (typeof WORKER_ROLES)[number];
 
+export const WORKER_ROLE_LABELS: Record<WorkerRole, string> = {
+  registered_nurse: 'Registered Nurse',
+  ward_assistant: 'Ward Assistant',
+};
+
 export const VERIFICATION_STATUSES = [
   'draft',
   'submitted',
@@ -33,11 +38,21 @@ export type OnboardingStatus = (typeof ONBOARDING_STATUSES)[number];
 
 export const ORG_STATUSES = [
   'pending',
+  'under_review',
   'active',
+  'rejected',
   'suspended',
   'closed',
 ] as const;
 export type OrgStatus = (typeof ORG_STATUSES)[number];
+
+export const ORGANIZATION_TYPES = [
+  'hospital',
+  'clinic',
+  'nursing_home',
+  'other',
+] as const;
+export type OrganizationType = (typeof ORGANIZATION_TYPES)[number];
 
 export const ORG_ROLES = [
   'org_admin',
@@ -144,6 +159,26 @@ export type CommissionStatus = (typeof COMMISSION_STATUSES)[number];
 /** Default pilot commission: 16% (band 15–17%). */
 export const DEFAULT_COMMISSION_RATE_BPS = 1600;
 
+/** Calendar days from invoice issue to due date. */
+export const WORKER_COMMISSION_DUE_DAYS = 10;
+
+export const WORKER_INVOICE_STATUSES = [
+  'draft',
+  'open',
+  'payment_processing',
+  'paid',
+  'past_due',
+  'void',
+  'uncollectible',
+] as const;
+export type WorkerInvoiceStatus = (typeof WORKER_INVOICE_STATUSES)[number];
+
+export const WORKER_BILLING_STANDINGS = [
+  'good_standing',
+  'restricted',
+] as const;
+export type WorkerBillingStanding = (typeof WORKER_BILLING_STANDINGS)[number];
+
 export type MoneyMinor = {
   amountMinor: number;
   currency: string;
@@ -156,6 +191,26 @@ export type FinancialSnapshot = {
   workerTransferAmountMinor: number;
   organizationTotalDueMinor: number;
   currency: string;
+};
+
+export type WorkerCommissionInvoice = {
+  id: string;
+  invoiceNumber: string;
+  workerId: string;
+  assignmentId: string;
+  timesheetId: string;
+  organizationId: string;
+  currency: string;
+  approvedMinutes: number;
+  rateMinor: number;
+  grossAmountMinor: number;
+  commissionRateBps: number;
+  commissionAmountMinor: number;
+  status: WorkerInvoiceStatus;
+  issuedAt: string;
+  dueAt: string;
+  paidAt: string | null;
+  pastDueAt: string | null;
 };
 
 export type Profile = {

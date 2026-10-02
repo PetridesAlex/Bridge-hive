@@ -20,6 +20,7 @@ build/
 .next/
 .expo/
 .turbo/
+.tmp-jest/
 *.tsbuildinfo
 
 # OS / editor
@@ -33,5 +34,9 @@ build/
 *.log
 npm-debug.log*
 
-# Generated (keep stubs, ignore large dumps if any)
-packages/supabase-types/src/database.generated.ts
+# Generated (kept committed so Vercel/CI match local `npm run db:types` output)
+# Historical ignore removed — do not re-add without switching index.ts to a
+# committed fallback, or Preview builds will hit implicit-any map errors.
+
+# Local-only helper scripts (never ship bypass tools)
+scripts/local/

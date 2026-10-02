@@ -72,6 +72,45 @@ update public.worker_profiles
 set verification_status = 'verified'
 where user_id = '33333333-3333-3333-3333-333333333333';
 
+-- Marketplace eligibility requires verified payout + role-required credentials.
+insert into public.payout_accounts (
+  worker_id, country, currency, masked_iban, status, verified_at, last_verified_at
+) values (
+  '33333333-3333-3333-3333-333333333333',
+  'CY',
+  'EUR',
+  'CY••••3333',
+  'verified',
+  now(),
+  now()
+)
+on conflict (worker_id) do update
+set status = 'verified',
+    verified_at = now(),
+    last_verified_at = now(),
+    masked_iban = excluded.masked_iban;
+
+select set_config('bridgehive.allow_platform_verify', 'on', true);
+insert into public.credentials (
+  worker_id, credential_type, status, expires_at, storage_path, storage_paths
+)
+select
+  '33333333-3333-3333-3333-333333333333',
+  t.cred_type,
+  'pending',
+  now() + interval '1 year',
+  '33333333-3333-3333-3333-333333333333/' || t.cred_type || '/seed.pdf',
+  jsonb_build_array(
+    '33333333-3333-3333-3333-333333333333/' || t.cred_type || '/seed.pdf'
+  )
+from unnest(public.worker_required_credential_types('registered_nurse')) as t(cred_type);
+
+update public.credentials
+set status = 'verified',
+    verified_at = now()
+where worker_id = '33333333-3333-3333-3333-333333333333';
+select set_config('bridgehive.allow_platform_verify', 'off', true);
+
 insert into public.shifts (
   id, organization_id, location_id, required_role,
   starts_at, ends_at, break_minutes, rate_minor, currency, status, acceptance_deadline

@@ -1,182 +1,157 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing, touchTarget, typography } from '@/constants/theme';
+import { IconButton } from '@/components/ui/IconButton';
+import { colors, spacing, typography } from '@/constants/theme';
+import { useRouter } from 'expo-router';
 
 type Props = {
   title: string;
+  /** Small context label above the title (root screens). */
+  eyebrow?: string;
+  /** Supporting sentence / meta below the title. */
   subtitle?: string;
   showBack?: boolean;
   onBack?: () => void;
+  /** Root: aligned with title row. Detail: aligned with back row. */
   right?: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
+  /** page = 28/34 root; detail = 24/30 for long titles / short page names */
+  titleSize?: 'page' | 'detail';
+  /** Unused — kept for call-site compatibility; premium chrome is always light. */
   light?: boolean;
 };
 
+/**
+ * Shared page header.
+ * - Root (`showBack` false): eyebrow → title + right → subtitle
+ * - Detail (`showBack` true): back row → title → subtitle
+ */
 export function ScreenHeader({
   title,
+  eyebrow,
   subtitle,
   showBack = false,
   onBack,
   right,
-  style,
-  light = false,
+  titleSize,
 }: Props) {
   const router = useRouter();
-  const fg = light ? colors.white : colors.navy;
-  const muted = light ? 'rgba(255,255,255,0.72)' : colors.textSecondary;
-  const backBg = light ? 'rgba(255,255,255,0.14)' : colors.blueLight;
+  const size = titleSize ?? (showBack ? 'detail' : 'page');
+  const titleStyle = size === 'detail' ? styles.titleDetail : styles.titlePage;
 
   if (showBack) {
     return (
-      <View style={[styles.wrap, styles.wrapNested, style]}>
-        <View style={styles.nestedTop}>
-          <Pressable
-            onPress={onBack ?? (() => router.back())}
-            hitSlop={8}
-            style={[styles.back, { backgroundColor: backBg }]}
-            accessibilityRole="button"
+      <View style={styles.detailWrap}>
+        <View style={styles.detailTop}>
+          <IconButton
+            icon="chevron-back"
             accessibilityLabel="Go back"
-          >
-            <Ionicons name="chevron-back" size={22} color={fg} />
-          </Pressable>
-          {right ? <View style={styles.right}>{right}</View> : <View style={styles.rightSpacer} />}
+            onPress={onBack ?? (() => router.back())}
+            color={colors.navy}
+            backgroundColor={colors.surfaceSubdued}
+          />
+          {right ? <View style={styles.rightSlot}>{right}</View> : <View style={styles.spacer} />}
         </View>
-
-        <View style={styles.nestedTitles}>
-          {subtitle ? (
-            <Text style={[styles.nestedEyebrow, { color: muted }]} numberOfLines={1}>
-              {subtitle}
-            </Text>
-          ) : null}
-          <Text style={[styles.nestedTitle, { color: fg }]} numberOfLines={2}>
-            {title}
+        <Text style={titleStyle} numberOfLines={3}>
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text style={styles.subtitle} numberOfLines={3}>
+            {subtitle}
           </Text>
-          {!light ? <View style={styles.accent} /> : null}
-        </View>
+        ) : null}
       </View>
     );
   }
 
   return (
-    <View style={[styles.wrap, styles.wrapHero, style]}>
-      <View style={styles.row}>
-        <View style={styles.left}>
-          <View style={styles.titles}>
-            {subtitle ? (
-              <Text
-                style={[styles.eyebrow, { color: muted }, light && styles.eyebrowLight]}
-                numberOfLines={1}
-              >
-                {subtitle}
-              </Text>
-            ) : null}
-            <Text style={[styles.title, styles.titleHero, { color: fg }]} numberOfLines={1}>
-              {title}
-            </Text>
-          </View>
-        </View>
-        {right ? <View style={styles.right}>{right}</View> : null}
+    <View style={styles.rootWrap}>
+      {eyebrow ? (
+        <Text style={styles.eyebrow} numberOfLines={1}>
+          {eyebrow}
+        </Text>
+      ) : null}
+      <View style={styles.titleRow}>
+        <Text style={[titleStyle, styles.titleFlex]} numberOfLines={3}>
+          {title}
+        </Text>
+        {right ? <View style={styles.rightSlot}>{right}</View> : null}
       </View>
-      {!light ? <View style={styles.accent} /> : null}
+      {subtitle ? (
+        <Text style={styles.subtitle} numberOfLines={3}>
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
+export const PageHeader = ScreenHeader;
+export const RootHeader = ScreenHeader;
+export const DetailHeader = ScreenHeader;
+
 const styles = StyleSheet.create({
-  wrap: {
+  rootWrap: {
+    paddingTop: spacing.md,
     marginBottom: spacing.lg,
+    gap: spacing.xs,
   },
-  wrapHero: {
-    marginBottom: spacing.xl,
-    paddingTop: spacing.xs,
+  detailWrap: {
+    paddingTop: spacing.sm,
+    marginBottom: spacing.lg,
+    gap: spacing.xs,
   },
-  wrapNested: {
-    marginBottom: spacing.xl,
-    gap: spacing.md,
-  },
-  nestedTop: {
+  detailTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: touchTarget,
-  },
-  nestedTitles: {
-    gap: 6,
-    paddingRight: spacing.sm,
-  },
-  nestedEyebrow: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    color: colors.navyLift,
-  },
-  nestedTitle: {
-    fontFamily: typography.fonts.displayExtra,
-    fontSize: 28,
-    lineHeight: 34,
-    letterSpacing: -0.7,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: touchTarget,
-    gap: spacing.sm,
-  },
-  left: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    minWidth: 0,
-    gap: spacing.md,
-  },
-  back: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  titles: {
-    flex: 1,
-    minWidth: 0,
-    gap: 5,
+    minHeight: 44,
+    marginBottom: spacing.sm,
   },
   eyebrow: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 11,
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
+    fontFamily: typography.fonts.semibold,
+    fontSize: typography.size.sm,
+    lineHeight: typography.lineHeight.sm,
+    color: colors.tealStrong,
   },
-  eyebrowLight: {
-    letterSpacing: 0.8,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    minHeight: 44,
   },
-  title: {
-    fontFamily: typography.fonts.displayExtra,
-    letterSpacing: -0.8,
+  titleFlex: {
+    flex: 1,
+    minWidth: 0,
   },
-  titleHero: {
-    fontSize: 32,
-    lineHeight: 38,
+  titlePage: {
+    fontFamily: typography.fonts.display,
+    fontSize: typography.size.xxxl,
+    lineHeight: typography.lineHeight.xxxl,
+    letterSpacing: -0.3,
+    color: colors.navy,
   },
-  accent: {
-    width: 36,
-    height: 3,
-    borderRadius: radii.full,
-    backgroundColor: colors.yellow,
-    marginTop: 2,
+  titleDetail: {
+    fontFamily: typography.fonts.display,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.3,
+    color: colors.navy,
   },
-  right: {
+  subtitle: {
+    fontFamily: typography.fonts.regular,
+    fontSize: typography.size.md,
+    lineHeight: typography.lineHeight.md,
+    color: colors.textSecondary,
+  },
+  rightSlot: {
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 0,
   },
-  rightSpacer: {
-    width: 40,
+  spacer: {
+    width: 44,
+    height: 44,
   },
 });

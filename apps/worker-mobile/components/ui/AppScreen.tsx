@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenEnter } from '@/components/ui/ScreenEnter';
 import { colors, spacing } from '@/constants/theme';
-import { useLayout } from '@/hooks/useLayout';
+import { type ContentKind, useLayout } from '@/hooks/useLayout';
 
 type Props = {
   children: React.ReactNode;
@@ -22,6 +23,10 @@ type Props = {
   refreshControl?: ScrollViewProps['refreshControl'];
   /** Full-bleed children (headers) can opt out of the centered column. */
   fullBleed?: boolean;
+  /** Column max-width preset for Expo web / tablet. */
+  contentKind?: ContentKind;
+  /** Skip first-mount enter animation. */
+  disableEnter?: boolean;
 };
 
 export function AppScreen({
@@ -33,8 +38,10 @@ export function AppScreen({
   edges = ['top'],
   refreshControl,
   fullBleed = false,
+  contentKind = 'list',
+  disableEnter = false,
 }: Props) {
-  const { gutter, contentMaxWidth } = useLayout();
+  const { gutter, contentMaxWidth } = useLayout(contentKind);
 
   const columnStyle: StyleProp<ViewStyle> = fullBleed
     ? undefined
@@ -48,24 +55,22 @@ export function AppScreen({
     ? { paddingHorizontal: gutter }
     : undefined;
 
-  if (scroll) {
-    return (
-      <SafeAreaView style={[styles.safe, style]} edges={edges}>
-        <ScrollView
-          contentContainerStyle={[styles.scrollContent, columnStyle, padStyle, contentStyle]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={refreshControl}
-        >
-          {children}
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
+  const body = scroll ? (
+    <ScrollView
+      contentContainerStyle={[styles.scrollContent, columnStyle, padStyle, contentStyle]}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
+    >
+      {children}
+    </ScrollView>
+  ) : (
+    <View style={[styles.fill, columnStyle, padStyle, contentStyle]}>{children}</View>
+  );
 
   return (
     <SafeAreaView style={[styles.safe, style]} edges={edges}>
-      <View style={[styles.fill, columnStyle, padStyle, contentStyle]}>{children}</View>
+      {disableEnter ? body : <ScreenEnter>{body}</ScreenEnter>}
     </SafeAreaView>
   );
 }

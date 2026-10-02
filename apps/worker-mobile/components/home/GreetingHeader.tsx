@@ -1,11 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/Avatar';
+import { IconButton } from '@/components/ui/IconButton';
 import { colors, spacing, typography } from '@/constants/theme';
-import { useLayout } from '@/hooks/useLayout';
 import { greetingForNow } from '@/utils/format';
 
 type Props = {
@@ -15,38 +14,41 @@ type Props = {
   unreadCount?: number;
 };
 
+/** Compact light home greeting — not a full-width navy slab. */
 export function GreetingHeader({ firstName, roleLabel, initials, unreadCount = 0 }: Props) {
   const router = useRouter();
   const greeting = greetingForNow();
-  const { gutter } = useLayout();
 
   return (
-    <View style={[styles.wrap, { marginHorizontal: -gutter, paddingHorizontal: gutter }]}>
+    <View style={styles.wrap}>
       <View style={styles.row}>
         <View style={styles.left}>
           <Avatar
             initials={initials}
-            size={52}
-            backgroundColor="rgba(245,176,0,0.22)"
-            textColor={colors.yellow}
+            size={44}
+            backgroundColor={colors.tealSoft}
+            textColor={colors.tealStrong}
           />
           <View style={styles.textCol}>
-            <Text style={styles.kicker}>Bridge Hive · Cyprus</Text>
-            <Text style={styles.greeting}>
+            <Text style={styles.kicker}>Bridge Hive</Text>
+            <Text style={styles.greeting} numberOfLines={1}>
               {greeting}, {firstName}
             </Text>
-            <Text style={styles.role}>{roleLabel}</Text>
+            <Text style={styles.role} numberOfLines={1}>
+              {roleLabel}
+            </Text>
           </View>
         </View>
-        <Pressable
-          onPress={() => router.push('/notifications')}
-          style={styles.bell}
-          accessibilityRole="button"
-          accessibilityLabel="Notifications"
-        >
-          <Ionicons name="notifications-outline" size={22} color={colors.white} />
+        <View style={styles.bellWrap}>
+          <IconButton
+            icon="notifications-outline"
+            accessibilityLabel="Notifications"
+            onPress={() => router.push('/notifications')}
+            color={colors.navy}
+            backgroundColor={colors.surfaceSubdued}
+          />
           {unreadCount > 0 ? <View style={styles.dot} /> : null}
-        </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -54,56 +56,53 @@ export function GreetingHeader({ firstName, roleLabel, initials, unreadCount = 0
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: colors.navy,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+    paddingBottom: spacing.lg,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: spacing.md,
   },
   left: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     flex: 1,
+    minWidth: 0,
   },
-  textCol: { flex: 1, gap: 2 },
+  textCol: { flex: 1, gap: 2, minWidth: 0 },
   kicker: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    color: colors.yellow,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+    fontSize: typography.size.sm,
+    lineHeight: typography.lineHeight.sm,
+    color: colors.tealStrong,
   },
   greeting: {
     fontFamily: typography.fonts.display,
-    fontSize: 22,
-    color: colors.white,
+    fontSize: 20,
+    lineHeight: 26,
+    color: colors.navy,
   },
   role: {
     fontFamily: typography.fonts.regular,
-    fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    fontSize: typography.size.sm,
+    lineHeight: typography.lineHeight.sm,
+    color: colors.textSecondary,
   },
-  bell: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  bellWrap: {
+    position: 'relative',
   },
   dot: {
     position: 'absolute',
-    top: 10,
-    right: 12,
+    top: 8,
+    right: 10,
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: colors.yellow,
+    borderWidth: 1.5,
+    borderColor: colors.white,
   },
 });

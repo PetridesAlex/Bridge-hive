@@ -4,6 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthShell } from '@/components/auth/AuthShell';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
@@ -50,13 +51,17 @@ export default function WorkerLoginScreen() {
 
   return (
     <AuthShell
-      title="Sign in"
-      subtitle="Continue as a nurse or ward assistant."
+      title="Welcome back"
+      subtitle="Sign in to manage shifts, timesheets, and commission invoices for healthcare professionals."
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>New to Bridge Hive?</Text>
-          <Pressable onPress={() => router.push('/auth/worker/register')}>
-            <Text style={styles.footerLink}>Create account</Text>
+          <Pressable
+            onPress={() => router.push('/auth/worker/register')}
+            accessibilityRole="link"
+            accessibilityLabel="Create worker account"
+          >
+            <Text style={styles.footerLink}>Create worker account</Text>
           </Pressable>
         </View>
       }
@@ -83,20 +88,31 @@ export default function WorkerLoginScreen() {
         placeholder="Required"
       />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : null}
 
       <View style={styles.actions}>
         <Button
-          label="Continue"
-          variant="brand"
+          label="Sign in"
+          variant="primary"
           size="lg"
           loading={submitting}
           onPress={onSubmit}
           style={styles.cta}
         />
-        <Pressable onPress={onForgot} hitSlop={10} style={styles.forgotBtn}>
+        <Pressable
+          onPress={onForgot}
+          hitSlop={10}
+          style={styles.forgotBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Forgot password"
+        >
           <Text style={styles.forgot}>Forgot password?</Text>
         </Pressable>
+        <GoogleSignInButton onSuccess={() => router.replace('/')} />
       </View>
     </AuthShell>
   );
@@ -117,7 +133,9 @@ const styles = StyleSheet.create({
   },
   forgotBtn: {
     alignSelf: 'center',
-    paddingVertical: 4,
+    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   forgot: {
     fontFamily: typography.fonts.semibold,
@@ -138,6 +156,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontFamily: typography.fonts.semibold,
     fontSize: 16,
-    color: colors.yellow,
+    color: colors.tealStrong,
   },
 });

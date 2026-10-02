@@ -16,12 +16,13 @@ export default function OrgError({
   }, [error]);
 
   return (
-    <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-center">
-      <h2 className="text-lg font-semibold text-red-900">Something went wrong</h2>
-      <p className="mt-2 text-sm text-red-700">
-        {error.message || 'An unexpected error occurred.'}
+    <div className="rounded-xl border border-bh-danger/30 bg-bh-danger-soft p-6">
+      <h2 className="text-lg font-semibold text-bh-text">Something went wrong</h2>
+      <p className="mt-2 text-sm text-bh-text-secondary">
+        We could not load this page. Try again. If the problem continues, contact Bridge Hive
+        support.
       </p>
-      <Button className="mt-4" variant="outline" onClick={reset}>
+      <Button type="button" className="mt-4" onClick={reset}>
         Try again
       </Button>
     </div>

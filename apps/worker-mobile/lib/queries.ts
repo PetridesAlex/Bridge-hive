@@ -40,14 +40,32 @@ export async function getShiftRequirements(shiftId: string) {
   return { data: (data ?? []) as ShiftRequirement[], error: error?.message };
 }
 
+/** Assignment row with optional nested shift fields for Work/Home lists. */
+export type AssignmentWithShift = ShiftAssignment & {
+  shifts: Pick<
+    Shift,
+    | 'id'
+    | 'title'
+    | 'starts_at'
+    | 'ends_at'
+    | 'rate_minor'
+    | 'currency'
+    | 'required_role'
+    | 'status'
+    | 'break_minutes'
+  > | null;
+};
+
 export async function getMyAssignments(workerId: string) {
   const { data, error } = await supabase
     .from('shift_assignments')
-    .select('*')
+    .select(
+      '*, shifts ( id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes )',
+    )
     .eq('worker_id', workerId)
     .order('accepted_at', { ascending: false });
 
-  return { data: (data ?? []) as ShiftAssignment[], error: error?.message };
+  return { data: (data ?? []) as AssignmentWithShift[], error: error?.message };
 }
 
 export async function getAssignmentById(assignmentId: string) {

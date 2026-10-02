@@ -1,8 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Card } from '@/components/ui/Card';
-import { colors, payoutStatusStyles, spacing, typography } from '@/constants/theme';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import type { Payout } from '@/lib/queries';
 import { formatMoney, formatShortDate, payoutDisplayStatus } from '@/utils/format';
 
@@ -10,20 +10,26 @@ type Props = {
   payout: Payout;
 };
 
+function toneFor(display: string): StatusTone {
+  if (display === 'paid') return 'success';
+  if (display === 'issue') return 'danger';
+  return 'warning';
+}
+
 export function PayoutCard({ payout }: Props) {
   const display = payoutDisplayStatus(payout.status);
-  const style = payoutStatusStyles[display];
 
   return (
-    <Card style={styles.card}>
+    <View style={styles.card}>
       <View style={styles.row}>
         <View style={styles.left}>
           <Text style={styles.title}>Shift payout</Text>
           <Text style={styles.date}>{formatShortDate(payout.created_at)}</Text>
         </View>
-        <View style={[styles.badge, { backgroundColor: style.bg }]}>
-          <Text style={[styles.badgeText, { color: style.fg }]}>{style.label}</Text>
-        </View>
+        <StatusBadge
+          label={display === 'issue' ? 'Issue' : display === 'paid' ? 'Paid' : 'Processing'}
+          tone={toneFor(display)}
+        />
       </View>
 
       <View style={styles.amounts}>
@@ -43,7 +49,7 @@ export function PayoutCard({ payout }: Props) {
           Payment reported by the organization — awaiting Bridge Hive reconciliation.
         </Text>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
@@ -65,27 +71,25 @@ function Amount({
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.md },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   left: { gap: 2 },
   title: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
     color: colors.text,
   },
   date: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,
     color: colors.textMuted,
-  },
-  badge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  badgeText: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
   },
   amounts: {
     flexDirection: 'row',
@@ -98,12 +102,12 @@ const styles = StyleSheet.create({
   },
   amountValue: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
   },
   amountEmphasize: {
-    fontFamily: typography.fonts.display,
-    fontSize: 20,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 17,
     color: colors.navy,
   },
   note: {

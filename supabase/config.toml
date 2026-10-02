@@ -50,5 +50,9 @@ enable_confirmations = false
 [edge_runtime]
 enabled = true
 
+# Stripe cannot send a Supabase JWT; signature verification is enforced in the function.
+[functions.stripe-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = false

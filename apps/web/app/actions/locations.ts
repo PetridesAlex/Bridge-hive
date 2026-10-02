@@ -3,19 +3,26 @@
 import {
   createLocationSchema,
   createWardSchema,
+  isOwnedLocationImagePath,
 } from '@bridge-hive/domain';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 
+import { rpcErrorMessage } from '@/lib/admin/auth';
 import { requireOrgMembership } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 
 export type ActionResult = {
   error?: string;
   success?: boolean;
+  locationId?: string;
 };
 
-function zodErrorMessage(error: { flatten: () => { formErrors: string[]; fieldErrors: Record<string, string[] | undefined> } }) {
+function zodErrorMessage(error: {
+  flatten: () => {
+    formErrors: string[];
+    fieldErrors: Record<string, string[] | undefined>;
+  };
+}) {
   const flat = error.flatten();
   const field = Object.values(flat.fieldErrors).flat().filter(Boolean)[0];
   return field ?? flat.formErrors[0] ?? 'Validation failed';
@@ -74,7 +81,7 @@ export async function createLocationAction(
   }
 
   revalidatePath(`/org/${slug}/locations`);
-  redirect(`/org/${slug}/locations/${data.id}`);
+  return { success: true, locationId: data.id };
 }
 
 export async function updateLocationAction(
@@ -131,9 +138,41 @@ export async function updateLocationAction(
 
   revalidatePath(`/org/${slug}/locations`);
   revalidatePath(`/org/${slug}/locations/${locationId}`);
-  return { success: true };
+  return { success: true, locationId };
 }
 
+export async function setLocationImagePathAction(params: {
+  slug: string;
+  locationId: string;
+  path: string | null;
+}): Promise<ActionResult> {
+  const ctx = await requireOrgMembership(params.slug);
+  if (!ctx.capabilities.canManageLocations) {
+    return { error: 'You do not have permission to update location images.' };
+  }
+
+  if (
+    params.path != null &&
+    !isOwnedLocationImagePath(ctx.org.id, params.locationId, params.path)
+  ) {
+    return { error: 'Invalid image path.' };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('set_location_image_path', {
+    p_organization_id: ctx.org.id,
+    p_location_id: params.locationId,
+    p_path: params.path as unknown as string,
+  });
+
+  if (error) {
+    return { error: rpcErrorMessage(error) };
+  }
+
+  revalidatePath(`/org/${params.slug}/locations`);
+  revalidatePath(`/org/${params.slug}/locations/${params.locationId}`);
+  return { success: true, locationId: params.locationId };
+}
 
 export async function createWardAction(
   slug: string,
@@ -221,4 +260,3 @@ export async function updateWardAction(
   revalidatePath(`/org/${slug}/locations/${locationId}`);
   return { success: true };
 }
-

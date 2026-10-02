@@ -24,7 +24,9 @@ if (
 /**
  * Web: browser localStorage.
  * Native: AsyncStorage persists the session across launches.
- * detectSessionInUrl is disabled for native.
+ * detectSessionInUrl stays false on all platforms — OAuth / deep-link session
+ * exchange is owned by `createSessionFromUrl` so PKCE codes are never double-spent
+ * (Supabase auto-detect + our handler caused Expo web redboxes).
  */
 const authStorage =
   Platform.OS === 'web'
@@ -52,6 +54,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabasePublishableK
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // PKCE for Google OAuth + email flows on Expo.
+    flowType: 'pkce',
   },
 });
 

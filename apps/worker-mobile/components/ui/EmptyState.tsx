@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing, typography } from '@/constants/theme';
 import { Button } from '@/components/ui/Button';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 
 type Props = {
   title: string;
@@ -21,14 +21,21 @@ export function EmptyState({
   onAction,
 }: Props) {
   return (
-    <View style={styles.wrap}>
+    <View style={styles.wrap} accessibilityRole="summary">
       <View style={styles.iconWrap}>
-        <Ionicons name={icon} size={28} color={colors.blue} />
+        <Ionicons name={icon} size={22} color={colors.navy} />
       </View>
       <Text style={styles.title}>{title}</Text>
       {description ? <Text style={styles.description}>{description}</Text> : null}
       {actionLabel && onAction ? (
-        <Button label={actionLabel} onPress={onAction} style={styles.btn} fullWidth={false} />
+        <Button
+          label={actionLabel}
+          onPress={onAction}
+          style={styles.btn}
+          fullWidth={false}
+          variant="primary"
+          size="sm"
+        />
       ) : null}
     </View>
   );
@@ -37,22 +44,22 @@ export function EmptyState({
 const styles = StyleSheet.create({
   wrap: {
     alignItems: 'center',
-    paddingVertical: spacing.huge,
-    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.blueLight,
+    width: 44,
+    height: 44,
+    borderRadius: radii.full,
+    backgroundColor: colors.surfaceSubdued,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   title: {
     fontFamily: typography.fonts.semibold,
     fontSize: typography.size.lg,
-    color: colors.navy,
+    color: colors.text,
     textAlign: 'center',
   },
   description: {
@@ -64,7 +71,7 @@ const styles = StyleSheet.create({
     lineHeight: typography.lineHeight.sm,
   },
   btn: {
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.xl,
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
 });

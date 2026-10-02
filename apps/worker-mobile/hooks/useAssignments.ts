@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { getMyAssignments, type ShiftAssignment } from '@/lib/queries';
+import {
+  getMyAssignments,
+  type AssignmentWithShift,
+} from '@/lib/queries';
 
 export function useAssignments(workerId?: string | null) {
-  const [assignments, setAssignments] = useState<ShiftAssignment[]>([]);
+  const [assignments, setAssignments] = useState<AssignmentWithShift[]>([]);
   const [loading, setLoading] = useState(Boolean(workerId));
   const [error, setError] = useState<string>();
 

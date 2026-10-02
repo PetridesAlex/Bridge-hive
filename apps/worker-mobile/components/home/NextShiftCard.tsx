@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import type { WorkerShiftDetails } from '@/lib/rpcs';
 import {
   formatDayLabel,
@@ -21,6 +20,19 @@ type Props = {
   assignmentStatus?: string;
 };
 
+function statusLabel(status?: string): string {
+  if (!status) return '';
+  const map: Record<string, string> = {
+    accepted: 'Accepted',
+    checked_in: 'Checked in',
+    checked_out: 'Checked out',
+    submitted: 'Timesheet submitted',
+    approved: 'Approved',
+    rejected: 'Rejected',
+  };
+  return map[status] ?? status.replace(/_/g, ' ');
+}
+
 export function NextShiftCard({ shift, assignmentStatus }: Props) {
   const router = useRouter();
   const minutes = Math.max(
@@ -33,12 +45,21 @@ export function NextShiftCard({ shift, assignmentStatus }: Props) {
     shift.required_role;
 
   return (
-    <Card style={styles.card}>
+    <Pressable
+      style={styles.card}
+      onPress={() => router.push(`/shifts/${shift.shift_id}`)}
+      accessibilityRole="button"
+      accessibilityLabel="View next shift"
+    >
       <View style={styles.accent} />
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>Next Shift</Text>
+        <Text style={styles.eyebrow}>Next shift</Text>
         {assignmentStatus ? (
-          <Text style={styles.status}>{assignmentStatus.replace(/_/g, ' ')}</Text>
+          <StatusBadge
+            label={statusLabel(assignmentStatus)}
+            tone={assignmentStatus === 'checked_in' ? 'accent' : 'info'}
+            icon="time"
+          />
         ) : null}
       </View>
       <Text style={styles.org}>{shift.organization_name}</Text>
@@ -51,91 +72,73 @@ export function NextShiftCard({ shift, assignmentStatus }: Props) {
       <View style={styles.meta}>
         <MetaRow
           icon="calendar-outline"
-          caption="Date"
           label={formatDayLabel(isoDateFromTimestamp(shift.starts_at))}
         />
         <MetaRow
           icon="time-outline"
-          caption="Schedule"
           label={formatTimeRange(shift.starts_at, shift.ends_at)}
         />
-        <MetaRow
-          icon="hourglass-outline"
-          caption="Duration"
-          label={formatDurationMinutes(minutes)}
-        />
+        <MetaRow icon="hourglass-outline" label={formatDurationMinutes(minutes)} />
       </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.pay}>{formatMoney(shift.rate_minor, shift.currency)}/hr</Text>
-        <Button
-          label="View Shift"
-          variant="primary"
-          size="sm"
-          fullWidth={false}
-          onPress={() => router.push(`/shifts/${shift.shift_id}`)}
-        />
-      </View>
-    </Card>
+      <Text style={styles.pay}>{formatMoney(shift.rate_minor, shift.currency)}/hr</Text>
+    </Pressable>
   );
 }
 
 function MetaRow({
   icon,
-  caption,
   label,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
-  caption: string;
   label: string;
 }) {
   return (
     <View style={styles.metaRow}>
-      <Ionicons name={icon} size={16} color={colors.navyLift} />
-      <View>
-        <Text style={styles.metaCaption}>{caption}</Text>
-        <Text style={styles.metaLabel}>{label}</Text>
-      </View>
+      <Ionicons name={icon} size={15} color={colors.navy} />
+      <Text style={styles.metaLabel}>{label}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { overflow: 'hidden', gap: spacing.md },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    overflow: 'hidden',
+  },
   accent: {
     position: 'absolute',
     left: 0,
     top: 0,
     bottom: 0,
-    width: 4,
-    backgroundColor: colors.yellow,
+    width: 3,
+    backgroundColor: colors.teal,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: spacing.sm,
   },
   eyebrow: {
     fontFamily: typography.fonts.semibold,
     fontSize: 12,
     color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  status: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    color: colors.navyLift,
-    textTransform: 'capitalize',
   },
   org: {
-    fontFamily: typography.fonts.semibold,
+    fontFamily: typography.fonts.medium,
     fontSize: 13,
-    color: colors.navyLift,
+    color: colors.textSecondary,
   },
   role: {
     fontFamily: typography.fonts.display,
     fontSize: 20,
+    lineHeight: 26,
     color: colors.text,
   },
   dept: {
@@ -143,27 +146,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textSecondary,
   },
-  meta: { gap: spacing.sm },
+  meta: { gap: 6, marginTop: spacing.xs },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  metaCaption: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 11,
-    color: colors.textMuted,
-  },
   metaLabel: {
-    fontFamily: typography.fonts.semibold,
+    fontFamily: typography.fonts.medium,
     fontSize: 14,
     color: colors.text,
   },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: spacing.sm,
-  },
   pay: {
-    fontFamily: typography.fonts.display,
-    fontSize: 22,
+    fontFamily: typography.fonts.bold,
+    fontSize: 18,
     color: colors.navy,
+    marginTop: spacing.xs,
   },
 });

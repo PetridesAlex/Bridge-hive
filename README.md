@@ -3,7 +3,7 @@
 Healthcare shift marketplace platform.
 
 - **Worker mobile app** — Expo React Native (`apps/worker-mobile`)
-- **Web** — Next.js organization dashboard (`apps/web`)
+- **Web** — Next.js organization + platform admin dashboard (`apps/web`)
 - **Backend** — Supabase (Auth, Postgres, Storage, Realtime, Edge Functions)
 
 ## Repository layout
@@ -11,7 +11,7 @@ Healthcare shift marketplace platform.
 ```
 apps/
   worker-mobile/   # Expo React Native worker app
-  web/             # Next.js organization dashboard
+  web/             # Next.js organization + platform admin dashboard
 packages/
   domain/          # Shared types, Zod schemas, money/time helpers
   supabase-types/  # Generated database types
@@ -25,17 +25,30 @@ docs/
   schema.md
 ```
 
-## Phase 3 (current)
+## Phase 4 (current)
 
-Organization web dashboard in `apps/web`:
+Platform admin dashboard in `apps/web` under `/admin`:
 
-- Organization sign-in with SSR cookie sessions (`@supabase/ssr`)
-- Multi-organization selection
-- Locations and wards management (role-gated)
-- Shift draft create/edit, publish via `publish_shift` RPC
-- Shift detail with assignments and timesheet review via `review_timesheet`
+- Platform-admin sign-in (SQL-bootstrap roles only; no public registration)
+- Worker directory and detail with verification / suspension actions
+- Credential review queue with short-lived signed document URLs
+- Cross-platform audit log
+- Role separation: support, verifier, finance (placeholder), super admin
 
-Migrations: `001`–`014` under `supabase/migrations/`.
+Migrations: `001`–`016` under `supabase/migrations/`.
+
+### Platform admin bootstrap
+
+After creating an Auth user, grant a platform role with the service role / SQL editor:
+
+```sql
+insert into public.platform_admin_roles (user_id, role)
+values ('<auth-user-uuid>', 'platform_super_admin');
+```
+
+Then open `http://localhost:3000/admin/sign-in`.
+
+**Dual-role rule:** a user may hold both a platform admin role and a worker profile. Admin authorization always comes from `platform_admin_roles`. RPCs block self-verification of the same user's own credentials/worker profile.
 
 ### Prerequisites
 
@@ -69,19 +82,10 @@ cp .env.example apps/worker-mobile/.env
 cd apps/worker-mobile
 npm start
 
-# Organization web
+# Organization / admin web
 cp apps/web/.env.local.example apps/web/.env.local
 # Fill NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY from `npx supabase status`
 npm run web
-```
-
-### Platform admin bootstrap
-
-After creating an Auth user, grant a platform role with the service role / SQL editor:
-
-```sql
-insert into public.platform_admin_roles (user_id, role)
-values ('<auth-user-uuid>', 'platform_super_admin');
 ```
 
 ### Organization membership bootstrap

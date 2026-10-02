@@ -14,7 +14,7 @@ Vercel hosts the Next.js org + platform-admin dashboards. Auth, Postgres, Storag
 |------|---------------|---------|-------------------------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Preview (+ later Production) | Yes | Local `apps/web/.env.local`; Supabase → Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Preview | Yes (publishable) | Same `.env.local`; Dashboard → anon / publishable key |
-| `APP_PUBLIC_URL` | Preview | Origin only | Set to exact `https://<deployment>.vercel.app` after first URL is known; or omit and use code fallback `https://$VERCEL_URL` |
+| `APP_PUBLIC_URL` | Preview | Origin only | Stable branch Preview: `https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app` (see [`org-activation-email-preview.md`](./org-activation-email-preview.md)). Falls back to `VERCEL_BRANCH_URL` then `VERCEL_URL`. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Preview | **Server-only** | Same `.env.local`; Dashboard → service_role — never `NEXT_PUBLIC_*` |
 | `ALLOW_LOCAL_INVITE_LINK_COPY` | Omit / `false` on Vercel | — | Local-only ([`.env.local.example`](../apps/web/.env.local.example)) |
 | `STRIPE_SECRET_KEY` | Not required for web UI preview | Server-only | Edge Functions / mobile Checkout |

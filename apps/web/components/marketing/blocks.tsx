@@ -50,8 +50,8 @@ export function AudienceSplit() {
         </h3>
         <p className="mt-3 text-sm leading-relaxed text-bh-sidebar-muted">
           Create an account in the worker app, upload role-specific documents, and
-          complete payout details. A platform admin reviews your package before
-          shifts become available — email confirmation alone is not activation.
+          submit bank details for wage payouts. A platform admin reviews your package
+          before shifts become available — email confirmation alone is not activation.
         </p>
         <a
           href="/professionals"
@@ -104,10 +104,10 @@ export function TrustPanel() {
       </h3>
       <p className="mt-4 max-w-2xl text-sm leading-relaxed text-bh-text-secondary">
         Bridge Hive runs structured account review for organizations and workers:
-        credentials and payout details are examined by a platform administrator
-        before marketplace access. The platform does not replace employer clinical
-        judgment, professional registration boards, or local employment law. We do
-        not invent staffing guarantees or claim automatic approval after signup.
+        credentials and bank details for wage payouts are examined by a platform
+        administrator before marketplace access. The platform does not replace
+        employer clinical judgment, professional registration boards, or local
+        employment law — and activation is never automatic after signup alone.
       </p>
     </div>
   );
@@ -120,27 +120,28 @@ export function InquiryCta() {
         Ready to structure your staffing workflow?
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-bh-sidebar-muted">
-        Organizations sign in when invited. Professionals continue in the worker app
-        after email confirmation. For new hospital partnerships, send an inquiry.
+        Organizations sign in when invited. Professionals use the worker app
+        continuation page after email confirmation. New hospital partnerships start
+        with a partnership inquiry — not organization sign-in as a substitute.
       </p>
       <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
         <a
           href="/sign-in"
-          className="inline-flex rounded-md bg-white px-5 py-2.5 text-sm font-medium text-bh-sidebar hover:bg-bh-subtle"
+          className="inline-flex rounded-md bg-white px-5 py-2.5 text-sm font-medium text-bh-sidebar transition-colors hover:bg-bh-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
           Organization sign in
         </a>
         <a
           href="/contact"
-          className="inline-flex rounded-md border border-white/25 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/10"
+          className="inline-flex rounded-md border border-white/25 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
         >
-          Organization inquiry
+          Partnership inquiry
         </a>
         <a
           href="/auth/worker/login"
-          className="inline-flex rounded-md px-5 py-2.5 text-sm font-medium text-bh-honey hover:text-white"
+          className="inline-flex rounded-md px-5 py-2.5 text-sm font-medium text-bh-honey transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-honey"
         >
-          For professionals
+          Worker app continuation
         </a>
       </div>
     </div>

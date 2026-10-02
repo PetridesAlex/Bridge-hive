@@ -31,12 +31,16 @@ export default function ProfessionalsPage() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <MarketingButton href="/auth/worker/login">
-            Continue in the worker app
+            Open worker app continuation
           </MarketingButton>
           <MarketingButton href="/how-it-works" variant="secondary">
             See the full journey
           </MarketingButton>
         </div>
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-bh-text-muted">
+          The continuation page helps you return to the Bridge Hive worker app after
+          email confirmation. It is not a full web version of the app.
+        </p>
       </Section>
 
       <div className="marketing-rule" />
@@ -56,8 +60,8 @@ export default function ProfessionalsPage() {
                 body: 'Submit credentials and information required for your role — registered nurse or ward assistant.',
               },
               {
-                label: 'Complete payout details',
-                body: 'Provide the bank details Bridge Hive needs for commission invoicing. This is separate from how organizations pay your wages.',
+                label: 'Submit bank details for wage payouts',
+                body: 'Provide bank account details so healthcare organizations can pay your approved wages by bank transfer. Bridge Hive reviews those details as part of account verification — it does not use them to collect platform fees.',
               },
               {
                 label: 'Platform admin review',
@@ -68,8 +72,8 @@ export default function ProfessionalsPage() {
                 body: 'Once activated, view openings that match your role and accept work you can complete.',
               },
               {
-                label: 'Timesheets and invoices',
-                body: 'Complete timesheets in the app. Organizations pay wages by bank transfer; Bridge Hive issues a separate platform commission invoice.',
+                label: 'Timesheets, wages, and commission',
+                body: 'Complete timesheets in the app. Organizations pay approved wages by bank transfer. Separately, Bridge Hive invoices you for its platform commission.',
               },
             ]}
           />
@@ -78,30 +82,25 @@ export default function ProfessionalsPage() {
 
       <Section className="!pt-0">
         <SectionHeading
-          title="Payments — said accurately"
-          lede="Product model from Bridge Hive finance design. Public commercial terms remain subject to legal and commercial confirmation."
+          title="How payments work"
+          lede="Wage pay and platform commission are separate obligations with separate payment methods."
         />
         <FeatureRow
           items={[
             {
-              title: 'Organization pays you directly',
-              body: 'For approved work, the healthcare organization pays the worker by bank transfer. Bridge Hive does not hold or disburse hospital wages.',
+              title: 'Organizations pay your wages',
+              body: 'For approved work, the healthcare organization pays you directly by bank transfer of approved gross shift pay. Bridge Hive does not hold or disburse hospital wages.',
             },
             {
-              title: 'Platform commission invoice',
-              body: 'Workers pay Bridge Hive a separate platform commission invoice — 16% of approved gross shift pay in the current product model.',
+              title: 'Bank details support wage transfer',
+              body: 'Your verified bank details exist so organizations can transfer wages to you. Bridge Hive stores verification records for account review; it does not collect commission through those bank details.',
             },
             {
-              title: 'Due timing',
-              body: 'Commission invoices are due 10 calendar days after the relevant invoice is issued, per the current product rules.',
+              title: 'Separate platform commission invoice',
+              body: 'Workers settle a separate Bridge Hive commission invoice — 16% of approved gross shift pay — due 10 calendar days after the invoice is issued. Commission is not deducted from the organization wage transfer.',
             },
           ]}
         />
-        <p className="mt-8 max-w-2xl text-xs leading-relaxed text-bh-text-muted">
-          Fee percentages and due dates are described here as the verified product
-          model. Treat them as subject to legal and commercial confirmation before
-          relying on them in contracts.
-        </p>
       </Section>
 
       <Section className="!pt-0">

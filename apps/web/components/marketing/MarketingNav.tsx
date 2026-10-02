@@ -38,7 +38,7 @@ export function MarketingNav() {
             href="/auth/worker/login"
             className="rounded-md px-3 py-2 text-sm font-medium text-bh-text-secondary transition-colors hover:text-bh-text"
           >
-            For professionals
+            Worker app
           </Link>
           <Link
             href="/sign-in"
@@ -80,7 +80,7 @@ export function MarketingNav() {
               className="rounded-md px-2 py-2.5 text-base font-medium text-bh-text-secondary"
               onClick={() => setOpen(false)}
             >
-              For professionals
+              Worker app continuation
             </Link>
             <Link
               href="/sign-in"

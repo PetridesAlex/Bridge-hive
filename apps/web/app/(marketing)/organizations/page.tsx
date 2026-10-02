@@ -27,13 +27,13 @@ export default function OrganizationsPage() {
         <p className="mt-5 max-w-2xl text-[var(--m-lede)] leading-relaxed text-bh-text-secondary">
           Bridge Hive helps hospitals and care organizations publish openings for
           registered nurses and ward assistants, limit visibility to verified
-          professionals, and review completed timesheets — without implying that
-          every shift will fill on demand.
+          professionals, and review completed timesheets — with operational
+          structure rather than fill-rate guarantees.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <MarketingButton href="/sign-in">Organization sign in</MarketingButton>
           <MarketingButton href="/contact" variant="secondary">
-            Organization inquiry
+            Partnership inquiry
           </MarketingButton>
         </div>
       </Section>
@@ -43,7 +43,7 @@ export default function OrganizationsPage() {
       <Section>
         <SectionHeading
           title="What you can operate in the dashboard"
-          lede="Features reflect the live Bridge Hive product — not promises about real-world workforce supply."
+          lede="The organization workspace covers the staffing workflow from locations through timesheet review."
         />
         <FeatureRow
           items={[
@@ -76,15 +76,15 @@ export default function OrganizationsPage() {
       </Section>
 
       <Section className="!pt-0">
-        <div className="max-w-2xl rounded-2xl border border-bh-border bg-bh-subtle/50 p-8">
+        <div className="marketing-panel max-w-2xl">
           <h2 className="text-xl font-semibold text-bh-sidebar">
-            What Bridge Hive does not claim
+            Built as workflow software
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-bh-text-secondary">
-            The platform does not guarantee that a shift will be filled, that a
-            specific professional will be available, or that verification replaces
-            your clinical hiring standards. Use Bridge Hive as structured workflow
-            software — not as a substitute for local employment or clinical policy.
+            Bridge Hive structures publishing, eligibility, and timesheet review. It
+            does not guarantee that every shift will fill, that a specific professional
+            will be available, or that platform verification replaces your clinical
+            hiring standards or local employment policy.
           </p>
         </div>
       </Section>

@@ -68,7 +68,7 @@ export function MarketingButton({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-medium transition-colors ${styles}`}
+      className={`inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal-strong ${styles}`}
     >
       {children}
     </Link>

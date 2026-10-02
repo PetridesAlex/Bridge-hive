@@ -9,6 +9,19 @@ async function readWeb(...parts: string[]) {
   return fs.readFile(path.join(webRoot, ...parts), 'utf8');
 }
 
+const MARKETING_SOURCE_GLOBS = [
+  'app/(marketing)/page.tsx',
+  'app/(marketing)/organizations/page.tsx',
+  'app/(marketing)/professionals/page.tsx',
+  'app/(marketing)/how-it-works/page.tsx',
+  'app/(marketing)/about/page.tsx',
+  'app/(marketing)/contact/page.tsx',
+  'components/marketing/Hero.tsx',
+  'components/marketing/MarketingFooter.tsx',
+  'components/marketing/MarketingNav.tsx',
+  'components/marketing/blocks.tsx',
+] as const;
+
 describe('marketing site contracts', () => {
   it('exposes the expected public marketing paths', () => {
     expect([...PUBLIC_MARKETING_PATHS]).toEqual([
@@ -39,8 +52,10 @@ describe('marketing site contracts', () => {
     const hero = await readWeb('components/marketing/Hero.tsx');
     expect(hero).toMatch(/href="\/sign-in"/);
     expect(hero).toMatch(/href="\/auth\/worker\/login"/);
-    expect(hero).toMatch(/Send an inquiry/);
+    expect(hero).toMatch(/Prepare an inquiry|Send an inquiry/);
+    expect(hero).toMatch(/not a full web app/i);
     expect(hero).not.toMatch(/href="\/sign-up"/);
+    expect(hero).not.toMatch(/Licensed clinical photography TBD/);
     expect(src).not.toMatch(/Organization Dashboard/);
     expect(src).not.toMatch(/Request access/);
   });
@@ -53,26 +68,49 @@ describe('marketing site contracts', () => {
     expect(nav).not.toMatch(/\/sign-up/);
     expect(footer).not.toMatch(/\/sign-up/);
     expect(footer).toMatch(/\/admin\/sign-in/);
-    expect(footer).toMatch(/Coming soon/);
+    expect(footer).not.toMatch(/Coming soon/);
+    expect(footer).toMatch(/\/contact/);
   });
 
-  it('contact page does not pretend form submission succeeded', async () => {
+  it('contact page is an honest partnership inquiry surface without fake submit UX', async () => {
     const src = await readWeb('app/(marketing)/contact/page.tsx');
-    expect(src).toMatch(/Submission endpoint not configured/);
-    expect(src).toMatch(/TODO/);
+    expect(src).toMatch(/Partnership inquiry/);
+    expect(src).toMatch(/not a substitute for organization sign-in/i);
+    expect(src).toMatch(/Organization name/);
+    expect(src).not.toMatch(/TODO/);
+    expect(src).not.toMatch(/Submission endpoint not configured/);
+    expect(src).not.toMatch(/Coming soon/);
     expect(src).not.toMatch(/message sent|thank you for contacting/i);
     expect(src).not.toMatch(/<form/i);
+    expect(src).toMatch(/href="\/sign-in"/);
+    expect(src).toMatch(/href="\/auth\/worker\/login"/);
   });
 
-  it('professionals page states bank transfer and commission model carefully', async () => {
+  it('professionals page distinguishes wage bank transfer from commission invoicing', async () => {
     const src = await readWeb('app/(marketing)/professionals/page.tsx');
+    const how = await readWeb('app/(marketing)/how-it-works/page.tsx');
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
     expect(src).toMatch(/bank transfer/);
     expect(src).toMatch(/16%/);
     expect(src).toMatch(/10 calendar days/);
     expect(src).toMatch(/does not hold or disburse/);
-    expect(src).toMatch(/subject to legal/);
+    expect(src).toMatch(/does not use them to collect platform fees|not used to collect commission/i);
+    expect(src).not.toMatch(/bank details Bridge Hive needs for commission invoicing/i);
+    expect(src).not.toMatch(/subject to legal/);
+    expect(how).not.toMatch(/payout details for Bridge Hive commission invoicing/i);
+    expect(how).toMatch(/bank details for wage payouts/i);
+  });
+
+  it('marketing sources omit public scaffolding phrases', async () => {
+    for (const file of MARKETING_SOURCE_GLOBS) {
+      const src = await readWeb(file);
+      expect(src).not.toMatch(/Coming soon/);
+      expect(src).not.toMatch(/\bTODO\b/);
+      expect(src).not.toMatch(/\bTBD\b/);
+      expect(src).not.toMatch(/Submission endpoint not configured/);
+      expect(src).not.toMatch(/Licensed clinical photography/);
+    }
   });
 
   it('marketing metadata is not organization-dashboard copy', async () => {

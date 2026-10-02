@@ -22,8 +22,8 @@ export default function AboutPage() {
         </h1>
         <p className="mt-5 max-w-2xl text-[var(--m-lede)] leading-relaxed text-bh-text-secondary">
           Bridge Hive exists to make healthcare staffing workflows understandable:
-          who is invited, who is verified, which role a shift needs, and how
-          payment responsibilities are separated.
+          who is invited, who is verified, which role a shift needs, and how wage
+          pay and platform commission stay separate.
         </p>
       </Section>
 
@@ -38,14 +38,14 @@ export default function AboutPage() {
             },
             {
               title: 'Operational structure',
-              body: 'Locations, wards, shifts, timesheets, and invoices are modeled as real workflows, not decorative marketplace language.',
+              body: 'Locations, wards, shifts, timesheets, and invoices are modeled as real workflows with clear ownership on each side.',
             },
             {
               title: 'Separated responsibilities',
-              body: 'Organizations pay workers. Workers settle Bridge Hive’s platform commission. We do not blur those paths.',
+              body: 'Organizations pay workers for approved work. Workers settle Bridge Hive’s platform commission separately. Those paths are never blended.',
             },
           ].map((item) => (
-            <div key={item.title} className="border-t border-bh-border pt-5">
+            <div key={item.title} className="marketing-value border-t border-bh-border pt-5">
               <h2 className="text-lg font-semibold text-bh-sidebar">{item.title}</h2>
               <p className="mt-2 text-sm leading-relaxed text-bh-text-secondary">
                 {item.body}
@@ -53,15 +53,10 @@ export default function AboutPage() {
             </div>
           ))}
         </div>
-        <p className="mt-12 max-w-2xl text-sm leading-relaxed text-bh-text-muted">
-          This page does not invent founder biographies, accreditations, partner
-          logos, or outcome statistics. When those materials are ready and reviewed,
-          they can be published here with proper attribution.
-        </p>
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-12 flex flex-wrap gap-3">
           <MarketingButton href="/how-it-works">How it works</MarketingButton>
           <MarketingButton href="/contact" variant="secondary">
-            Contact
+            Partnership inquiry
           </MarketingButton>
         </div>
       </Section>

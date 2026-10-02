@@ -57,14 +57,12 @@ export function MarketingFooter() {
               </Link>
             </li>
             <li>
-              <span className="text-bh-sidebar-muted">
-                Privacy — Coming soon
-              </span>
-            </li>
-            <li>
-              <span className="text-bh-sidebar-muted">
-                Terms — Coming soon
-              </span>
+              <Link
+                href="/contact"
+                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
+              >
+                Partnership inquiry
+              </Link>
             </li>
             <li>
               <Link

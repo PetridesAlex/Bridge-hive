@@ -21,14 +21,18 @@ export default function HowItWorksPage() {
         <SectionHeading
           eyebrow="How Bridge Hive works"
           title="Two journeys that stay separate"
-          lede="Organizations and professionals use different entry points, reviews, and destinations. Mixing them creates confusion — we keep the paths distinct."
+          lede="Organizations and professionals use different entry points, reviews, and destinations — so sign-in, verification, and payment responsibilities stay clear."
         />
         <div className="mt-8 flex flex-wrap gap-3">
           <MarketingButton href="/sign-in">Organization sign in</MarketingButton>
           <MarketingButton href="/auth/worker/login" variant="secondary">
-            For professionals
+            Worker app continuation
           </MarketingButton>
         </div>
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-bh-text-muted">
+          Professionals use the continuation page to open the Bridge Hive worker app
+          after email confirmation — not a browser replacement for the native app.
+        </p>
       </Section>
 
       <div className="marketing-rule" />
@@ -52,7 +56,7 @@ export default function HowItWorksPage() {
               },
               {
                 label: 'Review timesheets',
-                body: 'As assignments complete, review timesheets in the organization dashboard.',
+                body: 'As assignments complete, review timesheets in the organization dashboard and pay approved wages by bank transfer.',
               },
             ]}
           />
@@ -65,15 +69,15 @@ export default function HowItWorksPage() {
               },
               {
                 label: 'Submit verification package',
-                body: 'Upload documents for your role and complete payout details for Bridge Hive commission invoicing.',
+                body: 'Upload role-specific documents and bank details for wage payouts. Platform review verifies the package before activation.',
               },
               {
                 label: 'Admin review & activation',
                 body: 'A platform admin reviews your package. Marketplace shifts appear only after activation.',
               },
               {
-                label: 'Accept work & settle invoices',
-                body: 'Accept eligible shifts, submit timesheets, receive organization pay by bank transfer, and settle Bridge Hive commission invoices separately.',
+                label: 'Accept work & settle separately',
+                body: 'Accept eligible shifts, submit timesheets, receive organization wages by bank transfer, and settle Bridge Hive’s separate commission invoice on its own schedule.',
               },
             ]}
           />

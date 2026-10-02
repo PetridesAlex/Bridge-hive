@@ -14,7 +14,7 @@ import { Section, SectionHeading } from '@/components/marketing/Section';
 export const metadata: Metadata = {
   title: 'Bridge Hive — Healthcare staffing platform',
   description:
-    'Premium healthcare staffing platform connecting organizations with verified registered nurses and ward assistants.',
+    'Healthcare staffing platform connecting organizations with verified registered nurses and ward assistants.',
   alternates: { canonical: 'https://bridgehive.app/' },
 };
 
@@ -36,8 +36,8 @@ export default function HomePage() {
 
       <Section>
         <SectionHeading
-          eyebrow="What the platform actually does"
-          title="Practical staffing operations — not vague marketplace hype"
+          eyebrow="Platform capabilities"
+          title="Staffing operations with role and ward clarity"
         />
         <FeatureRow
           items={[
@@ -47,7 +47,7 @@ export default function HomePage() {
             },
             {
               title: 'Verified worker eligibility',
-              body: 'Professionals complete document and payout review with a platform admin before marketplace shifts appear.',
+              body: 'Professionals complete document and bank-detail review with a platform admin before marketplace shifts appear.',
             },
             {
               title: 'Shift publishing & acceptance',
@@ -59,7 +59,7 @@ export default function HomePage() {
             },
             {
               title: 'Separate payment paths',
-              body: 'Organizations pay workers by bank transfer. Workers settle a separate Bridge Hive platform commission invoice.',
+              body: 'Organizations pay workers by bank transfer for approved wages. Workers settle a separate Bridge Hive platform commission invoice.',
             },
             {
               title: 'Account activation gates',
@@ -84,7 +84,7 @@ export default function HomePage() {
               },
               {
                 label: 'Review completed work',
-                body: 'Accept timesheets and keep operational visibility — without claiming guaranteed fill rates.',
+                body: 'Accept timesheets and keep operational visibility across locations and wards.',
               },
             ]}
           />
@@ -97,7 +97,7 @@ export default function HomePage() {
               },
               {
                 label: 'Submit for review',
-                body: 'Upload role-specific documents and payout details. A platform admin reviews the package before activation.',
+                body: 'Upload role-specific documents and bank details for wage payouts. A platform admin reviews the package before activation.',
               },
               {
                 label: 'Accept eligible shifts',
@@ -121,19 +121,19 @@ export default function HomePage() {
           items={[
             {
               q: 'Can my hospital create an account online?',
-              a: 'Not via open self-registration. Organization accounts are provisioned by Bridge Hive. Existing admins use Organization sign in; new partners should send an inquiry.',
+              a: 'Not via open self-registration. Organization accounts are provisioned by Bridge Hive. Existing admins use Organization sign in; new partners should prepare an inquiry on the Contact page.',
             },
             {
               q: 'Does confirming my email make me eligible for shifts?',
-              a: 'No. Email confirmation proves the address works. Document and payout review by a platform admin is required before shifts become available.',
+              a: 'No. Email confirmation proves the address works. Document and bank-detail review by a platform admin is required before shifts become available.',
             },
             {
-              q: 'Who pays my wages?',
-              a: 'The healthcare organization pays you directly by bank transfer for approved work. Bridge Hive does not hold or disburse hospital wages. Workers receive a separate platform commission invoice from Bridge Hive.',
+              q: 'Who pays my wages — and what about commission?',
+              a: 'The healthcare organization pays approved wages by bank transfer. Bridge Hive does not hold or disburse hospital wages. Separately, workers settle a Bridge Hive platform commission invoice — 16% of approved gross shift pay, due 10 calendar days after issuance. Bank details support wage transfer; they are not used to collect commission.',
             },
             {
-              q: 'Where do professionals download the app?',
-              a: 'Use the worker continuation page for deep-link and install guidance. Public app-store listings are not published from this website yet.',
+              q: 'What does “Worker app continuation” open?',
+              a: 'A web page that helps you return to the Bridge Hive worker app after email confirmation, including deep-link guidance. It is not a full browser version of the app, and public app-store listings are not advertised from this website.',
             },
           ]}
         />

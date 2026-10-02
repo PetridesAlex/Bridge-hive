@@ -5,7 +5,7 @@ import { MarketingButton, Section } from '@/components/marketing/Section';
 export const metadata: Metadata = {
   title: 'Contact',
   description:
-    'How to reach Bridge Hive for organization inquiries. Contact submission endpoint is not configured on this website yet.',
+    'How healthcare organizations prepare a partnership inquiry with Bridge Hive.',
   alternates: { canonical: 'https://bridgehive.app/contact' },
 };
 
@@ -17,50 +17,66 @@ export default function ContactPage() {
           Contact
         </p>
         <h1 className="mt-3 max-w-2xl text-[var(--m-display)] font-semibold leading-[1.1] tracking-tight text-bh-sidebar">
-          Organization inquiry
+          Partnership inquiry for organizations
         </h1>
         <p className="mt-5 max-w-xl text-[var(--m-lede)] leading-relaxed text-bh-text-secondary">
-          Existing organization administrators sign in with their provisioned
-          account. New hospital partnerships are handled by Bridge Hive — not by
-          open web registration.
+          Bridge Hive provisions healthcare organization accounts after review.
+          There is no open hospital self-registration. Use this page to prepare a
+          partnership inquiry — it is not a substitute for organization sign-in.
         </p>
       </Section>
 
       <div className="marketing-rule" />
 
       <Section>
-        <div className="max-w-xl rounded-2xl border border-bh-border bg-bh-surface p-8">
+        <div className="marketing-panel max-w-2xl">
           <h2 className="text-xl font-semibold text-bh-sidebar">
-            Submission endpoint not configured
+            Preparing an organization inquiry
           </h2>
           <p className="mt-3 text-sm leading-relaxed text-bh-text-secondary">
-            This website does not yet have a verified contact email address or form
-            backend. We will not show a pretend success confirmation for inquiries.
+            New hospital and care-organization partners work with Bridge Hive
+            directly. Include the details below so our team can respond with the
+            right next step for your organization.
           </p>
-          <p className="mt-4 rounded-md bg-bh-honey-soft px-3 py-2 text-xs leading-relaxed text-bh-text">
-            <strong>TODO:</strong> Configure a verified receiving address or form
-            submission API, then replace this panel with a working inquiry flow.
+          <ul className="mt-6 space-y-3 text-sm leading-relaxed text-bh-text-secondary">
+            <li className="flex gap-3">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-bh-teal-strong" />
+              Organization name and country
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-bh-teal-strong" />
+              Approximate staffing needs for registered nurses and/or ward assistants
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-bh-teal-strong" />
+              Primary contact name, role, and preferred email
+            </li>
+            <li className="flex gap-3">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-bh-teal-strong" />
+              Any locations or wards you intend to staff first
+            </li>
+          </ul>
+          <p className="mt-6 text-sm leading-relaxed text-bh-text-muted">
+            A public inquiry mailbox for this website will be published here once it
+            is confirmed. Until then, existing organization administrators should use
+            organization sign-in; professionals should use the worker app continuation
+            page for account guidance.
           </p>
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <MarketingButton href="/sign-in">
-              Organization sign in
-            </MarketingButton>
-            <MarketingButton href="/auth/worker/login" variant="secondary">
-              Professionals — worker app
-            </MarketingButton>
-          </div>
         </div>
 
-        <div className="mt-12 max-w-xl">
-          <h2 className="text-lg font-semibold text-bh-sidebar">What to include</h2>
-          <p className="mt-2 text-sm leading-relaxed text-bh-text-secondary">
-            When a contact channel is available, organization inquiries should include
-            organization name, country, approximate staffing needs (registered nurse
-            and/or ward assistant), and a primary contact. Workers should use the
-            worker app for account and verification questions — not this page as a
-            substitute for app support.
-          </p>
+        <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+          <MarketingButton href="/sign-in">
+            Organization sign in
+          </MarketingButton>
+          <MarketingButton href="/auth/worker/login" variant="secondary">
+            Worker app continuation
+          </MarketingButton>
         </div>
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-bh-text-muted">
+          Registered nurses and ward assistants: account, verification, and shift
+          questions belong in the Bridge Hive worker app — not this organization
+          inquiry page.
+        </p>
       </Section>
     </>
   );

@@ -58,6 +58,9 @@ export const DEFAULT_ACTIVATION_NEXT = '/activate-organization-account';
 export const DEFAULT_WORKER_RECOVERY_NEXT = '/auth/worker/reset-password';
 export const DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT = '/auth/worker/login';
 
+/** Native worker app deep link for post-confirm sign-in (no auth tokens). */
+export const WORKER_APP_LOGIN_DEEP_LINK = `bridgehive://${DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT.replace(/^\//, '')}`;
+
 /** Cooldown between worker confirmation resend taps (client UX). */
 export const WORKER_CONFIRM_RESEND_COOLDOWN_MS = 60_000;
 

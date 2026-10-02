@@ -1,9 +1,9 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { WorkerAppContinuePanel } from '@/components/auth/worker-app-continue';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
 
@@ -56,11 +56,8 @@ export default function WorkerResetPasswordPage() {
         </p>
 
         {done ? (
-          <div className="mt-8 space-y-4">
-            <p className="text-sm font-medium text-emerald-700">Your password was updated.</p>
-            <Button asChild className="w-full">
-              <Link href="/sign-in">Back to sign in</Link>
-            </Button>
+          <div className="mt-8">
+            <WorkerAppContinuePanel variant="password-updated" />
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
@@ -100,9 +97,9 @@ export default function WorkerResetPasswordPage() {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => router.push('/sign-in')}
+              onClick={() => router.push('/')}
             >
-              Cancel
+              Back to home
             </Button>
           </form>
         )}

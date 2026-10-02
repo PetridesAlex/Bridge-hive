@@ -147,7 +147,9 @@ export default async function ShiftDetailPage({
     shift.ward && typeof shift.ward === 'object' && 'name' in shift.ward
       ? shift.ward
       : null;
-  const requirements = Array.isArray(shift.requirements) ? shift.requirements : [];
+  const requirements = Array.isArray(shift.requirements)
+    ? shift.requirements
+    : [];
   const acceptanceClosed = Boolean(
     shift.status === 'published' &&
       shift.acceptance_deadline &&

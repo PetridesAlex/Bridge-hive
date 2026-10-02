@@ -43,6 +43,22 @@ const WARD_ICON_TONES = [
 
 type WardRow = { id: string; name: string; instructions: string | null };
 
+function toWardRows(value: unknown): WardRow[] {
+  if (!Array.isArray(value)) return [];
+  const rows: WardRow[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as { id?: unknown; name?: unknown; instructions?: unknown };
+    if (typeof row.id !== 'string' || typeof row.name !== 'string') continue;
+    rows.push({
+      id: row.id,
+      name: row.name,
+      instructions: typeof row.instructions === 'string' ? row.instructions : null,
+    });
+  }
+  return rows;
+}
+
 function weekBuckets(dates: Date[], weeks = 6): number[] {
   const now = Date.now();
   const msWeek = 7 * 24 * 60 * 60 * 1000;
@@ -188,11 +204,7 @@ export default async function LocationsPage({
         country_code: (loc.country_code as string | null) ?? null,
         image_path: imagePath,
         imageUrl,
-        wards: (Array.isArray(loc.wards) ? loc.wards : []).map((w) => ({
-          id: (w as WardRow).id,
-          name: (w as WardRow).name,
-          instructions: (w as WardRow).instructions ?? null,
-        })),
+        wards: toWardRows(loc.wards),
       };
     }),
   );

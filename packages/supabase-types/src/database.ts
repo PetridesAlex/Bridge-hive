@@ -1,8 +1,7 @@
 /**
- * Hand-maintained Database type mirror for Phase 1 (+ finance remediation).
- * Prefer regenerating after `npx supabase db reset`:
- *   npm run db:types
- * Then export from database.generated.ts instead of this file.
+ * Hand-maintained Database type mirror (legacy fallback / partial docs).
+ * Apps import via `src/index.ts` → `database.generated.ts` (committed).
+ * Prefer regenerating: `npm run db:types`
  */
 
 export type Json =

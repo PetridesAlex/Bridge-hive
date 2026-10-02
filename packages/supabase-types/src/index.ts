@@ -1,6 +1,11 @@
 /**
- * Database types generated from local Supabase schema.
- * Regenerate: `npm run db:types`
+ * Database types for Bridge Hive apps.
+ *
+ * Exports the generated schema types. `database.generated.ts` is committed so
+ * Vercel / CI clean checkouts typecheck the same way as local machines that
+ * have run `npm run db:types`.
+ *
+ * Regenerate after migrations: `npm run db:types`
  */
 import type { Database } from './database.generated';
 

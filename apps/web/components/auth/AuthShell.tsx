@@ -1,6 +1,8 @@
+import { Globe } from 'lucide-react';
 import Link from 'next/link';
 
-import { AuthMotif } from '@/components/auth/AuthMotif';
+import { AuthHeroPanel } from '@/components/auth/AuthHeroPanel';
+import { BridgeHiveLogo } from '@/components/auth/BridgeHiveLogo';
 
 import '@/components/auth/auth-portal.css';
 
@@ -10,78 +12,43 @@ export function AuthShell({
   variant,
   title,
   description,
-  panelEyebrow,
-  panelTitle,
-  panelBody,
+  eyebrow,
   children,
   footer,
 }: {
   variant: AuthPortalVariant;
   title: string;
   description: string;
-  panelEyebrow: string;
-  panelTitle: string;
-  panelBody: string;
+  eyebrow: string;
   children: React.ReactNode;
   footer: React.ReactNode;
 }) {
   return (
     <div className="auth-portal" data-variant={variant}>
-      <div className="auth-portal-shell">
-        <aside className="auth-portal-brand">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-bh-honey">
-              Bridge Hive
-            </p>
-            <p className="mt-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-sidebar-muted">
-              {panelEyebrow}
-            </p>
-            <h2 className="mt-4 max-w-md text-3xl font-semibold leading-tight tracking-tight text-white">
-              {panelTitle}
-            </h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-bh-sidebar-muted">
-              {panelBody}
-            </p>
-          </div>
-          <AuthMotif accent={variant === 'admin' ? 'honey' : 'teal'} />
-        </aside>
+      <div className="auth-portal-card">
+        <AuthHeroPanel />
 
-        <div className="auth-portal-form-column">
-          <div className="auth-portal-form-card auth-rise">
-            <div className="mb-8 lg:hidden">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-honey-strong">
-                Bridge Hive
+        <div className="auth-form-column">
+          <div className="auth-form-lang" aria-hidden="true">
+            <Globe size={14} strokeWidth={1.75} />
+            <span>EN</span>
+          </div>
+
+          <div className="auth-form-card auth-rise">
+            <div className="auth-mobile-brand">
+              <BridgeHiveLogo />
+              <p className="auth-hero-eyebrow" style={{ color: '#6b7c8a' }}>
+                Healthcare Staffing Platform
               </p>
             </div>
 
-            <p
-              className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${
-                variant === 'admin' ? 'text-bh-honey-strong' : 'text-bh-teal-strong'
-              }`}
-            >
-              {variant === 'admin' ? 'Restricted workspace' : 'Organization portal'}
-            </p>
-            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-bh-sidebar">
-              {title}
-            </h1>
-            <p className="mt-3 text-sm leading-relaxed text-bh-text-secondary">
-              {description}
-            </p>
+            <p className="auth-form-eyebrow">{eyebrow}</p>
+            <h1 className="auth-form-title">{title}</h1>
+            <p className="auth-form-description">{description}</p>
 
-            <div className="mt-8">{children}</div>
+            <div className="auth-form-body">{children}</div>
 
-            <div className="mt-8 space-y-2 text-sm text-bh-text-muted">{footer}</div>
-
-            <p className="mt-6 text-xs leading-relaxed text-bh-text-muted">
-              Having trouble signing in? Contact{' '}
-              <a
-                href="mailto:support@bridgehive.app"
-                className="font-medium text-bh-teal-strong underline-offset-2 hover:underline"
-              >
-                support@bridgehive.app
-              </a>
-              . Do not share passwords in email.
-            </p>
+            <div className="auth-form-footer">{footer}</div>
           </div>
         </div>
       </div>
@@ -97,10 +64,7 @@ export function AuthFooterLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      className="font-medium text-bh-teal-strong underline-offset-2 hover:underline"
-    >
+    <Link href={href} className="font-medium">
       {children}
     </Link>
   );

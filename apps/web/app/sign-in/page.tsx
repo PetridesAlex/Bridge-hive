@@ -14,18 +14,18 @@ export default async function SignInPage({
   return (
     <AuthShell
       variant="organization"
-      title="Organization sign in"
+      eyebrow="Organization Portal"
+      title="Organization Sign In"
       description="Sign in with your provisioned organization account to manage locations, wards, and shifts. Access is by invitation only — there is no open self-registration."
-      panelEyebrow="For hospital organizations"
-      panelTitle="Coordinate shifts with confidence"
-      panelBody="Bridge Hive connects invited organizations to verified clinical professionals. Sign in only if your hospital has been provisioned by Bridge Hive."
       footer={
         <>
           <p>
-            <AuthFooterLink href="/">Back to public site</AuthFooterLink>
+            Need access? Contact{' '}
+            <a href="mailto:support@bridgehive.app">support@bridgehive.app</a>
           </p>
           <p>
-            Exploring a partnership?{' '}
+            <AuthFooterLink href="/">Back to public site</AuthFooterLink>
+            {' · '}
             <AuthFooterLink href="/contact#partnerships">
               Contact partnerships
             </AuthFooterLink>

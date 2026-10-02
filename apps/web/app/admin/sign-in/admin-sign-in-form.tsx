@@ -1,5 +1,6 @@
 'use client';
 
+import { ArrowRight, Mail } from 'lucide-react';
 import { useActionState } from 'react';
 
 import {
@@ -22,14 +23,17 @@ export function AdminSignInForm({ next }: { next: string }) {
 
       <div className="auth-field">
         <label htmlFor="admin-sign-in-email">Email</label>
-        <input
-          id="admin-sign-in-email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          required
-          placeholder=" "
-        />
+        <div className="auth-field-input">
+          <Mail className="auth-field-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
+          <input
+            id="admin-sign-in-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            placeholder="Enter your email address"
+          />
+        </div>
       </div>
 
       <AuthPasswordField id="admin-sign-in-password" />
@@ -41,7 +45,14 @@ export function AdminSignInForm({ next }: { next: string }) {
       ) : null}
 
       <button type="submit" disabled={pending} className="auth-submit">
-        {pending ? 'Signing in…' : 'Sign in to admin'}
+        {pending ? (
+          'Signing in…'
+        ) : (
+          <>
+            Sign in to admin
+            <ArrowRight size={17} strokeWidth={2} aria-hidden="true" />
+          </>
+        )}
       </button>
     </form>
   );

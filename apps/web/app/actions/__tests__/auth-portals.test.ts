@@ -17,20 +17,24 @@ describe('premium auth portals', () => {
     const form = await readWeb('app/sign-in/sign-in-form.tsx');
     const shell = await readWeb('components/auth/AuthShell.tsx');
 
-    expect(page).toMatch(/Organization sign in/);
+    expect(page).toMatch(/Organization Sign In/);
+    expect(page).toMatch(/Organization Portal/);
     expect(page).toMatch(/AuthShell/);
     expect(page).toMatch(/variant="organization"/);
     expect(page).toMatch(/safeOrgNext/);
     expect(page).toMatch(/invitation only|provisioned/i);
     expect(page).toMatch(/href="\/"/);
     expect(page).toMatch(/\/contact#partnerships/);
-    expect(shell).toMatch(/support@bridgehive\.app/);
+    expect(page).toMatch(/support@bridgehive\.app/);
     expect(page).not.toMatch(/href="\/sign-up"/);
     expect(page).not.toMatch(/DevOps/);
+    expect(page).not.toMatch(/Microsoft/);
     expect(form).toMatch(/signInAction/);
     expect(form).toMatch(/role="alert"/);
     expect(form).toMatch(/AuthPasswordField/);
     expect(form).toMatch(/autoComplete="email"/);
+    expect(shell).toMatch(/AuthHeroPanel/);
+    expect(shell).toMatch(/AuthFooterLink/);
   });
 
   it('admin sign-in uses restricted copy, org portal link, and never exposes admin mailbox', async () => {
@@ -39,16 +43,20 @@ describe('premium auth portals', () => {
     const shell = await readWeb('components/auth/AuthShell.tsx');
     const action = await readWeb('app/actions/admin.ts');
 
-    expect(page).toMatch(/Platform admin sign in/);
+    expect(page).toMatch(/Platform Admin Sign In/);
+    expect(page).toMatch(/Admin Console/);
     expect(page).toMatch(/AuthShell/);
     expect(page).toMatch(/variant="admin"/);
     expect(page).toMatch(/safeAdminNext/);
     expect(page).toMatch(/href="\/sign-in"/);
-    expect(shell).toMatch(/support@bridgehive\.app/);
+    expect(page).toMatch(/support@bridgehive\.app/);
     expect(page).not.toMatch(/admin@bridgehive\.app/);
     expect(shell).not.toMatch(/admin@bridgehive\.app/);
     expect(page).not.toMatch(/DevOps/);
     expect(page).not.toMatch(/href="\/sign-up"/);
+    expect(page).not.toMatch(/Microsoft/);
+    expect(form).not.toMatch(/Microsoft/);
+    expect(form).not.toMatch(/Forgot password/);
     expect(form).toMatch(/signInPlatformAdminAction/);
     expect(form).toMatch(/role="alert"/);
     expect(form).not.toMatch(/admin@bridgehive\.app/);
@@ -62,14 +70,29 @@ describe('premium auth portals', () => {
   it('auth shell and portal CSS stay scoped to auth components', async () => {
     const shell = await readWeb('components/auth/AuthShell.tsx');
     const css = await readWeb('components/auth/auth-portal.css');
+    const hero = await readWeb('components/auth/AuthHeroPanel.tsx');
+    const activity = await readWeb('components/auth/AuthPlatformActivity.tsx');
     const orgDash = await readWeb('app/dashboard/layout.tsx').catch(() => '');
     const adminLayout = await readWeb('app/admin/layout.tsx').catch(() => '');
 
     expect(shell).toMatch(/auth-portal\.css/);
     expect(css).toMatch(/\.auth-portal/);
-    expect(css).toMatch(/--bh-teal|--bh-canvas/);
+    expect(css).toMatch(/auth-portal-card|auth-hero/);
+    expect(hero).toMatch(/\/auth\/healthcare-hero\.webp/);
+    expect(hero).toMatch(/BridgeHiveLogo/);
+    expect(activity).toMatch(/Illustrative/);
+    expect(activity).toMatch(/metrics\?/);
     expect(orgDash).not.toMatch(/auth-portal\.css/);
     expect(adminLayout).not.toMatch(/auth-portal\.css/);
+  });
+
+  it('ships healthcare hero asset for the auth hero panel', async () => {
+    await expect(
+      fs.access(path.join(webRoot, 'public/auth/healthcare-hero.webp')),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(webRoot, 'public/auth/healthcare-hero.jpg')),
+    ).resolves.toBeUndefined();
   });
 
   it('safeOrgNext and safeAdminNext reject open redirects', () => {

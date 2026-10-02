@@ -1,5 +1,6 @@
 'use client';
 
+import { Eye, EyeOff, Lock } from 'lucide-react';
 import { useId, useState } from 'react';
 
 export function AuthPasswordField({
@@ -7,11 +8,13 @@ export function AuthPasswordField({
   name = 'password',
   label = 'Password',
   autoComplete = 'current-password',
+  placeholder = 'Enter your password',
 }: {
   id?: string;
   name?: string;
   label?: string;
   autoComplete?: string;
+  placeholder?: string;
 }) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
@@ -20,14 +23,15 @@ export function AuthPasswordField({
   return (
     <div className="auth-field">
       <label htmlFor={fieldId}>{label}</label>
-      <div className="auth-password-wrap">
+      <div className="auth-field-input auth-password-wrap">
+        <Lock className="auth-field-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
         <input
           id={fieldId}
           name={name}
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
           required
-          placeholder=" "
+          placeholder={placeholder}
         />
         <button
           type="button"
@@ -36,7 +40,11 @@ export function AuthPasswordField({
           aria-pressed={visible}
           aria-label={visible ? 'Hide password' : 'Show password'}
         >
-          {visible ? 'Hide' : 'Show'}
+          {visible ? (
+            <EyeOff size={17} strokeWidth={1.75} aria-hidden="true" />
+          ) : (
+            <Eye size={17} strokeWidth={1.75} aria-hidden="true" />
+          )}
         </button>
       </div>
     </div>

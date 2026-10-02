@@ -22,16 +22,18 @@ export default async function AdminSignInPage({
   return (
     <AuthShell
       variant="admin"
-      title="Platform admin sign in"
-      description="Access is limited to granted platform administrators. Accounts are provisioned by Bridge Hive — there is no public registration for this console."
-      panelEyebrow="Platform administration"
-      panelTitle="Operate the Bridge Hive platform"
-      panelBody="Use this portal only if you hold a platform admin role. Organization teams should sign in through the organization portal instead."
+      eyebrow="Admin Console"
+      title="Platform Admin Sign In"
+      description="Access the Bridge Hive administration dashboard. Manage organizations, monitor activity, and oversee the platform."
       footer={
         <>
           <p>
+            Need access? Contact{' '}
+            <a href="mailto:support@bridgehive.app">support@bridgehive.app</a>
+          </p>
+          <p>
             Looking for your hospital workspace?{' '}
-            <AuthFooterLink href="/sign-in">Organization sign in</AuthFooterLink>
+            <AuthFooterLink href="/sign-in">Organization Sign In</AuthFooterLink>
           </p>
         </>
       }

@@ -625,4 +625,3 @@ export function locationWorkload(
     .map(([locationId, v]) => ({ locationId, name: v.name, count: v.count }))
     .sort((a, b) => b.count - a.count);
 }
-

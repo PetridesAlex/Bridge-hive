@@ -64,7 +64,7 @@ Add/update for **Preview** (and redeploy the branch):
 
 Also: **Settings → Environment Variables** → enable **Automatically expose System Environment Variables** (so `VERCEL_BRANCH_URL` / `VERCEL_URL` exist at runtime).
 
-Keep existing `NEXT_PUBLIC_SUPABASE_*` and `SUPABASE_SERVICE_ROLE_KEY`.  
+Keep existing `NEXT_PUBLIC_SUPABASE_*` and `SUPABASE_SERVICE_ROLE_KEY`.
 Code also prefers request `Host` on `*.vercel.app`, then `VERCEL_BRANCH_URL`, when `APP_PUBLIC_URL` is unset or loopback.
 
 Optional for worker app email regressions (Expo `.env`):

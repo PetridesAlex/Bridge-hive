@@ -2,8 +2,8 @@
 
 Agent does **not** enable Google in the hosted project or paste Client secrets into the repo / chat.
 
-Project ref host: `hfnymqjrbppculcofaag.supabase.co`  
-App scheme: `bridgehive`  
+Project ref host: `hfnymqjrbppculcofaag.supabase.co`
+App scheme: `bridgehive`
 OAuth method: **browser-based** Supabase Auth (`signInWithOAuth` + system browser). No native Google SDK; no Android SHA-1 / iOS native client IDs required for this version.
 
 ## Exact redirect URI strings (this repository)

@@ -6,20 +6,20 @@ Apply Dashboard checks and template edits manually for project `hfnymqjrbppculco
 
 Use **one** recent signup timestamp. Do not spam Resend while diagnosing rate limits.
 
-1. **Authentication → Users**  
+1. **Authentication → Users**
    Find the synthetic account. Note: exists? email confirmed? Do **not** delete or manually confirm.
 
-2. **Logs → Auth**  
+2. **Logs → Auth**
    Filter near the signup time. Record only event **category/code** and **timestamp** (signup, SMTP error, rate limit). No emails/tokens in notes.
 
-3. **Resend → Emails**  
+3. **Resend → Emails**
    Same window / recipient. Status must be one of: `not present`, `sent`, `delivered`, `bounced`, `suppressed`, `rejected`, `deferred`. Note safe diagnostic reason if shown. Check suppression list if bounced/suppressed.
 
-4. **Authentication → Emails → SMTP Settings**  
-   Custom SMTP enabled? Sender domain verified? From-address on that domain? Resend SMTP host correct?  
+4. **Authentication → Emails → SMTP Settings**
+   Custom SMTP enabled? Sender domain verified? From-address on that domain? Resend SMTP host correct?
    **Do not** copy SMTP password or API keys.
 
-5. **Recipient mailbox**  
+5. **Recipient mailbox**
    Inbox, Spam/Junk, Promotions, All Mail; search “Bridge Hive”.
 
 ### How to interpret (evidence only)

@@ -253,4 +253,33 @@ describe('marketing site contracts', () => {
       await expect(fs.access(path.join(webRoot, file))).resolves.toBeUndefined();
     }
   });
+
+  it('ships the official Bridge Hive mark in marketing brand and icon metadata', async () => {
+    const brand = await readWeb('components/marketing/MarketingBrand.tsx');
+    const layout = await readWeb('app/(marketing)/layout.tsx');
+    const nav = await readWeb('components/marketing/MarketingNav.tsx');
+    const footer = await readWeb('components/marketing/MarketingFooter.tsx');
+
+    expect(brand).toMatch(/\/brand\/bridge-hive-logo-512\.webp/);
+    expect(brand).toMatch(/next\/image/);
+    expect(brand).toMatch(/Bridge Hive|m-brand-wordmark/);
+    expect(brand).not.toMatch(/viewBox="0 0 32 32"/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-64\.png/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-180\.png/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-192\.png/);
+    expect(nav).toMatch(/MarketingBrand/);
+    expect(footer).toMatch(/MarketingBrand/);
+
+    for (const file of [
+      'public/brand/bridge-hive-logo-512.webp',
+      'public/brand/bridge-hive-logo-64.png',
+      'public/brand/bridge-hive-logo-180.png',
+      'public/brand/bridge-hive-logo-192.png',
+      'public/brand/bridge-hive-logo-original.png',
+      'app/favicon.ico',
+      'app/icon.png',
+    ]) {
+      await expect(fs.access(path.join(webRoot, file))).resolves.toBeUndefined();
+    }
+  });
 });

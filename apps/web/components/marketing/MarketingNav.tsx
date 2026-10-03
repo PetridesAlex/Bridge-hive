@@ -63,7 +63,7 @@ export function MarketingNav() {
         className={`m-header ${scrolled || open ? 'is-scrolled' : ''}`}
       >
         <div className="m-header-inner">
-          <MarketingBrand />
+          <MarketingBrand priority markSize={44} />
 
           <nav className="m-nav-desktop" aria-label="Primary">
             {MARKETING_NAV.map((item) => (

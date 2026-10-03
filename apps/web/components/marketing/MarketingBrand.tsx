@@ -1,43 +1,38 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
-/** Bridge Hive mark + wordmark for marketing surfaces only (light/dark variants). */
+const MARK_SRC = '/brand/bridge-hive-logo-512.webp';
+
+/** Official Bridge Hive mark + readable wordmark for marketing surfaces only. */
 export function MarketingBrand({
   href = '/',
   tone = 'light',
-  markSize = 28,
+  markSize = 44,
+  priority = false,
 }: {
   href?: string;
   tone?: 'light' | 'dark';
+  /** Display size in CSS pixels (keep ~40–52 in header). */
   markSize?: number;
+  priority?: boolean;
 }) {
+  const size = Math.min(52, Math.max(40, markSize));
+
   return (
     <Link
       href={href}
       className={`m-brand m-brand--${tone}`}
       aria-label="Bridge Hive home"
     >
-      <svg
-        width={markSize}
-        height={markSize}
-        viewBox="0 0 32 32"
-        fill="none"
-        aria-hidden="true"
+      <Image
+        src={MARK_SRC}
+        alt=""
+        width={size}
+        height={size}
+        sizes={`${size}px`}
         className="m-brand-mark"
-      >
-        <path
-          d="M8 16c0-4.4 3.6-8 8-8h2.2c2.9 0 5.3 2.4 5.3 5.3 0 1.8-.9 3.4-2.3 4.4 1.4 1 2.3 2.6 2.3 4.4 0 2.9-2.4 5.3-5.3 5.3H16c-4.4 0-8-3.6-8-8z"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M14 12.5h4.5M14 16h5.5M14 19.5h4"
-          stroke="currentColor"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-        <circle cx="22.5" cy="10" r="1.6" fill="currentColor" />
-      </svg>
+        priority={priority}
+      />
       <span className="m-brand-wordmark">
         <span className="m-brand-bridge">Bridge</span>{' '}
         <span className="m-brand-hive">Hive</span>

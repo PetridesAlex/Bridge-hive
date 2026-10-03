@@ -51,13 +51,16 @@
 .m-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.65rem;
   text-decoration: none;
 }
 
 .m-brand-mark {
-  color: var(--m-honey);
   flex-shrink: 0;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0.55rem;
 }
 
 .m-brand-wordmark {

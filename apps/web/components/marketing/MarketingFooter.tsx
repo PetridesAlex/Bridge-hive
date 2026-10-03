@@ -8,7 +8,7 @@ export function MarketingFooter() {
     <footer className="m-footer">
       <div className="m-footer-grid">
         <div>
-          <MarketingBrand tone="dark" />
+          <MarketingBrand tone="dark" markSize={44} />
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-[rgba(220,232,238,0.68)]">
             A staffing platform that connects healthcare organizations with verified
             registered nurses and ward assistants — with clear roles, review workflows,

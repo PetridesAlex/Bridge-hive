@@ -2,15 +2,21 @@ import {
   ORG_DISPLAY_NAME_MAX_LENGTH,
   ORG_PAYMENT_INSTRUCTIONS_UNAVAILABLE,
   ORG_PAYS_WORKER_GROSS_COPY,
+  addOrgActivityCalendarDays,
   buildAttentionQueue,
+  buildOrgActivitySeries,
   buildRoleCoverage,
   buildShiftCoverageTrend,
   countFilledUpcoming,
   countOpenShifts,
   estimatedUpcomingGrossMinor,
   isOwnedOrganizationLogoPath,
+  isOrgActivityRangeDays,
   locationWorkload,
+  mondayOfOrgActivityYmd,
   normalizeOrganizationDisplayName,
+  orgActivityFetchStartYmd,
+  orgActivityYmdInTimeZone,
   orgLifecycleBannerTone,
   orgNavItemsForCapabilities,
   orgProfileCompleteness,
@@ -247,5 +253,214 @@ describe('organization branding helpers', () => {
         { location_id: 'l2', location_name: 'Ward B' },
       ])[0],
     ).toMatchObject({ locationId: 'l1', count: 2 });
+  });
+});
+
+describe('organization activity series', () => {
+  // Midday Europe/Nicosia on 3 Oct 2026 (EEST, UTC+3)
+  const now = new Date('2026-10-03T12:00:00.000+03:00');
+  const timeZone = 'Europe/Nicosia';
+
+  it('validates range days and computes fetch lookback in org timezone', () => {
+    expect(isOrgActivityRangeDays(7)).toBe(true);
+    expect(isOrgActivityRangeDays(14)).toBe(false);
+    expect(orgActivityYmdInTimeZone(now, timeZone)).toBe('2026-10-03');
+    expect(orgActivityFetchStartYmd(timeZone, now)).toBe('2026-04-07');
+    expect(mondayOfOrgActivityYmd('2026-10-03')).toBe('2026-09-28');
+    expect(addOrgActivityCalendarDays('2026-10-03', -6)).toBe('2026-09-27');
+  });
+
+  it('buckets shifts created, acceptances including withdrawn, distinct workers, and approved timesheets', () => {
+    const series = buildOrgActivitySeries({
+      timeZone,
+      rangeDays: 7,
+      now,
+      shifts: [
+        { id: 's1', created_at: '2026-10-01T10:00:00.000+03:00', status: 'draft' },
+        { id: 's2', created_at: '2026-10-01T15:00:00.000+03:00', status: 'published' },
+        { id: 's3', created_at: '2026-09-20T10:00:00.000+03:00', status: 'filled' }, // outside 7d
+        { id: 's4', created_at: '2026-10-03T08:00:00.000+03:00', status: 'filled' },
+      ],
+      assignments: [
+        {
+          id: 'a1',
+          worker_id: 'w1',
+          accepted_at: '2026-10-02T09:00:00.000+03:00',
+          status: 'accepted',
+        },
+        {
+          id: 'a2',
+          worker_id: 'w1',
+          accepted_at: '2026-10-02T11:00:00.000+03:00',
+          status: 'withdrawn', // still counts as acceptance history
+        },
+        {
+          id: 'a3',
+          worker_id: 'w2',
+          accepted_at: '2026-10-03T09:00:00.000+03:00',
+          status: 'cancelled',
+        },
+        {
+          id: 'a4',
+          worker_id: 'w3',
+          accepted_at: '2026-09-01T09:00:00.000+03:00',
+          status: 'accepted', // outside window
+        },
+      ],
+      timesheets: [
+        {
+          id: 't1',
+          reviewed_at: '2026-10-03T10:00:00.000+03:00',
+          status: 'approved',
+        },
+        {
+          id: 't2',
+          reviewed_at: '2026-10-03T11:00:00.000+03:00',
+          status: 'rejected', // must not count
+        },
+        {
+          id: 't3',
+          reviewed_at: null,
+          status: 'submitted',
+        },
+      ],
+    });
+
+    expect(series.granularity).toBe('day');
+    expect(series.buckets).toHaveLength(7);
+    expect(series.periodStartYmd).toBe('2026-09-27');
+    expect(series.periodEndYmd).toBe('2026-10-03');
+    expect(series.totals.shiftsCreated).toBe(3);
+    expect(series.totals.statusBreakdown).toEqual({
+      draft: 1,
+      published: 1,
+      filled: 1,
+    });
+    expect(series.totals.acceptances).toBe(3);
+    expect(series.totals.participatingWorkers).toBe(2);
+    expect(series.totals.timesheetsApproved).toBe(1);
+
+    const oct2 = series.buckets.find((b) => b.key === '2026-10-02');
+    expect(oct2?.acceptances).toBe(2);
+    expect(oct2?.participatingWorkers).toBe(1);
+
+    // Series props must not expose worker identifiers
+    expect(JSON.stringify(series)).not.toMatch(/"w1"|"w2"|"w3"/);
+    expect(JSON.stringify(series)).not.toMatch(/email|iban|phone/i);
+  });
+
+  it('computes prior-period totals and uses weekly buckets for 90 days', () => {
+    const series = buildOrgActivitySeries({
+      timeZone,
+      rangeDays: 90,
+      now,
+      shifts: [
+        // Current 90d window starts 2026-07-06
+        { id: 's1', created_at: '2026-08-01T10:00:00.000+03:00', status: 'published' },
+        // Prior window ends 2026-07-05
+        { id: 's2', created_at: '2026-07-01T10:00:00.000+03:00', status: 'draft' },
+      ],
+      assignments: [
+        {
+          id: 'a1',
+          worker_id: 'w1',
+          accepted_at: '2026-08-15T10:00:00.000+03:00',
+          status: 'accepted',
+        },
+        {
+          id: 'a2',
+          worker_id: 'w9',
+          accepted_at: '2026-06-20T10:00:00.000+03:00',
+          status: 'accepted',
+        },
+      ],
+      timesheets: [
+        {
+          id: 't1',
+          reviewed_at: '2026-06-25T10:00:00.000+03:00',
+          status: 'approved',
+        },
+      ],
+    });
+
+    expect(series.granularity).toBe('week');
+    expect(series.periodStartYmd).toBe('2026-07-06');
+    expect(series.priorPeriodEndYmd).toBe('2026-07-05');
+    expect(series.priorPeriodStartYmd).toBe(
+      addOrgActivityCalendarDays('2026-07-05', -89),
+    );
+    expect(series.totals.shiftsCreated).toBe(1);
+    expect(series.totals.acceptances).toBe(1);
+    expect(series.priorTotals.shiftsCreated).toBe(1);
+    expect(series.priorTotals.acceptances).toBe(1);
+    expect(series.priorTotals.timesheetsApproved).toBe(1);
+    expect(series.buckets.length).toBeGreaterThan(10);
+    expect(series.buckets.every((b) => b.key === mondayOfOrgActivityYmd(b.key))).toBe(
+      true,
+    );
+  });
+
+  it('returns honest zeros for empty activity and respects 30-day boundaries', () => {
+    const empty = buildOrgActivitySeries({
+      timeZone,
+      rangeDays: 30,
+      now,
+      shifts: [],
+      assignments: [],
+      timesheets: [],
+    });
+    expect(empty.buckets).toHaveLength(30);
+    expect(empty.totals).toMatchObject({
+      shiftsCreated: 0,
+      acceptances: 0,
+      participatingWorkers: 0,
+      timesheetsApproved: 0,
+    });
+    expect(empty.periodStartYmd).toBe('2026-09-04');
+
+    // Event just before local midnight boundary (still previous local day)
+    const boundary = buildOrgActivitySeries({
+      timeZone,
+      rangeDays: 30,
+      now,
+      shifts: [
+        {
+          id: 'edge',
+          created_at: '2026-09-03T23:30:00.000+03:00',
+          status: 'published',
+        },
+        {
+          id: 'in',
+          created_at: '2026-09-04T00:15:00.000+03:00',
+          status: 'published',
+        },
+      ],
+      assignments: [],
+      timesheets: [],
+    });
+    expect(boundary.totals.shiftsCreated).toBe(1);
+    expect(boundary.priorTotals.shiftsCreated).toBe(1);
+  });
+
+  it('handles Europe/Nicosia DST spring-forward day without dropping buckets', () => {
+    // 2026-03-29 is DST start in Cyprus; window ending that day still has 7 keys
+    const dstNow = new Date('2026-03-29T15:00:00.000+03:00');
+    const series = buildOrgActivitySeries({
+      timeZone: 'Europe/Nicosia',
+      rangeDays: 7,
+      now: dstNow,
+      shifts: [
+        {
+          id: 'dst',
+          created_at: '2026-03-29T04:30:00.000+03:00',
+          status: 'published',
+        },
+      ],
+      assignments: [],
+      timesheets: [],
+    });
+    expect(series.buckets).toHaveLength(7);
+    expect(series.periodEndYmd).toBe('2026-03-29');
+    expect(series.totals.shiftsCreated).toBe(1);
   });
 });

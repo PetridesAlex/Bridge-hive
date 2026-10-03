@@ -625,3 +625,331 @@ export function locationWorkload(
     .map(([locationId, v]) => ({ locationId, name: v.name, count: v.count }))
     .sort((a, b) => b.count - a.count);
 }
+
+/* -------------------------------------------------------------------------- */
+/* Organization activity (historical, org-timezone buckets)                   */
+/* -------------------------------------------------------------------------- */
+
+export type OrgActivityRangeDays = 7 | 30 | 90;
+
+export type OrgActivityShiftRow = {
+  id: string;
+  created_at: string;
+  status: string;
+};
+
+export type OrgActivityAssignmentRow = {
+  id: string;
+  worker_id: string;
+  accepted_at: string;
+  status: string;
+};
+
+export type OrgActivityTimesheetRow = {
+  id: string;
+  reviewed_at: string | null;
+  status: string;
+};
+
+export type OrgActivityBucket = {
+  key: string;
+  label: string;
+  shiftsCreated: number;
+  acceptances: number;
+  participatingWorkers: number;
+  timesheetsApproved: number;
+};
+
+export type OrgActivityTotals = {
+  shiftsCreated: number;
+  acceptances: number;
+  participatingWorkers: number;
+  timesheetsApproved: number;
+  /** Current status among shifts created in the period (not publish history). */
+  statusBreakdown: Record<string, number>;
+};
+
+export type OrgActivitySeries = {
+  rangeDays: OrgActivityRangeDays;
+  granularity: 'day' | 'week';
+  timeZone: string;
+  periodStartYmd: string;
+  periodEndYmd: string;
+  periodLabel: string;
+  buckets: OrgActivityBucket[];
+  totals: OrgActivityTotals;
+  priorTotals: OrgActivityTotals;
+  priorPeriodStartYmd: string;
+  priorPeriodEndYmd: string;
+  priorPeriodLabel: string;
+};
+
+/** Max lookback so 90-day range can compare to the prior 90 days. */
+export const ORG_ACTIVITY_FETCH_LOOKBACK_DAYS = 180;
+
+export function isOrgActivityRangeDays(value: unknown): value is OrgActivityRangeDays {
+  return value === 7 || value === 30 || value === 90;
+}
+
+/** Local calendar YYYY-MM-DD for an instant in an IANA timezone. */
+export function orgActivityYmdInTimeZone(
+  instant: Date | string,
+  timeZone: string,
+): string {
+  const date = typeof instant === 'string' ? new Date(instant) : instant;
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timeZone || 'Europe/Nicosia',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
+
+export function addOrgActivityCalendarDays(ymd: string, deltaDays: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  if (!y || !m || !d) return ymd;
+  const dt = new Date(Date.UTC(y, m - 1, d + deltaDays));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Monday (ISO) of the calendar week containing `ymd` (YMD arithmetic). */
+export function mondayOfOrgActivityYmd(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y!, m! - 1, d!));
+  const dow = dt.getUTCDay(); // 0 Sun … 6 Sat
+  const diff = dow === 0 ? -6 : 1 - dow;
+  dt.setUTCDate(dt.getUTCDate() + diff);
+  return dt.toISOString().slice(0, 10);
+}
+
+function eachYmdInclusive(startYmd: string, endYmd: string): string[] {
+  const out: string[] = [];
+  let cur = startYmd;
+  let guard = 0;
+  while (cur <= endYmd && guard < 400) {
+    out.push(cur);
+    cur = addOrgActivityCalendarDays(cur, 1);
+    guard += 1;
+  }
+  return out;
+}
+
+function formatOrgActivityDayLabel(ymd: string): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const dt = new Date(Date.UTC(y!, m! - 1, d!, 12));
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  }).format(dt);
+}
+
+function formatOrgActivityWeekLabel(mondayYmd: string): string {
+  const sunday = addOrgActivityCalendarDays(mondayYmd, 6);
+  return `${formatOrgActivityDayLabel(mondayYmd)} – ${formatOrgActivityDayLabel(sunday)}`;
+}
+
+function formatOrgActivityPeriodLabel(startYmd: string, endYmd: string): string {
+  return `${formatOrgActivityDayLabel(startYmd)} – ${formatOrgActivityDayLabel(endYmd)}`;
+}
+
+function emptyTotals(): OrgActivityTotals {
+  return {
+    shiftsCreated: 0,
+    acceptances: 0,
+    participatingWorkers: 0,
+    timesheetsApproved: 0,
+    statusBreakdown: {},
+  };
+}
+
+function resolveActivityWindows(params: {
+  timeZone: string;
+  rangeDays: OrgActivityRangeDays;
+  now: Date;
+}) {
+  const timeZone = params.timeZone || 'Europe/Nicosia';
+  const periodEndYmd = orgActivityYmdInTimeZone(params.now, timeZone);
+  const periodStartYmd = addOrgActivityCalendarDays(
+    periodEndYmd,
+    -(params.rangeDays - 1),
+  );
+  const priorPeriodEndYmd = addOrgActivityCalendarDays(periodStartYmd, -1);
+  const priorPeriodStartYmd = addOrgActivityCalendarDays(
+    priorPeriodEndYmd,
+    -(params.rangeDays - 1),
+  );
+  return {
+    timeZone,
+    periodStartYmd,
+    periodEndYmd,
+    priorPeriodStartYmd,
+    priorPeriodEndYmd,
+  };
+}
+
+function accumulateTotals(params: {
+  startYmd: string;
+  endYmd: string;
+  timeZone: string;
+  shifts: OrgActivityShiftRow[];
+  assignments: OrgActivityAssignmentRow[];
+  timesheets: OrgActivityTimesheetRow[];
+}): OrgActivityTotals {
+  const totals = emptyTotals();
+  const workers = new Set<string>();
+
+  for (const shift of params.shifts) {
+    const ymd = orgActivityYmdInTimeZone(shift.created_at, params.timeZone);
+    if (!ymd || ymd < params.startYmd || ymd > params.endYmd) continue;
+    totals.shiftsCreated += 1;
+    totals.statusBreakdown[shift.status] =
+      (totals.statusBreakdown[shift.status] ?? 0) + 1;
+  }
+
+  for (const row of params.assignments) {
+    const ymd = orgActivityYmdInTimeZone(row.accepted_at, params.timeZone);
+    if (!ymd || ymd < params.startYmd || ymd > params.endYmd) continue;
+    totals.acceptances += 1;
+    if (row.worker_id) workers.add(row.worker_id);
+  }
+  totals.participatingWorkers = workers.size;
+
+  for (const row of params.timesheets) {
+    if (row.status !== 'approved' || !row.reviewed_at) continue;
+    const ymd = orgActivityYmdInTimeZone(row.reviewed_at, params.timeZone);
+    if (!ymd || ymd < params.startYmd || ymd > params.endYmd) continue;
+    totals.timesheetsApproved += 1;
+  }
+
+  return totals;
+}
+
+/**
+ * Historical organization activity series for 7 / 30 / 90 local days.
+ * Acceptances include later withdrawn/cancelled (event history by accepted_at).
+ * Participating workers = distinct worker_id in the period (never PII).
+ */
+export function buildOrgActivitySeries(params: {
+  shifts: OrgActivityShiftRow[];
+  assignments: OrgActivityAssignmentRow[];
+  timesheets: OrgActivityTimesheetRow[];
+  timeZone: string;
+  rangeDays: OrgActivityRangeDays;
+  now?: Date;
+}): OrgActivitySeries {
+  const now = params.now ?? new Date();
+  const windows = resolveActivityWindows({
+    timeZone: params.timeZone,
+    rangeDays: params.rangeDays,
+    now,
+  });
+  const granularity: 'day' | 'week' = params.rangeDays === 90 ? 'week' : 'day';
+
+  const dayKeys = eachYmdInclusive(windows.periodStartYmd, windows.periodEndYmd);
+  const bucketKeys =
+    granularity === 'day'
+      ? dayKeys
+      : Array.from(new Set(dayKeys.map(mondayOfOrgActivityYmd))).sort();
+
+  const buckets: OrgActivityBucket[] = bucketKeys.map((key) => ({
+    key,
+    label:
+      granularity === 'day'
+        ? formatOrgActivityDayLabel(key)
+        : formatOrgActivityWeekLabel(key),
+    shiftsCreated: 0,
+    acceptances: 0,
+    participatingWorkers: 0,
+    timesheetsApproved: 0,
+  }));
+  const bucketIndex = new Map(buckets.map((b, i) => [b.key, i]));
+  const workersByBucket = new Map<string, Set<string>>();
+
+  const bucketKeyForYmd = (ymd: string): string | null => {
+    if (ymd < windows.periodStartYmd || ymd > windows.periodEndYmd) return null;
+    const key = granularity === 'day' ? ymd : mondayOfOrgActivityYmd(ymd);
+    return bucketIndex.has(key) ? key : null;
+  };
+
+  for (const shift of params.shifts) {
+    const ymd = orgActivityYmdInTimeZone(shift.created_at, windows.timeZone);
+    const key = ymd ? bucketKeyForYmd(ymd) : null;
+    if (!key) continue;
+    buckets[bucketIndex.get(key)!]!.shiftsCreated += 1;
+  }
+
+  for (const row of params.assignments) {
+    const ymd = orgActivityYmdInTimeZone(row.accepted_at, windows.timeZone);
+    const key = ymd ? bucketKeyForYmd(ymd) : null;
+    if (!key) continue;
+    buckets[bucketIndex.get(key)!]!.acceptances += 1;
+    if (row.worker_id) {
+      let set = workersByBucket.get(key);
+      if (!set) {
+        set = new Set();
+        workersByBucket.set(key, set);
+      }
+      set.add(row.worker_id);
+    }
+  }
+
+  for (const [key, set] of workersByBucket) {
+    const idx = bucketIndex.get(key);
+    if (idx == null) continue;
+    buckets[idx]!.participatingWorkers = set.size;
+  }
+
+  for (const row of params.timesheets) {
+    if (row.status !== 'approved' || !row.reviewed_at) continue;
+    const ymd = orgActivityYmdInTimeZone(row.reviewed_at, windows.timeZone);
+    const key = ymd ? bucketKeyForYmd(ymd) : null;
+    if (!key) continue;
+    buckets[bucketIndex.get(key)!]!.timesheetsApproved += 1;
+  }
+
+  const totals = accumulateTotals({
+    startYmd: windows.periodStartYmd,
+    endYmd: windows.periodEndYmd,
+    timeZone: windows.timeZone,
+    shifts: params.shifts,
+    assignments: params.assignments,
+    timesheets: params.timesheets,
+  });
+  const priorTotals = accumulateTotals({
+    startYmd: windows.priorPeriodStartYmd,
+    endYmd: windows.priorPeriodEndYmd,
+    timeZone: windows.timeZone,
+    shifts: params.shifts,
+    assignments: params.assignments,
+    timesheets: params.timesheets,
+  });
+
+  return {
+    rangeDays: params.rangeDays,
+    granularity,
+    timeZone: windows.timeZone,
+    periodStartYmd: windows.periodStartYmd,
+    periodEndYmd: windows.periodEndYmd,
+    periodLabel: formatOrgActivityPeriodLabel(
+      windows.periodStartYmd,
+      windows.periodEndYmd,
+    ),
+    buckets,
+    totals,
+    priorTotals,
+    priorPeriodStartYmd: windows.priorPeriodStartYmd,
+    priorPeriodEndYmd: windows.priorPeriodEndYmd,
+    priorPeriodLabel: formatOrgActivityPeriodLabel(
+      windows.priorPeriodStartYmd,
+      windows.priorPeriodEndYmd,
+    ),
+  };
+}
+
+/** Local YMD to start fetching (180-day lookback including today). */
+export function orgActivityFetchStartYmd(timeZone: string, now = new Date()): string {
+  const today = orgActivityYmdInTimeZone(now, timeZone || 'Europe/Nicosia');
+  return addOrgActivityCalendarDays(today, -(ORG_ACTIVITY_FETCH_LOOKBACK_DAYS - 1));
+}

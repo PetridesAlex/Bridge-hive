@@ -1,6 +1,7 @@
 import {
   buildAttentionQueue,
   buildDashboardQuickActions,
+  buildOrgActivitySeries,
   buildRoleCoverage,
   buildShiftCoverageTrend,
   countFilledUpcoming,
@@ -9,12 +10,14 @@ import {
   isOwnedOrganizationLogoPath,
   locationWorkload,
   mapShiftToCalendarEvent,
+  orgActivityFetchStartYmd,
   ORG_STATUS_LABELS,
   orgLifecycleBannerTone,
   orgOperationalBlockedMessage,
   orgPendingSubmitMessage,
   orgProfileCompleteness,
   orgSubmitCtaLabel,
+  type OrgActivityRangeDays,
   type OrgStatus,
 } from '@bridge-hive/domain';
 import { CalendarDays, ClipboardList, MapPin } from 'lucide-react';
@@ -29,6 +32,7 @@ import {
   KpiCard,
   StatusBanner,
 } from '@/components/org/dashboard-widgets';
+import { OrganizationActivityPanel } from '@/components/org/organization-activity-panel';
 import { ShiftScheduleCalendar } from '@/components/org/shift-schedule-calendar';
 import { UpcomingShiftsRail } from '@/components/org/upcoming-shifts-rail';
 import { Button } from '@/components/ui/button';
@@ -38,7 +42,7 @@ import {
   todayYmdInTimezone,
 } from '@/lib/org-calendar-time';
 import { createClient } from '@/lib/supabase/server';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 export default async function OrgDashboardPage({
   params,
@@ -88,6 +92,11 @@ export default async function OrgDashboardPage({
   const sixWeeksEnd = new Date(now.getTime() + 42 * 24 * 60 * 60 * 1000);
   const periodDays = 30;
   const inPeriod = new Date(now.getTime() + periodDays * 24 * 60 * 60 * 1000);
+  const activityFetchStartYmd = orgActivityFetchStartYmd(timeZone, now);
+  const activitySinceIso = fromZonedTime(
+    `${activityFetchStartYmd}T00:00:00`,
+    timeZone,
+  ).toISOString();
 
   const [
     calendarResult,
@@ -101,6 +110,9 @@ export default async function OrgDashboardPage({
     { data: kpiShifts },
     { data: metricShifts },
     { data: locationShiftRows },
+    activityShiftsResult,
+    activityAssignmentsResult,
+    activityTimesheetsResult,
   ] = await Promise.all([
     supabase
       .from('shifts')
@@ -176,9 +188,37 @@ export default async function OrgDashboardPage({
       .in('status', ['published', 'filled'])
       .gte('starts_at', now.toISOString())
       .lte('starts_at', inPeriod.toISOString()),
+    supabase
+      .from('shifts')
+      .select('id, created_at, status')
+      .eq('organization_id', ctx.org.id)
+      .gte('created_at', activitySinceIso)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('shift_assignments')
+      .select(
+        'id, worker_id, accepted_at, status, shift:shifts!inner(organization_id)',
+      )
+      .eq('shift.organization_id', ctx.org.id)
+      .gte('accepted_at', activitySinceIso)
+      .order('accepted_at', { ascending: true }),
+    supabase
+      .from('timesheets')
+      .select(
+        'id, status, reviewed_at, assignment:shift_assignments!inner(shift:shifts!inner(organization_id))',
+      )
+      .eq('assignment.shift.organization_id', ctx.org.id)
+      .eq('status', 'approved')
+      .gte('reviewed_at', activitySinceIso)
+      .order('reviewed_at', { ascending: true }),
   ]);
 
   const calendarLoadError = Boolean(calendarResult.error);
+  const activityLoadError = Boolean(
+    activityShiftsResult.error ||
+      activityAssignmentsResult.error ||
+      activityTimesheetsResult.error,
+  );
   const rawCalendarShifts = calendarResult.data ?? [];
 
   let orgLogoUrl: string | null = null;
@@ -217,6 +257,41 @@ export default async function OrgDashboardPage({
       };
     }),
   );
+
+  const activityShifts = (activityShiftsResult.data ?? []).map((row) => ({
+    id: row.id,
+    created_at: row.created_at,
+    status: row.status,
+  }));
+  const activityAssignments = (activityAssignmentsResult.data ?? []).map(
+    (row) => ({
+      id: row.id,
+      worker_id: row.worker_id,
+      accepted_at: row.accepted_at,
+      status: row.status,
+    }),
+  );
+  const activityTimesheets = (activityTimesheetsResult.data ?? []).map(
+    (row) => ({
+      id: row.id,
+      reviewed_at: row.reviewed_at,
+      status: row.status,
+    }),
+  );
+  const activityRanges: OrgActivityRangeDays[] = [7, 30, 90];
+  const activitySeriesByRange = Object.fromEntries(
+    activityRanges.map((rangeDays) => [
+      rangeDays,
+      buildOrgActivitySeries({
+        shifts: activityShifts,
+        assignments: activityAssignments,
+        timesheets: activityTimesheets,
+        timeZone,
+        rangeDays,
+        now,
+      }),
+    ]),
+  ) as Record<OrgActivityRangeDays, ReturnType<typeof buildOrgActivitySeries>>;
 
   const attention = buildAttentionQueue({
     slug,
@@ -438,44 +513,6 @@ export default async function OrgDashboardPage({
                 loadError={calendarLoadError}
                 filteredEmpty={filteredEmpty}
               />
-
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                <DashboardPanel
-                  eyebrow="Forecast"
-                  title="Shift coverage trend"
-                  description="Published and filled · next six weeks"
-                  accent="teal"
-                >
-                  <CoverageTrendChart
-                    buckets={trend}
-                    emptyHref={`/org/${slug}/shifts/new`}
-                  />
-                </DashboardPanel>
-                <DashboardPanel
-                  eyebrow="Staffing mix"
-                  title="Coverage by role"
-                  description="Required roles · next six weeks"
-                  accent="honey"
-                >
-                  <RoleCoverageBars
-                    coverage={roleCoverage}
-                    periodLabel="Next 6 weeks"
-                  />
-                </DashboardPanel>
-                <DashboardPanel
-                  eyebrow="Sites"
-                  title="Location workload"
-                  description={`Upcoming published and filled · next ${periodDays} days`}
-                  accent="info"
-                  className="sm:col-span-2 xl:col-span-1"
-                >
-                  <LocationWorkloadList
-                    rows={workload}
-                    slug={slug}
-                    periodDays={periodDays}
-                  />
-                </DashboardPanel>
-              </div>
             </div>
 
             <aside className="flex min-w-0 flex-col gap-5 xl:col-span-4 2xl:col-span-3">
@@ -507,6 +544,64 @@ export default async function OrgDashboardPage({
               </DashboardPanel>
             </aside>
           </div>
+
+          <OrganizationActivityPanel
+            seriesByRange={activitySeriesByRange}
+            loadError={activityLoadError}
+            createShiftHref={`/org/${slug}/shifts/new`}
+          />
+
+          <section className="space-y-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                Upcoming coverage
+              </p>
+              <h2 className="mt-1 text-lg font-bold tracking-tight text-bh-sidebar">
+                Forward-looking staffing
+              </h2>
+              <p className="mt-1 text-sm text-bh-text-secondary">
+                Schedule outlook for the next six weeks — separate from historical
+                organization activity above.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <DashboardPanel
+                eyebrow="Forecast"
+                title="Shift coverage trend"
+                description="Published and filled · next six weeks"
+                accent="teal"
+              >
+                <CoverageTrendChart
+                  buckets={trend}
+                  emptyHref={`/org/${slug}/shifts/new`}
+                />
+              </DashboardPanel>
+              <DashboardPanel
+                eyebrow="Staffing mix"
+                title="Coverage by role"
+                description="Required roles · next six weeks"
+                accent="honey"
+              >
+                <RoleCoverageBars
+                  coverage={roleCoverage}
+                  periodLabel="Next 6 weeks"
+                />
+              </DashboardPanel>
+              <DashboardPanel
+                eyebrow="Sites"
+                title="Location workload"
+                description={`Upcoming published and filled · next ${periodDays} days`}
+                accent="info"
+                className="sm:col-span-2 xl:col-span-1"
+              >
+                <LocationWorkloadList
+                  rows={workload}
+                  slug={slug}
+                  periodDays={periodDays}
+                />
+              </DashboardPanel>
+            </div>
+          </section>
         </>
       ) : (
         <DashboardPanel title="Workspace locked">

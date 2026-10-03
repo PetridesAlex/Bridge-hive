@@ -124,10 +124,7 @@ export function KpiCard({
   trendPercent?: number | null;
 }) {
   const theme = TINTS[tint];
-  const sparkValues =
-    series && series.length > 0
-      ? series
-      : [0, 0, 0, 0, 0, typeof value === 'number' ? value : 0];
+  const sparkValues = series && series.length > 0 ? series : null;
 
   return (
     <Link
@@ -155,7 +152,9 @@ export function KpiCard({
         >
           <Icon className="h-5 w-5" aria-hidden />
         </span>
-        <Sparkline values={sparkValues} color={theme.spark} />
+        {sparkValues ? (
+          <Sparkline values={sparkValues} color={theme.spark} />
+        ) : null}
       </div>
       <div className="relative mt-4 space-y-1">
         <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">

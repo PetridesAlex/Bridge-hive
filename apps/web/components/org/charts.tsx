@@ -2,7 +2,11 @@ import { Stethoscope, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
-import type { RoleCoverage, WeekBucket } from '@bridge-hive/domain';
+import type {
+  OrgActivitySeries,
+  RoleCoverage,
+  WeekBucket,
+} from '@bridge-hive/domain';
 
 export function CoverageTrendChart({
   buckets,
@@ -265,6 +269,222 @@ export function RoleCoverageBars({
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+type ActivityFocus = 'all' | 'created' | 'acceptances' | 'workers' | 'approved';
+
+const ACTIVITY_SERIES = [
+  {
+    id: 'created' as const,
+    label: 'Shifts created',
+    color: '#087F8C',
+    fill: '#16A6B6',
+    value: (b: OrgActivitySeries['buckets'][number]) => b.shiftsCreated,
+  },
+  {
+    id: 'acceptances' as const,
+    label: 'Acceptances',
+    color: '#2563EB',
+    fill: '#3B82F6',
+    value: (b: OrgActivitySeries['buckets'][number]) => b.acceptances,
+  },
+  {
+    id: 'workers' as const,
+    label: 'Participating workers',
+    color: '#C49212',
+    fill: '#E0AA18',
+    value: (b: OrgActivitySeries['buckets'][number]) => b.participatingWorkers,
+  },
+  {
+    id: 'approved' as const,
+    label: 'Timesheets approved',
+    color: '#0B2A43',
+    fill: '#1B3F5C',
+    value: (b: OrgActivitySeries['buckets'][number]) => b.timesheetsApproved,
+  },
+];
+
+export function OrganizationActivityChart({
+  series,
+  focus,
+  emptyHref,
+  hasActivity,
+}: {
+  series: OrgActivitySeries;
+  focus: ActivityFocus;
+  emptyHref: string;
+  hasActivity: boolean;
+}) {
+  if (!hasActivity) {
+    return (
+      <div className="rounded-2xl border border-dashed border-bh-teal/25 bg-bh-teal-soft/30 px-4 py-10 text-center">
+        <p className="text-sm font-semibold text-bh-text">No activity in this period</p>
+        <p className="mt-1 text-sm text-bh-text-secondary">
+          Create and publish shifts to start building a historical activity record.
+        </p>
+        <Link
+          href={emptyHref}
+          className="mt-3 inline-flex text-sm font-semibold text-bh-teal-strong hover:underline"
+        >
+          Create shift →
+        </Link>
+      </div>
+    );
+  }
+
+  const active =
+    focus === 'all'
+      ? ACTIVITY_SERIES
+      : ACTIVITY_SERIES.filter((s) => s.id === focus);
+
+  const max = Math.max(
+    1,
+    ...series.buckets.flatMap((b) => active.map((s) => s.value(b))),
+  );
+
+  const width = 720;
+  const height = 220;
+  const padX = 36;
+  const padTop = 16;
+  const padBottom = 28;
+  const innerW = width - padX * 2;
+  const innerH = height - padTop - padBottom;
+  const step =
+    series.buckets.length <= 1
+      ? 0
+      : innerW / Math.max(1, series.buckets.length - 1);
+
+  const labelEvery = Math.max(1, Math.ceil(series.buckets.length / 8));
+
+  return (
+    <div className="space-y-3">
+      <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-bh-text-secondary">
+        {active.map((s) => (
+          <li key={s.id} className="inline-flex items-center gap-1.5">
+            <span
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: s.color }}
+              aria-hidden
+            />
+            {s.label}
+          </li>
+        ))}
+      </ul>
+
+      <div className="overflow-x-auto rounded-2xl border border-bh-border/70 bg-bh-surface/80 px-2 pt-3">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          className="h-56 w-full min-w-[320px]"
+          role="img"
+          aria-label={`Organization activity counts by ${series.granularity} for ${series.periodLabel}`}
+        >
+          {[0.25, 0.5, 0.75, 1].map((t) => {
+            const y = padTop + innerH * (1 - t);
+            return (
+              <g key={t}>
+                <line
+                  x1={padX}
+                  x2={width - padX}
+                  y1={y}
+                  y2={y}
+                  stroke="#E1E7EA"
+                  strokeWidth="1"
+                />
+                <text
+                  x={padX - 8}
+                  y={y + 3}
+                  textAnchor="end"
+                  fill="#64748B"
+                  fontSize="10"
+                >
+                  {Math.round(max * t)}
+                </text>
+              </g>
+            );
+          })}
+
+          {active.map((s) => {
+            const points = series.buckets.map((b, i) => {
+              const x =
+                series.buckets.length <= 1
+                  ? padX + innerW / 2
+                  : padX + i * step;
+              const y = padTop + innerH - (s.value(b) / max) * innerH;
+              return { x, y, value: s.value(b) };
+            });
+            const line = points.map((p) => `${p.x},${p.y}`).join(' ');
+            const area = [
+              `${points[0]!.x},${padTop + innerH}`,
+              ...points.map((p) => `${p.x},${p.y}`),
+              `${points[points.length - 1]!.x},${padTop + innerH}`,
+            ].join(' ');
+            const gradId = `org-activity-${s.id}`;
+            return (
+              <g key={s.id}>
+                <defs>
+                  <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={s.fill} stopOpacity="0.28" />
+                    <stop offset="100%" stopColor={s.fill} stopOpacity="0.02" />
+                  </linearGradient>
+                </defs>
+                {focus !== 'all' || active.length === 1 ? (
+                  <polygon fill={`url(#${gradId})`} points={area} />
+                ) : null}
+                <polyline
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  points={line}
+                />
+                {points.map((p, i) => (
+                  <circle
+                    key={`${s.id}-${series.buckets[i]!.key}`}
+                    cx={p.x}
+                    cy={p.y}
+                    r={focus === 'all' ? 2.5 : 3.5}
+                    fill="#fff"
+                    stroke={s.color}
+                    strokeWidth="1.75"
+                  >
+                    <title>
+                      {series.buckets[i]!.label}: {s.label} {p.value}
+                    </title>
+                  </circle>
+                ))}
+              </g>
+            );
+          })}
+
+          {series.buckets.map((b, i) => {
+            if (i % labelEvery !== 0 && i !== series.buckets.length - 1) {
+              return null;
+            }
+            const x =
+              series.buckets.length <= 1 ? padX + innerW / 2 : padX + i * step;
+            return (
+              <text
+                key={b.key}
+                x={x}
+                y={height - 8}
+                textAnchor="middle"
+                fontSize="10"
+                fill="#64748B"
+              >
+                {b.label}
+              </text>
+            );
+          })}
+        </svg>
+      </div>
+
+      <p className="text-xs text-bh-text-muted">
+        Axis unit: counts · {series.granularity === 'week' ? 'Weekly' : 'Daily'}{' '}
+        buckets in {series.timeZone}
+      </p>
     </div>
   );
 }

@@ -76,23 +76,58 @@ describe('premium auth portals', () => {
     const adminLayout = await readWeb('app/admin/layout.tsx').catch(() => '');
 
     expect(shell).toMatch(/auth-portal\.css/);
+    expect(shell).toMatch(/AuthHeroPanel variant=\{variant\}/);
     expect(css).toMatch(/\.auth-portal/);
     expect(css).toMatch(/auth-portal-card|auth-hero/);
+    expect(css).toMatch(/data-variant='admin'/);
     expect(hero).toMatch(/\/auth\/healthcare-hero\.webp/);
+    expect(hero).toMatch(/\/auth\/admin-hero\.jpg/);
     expect(hero).toMatch(/BridgeHiveLogo/);
-    expect(activity).toMatch(/Illustrative/);
-    expect(activity).toMatch(/metrics\?/);
+    expect(hero).toMatch(/AuthPlatformActivity variant=\{variant\}/);
+    expect(activity).toMatch(/How Bridge Hive works/);
+    expect(activity).toMatch(/Publish shifts/);
+    expect(activity).not.toMatch(/1,248/);
+    expect(activity).not.toMatch(/\+12%/);
+    expect(activity).not.toMatch(/3,620/);
+    expect(activity).not.toMatch(/DEFAULT_CHART|chartPoints/);
+    expect(activity).not.toMatch(/\bmetrics\s*\?/);
     expect(orgDash).not.toMatch(/auth-portal\.css/);
     expect(adminLayout).not.toMatch(/auth-portal\.css/);
   });
 
-  it('ships healthcare hero asset for the auth hero panel', async () => {
+  it('ships distinct healthcare and admin hero assets plus org banner', async () => {
     await expect(
       fs.access(path.join(webRoot, 'public/auth/healthcare-hero.webp')),
     ).resolves.toBeUndefined();
     await expect(
       fs.access(path.join(webRoot, 'public/auth/healthcare-hero.jpg')),
     ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(webRoot, 'public/auth/admin-hero.jpg')),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(webRoot, 'public/auth/admin-hero.webp')),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(webRoot, 'public/org/bridge-hive-dashboard-banner.webp')),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(webRoot, 'public/org/bridge-hive-dashboard-banner.jpg')),
+    ).resolves.toBeUndefined();
+  });
+
+  it('keeps organization activity analytics on the dashboard', async () => {
+    const dash = await readWeb('app/org/[slug]/dashboard/page.tsx');
+    const panel = await readWeb('components/org/organization-activity-panel.tsx');
+    const domain = await fs.readFile(
+      path.join(webRoot, '../../packages/domain/src/org-dashboard.ts'),
+      'utf8',
+    );
+    expect(dash).toMatch(/OrganizationActivityPanel/);
+    expect(dash).toMatch(/buildOrgActivitySeries/);
+    expect(panel).toMatch(/7d|30d|90d|rangeDays/);
+    expect(domain).toMatch(/buildOrgActivitySeries/);
+    expect(dash).not.toMatch(/timesheetSeries|locationSeries/);
   });
 
   it('safeOrgNext and safeAdminNext reject open redirects', () => {

@@ -17,6 +17,7 @@ import {
   OrganizationSwitcher,
   type SwitcherOrg,
 } from '@/components/org/organization-switcher';
+import { SidebarLiveClock } from '@/components/org/sidebar-live-clock';
 import { Button } from '@/components/ui/button';
 import { clearOrganizationLogoUrlCache } from '@/lib/organization-logo';
 import { cn } from '@/lib/utils';
@@ -68,27 +69,41 @@ export function OrganizationSidebar({
         className,
       )}
     >
-      <div className="border-b border-white/10 px-5 py-6">
-        <div className="flex items-center gap-2.5">
+      <div className="relative overflow-hidden border-b border-white/10 px-5 py-6">
+        <div
+          className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-bh-honey/10 blur-2xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-12 left-8 h-24 w-24 rounded-full bg-bh-teal/15 blur-2xl"
+          aria-hidden
+        />
+        <div className="relative flex items-center gap-3">
           <span
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-bh-honey text-sm font-bold text-bh-text shadow-sm"
+            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-bh-honey/35 bg-gradient-to-br from-bh-honey to-bh-honey-strong text-bh-sidebar shadow-[0_8px_18px_rgba(224,170,24,0.28)]"
             aria-hidden
           >
-            BH
+            <span className="text-[15px] font-black tracking-tight">B</span>
+            <span className="absolute bottom-1.5 right-1.5 h-2 w-2 rounded-sm bg-bh-sidebar/90" />
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey">
-              Bridge Hive
+            <p className="text-[13px] font-bold leading-none tracking-tight">
+              <span className="text-white">Bridge</span>{' '}
+              <span className="text-bh-honey">Hive</span>
             </p>
-            <p className="mt-0.5 truncate text-sm font-medium text-bh-sidebar-text/90">
-              Organization workspace
-            </p>
+            <div className="mt-1.5 flex items-center gap-2">
+              <span className="h-px w-4 bg-bh-honey/70" aria-hidden />
+              <p className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-sidebar-muted">
+                Organization workspace
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="px-3.5 py-4">
         <OrganizationSwitcher current={current} memberships={memberships} />
+        <SidebarLiveClock />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3.5 pb-5" aria-label="Organization">

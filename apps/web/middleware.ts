@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
+import { applySafeNext, safeOrgNext } from '@/lib/auth-redirect';
 import { updateSession } from '@/lib/supabase/middleware';
 
 const PUBLIC_PATHS = [
@@ -45,19 +46,8 @@ export async function middleware(request: NextRequest) {
 
   if (user && (pathname === '/sign-in' || pathname === '/sign-up')) {
     const redirectUrl = request.nextUrl.clone();
-    const next = request.nextUrl.searchParams.get('next');
-    if (next && next.startsWith('/')) {
-      redirectUrl.pathname = next.split('?')[0];
-      const nextParams = next.split('?')[1];
-      if (nextParams) {
-        redirectUrl.search = `?${nextParams}`;
-      } else {
-        redirectUrl.search = '';
-      }
-    } else {
-      redirectUrl.pathname = '/dashboard';
-      redirectUrl.search = '';
-    }
+    const next = safeOrgNext(request.nextUrl.searchParams.get('next'));
+    applySafeNext(redirectUrl, next, '/dashboard');
     return NextResponse.redirect(redirectUrl);
   }
 

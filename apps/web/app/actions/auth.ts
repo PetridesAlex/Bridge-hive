@@ -2,15 +2,12 @@
 
 import { redirect } from 'next/navigation';
 
+import { safeOrgNext } from '@/lib/auth-redirect';
 import { createClient } from '@/lib/supabase/server';
 
 export type ActionResult = {
   error?: string;
 };
-
-function safeNextPath(raw: string, fallback: string): string {
-  return raw.startsWith('/') ? raw : fallback;
-}
 
 export async function signInAction(
   _prev: ActionResult,
@@ -20,7 +17,7 @@ export async function signInAction(
     .trim()
     .toLowerCase();
   const password = String(formData.get('password') ?? '');
-  const next = safeNextPath(String(formData.get('next') ?? '/dashboard'), '/dashboard');
+  const next = safeOrgNext(String(formData.get('next') ?? '/dashboard'));
 
   if (!email || !password) {
     return { error: 'Email and password are required.' };
@@ -48,7 +45,7 @@ export async function signUpAction(
     .trim()
     .toLowerCase();
   const password = String(formData.get('password') ?? '');
-  const next = safeNextPath(String(formData.get('next') ?? '/dashboard'), '/dashboard');
+  const next = safeOrgNext(String(formData.get('next') ?? '/dashboard'));
 
   const hasInvitationContext =
     next.includes('/organization-invitations/accept') ||

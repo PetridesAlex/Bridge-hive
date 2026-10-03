@@ -17,6 +17,7 @@ import {
   getPlatformAdminContext,
   rpcErrorMessage,
 } from '@/lib/admin/auth';
+import { safeAdminNext } from '@/lib/auth-redirect';
 import { createClient } from '@/lib/supabase/server';
 
 export type AdminActionResult = {
@@ -54,7 +55,7 @@ export async function signInPlatformAdminAction(
     .trim()
     .toLowerCase();
   const password = String(formData.get('password') ?? '');
-  const next = String(formData.get('next') ?? '/admin');
+  const next = safeAdminNext(String(formData.get('next') ?? '/admin'));
 
   if (!email || !password) {
     return { error: 'Email and password are required.' };
@@ -83,7 +84,7 @@ export async function signInPlatformAdminAction(
     };
   }
 
-  redirect(next.startsWith('/admin') ? next : '/admin');
+  redirect(next);
 }
 
 export async function suspendWorkerAction(

@@ -1,4 +1,3 @@
-import { Globe } from 'lucide-react';
 import Link from 'next/link';
 
 import { AuthHeroPanel } from '@/components/auth/AuthHeroPanel';
@@ -26,14 +25,9 @@ export function AuthShell({
   return (
     <div className="auth-portal" data-variant={variant}>
       <div className="auth-portal-card">
-        <AuthHeroPanel />
+        <AuthHeroPanel variant={variant} />
 
         <div className="auth-form-column">
-          <div className="auth-form-lang" aria-hidden="true">
-            <Globe size={14} strokeWidth={1.75} />
-            <span>EN</span>
-          </div>
-
           <div className="auth-form-card auth-rise">
             <div className="auth-mobile-brand">
               <BridgeHiveLogo />

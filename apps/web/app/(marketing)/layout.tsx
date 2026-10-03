@@ -1,7 +1,15 @@
 import type { Metadata } from 'next';
+import { DM_Sans } from 'next/font/google';
 
 import './marketing.css';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
+
+const marketingFont = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-marketing',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: {
@@ -40,5 +48,9 @@ export default function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <MarketingShell>{children}</MarketingShell>;
+  return (
+    <div className={marketingFont.variable}>
+      <MarketingShell>{children}</MarketingShell>
+    </div>
+  );
 }

@@ -21,6 +21,8 @@ const MARKETING_SOURCE_GLOBS = [
   'components/marketing/MarketingFooter.tsx',
   'components/marketing/MarketingNav.tsx',
   'components/marketing/blocks.tsx',
+  'components/marketing/AudienceJourney.tsx',
+  'components/marketing/HowItWorksClient.tsx',
   'components/marketing/ContactEmail.tsx',
   'app/robots.ts',
   'app/sitemap.ts',
@@ -78,7 +80,10 @@ describe('marketing site contracts', () => {
     expect(hero).toMatch(/href="\/auth\/worker\/login"/);
     expect(hero).toMatch(/\/contact#partnerships/);
     expect(hero).toMatch(/Prepare an inquiry|Send an inquiry/);
-    expect(hero).toMatch(/not a full web app/i);
+    expect(hero).toMatch(/Partnership inquiry|Explore for organizations/);
+    expect(hero).toMatch(/Explore for professionals/);
+    expect(hero).toMatch(/Illustrative/);
+    expect(src).toMatch(/not a full\s+browser version of the app|not a full web/i);
     expect(hero).not.toMatch(/href="\/sign-up"/);
     expect(hero).not.toMatch(/Licensed clinical photography TBD/);
     expect(src).not.toMatch(/Organization Dashboard/);
@@ -149,7 +154,7 @@ describe('marketing site contracts', () => {
 
   it('professionals page distinguishes wage bank transfer from commission without published fee percentages', async () => {
     const src = await readWeb('app/(marketing)/professionals/page.tsx');
-    const how = await readWeb('app/(marketing)/how-it-works/page.tsx');
+    const how = await readWeb('components/marketing/HowItWorksClient.tsx');
     const home = await readWeb('app/(marketing)/page.tsx');
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
@@ -167,6 +172,21 @@ describe('marketing site contracts', () => {
     expect(src).toMatch(/\/contact#support/);
     expect(how).not.toMatch(/payout details for Bridge Hive commission invoicing/i);
     expect(how).toMatch(/bank details for wage payouts/i);
+  });
+
+  it('scopes marketing fonts and styles to the marketing layout shell', async () => {
+    const layout = await readWeb('app/(marketing)/layout.tsx');
+    const css = await readWeb('app/(marketing)/marketing.css');
+    const shell = await readWeb('components/marketing/MarketingShell.tsx');
+    const signIn = await readWeb('app/sign-in/page.tsx');
+    const adminSignIn = await readWeb('app/admin/sign-in/page.tsx');
+    expect(layout).toMatch(/DM_Sans|dm_sans|DM Sans/i);
+    expect(layout).toMatch(/--font-marketing/);
+    expect(css).toMatch(/\.marketing\s*\{/);
+    expect(shell).toMatch(/className="marketing/);
+    expect(signIn).not.toMatch(/marketing\.css/);
+    expect(signIn).not.toMatch(/--font-marketing/);
+    expect(adminSignIn).not.toMatch(/marketing\.css/);
   });
 
   it('marketing sources omit public scaffolding phrases', async () => {

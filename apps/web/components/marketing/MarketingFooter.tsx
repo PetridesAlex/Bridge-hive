@@ -1,16 +1,15 @@
 import Link from 'next/link';
 
+import { MarketingBrand } from '@/components/marketing/MarketingBrand';
 import { MARKETING_NAV } from '@/components/marketing/nav-config';
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-bh-border bg-bh-sidebar text-bh-sidebar-text">
-      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 sm:px-8 md:grid-cols-[1.4fr_1fr_1fr]">
+    <footer className="m-footer">
+      <div className="m-footer-grid">
         <div>
-          <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-bh-honey">
-            Bridge Hive
-          </p>
-          <p className="mt-3 max-w-sm text-sm leading-relaxed text-bh-sidebar-muted">
+          <MarketingBrand tone="dark" />
+          <p className="mt-4 max-w-sm text-sm leading-relaxed text-[rgba(220,232,238,0.68)]">
             A staffing platform that connects healthcare organizations with verified
             registered nurses and ward assistants — with clear roles, review workflows,
             and accountability on both sides.
@@ -18,81 +17,69 @@ export function MarketingFooter() {
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-bh-sidebar-muted">
-            Explore
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
+          <h3>Explore</h3>
+          <ul>
             {MARKETING_NAV.map((item) => (
               <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="text-bh-sidebar-text/90 transition-colors hover:text-white"
-                >
-                  {item.label}
-                </Link>
+                <Link href={item.href}>{item.label}</Link>
               </li>
             ))}
           </ul>
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-bh-sidebar-muted">
-            Access
-          </p>
-          <ul className="mt-3 space-y-2 text-sm">
+          <h3>Access</h3>
+          <ul>
             <li>
-              <Link
-                href="/sign-in"
-                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
-              >
-                Organization sign in
-              </Link>
+              <Link href="/sign-in">Organization sign in</Link>
             </li>
             <li>
-              <Link
-                href="/organisation"
-                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
-              >
-                Organization portal
-              </Link>
+              <Link href="/organisation">Organization portal</Link>
             </li>
             <li>
-              <Link
-                href="/auth/worker/login"
-                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
-              >
-                Worker app continuation
-              </Link>
+              <Link href="/auth/worker/login">Worker app continuation</Link>
             </li>
             <li>
-              <Link
-                href="/contact#partnerships"
-                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
-              >
-                Partnership inquiry
-              </Link>
+              <Link href="/contact#partnerships">Partnership inquiry</Link>
             </li>
             <li>
-              <Link
-                href="/contact#support"
-                className="text-bh-sidebar-text/90 transition-colors hover:text-white"
-              >
-                Support
-              </Link>
+              <Link href="/contact#support">Support</Link>
             </li>
             <li>
               <Link
                 href="/admin/sign-in"
-                className="text-xs text-bh-sidebar-muted/80 transition-colors hover:text-bh-sidebar-muted"
+                className="!text-xs !text-[rgba(220,232,238,0.45)]"
               >
                 Platform admin
               </Link>
             </li>
           </ul>
         </div>
+
+        <div>
+          <h3>Contact</h3>
+          <ul>
+            <li>
+              <a href="mailto:info@bridgehive.app?subject=Partnership%20inquiry">
+                info@bridgehive.app
+              </a>
+              <span className="mt-0.5 block text-xs text-[rgba(220,232,238,0.45)]">
+                Partnerships
+              </span>
+            </li>
+            <li className="mt-2">
+              <a href="mailto:support@bridgehive.app?subject=Bridge%20Hive%20support">
+                support@bridgehive.app
+              </a>
+              <span className="mt-0.5 block text-xs text-[rgba(220,232,238,0.45)]">
+                Support
+              </span>
+            </li>
+          </ul>
+        </div>
       </div>
-      <div className="border-t border-white/10">
-        <p className="mx-auto max-w-6xl px-5 py-4 text-xs text-bh-sidebar-muted sm:px-8">
+      <div className="m-footer-note">
+        <p>
           © {new Date().getFullYear()} Bridge Hive. Healthcare staffing platform —
           not a clinical service provider.
         </p>

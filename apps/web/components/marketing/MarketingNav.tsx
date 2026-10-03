@@ -1,97 +1,137 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useId, useRef, useState } from 'react';
 
+import { MarketingBrand } from '@/components/marketing/MarketingBrand';
 import { MARKETING_NAV } from '@/components/marketing/nav-config';
 
 export function MarketingNav() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const panelId = useId();
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    const onPointer = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null;
+      if (headerRef.current && target && !headerRef.current.contains(target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('touchstart', onPointer);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('touchstart', onPointer);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-bh-border/80 bg-bh-canvas/90 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
-        <Link
-          href="/"
-          className="text-[13px] font-semibold uppercase tracking-[0.14em] text-bh-sidebar"
-        >
-          Bridge Hive
-        </Link>
+    <>
+      <header
+        ref={headerRef}
+        className={`m-header ${scrolled || open ? 'is-scrolled' : ''}`}
+      >
+        <div className="m-header-inner">
+          <MarketingBrand />
 
-        <nav
-          className="hidden items-center gap-7 md:flex"
-          aria-label="Primary"
-        >
-          {MARKETING_NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="text-sm font-medium text-bh-text-secondary transition-colors hover:text-bh-text"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="hidden items-center gap-2 md:flex">
-          <Link
-            href="/auth/worker/login"
-            className="rounded-md px-3 py-2 text-sm font-medium text-bh-text-secondary transition-colors hover:text-bh-text"
-          >
-            Worker app
-          </Link>
-          <Link
-            href="/sign-in"
-            className="rounded-md bg-bh-sidebar px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-bh-sidebar-hover"
-          >
-            Organization sign in
-          </Link>
-        </div>
-
-        <button
-          type="button"
-          className="inline-flex items-center justify-center rounded-md border border-bh-border bg-bh-surface px-3 py-2 text-sm font-medium text-bh-text md:hidden"
-          aria-expanded={open}
-          aria-controls="marketing-mobile-nav"
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? 'Close' : 'Menu'}
-        </button>
-      </div>
-
-      {open ? (
-        <div
-          id="marketing-mobile-nav"
-          className="border-t border-bh-border bg-bh-surface px-5 py-4 md:hidden"
-        >
-          <nav className="flex flex-col gap-1" aria-label="Mobile">
+          <nav className="m-nav-desktop" aria-label="Primary">
             {MARKETING_NAV.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-md px-2 py-2.5 text-base font-medium text-bh-text"
-                onClick={() => setOpen(false)}
+                aria-current={pathname === item.href ? 'page' : undefined}
               >
                 {item.label}
               </Link>
             ))}
-            <Link
-              href="/auth/worker/login"
-              className="rounded-md px-2 py-2.5 text-base font-medium text-bh-text-secondary"
-              onClick={() => setOpen(false)}
-            >
-              Worker app continuation
+          </nav>
+
+          <div className="m-nav-actions">
+            <Link href="/auth/worker/login" className="m-link-quiet">
+              Worker app
             </Link>
-            <Link
-              href="/sign-in"
-              className="mt-2 rounded-md bg-bh-sidebar px-3 py-2.5 text-center text-base font-medium text-white"
-              onClick={() => setOpen(false)}
-            >
+            <Link href="/sign-in" className="m-btn m-btn--primary">
               Organization sign in
             </Link>
-          </nav>
+          </div>
+
+          <button
+            type="button"
+            className="m-menu-toggle"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? 'Close' : 'Menu'}
+          </button>
         </div>
+
+        {open ? (
+          <div id={panelId} className="m-mobile-panel">
+            <nav aria-label="Mobile">
+              {MARKETING_NAV.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={pathname === item.href ? 'page' : undefined}
+                  onClick={() => setOpen(false)}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <Link href="/auth/worker/login" onClick={() => setOpen(false)}>
+                Worker app continuation
+              </Link>
+              <Link
+                href="/sign-in"
+                className="m-btn m-btn--primary mt-2"
+                onClick={() => setOpen(false)}
+              >
+                Organization sign in
+              </Link>
+            </nav>
+          </div>
+        ) : null}
+      </header>
+      {open ? (
+        <button
+          type="button"
+          className="m-mobile-backdrop"
+          aria-label="Close menu"
+          onClick={() => setOpen(false)}
+        />
       ) : null}
-    </header>
+    </>
   );
 }

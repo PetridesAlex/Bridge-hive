@@ -45,17 +45,17 @@ export function DashboardQuickActions({
 
   return (
     <section
-      className="rounded-2xl border border-bh-border bg-bh-surface p-4 shadow-[0_4px_16px_rgba(7,29,48,0.04)] sm:p-5"
+      className="rounded-2xl border border-bh-border bg-bh-surface p-3.5 shadow-[0_4px_16px_rgba(7,29,48,0.04)] sm:p-4"
       aria-labelledby="quick-actions-heading"
     >
       <h2
         id="quick-actions-heading"
-        className="mb-4 text-[17px] font-bold tracking-tight text-bh-text"
+        className="mb-3 text-[17px] font-bold tracking-tight text-bh-text"
       >
         Quick actions
       </h2>
 
-      <ul className="grid grid-cols-2 gap-2.5">
+      <ul className="grid grid-cols-2 gap-2">
         {actions.map((action) => {
           const Icon = ICONS[action.id as keyof typeof ICONS] ?? PlusCircle;
           const tone = TONES[action.tone] ?? TONES.navy;
@@ -64,18 +64,18 @@ export function DashboardQuickActions({
               <Link
                 href={action.href}
                 className={cn(
-                  'group flex h-full min-h-[108px] flex-col gap-3 rounded-2xl border p-3.5 transition-[border-color,background-color,box-shadow,transform]',
+                  'group flex h-full min-h-[80px] flex-col gap-2 rounded-2xl border p-3 transition-[border-color,background-color,box-shadow,transform]',
                   'hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:hover:translate-y-0',
                   tone.card,
                 )}
               >
                 <span
                   className={cn(
-                    'flex h-10 w-10 items-center justify-center rounded-xl shadow-sm',
+                    'flex h-9 w-9 items-center justify-center rounded-xl shadow-sm',
                     tone.icon,
                   )}
                 >
-                  <Icon className="h-5 w-5" aria-hidden />
+                  <Icon className="h-4 w-4" aria-hidden />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold text-bh-text">

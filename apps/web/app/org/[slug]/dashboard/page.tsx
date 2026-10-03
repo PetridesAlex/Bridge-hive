@@ -408,12 +408,9 @@ export default async function OrgDashboardPage({
 
   const dateLabel = formatInTimeZone(now, timeZone, 'EEEE, d MMM yyyy');
   const weekLabel = `Week ${formatInTimeZone(now, timeZone, 'I')}`;
+  // Forward-looking weekly buckets from real schedule data (not fabricated).
   const openSeries = trend.map((b) => b.published);
   const filledSeries = trend.map((b) => b.filled);
-  const timesheetSeries = trend.map((b) => Math.min(b.published + b.filled, submittedCount || 0));
-  const locationSeries = trend.map((_, i) =>
-    Math.max(0, (locationsCount ?? 0) - Math.max(0, 5 - i)),
-  );
 
   return (
     <div className="space-y-6 bh-fade-up">
@@ -476,7 +473,6 @@ export default async function OrgDashboardPage({
               icon={ClipboardList}
               tint={submittedCount > 0 ? 'warning' : 'violet'}
               highlight={submittedCount > 0}
-              series={timesheetSeries}
             />
             <KpiCard
               label="Active locations"
@@ -489,7 +485,6 @@ export default async function OrgDashboardPage({
               href={`/org/${slug}/locations`}
               icon={MapPin}
               tint="teal"
-              series={locationSeries}
             />
           </div>
 
@@ -512,6 +507,11 @@ export default async function OrgDashboardPage({
                 canReviewTimesheets={ctx.capabilities.canReviewTimesheets}
                 loadError={calendarLoadError}
                 filteredEmpty={filteredEmpty}
+              />
+              <OrganizationActivityPanel
+                seriesByRange={activitySeriesByRange}
+                loadError={activityLoadError}
+                createShiftHref={`/org/${slug}/shifts/new`}
               />
             </div>
 
@@ -545,12 +545,6 @@ export default async function OrgDashboardPage({
             </aside>
           </div>
 
-          <OrganizationActivityPanel
-            seriesByRange={activitySeriesByRange}
-            loadError={activityLoadError}
-            createShiftHref={`/org/${slug}/shifts/new`}
-          />
-
           <section className="space-y-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
@@ -561,7 +555,7 @@ export default async function OrgDashboardPage({
               </h2>
               <p className="mt-1 text-sm text-bh-text-secondary">
                 Schedule outlook for the next six weeks — separate from historical
-                organization activity above.
+                organization activity.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

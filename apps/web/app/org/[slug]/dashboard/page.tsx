@@ -23,6 +23,7 @@ import Link from 'next/link';
 import { CoverageTrendChart, LocationWorkloadList, RoleCoverageBars } from '@/components/org/charts';
 import { DashboardGreeting } from '@/components/org/dashboard-greeting';
 import { DashboardQuickActions } from '@/components/org/dashboard-quick-actions';
+import { OrgDashboardBanner } from '@/components/org/org-dashboard-banner';
 import {
   AttentionQueueList,
   DashboardPanel,
@@ -342,6 +343,8 @@ export default async function OrgDashboardPage({
 
   return (
     <div className="space-y-6 bh-fade-up">
+      <OrgDashboardBanner />
+
       <DashboardGreeting
         firstName={firstName}
         orgName={ctx.org.display_name}

@@ -16,6 +16,7 @@ import {
   FileText,
   IdCard,
   MapPin,
+  MessageSquareText,
   ShieldCheck,
   Stethoscope,
   Wallet,
@@ -100,6 +101,13 @@ const KNOWN_CREDENTIAL_SET = new Set<string>(CREDENTIAL_TYPES);
 const fieldClass =
   'h-11 rounded-xl border-bh-border bg-bh-surface text-bh-text shadow-none focus-visible:border-bh-teal focus-visible:ring-bh-teal/25';
 
+const FORM_STEPS = [
+  { id: 1, label: 'Where & who', short: 'Where', icon: MapPin },
+  { id: 2, label: 'When', short: 'When', icon: CalendarClock },
+  { id: 3, label: 'Pay', short: 'Pay', icon: Wallet },
+  { id: 4, label: 'Requirements', short: 'Reqs', icon: ClipboardList },
+] as const;
+
 function Section({
   step,
   title,
@@ -114,7 +122,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-bh-border bg-bh-surface p-5 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:p-6">
+    <section
+      id={`shift-step-${step}`}
+      className="scroll-mt-36 rounded-2xl border border-bh-border bg-bh-surface p-5 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:p-6"
+    >
       <div className="mb-5 flex items-start gap-3 border-b border-bh-border/70 pb-4">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-teal-soft text-bh-teal-strong">
           <Icon className="h-5 w-5" aria-hidden />
@@ -193,6 +204,13 @@ export function ShiftForm({
   const locationName =
     locations.find((l) => l.id === locationId)?.name ?? 'Select location';
 
+  const stepCompletion = {
+    1: Boolean(locationId && requiredRole),
+    2: Boolean(startsAt && endsAt),
+    3: Boolean(rateEuros && Number(rateEuros) > 0),
+    4: true,
+  } as const;
+
   useEffect(() => {
     if (state.success) toast.success('Shift saved as draft');
     if (state.error) toast.error(state.error);
@@ -204,9 +222,178 @@ export function ShiftForm({
     );
   }
 
+  function scrollToStep(step: number) {
+    document
+      .getElementById(`shift-step-${step}`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <form action={formAction} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div className="space-y-5">
+        <div className="sticky top-16 z-20 overflow-hidden rounded-2xl border border-bh-sidebar/15 bg-bh-surface shadow-[0_16px_36px_rgba(7,29,48,0.1)]">
+          <div className="flex items-center justify-between gap-3 border-b border-bh-border/70 bg-gradient-to-r from-bh-sidebar to-[#0b2a43] px-4 py-2.5 text-bh-sidebar-text">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-honey">
+                Shift composer
+              </p>
+              <p className="truncate text-xs text-bh-sidebar-muted">
+                Jump steps or set location and role
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              {Object.values(stepCompletion).filter(Boolean).length}/4 ready
+            </span>
+          </div>
+
+          <div className="space-y-3 p-3 sm:p-3.5">
+            <div
+              role="navigation"
+              aria-label="Shift form steps"
+              className="grid grid-cols-2 gap-1.5 sm:grid-cols-4"
+            >
+              {FORM_STEPS.map((step) => {
+                const Icon = step.icon;
+                const complete = stepCompletion[step.id];
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => scrollToStep(step.id)}
+                    className={cn(
+                      'group flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left transition-all',
+                      complete
+                        ? 'border-bh-teal/35 bg-bh-teal-soft/60 shadow-sm hover:bg-bh-teal-soft'
+                        : 'border-bh-border bg-bh-subtle/40 hover:border-bh-border-strong hover:bg-bh-subtle',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[11px] font-bold',
+                        complete
+                          ? 'bg-bh-teal text-white'
+                          : 'bg-bh-surface text-bh-text-muted ring-1 ring-bh-border',
+                      )}
+                    >
+                      {complete ? <Check className="h-3.5 w-3.5" aria-hidden /> : step.id}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-bh-text">
+                        <Icon className="h-3 w-3 shrink-0 text-bh-text-muted" aria-hidden />
+                        <span className="truncate">{step.short}</span>
+                      </span>
+                      <span className="hidden truncate text-[10px] text-bh-text-muted sm:block">
+                        {step.label}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+              <div>
+                <label
+                  htmlFor="composer-location"
+                  className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted"
+                >
+                  Location
+                </label>
+                <div className="relative">
+                  <MapPin
+                    className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-bh-teal-strong"
+                    aria-hidden
+                  />
+                  <select
+                    id="composer-location"
+                    value={locationId}
+                    onChange={(e) => {
+                      setLocationId(e.target.value);
+                      scrollToStep(1);
+                    }}
+                    className="h-10 w-full appearance-none truncate rounded-xl border border-bh-border bg-bh-surface py-2 pl-9 pr-9 text-sm font-semibold text-bh-text shadow-sm focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+                  >
+                    <option value="" disabled>
+                      Select location
+                    </option>
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-bh-text-muted"
+                    aria-hidden
+                  >
+                    ▾
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">
+                  Worker role
+                </p>
+                <div
+                  role="group"
+                  aria-label="Worker role"
+                  className="grid grid-cols-2 gap-1 rounded-xl border border-bh-border bg-bh-subtle/50 p-1"
+                >
+                  {WORKER_ROLES.map((role) => {
+                    const selected = requiredRole === role;
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => {
+                          setRequiredRole(role);
+                          scrollToStep(1);
+                        }}
+                        className={cn(
+                          'rounded-lg px-2 py-2 text-center text-[11px] font-semibold transition-colors',
+                          selected
+                            ? 'bg-bh-sidebar text-white shadow-sm'
+                            : 'text-bh-text-secondary hover:bg-bh-surface hover:text-bh-text',
+                        )}
+                      >
+                        {WORKER_ROLE_LABELS[role]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-bh-border/70 bg-bh-subtle/40 px-3 py-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+                Summary
+              </span>
+              <span className="inline-flex max-w-[14rem] items-center gap-1.5 truncate rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-[11px] font-semibold text-bh-text">
+                <MapPin className="h-3 w-3 shrink-0 text-bh-teal-strong" aria-hidden />
+                <span className="truncate">{locationName}</span>
+              </span>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold',
+                  requiredRole
+                    ? 'border-bh-teal/25 bg-bh-teal-soft/70 text-bh-teal-strong'
+                    : 'border-bh-honey/30 bg-bh-honey-soft text-bh-honey-strong',
+                )}
+              >
+                <Stethoscope className="h-3 w-3 shrink-0" aria-hidden />
+                {requiredRole ? roleLabel(requiredRole) : 'Role pending'}
+              </span>
+              {startsAt ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-[11px] font-semibold text-bh-text">
+                  <CalendarClock className="h-3 w-3 shrink-0 text-bh-text-muted" aria-hidden />
+                  {formatPreviewTime(startsAt)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
         <Section
           step={1}
           title="Where and who"
@@ -478,18 +665,42 @@ export function ShiftForm({
             </div>
           </div>
 
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="notes">Notes for workers</Label>
-            <Textarea
-              id="notes"
-              name="notes"
-              defaultValue={shift?.notes ?? ''}
-              placeholder="Parking, unit entry, uniform, or reporting instructions…"
-              className="min-h-[104px] rounded-xl border-bh-border bg-bh-subtle/30 focus-visible:border-bh-teal focus-visible:bg-bh-surface focus-visible:ring-bh-teal/25"
-            />
-            <p className="text-xs text-bh-text-muted">
-              Visible to workers who view or claim this shift.
-            </p>
+          <div className="sm:col-span-2">
+            <div className="overflow-hidden rounded-2xl border border-bh-border bg-gradient-to-b from-bh-subtle/60 to-bh-surface shadow-[0_4px_16px_rgba(7,29,48,0.04)]">
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-bh-border/70 px-4 py-3.5 sm:px-5">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-sidebar text-bh-honey shadow-sm">
+                    <MessageSquareText className="h-4 w-4" aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <Label
+                      htmlFor="notes"
+                      className="text-sm font-semibold text-bh-text"
+                    >
+                      Notes for workers
+                    </Label>
+                    <p className="mt-0.5 text-xs leading-5 text-bh-text-secondary">
+                      Briefing details shown on the shift card after workers view or claim.
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex items-center rounded-full border border-bh-teal/25 bg-bh-teal-soft/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-bh-teal-strong">
+                  Shared with workers
+                </span>
+              </div>
+              <div className="p-3 sm:p-4">
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  defaultValue={shift?.notes ?? ''}
+                  placeholder="Parking, unit entry, uniform, reporting point, or anything the worker should know before arrival…"
+                  className="min-h-[128px] resize-y rounded-xl border-bh-border/80 bg-bh-surface px-3.5 py-3 text-sm leading-6 text-bh-text shadow-inner placeholder:text-bh-text-muted/80 focus-visible:border-bh-teal focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+                />
+                <p className="mt-2.5 text-[11px] leading-4 text-bh-text-muted">
+                  Keep it clear and actionable — workers read this before they start the shift.
+                </p>
+              </div>
+            </div>
           </div>
         </Section>
 
@@ -499,19 +710,39 @@ export function ShiftForm({
           </p>
         ) : null}
 
-        <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-bh-border bg-bh-surface/95 px-4 py-3 shadow-[0_8px_24px_rgba(7,29,48,0.08)] backdrop-blur">
-          <p className="text-xs text-bh-text-muted">
-            Saves as a private draft. Publish when you are ready.
-          </p>
+        <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-bh-sidebar/15 bg-bh-sidebar/[0.97] px-4 py-3.5 text-bh-sidebar-text shadow-[0_16px_40px_rgba(7,29,48,0.28)] backdrop-blur-md">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-white">
+              {pending
+                ? 'Saving draft…'
+                : !requiredRole
+                  ? 'Select a worker role to continue'
+                  : mode === 'create'
+                    ? 'Ready to save as a private draft'
+                    : 'Ready to save your changes'}
+            </p>
+            <p className="mt-0.5 text-[11px] text-bh-sidebar-muted">
+              Publish later from the shifts list when staffing is ready.
+            </p>
+          </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" asChild>
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 rounded-xl border-white/20 bg-white/5 px-5 font-semibold text-white hover:bg-white/12 hover:text-white"
+            >
               <Link href={`/org/${slug}/shifts`}>Cancel</Link>
             </Button>
             <Button
               type="submit"
               disabled={pending || locations.length === 0 || !requiredRole}
+              className="h-11 rounded-xl bg-bh-honey px-5 font-semibold text-bh-sidebar shadow-[0_8px_20px_rgba(224,170,24,0.35)] hover:bg-bh-honey-strong focus-visible:ring-bh-honey disabled:bg-bh-honey/40 disabled:text-bh-sidebar/50 disabled:shadow-none"
             >
-              {pending ? 'Saving…' : mode === 'create' ? 'Save draft' : 'Save changes'}
+              {pending
+                ? 'Saving…'
+                : mode === 'create'
+                  ? 'Save draft'
+                  : 'Save changes'}
             </Button>
           </div>
         </div>
@@ -583,38 +814,107 @@ export function ShiftForm({
               </p>
             </div>
 
-            <dl className="space-y-3 text-sm">
-              <div className="flex items-start justify-between gap-3">
-                <dt className="text-bh-text-muted">Credentials</dt>
-                <dd className="max-w-[60%] text-right font-semibold text-bh-text">
-                  {selectedRequirements.length === 0
-                    ? 'Role baseline'
-                    : `${selectedRequirements.length} extra`}
-                </dd>
+            <div
+              className={cn(
+                'rounded-xl border px-3.5 py-3 transition-colors',
+                selectedRequirements.length > 0
+                  ? 'border-bh-teal/30 bg-gradient-to-br from-bh-teal-soft/70 to-bh-surface'
+                  : 'border-bh-border bg-gradient-to-br from-bh-subtle/80 to-bh-surface',
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <span
+                  className={cn(
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+                    selectedRequirements.length > 0
+                      ? 'bg-bh-teal text-white'
+                      : 'bg-bh-sidebar/90 text-bh-honey',
+                  )}
+                >
+                  <ShieldCheck className="h-4 w-4" aria-hidden />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">
+                      Credentials
+                    </p>
+                    <span
+                      className={cn(
+                        'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                        selectedRequirements.length > 0
+                          ? 'bg-bh-teal text-white'
+                          : 'bg-bh-sidebar text-bh-honey',
+                      )}
+                    >
+                      {selectedRequirements.length > 0
+                        ? `${selectedRequirements.length} extra`
+                        : 'Baseline'}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-bh-text">
+                    {selectedRequirements.length === 0
+                      ? 'Role baseline only'
+                      : `${selectedRequirements.length} additional document${selectedRequirements.length === 1 ? '' : 's'}`}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-bh-text-secondary">
+                    {selectedRequirements.length === 0
+                      ? 'Platform role credentials still apply automatically.'
+                      : 'Workers must meet these extras before they can claim.'}
+                  </p>
+                </div>
               </div>
-            </dl>
 
-            {selectedRequirements.length > 0 ? (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedRequirements.slice(0, 4).map((type) => (
-                  <span
-                    key={type}
-                    className="rounded-full border border-bh-teal/20 bg-bh-teal-soft/60 px-2 py-0.5 text-[10px] font-semibold text-bh-teal-strong"
-                  >
-                    {credentialTypeLabel(type)}
+              {selectedRequirements.length > 0 ? (
+                <div className="mt-3 flex flex-wrap gap-1.5 border-t border-bh-teal/15 pt-3">
+                  {selectedRequirements.slice(0, 4).map((type) => (
+                    <span
+                      key={type}
+                      className="inline-flex items-center gap-1 rounded-full border border-bh-teal/25 bg-bh-surface px-2 py-0.5 text-[10px] font-semibold text-bh-teal-strong"
+                    >
+                      <Check className="h-2.5 w-2.5" aria-hidden />
+                      {credentialTypeLabel(type)}
+                    </span>
+                  ))}
+                  {selectedRequirements.length > 4 ? (
+                    <span className="rounded-full bg-bh-subtle px-2 py-0.5 text-[10px] font-semibold text-bh-text-muted">
+                      +{selectedRequirements.length - 4} more
+                    </span>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mt-3 flex items-center gap-2 border-t border-bh-border/70 pt-3">
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-bh-border/70">
+                    <span className="block h-full w-2/5 rounded-full bg-bh-honey" />
                   </span>
-                ))}
-                {selectedRequirements.length > 4 ? (
-                  <span className="rounded-full bg-bh-subtle px-2 py-0.5 text-[10px] font-semibold text-bh-text-muted">
-                    +{selectedRequirements.length - 4}
+                  <span className="text-[10px] font-semibold text-bh-text-muted">
+                    Optional extras available
                   </span>
-                ) : null}
+                </div>
+              )}
+            </div>
+
+            <div className="relative overflow-hidden rounded-xl border border-bh-sidebar/20 bg-bh-sidebar px-3.5 py-3.5 text-bh-sidebar-text shadow-[0_8px_20px_rgba(7,29,48,0.16)]">
+              <div
+                className="pointer-events-none absolute -right-6 -top-8 h-20 w-20 rounded-full bg-bh-honey/20 blur-2xl"
+                aria-hidden
+              />
+              <div className="relative flex items-start gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-bh-honey">
+                  <FileText className="h-4 w-4" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-honey">
+                    Privacy
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    Draft stays private
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-bh-sidebar-muted">
+                    Only your team can see it until you publish from the shifts list.
+                  </p>
+                </div>
               </div>
-            ) : null}
-
-            <p className="rounded-xl border border-bh-border/80 bg-bh-subtle/60 px-3 py-2.5 text-xs leading-5 text-bh-text-secondary">
-              Drafts stay private until you publish from the shifts list.
-            </p>
+            </div>
           </div>
         </div>
       </aside>

@@ -6,7 +6,6 @@ import {
   countFilledUpcoming,
   countOpenShifts,
   filterCalendarShifts,
-  isOwnedOrganizationLogoPath,
   locationWorkload,
   mapShiftToCalendarEvent,
   ORG_STATUS_LABELS,
@@ -23,7 +22,6 @@ import Link from 'next/link';
 import { CoverageTrendChart, LocationWorkloadList, RoleCoverageBars } from '@/components/org/charts';
 import { DashboardGreeting } from '@/components/org/dashboard-greeting';
 import { DashboardQuickActions } from '@/components/org/dashboard-quick-actions';
-import { OrgDashboardBanner } from '@/components/org/org-dashboard-banner';
 import {
   AttentionQueueList,
   DashboardPanel,
@@ -182,14 +180,6 @@ export default async function OrgDashboardPage({
   const calendarLoadError = Boolean(calendarResult.error);
   const rawCalendarShifts = calendarResult.data ?? [];
 
-  let orgLogoUrl: string | null = null;
-  if (isOwnedOrganizationLogoPath(ctx.org.id, ctx.org.logo_path)) {
-    const { data: signed } = await supabase.storage
-      .from('organization-logos')
-      .createSignedUrl(ctx.org.logo_path!, 60 * 15);
-    orgLogoUrl = signed?.signedUrl ?? null;
-  }
-
   const wardTotal = (locationWardRows ?? []).reduce((sum, loc) => {
     const c = Array.isArray(loc.wards)
       ? (loc.wards[0] as { count?: number })?.count ?? 0
@@ -343,12 +333,9 @@ export default async function OrgDashboardPage({
 
   return (
     <div className="space-y-6 bh-fade-up">
-      <OrgDashboardBanner />
-
       <DashboardGreeting
         firstName={firstName}
         orgName={ctx.org.display_name}
-        orgLogoUrl={orgLogoUrl}
         dateLabel={dateLabel}
         weekLabel={weekLabel}
       />

@@ -281,12 +281,27 @@ export default async function LocationsPage({
           </p>
         </div>
         <PermissionGuard allowed={ctx.capabilities.canManageLocations}>
-          <Button asChild variant="honey" className="rounded-xl font-semibold">
-            <Link href={filterHref(slug, filterState, { new: '1' })}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Add location
-            </Link>
-          </Button>
+          {showNew === '1' ? (
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 rounded-xl border-bh-border bg-bh-surface px-5 font-semibold text-bh-text shadow-sm hover:bg-bh-subtle"
+            >
+              <Link href={filterHref(slug, filterState, { new: undefined })}>
+                Cancel
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              asChild
+              className="h-11 rounded-xl bg-bh-sidebar px-5 font-semibold text-white shadow-[0_8px_20px_rgba(7,29,48,0.18)] transition hover:bg-bh-sidebar-hover focus-visible:ring-bh-sidebar"
+            >
+              <Link href={filterHref(slug, filterState, { new: '1' })}>
+                <Plus className="h-4 w-4" aria-hidden />
+                {locations.length === 0 ? 'Add your first location' : 'Add location'}
+              </Link>
+            </Button>
+          )}
         </PermissionGuard>
       </div>
 
@@ -434,22 +449,7 @@ export default async function LocationsPage({
         </div>
       </form>
 
-      {!locations.length ? (
-        <EmptyState
-          title="Add a location before creating shifts"
-          description="Create a location and wards so schedulers can publish openings."
-          action={
-            ctx.capabilities.canManageLocations ? (
-              <Button asChild variant="honey">
-                <Link href={`/org/${slug}/locations?new=1`}>
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Add location
-                </Link>
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : !filtered.length ? (
+      {!locations.length ? null : !filtered.length ? (
         <EmptyState
           title="No locations match"
           description="Adjust search or city filters."

@@ -78,20 +78,29 @@ describe('premium auth portals', () => {
     expect(shell).toMatch(/auth-portal\.css/);
     expect(css).toMatch(/\.auth-portal/);
     expect(css).toMatch(/auth-portal-card|auth-hero/);
+    expect(shell).toMatch(/AuthHeroPanel variant=\{variant\}/);
     expect(hero).toMatch(/\/auth\/healthcare-hero\.webp/);
+    expect(hero).toMatch(/\/auth\/admin-hero\.jpg/);
     expect(hero).toMatch(/BridgeHiveLogo/);
+    expect(css).toMatch(/data-variant='admin'/);
     expect(activity).toMatch(/Illustrative/);
     expect(activity).toMatch(/metrics\?/);
     expect(orgDash).not.toMatch(/auth-portal\.css/);
     expect(adminLayout).not.toMatch(/auth-portal\.css/);
   });
 
-  it('ships healthcare hero asset for the auth hero panel', async () => {
+  it('ships healthcare and admin hero assets for the auth hero panel', async () => {
     await expect(
       fs.access(path.join(webRoot, 'public/auth/healthcare-hero.webp')),
     ).resolves.toBeUndefined();
     await expect(
       fs.access(path.join(webRoot, 'public/auth/healthcare-hero.jpg')),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(webRoot, 'public/auth/admin-hero.jpg')),
+    ).resolves.toBeUndefined();
+    await expect(
+      fs.access(path.join(webRoot, 'public/auth/admin-hero.webp')),
     ).resolves.toBeUndefined();
   });
 

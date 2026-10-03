@@ -38,7 +38,7 @@ export default async function NewShiftPage({
           title={hasLocations ? 'Create shift' : 'Prepare to create shifts'}
           subtitle={
             hasLocations
-              ? 'Four short steps. Save as a private draft, then publish when staffing is ready.'
+              ? 'Four short steps. Filter by location and role up top, then save as a private draft until staffing is ready.'
               : 'Bridge Hive schedules are location-first. Complete this one setup step to unlock drafting and publishing.'
           }
         />

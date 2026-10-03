@@ -80,12 +80,36 @@
   opacity: 0.92;
 }
 
+.auth-portal[data-variant='admin'] .auth-hero-photo {
+  /* Favor clinicians + hospital while keeping navy brand field for copy */
+  object-position: 58% 42%;
+  opacity: 1;
+}
+
 .auth-hero-photo-mask {
   position: absolute;
   inset: 0;
   background:
     linear-gradient(90deg, rgba(7, 29, 48, 0.96) 0%, rgba(7, 29, 48, 0.78) 42%, rgba(7, 29, 48, 0.28) 72%, rgba(7, 29, 48, 0.55) 100%),
     linear-gradient(180deg, rgba(7, 29, 48, 0.35) 0%, transparent 28%, rgba(7, 29, 48, 0.55) 70%, rgba(7, 29, 48, 0.92) 100%);
+}
+
+.auth-portal[data-variant='admin'] .auth-hero-photo-mask {
+  background:
+    linear-gradient(
+      105deg,
+      rgba(7, 29, 48, 0.88) 0%,
+      rgba(7, 29, 48, 0.62) 38%,
+      rgba(7, 29, 48, 0.22) 68%,
+      rgba(7, 29, 48, 0.45) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(7, 29, 48, 0.28) 0%,
+      transparent 32%,
+      rgba(7, 29, 48, 0.4) 72%,
+      rgba(7, 29, 48, 0.88) 100%
+    );
 }
 
 .auth-hero-curves {
@@ -324,20 +348,6 @@
   }
 }
 
-.auth-form-lang {
-  position: absolute;
-  top: 1.15rem;
-  right: 1.25rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--auth-muted);
-  pointer-events: none;
-  user-select: none;
-}
-
 .auth-form-card {
   width: 100%;
   max-width: 22.5rem;
@@ -558,7 +568,7 @@
 
   .auth-form-column {
     justify-content: flex-start;
-    padding-top: 3.25rem;
+    padding-top: 1.75rem;
   }
 }
 

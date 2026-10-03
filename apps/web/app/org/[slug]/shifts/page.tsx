@@ -18,12 +18,14 @@ import {
   ChevronLeft,
   ChevronRight,
   FileEdit,
+  Filter,
   LayoutList,
   MapPin,
   Moon,
   MoreHorizontal,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   Sun,
   UserPlus,
 } from 'lucide-react';
@@ -457,7 +459,7 @@ export default async function ShiftsPage({
 
       <form
         method="get"
-        className="flex flex-col gap-3 rounded-2xl border border-bh-border bg-bh-surface p-3 shadow-[0_4px_16px_rgba(7,29,48,0.04)] lg:flex-row lg:flex-wrap lg:items-center lg:gap-2.5 lg:p-3.5"
+        className="overflow-hidden rounded-2xl border border-bh-sidebar/15 bg-bh-surface shadow-[0_16px_36px_rgba(7,29,48,0.08)]"
       >
         {viewRaw === 'calendar' ? (
           <input type="hidden" name="view" value="calendar" />
@@ -465,133 +467,230 @@ export default async function ShiftsPage({
         {dateYmd !== todayYmd ? (
           <input type="hidden" name="date" value={dateYmd} />
         ) : null}
-
-        <div className="relative min-w-0 flex-1 lg:min-w-[220px]">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bh-text-muted"
-            aria-hidden
-          />
-          <label htmlFor="q" className="sr-only">
-            Search shifts
-          </label>
-          <input
-            id="q"
-            name="q"
-            defaultValue={q ?? ''}
-            placeholder="Search shifts, locations or wards…"
-            className="h-10 w-full rounded-full border border-bh-border bg-bh-subtle/40 pl-9 pr-3 text-sm text-bh-text placeholder:text-bh-text-muted focus-visible:border-bh-accent-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-accent-blue/20"
-          />
-        </div>
-
-        <select
-          id="status"
-          name="status"
-          defaultValue={statusFilter ?? ''}
-          aria-label="Status"
-          className="h-10 rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Status (All statuses)</option>
-          {SHIFT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.replace(/_/g, ' ')}
-            </option>
-          ))}
-        </select>
-
-        <select
-          id="role"
-          name="role"
-          defaultValue={roleFilter ?? ''}
-          aria-label="Role"
-          className="h-10 rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Role (All roles)</option>
-          {WORKER_ROLES.map((role) => (
-            <option key={role} value={role}>
-              {WORKER_ROLE_LABELS[role]}
-            </option>
-          ))}
-        </select>
-
-        <select
-          id="location"
-          name="location"
-          defaultValue={locationFilter ?? ''}
-          aria-label="Location"
-          className="h-10 max-w-[200px] truncate rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Location (All locations)</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>
-              {loc.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          id="range"
-          name="range"
-          defaultValue={range ?? ''}
-          aria-label="Date range"
-          className="h-10 rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Date (All dates)</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="past">Past</option>
-        </select>
-
-        <Button type="submit" variant="secondary" className="h-10 rounded-full px-4">
-          Apply
-        </Button>
-
-        {hasFilters ? (
-          <Link
-            href={filterHref({
-              q: undefined,
-              status: undefined,
-              role: undefined,
-              location: undefined,
-              range: undefined,
-              page: undefined,
-            })}
-            className="inline-flex items-center gap-1.5 px-2 text-sm font-semibold text-bh-text-secondary hover:text-bh-accent-blue"
-          >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-            Clear filters
-          </Link>
+        {batchFilter ? (
+          <input type="hidden" name="batch" value={batchFilter} />
         ) : null}
 
-        <div
-          role="group"
-          aria-label="Shifts view"
-          className="ml-auto inline-flex rounded-xl border border-bh-border bg-bh-subtle/50 p-1"
-        >
-          <Link
-            href={filterHref({ view: undefined, page: '1' })}
-            aria-current={listView ? 'page' : undefined}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-              listView
-                ? 'bg-bh-sidebar text-white shadow-sm'
-                : 'text-bh-text-secondary hover:text-bh-text',
+        <div className="flex flex-col gap-3 border-b border-bh-border/70 bg-gradient-to-r from-bh-sidebar to-[#0b2a43] px-4 py-3 text-bh-sidebar-text sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-bh-honey">
+              <SlidersHorizontal className="h-4 w-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-honey">
+                Filters
+              </p>
+              <p className="truncate text-xs text-bh-sidebar-muted">
+                Narrow shifts by status, role, location, and date
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {hasFilters ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-honey/30 bg-bh-honey/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-bh-honey">
+                <Filter className="h-3 w-3" aria-hidden />
+                Active
+              </span>
+            ) : (
+              <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white/80">
+                All shifts
+              </span>
             )}
-          >
-            <LayoutList className="h-3.5 w-3.5" aria-hidden />
-            List
-          </Link>
-          <Link
-            href={filterHref({ view: 'calendar', page: undefined })}
-            aria-current={!listView ? 'page' : undefined}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-              !listView
-                ? 'bg-bh-sidebar text-white shadow-sm'
-                : 'text-bh-text-secondary hover:text-bh-text',
-            )}
-          >
-            <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-            Calendar
-          </Link>
+            <div
+              role="group"
+              aria-label="Shifts view"
+              className="inline-flex rounded-xl border border-white/15 bg-white/5 p-1"
+            >
+              <Link
+                href={filterHref({ view: undefined, page: '1' })}
+                aria-current={listView ? 'page' : undefined}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                  listView
+                    ? 'bg-bh-honey text-bh-sidebar shadow-sm'
+                    : 'text-bh-sidebar-muted hover:bg-white/10 hover:text-white',
+                )}
+              >
+                <LayoutList className="h-3.5 w-3.5" aria-hidden />
+                List
+              </Link>
+              <Link
+                href={filterHref({ view: 'calendar', page: undefined })}
+                aria-current={!listView ? 'page' : undefined}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
+                  !listView
+                    ? 'bg-bh-honey text-bh-sidebar shadow-sm'
+                    : 'text-bh-sidebar-muted hover:bg-white/10 hover:text-white',
+                )}
+              >
+                <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+                Calendar
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 p-3.5 sm:p-4">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-bh-teal-strong"
+              aria-hidden
+            />
+            <label htmlFor="q" className="sr-only">
+              Search shifts
+            </label>
+            <input
+              id="q"
+              name="q"
+              defaultValue={q ?? ''}
+              placeholder="Search shifts, locations or wards…"
+              className="h-11 w-full rounded-xl border border-bh-border bg-bh-subtle/30 pl-10 pr-3 text-sm font-medium text-bh-text shadow-sm placeholder:text-bh-text-muted focus-visible:border-bh-teal focus-visible:bg-bh-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+            />
+          </div>
+
+          <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+            <div>
+              <label
+                htmlFor="status"
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted"
+              >
+                Status
+              </label>
+              <select
+                id="status"
+                name="status"
+                defaultValue={statusFilter ?? ''}
+                className="h-10 w-full truncate rounded-xl border border-bh-border bg-bh-surface px-3 text-sm font-semibold text-bh-text shadow-sm focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+              >
+                <option value="">All statuses</option>
+                {SHIFT_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s.replace(/_/g, ' ')}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="role"
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted"
+              >
+                Role
+              </label>
+              <select
+                id="role"
+                name="role"
+                defaultValue={roleFilter ?? ''}
+                className="h-10 w-full truncate rounded-xl border border-bh-border bg-bh-surface px-3 text-sm font-semibold text-bh-text shadow-sm focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+              >
+                <option value="">All roles</option>
+                {WORKER_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {WORKER_ROLE_LABELS[role]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="location"
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted"
+              >
+                Location
+              </label>
+              <select
+                id="location"
+                name="location"
+                defaultValue={locationFilter ?? ''}
+                className="h-10 w-full truncate rounded-xl border border-bh-border bg-bh-surface px-3 text-sm font-semibold text-bh-text shadow-sm focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+              >
+                <option value="">All locations</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label
+                htmlFor="range"
+                className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted"
+              >
+                Date range
+              </label>
+              <select
+                id="range"
+                name="range"
+                defaultValue={range ?? ''}
+                className="h-10 w-full truncate rounded-xl border border-bh-border bg-bh-surface px-3 text-sm font-semibold text-bh-text shadow-sm focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+              >
+                <option value="">All dates</option>
+                <option value="upcoming">Upcoming</option>
+                <option value="past">Past</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-bh-border/70 pt-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {statusFilter ? (
+                <span className="rounded-full border border-bh-teal/25 bg-bh-teal-soft/70 px-2.5 py-1 text-[11px] font-semibold text-bh-teal-strong">
+                  {statusFilter.replace(/_/g, ' ')}
+                </span>
+              ) : null}
+              {roleFilter ? (
+                <span className="rounded-full border border-bh-border bg-bh-subtle px-2.5 py-1 text-[11px] font-semibold text-bh-text">
+                  {roleLabel(roleFilter)}
+                </span>
+              ) : null}
+              {locationFilter ? (
+                <span className="inline-flex max-w-[12rem] items-center gap-1 truncate rounded-full border border-bh-border bg-bh-subtle px-2.5 py-1 text-[11px] font-semibold text-bh-text">
+                  <MapPin className="h-3 w-3 shrink-0 text-bh-teal-strong" aria-hidden />
+                  <span className="truncate">
+                    {locations.find((l) => l.id === locationFilter)?.name ?? 'Location'}
+                  </span>
+                </span>
+              ) : null}
+              {range ? (
+                <span className="rounded-full border border-bh-honey/30 bg-bh-honey-soft px-2.5 py-1 text-[11px] font-semibold text-bh-honey-strong">
+                  {range === 'upcoming' ? 'Upcoming' : 'Past'}
+                </span>
+              ) : null}
+              {!hasFilters ? (
+                <span className="text-xs text-bh-text-muted">No filters applied</span>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {hasFilters ? (
+                <Link
+                  href={filterHref({
+                    q: undefined,
+                    status: undefined,
+                    role: undefined,
+                    location: undefined,
+                    range: undefined,
+                    page: undefined,
+                  })}
+                  className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-bh-border bg-bh-surface px-3.5 text-sm font-semibold text-bh-text-secondary transition-colors hover:bg-bh-subtle hover:text-bh-text"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                  Clear
+                </Link>
+              ) : null}
+              <Button
+                type="submit"
+                className="h-10 rounded-xl bg-bh-sidebar px-5 font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.18)] hover:bg-bh-sidebar-hover"
+              >
+                Apply filters
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
 

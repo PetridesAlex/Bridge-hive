@@ -52,22 +52,29 @@
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
+  flex-shrink: 0;
   text-decoration: none;
+  max-width: 100%;
 }
 
 .m-brand-mark {
   flex-shrink: 0;
-  width: auto;
-  height: auto;
+  display: block;
+  width: var(--m-brand-mark-size, 2.75rem);
+  height: var(--m-brand-mark-size, 2.75rem);
+  max-width: var(--m-brand-mark-size, 2.75rem);
+  max-height: var(--m-brand-mark-size, 2.75rem);
   object-fit: contain;
   border-radius: 0.55rem;
 }
 
 .m-brand-wordmark {
+  display: inline;
+  white-space: nowrap;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1;
+  line-height: 1.15;
 }
 
 .m-brand--light .m-brand-bridge {
@@ -112,9 +119,12 @@
   max-width: 72rem;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: nowrap;
   gap: 1rem;
-  padding: 0.85rem 1.25rem;
+  padding: 0.7rem 1.25rem;
   min-height: var(--m-header-h);
+  height: auto;
+  max-height: none;
 }
 
 @media (min-width: 640px) {

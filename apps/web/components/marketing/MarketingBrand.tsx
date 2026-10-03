@@ -23,6 +23,7 @@ export function MarketingBrand({
       href={href}
       className={`m-brand m-brand--${tone}`}
       aria-label="Bridge Hive home"
+      style={{ ['--m-brand-mark-size' as string]: `${size}px` }}
     >
       <Image
         src={MARK_SRC}
@@ -31,6 +32,7 @@ export function MarketingBrand({
         height={size}
         sizes={`${size}px`}
         className="m-brand-mark"
+        style={{ width: size, height: size }}
         priority={priority}
       />
       <span className="m-brand-wordmark">

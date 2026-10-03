@@ -57,7 +57,7 @@ const ADMIN_STEPS: WorkflowStep[] = [
   },
   {
     label: 'Platform oversight',
-    detail: 'Support staffing without inventing live stats',
+    detail: 'Maintain a clear view of platform operations.',
     Icon: Wallet,
     tone: 'gold',
   },

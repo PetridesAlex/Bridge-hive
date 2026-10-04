@@ -1,11 +1,28 @@
 'use client';
 
+import {
+  ArrowRight,
+  Building2,
+  Info,
+  Mail,
+  Smartphone,
+  UserRound,
+  Zap,
+} from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { MarketingBrand } from '@/components/marketing/MarketingBrand';
 import { MARKETING_NAV } from '@/components/marketing/nav-config';
+
+const NAV_ICONS = {
+  '/organizations': Building2,
+  '/professionals': UserRound,
+  '/how-it-works': Zap,
+  '/about': Info,
+  '/contact': Mail,
+} as const;
 
 export function MarketingNav() {
   const pathname = usePathname();
@@ -63,26 +80,41 @@ export function MarketingNav() {
         className={`m-header ${scrolled || open ? 'is-scrolled' : ''}`}
       >
         <div className="m-header-inner">
-          <MarketingBrand priority markSize={44} />
+          <MarketingBrand priority markSize={40} tone="light" />
 
           <nav className="m-nav-desktop" aria-label="Primary">
-            {MARKETING_NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={pathname === item.href ? 'page' : undefined}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {MARKETING_NAV.map((item) => {
+              const Icon = NAV_ICONS[item.href];
+              const current = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="m-nav-link"
+                  aria-current={current ? 'page' : undefined}
+                >
+                  {Icon ? (
+                    <Icon
+                      className="m-nav-link-icon"
+                      size={16}
+                      strokeWidth={1.85}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="m-nav-actions">
-            <Link href="/auth/worker/login" className="m-link-quiet">
+            <Link href="/auth/worker/login" className="m-nav-btn m-nav-btn--worker">
+              <Smartphone size={16} strokeWidth={1.85} aria-hidden="true" />
               Worker app
             </Link>
-            <Link href="/sign-in" className="m-btn m-btn--primary">
+            <Link href="/sign-in" className="m-nav-btn m-nav-btn--org">
               Organization sign in
+              <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
             </Link>
           </div>
 
@@ -100,25 +132,38 @@ export function MarketingNav() {
         {open ? (
           <div id={panelId} className="m-mobile-panel">
             <nav aria-label="Mobile">
-              {MARKETING_NAV.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={pathname === item.href ? 'page' : undefined}
-                  onClick={() => setOpen(false)}
-                >
-                  {item.label}
-                </Link>
-              ))}
-              <Link href="/auth/worker/login" onClick={() => setOpen(false)}>
+              {MARKETING_NAV.map((item) => {
+                const Icon = NAV_ICONS[item.href];
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="m-mobile-link"
+                    aria-current={pathname === item.href ? 'page' : undefined}
+                    onClick={() => setOpen(false)}
+                  >
+                    {Icon ? (
+                      <Icon size={18} strokeWidth={1.85} aria-hidden="true" />
+                    ) : null}
+                    {item.label}
+                  </Link>
+                );
+              })}
+              <Link
+                href="/auth/worker/login"
+                className="m-nav-btn m-nav-btn--worker"
+                onClick={() => setOpen(false)}
+              >
+                <Smartphone size={16} strokeWidth={1.85} aria-hidden="true" />
                 Worker app continuation
               </Link>
               <Link
                 href="/sign-in"
-                className="m-btn m-btn--primary mt-2"
+                className="m-nav-btn m-nav-btn--org"
                 onClick={() => setOpen(false)}
               >
                 Organization sign in
+                <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
               </Link>
             </nav>
           </div>

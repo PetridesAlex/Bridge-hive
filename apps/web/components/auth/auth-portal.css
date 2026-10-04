@@ -167,6 +167,13 @@
   gap: 0.55rem;
 }
 
+.auth-logo-mark {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+  border-radius: 0.45rem;
+}
+
 .auth-logo-wordmark {
   font-size: 1.15rem;
   font-weight: 700;

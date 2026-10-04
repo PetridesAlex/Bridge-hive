@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { signOutAction } from '@/app/actions/auth';
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import {
   OrganizationSwitcher,
   type SwitcherOrg,
@@ -79,13 +80,10 @@ export function OrganizationSidebar({
           aria-hidden
         />
         <div className="relative flex items-center gap-3">
-          <span
-            className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-bh-honey/35 bg-gradient-to-br from-bh-honey to-bh-honey-strong text-bh-sidebar shadow-[0_8px_18px_rgba(224,170,24,0.28)]"
-            aria-hidden
-          >
-            <span className="text-[15px] font-black tracking-tight">B</span>
-            <span className="absolute bottom-1.5 right-1.5 h-2 w-2 rounded-sm bg-bh-sidebar/90" />
-          </span>
+          <BridgeHiveMark
+            size={44}
+            className="h-11 w-11 shrink-0 rounded-2xl shadow-[0_8px_18px_rgba(7,29,48,0.35)] ring-1 ring-white/10"
+          />
           <div className="min-w-0">
             <p className="text-[13px] font-bold leading-none tracking-tight">
               <span className="text-white">Bridge</span>{' '}

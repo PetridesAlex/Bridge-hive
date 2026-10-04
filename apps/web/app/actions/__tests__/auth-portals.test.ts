@@ -83,6 +83,10 @@ describe('premium auth portals', () => {
     expect(hero).toMatch(/\/auth\/healthcare-hero\.webp/);
     expect(hero).toMatch(/\/auth\/admin-hero\.jpg/);
     expect(hero).toMatch(/BridgeHiveLogo/);
+    const logo = await readWeb('components/auth/BridgeHiveLogo.tsx');
+    expect(logo).toMatch(/bridge-hive-logo-v2-192\.png/);
+    expect(logo).toMatch(/next\/image/);
+    expect(logo).not.toMatch(/viewBox="0 0 32 32"/);
     expect(hero).toMatch(/AuthPlatformActivity variant=\{variant\}/);
     expect(activity).toMatch(/How Bridge Hive works/);
     expect(activity).toMatch(/Publish shifts/);

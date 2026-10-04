@@ -758,7 +758,7 @@
   cursor: pointer;
 }
 
-@media (min-width: 1080px) {
+@media (min-width: 1120px) {
   .m-mobile-backdrop {
     display: none;
   }
@@ -2274,7 +2274,8 @@
 .m-flow-shell .m-hiw-band.m-band--porcelain,
 .m-flow-shell .m-faq-band.m-band--porcelain {
   background: transparent;
-  overflow: visible;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .m-flow-shell .m-audience-atmosphere,
@@ -3618,7 +3619,7 @@
 }
 
 .m-how-journeys-band .m-section {
-  max-width: min(96rem, calc(100vw - 1.5rem));
+  max-width: min(96rem, 100%);
   padding-top: clamp(1.5rem, 3vw, 2.25rem);
   padding-bottom: clamp(3.5rem, 7vw, 5.5rem);
   padding-inline: clamp(0.75rem, 2vw, 1.5rem);
@@ -3640,12 +3641,13 @@
 
 @media (min-width: 1100px) {
   .m-how-journeys-band .m-section {
-    max-width: min(100rem, calc(100vw - 2rem));
+    max-width: min(100rem, 100%);
     padding-inline: clamp(1rem, 2.5vw, 2rem);
   }
 }
 
 .m-journey-card {
+  overflow-x: clip;
   --m-journey-lift: 0px;
   --m-journey-scale: 1;
   position: relative;
@@ -4171,7 +4173,7 @@
 
 @media (min-width: 1280px) {
   .m-how-journeys-band .m-section {
-    max-width: min(104rem, calc(100vw - 2.5rem));
+    max-width: min(104rem, 100%);
   }
 
   .m-journey-card {
@@ -5516,7 +5518,7 @@
 .m-contact-cards-inner {
   position: relative;
   z-index: 1;
-  max-width: min(96rem, calc(100vw - 1.5rem));
+  max-width: min(96rem, 100%);
   padding-inline: clamp(0.75rem, 2vw, 1.5rem);
 }
 
@@ -5533,7 +5535,7 @@
 @media (min-width: 1100px) {
   .m-contact-hero-inner,
   .m-contact-cards-inner {
-    max-width: min(100rem, calc(100vw - 2rem));
+    max-width: min(100rem, 100%);
     padding-inline: clamp(1rem, 2.5vw, 2rem);
   }
 }
@@ -5579,6 +5581,7 @@
 }
 
 .m-contact-card {
+  overflow-x: clip;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -6117,7 +6120,7 @@
 @media (min-width: 1280px) {
   .m-contact-hero-inner,
   .m-contact-cards-inner {
-    max-width: min(104rem, calc(100vw - 2.5rem));
+    max-width: min(104rem, 100%);
   }
 
   .m-contact-card {
@@ -6867,4 +6870,318 @@
 
 .marketing-value:hover {
   border-color: rgba(20, 169, 181, 0.45);
+}
+
+
+/* —— Mobile responsive repair (fix/marketing-mobile-responsive) —— */
+.m-hero-inner > * {
+  min-width: 0;
+}
+
+.m-hero-sub,
+.m-hero-access,
+.m-hero-ctas {
+  max-width: 100%;
+}
+
+.m-header {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.m-header-inner {
+  padding-left: max(0.55rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.45rem, env(safe-area-inset-right, 0px));
+}
+
+.m-mobile-panel {
+  max-height: calc(100dvh - var(--m-header-h) - env(safe-area-inset-top, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.m-audience-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.85rem;
+}
+
+.m-audience-card-head .m-eyebrow {
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+}
+
+.m-audience-card--story .m-audience-card-mark {
+  position: static;
+  top: auto;
+  right: auto;
+  flex-shrink: 0;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.95rem;
+  box-shadow: 0 10px 22px rgba(11, 32, 50, 0.12);
+}
+
+.m-audience-card--story .m-audience-card-mark svg {
+  width: 24px;
+  height: 24px;
+}
+
+.m-audience-card--story h3 {
+  max-width: none;
+  padding-right: 0;
+}
+
+@media (max-width: 379px) {
+  .m-header-inner {
+    gap: 0.45rem;
+    padding-left: 0.55rem;
+    padding-right: 0.45rem;
+  }
+
+  .m-brand {
+    min-width: 0;
+    gap: 0.4rem;
+  }
+
+  .m-brand-mark {
+    width: 2.35rem !important;
+    height: 2.35rem !important;
+    max-width: 2.35rem !important;
+    max-height: 2.35rem !important;
+  }
+
+  .m-brand-wordmark {
+    font-size: 0.82rem;
+  }
+
+  .m-menu-toggle {
+    flex-shrink: 0;
+    padding-inline: 0.7rem;
+  }
+}
+
+@media (max-width: 519px) {
+  .m-hero-ctas {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .m-hero-ctas .m-btn {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
+  .m-hero-access {
+    padding: 0.85rem 0.9rem 0.95rem;
+  }
+
+  .m-hero-access-link {
+    min-height: 2.75rem;
+  }
+
+  .m-hero-access-link > span:nth-child(2) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .m-audience-card {
+    padding: 1.35rem 1.15rem 1.25rem;
+  }
+
+  .m-audience-steps li {
+    grid-template-columns: 1.45rem 2.55rem minmax(0, 1fr);
+    gap: 0.55rem;
+    margin-inline: 0;
+  }
+
+  .m-audience-steps li strong,
+  .m-audience-steps li p {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (min-width: 720px) {
+  .m-audience-card--story {
+    position: relative;
+  }
+
+  .m-audience-card-head {
+    display: block;
+  }
+
+  .m-audience-card--story .m-audience-card-mark {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 1.15rem;
+  }
+
+  .m-audience-card--story .m-audience-card-mark svg {
+    width: 34px;
+    height: 34px;
+  }
+
+  .m-audience-card--story h3 {
+    max-width: 18ch;
+    padding-right: 5rem;
+  }
+}
+
+@media (max-width: 719px) {
+  .m-audience-visual {
+    max-width: 100%;
+  }
+
+  .m-audience-float {
+    max-width: min(100%, 16rem);
+  }
+}
+
+@media (max-width: 700px) {
+  .m-how-toggle-tab {
+    min-width: 0;
+    flex: 1 1 calc(50% - 0.35rem);
+  }
+
+  .m-org-mock-stage {
+    perspective: none;
+  }
+
+  .m-org-mock-panel {
+    transform: none !important;
+  }
+}
+
+.m-footer {
+  padding-bottom: max(2rem, env(safe-area-inset-bottom, 0px));
+}
+
+
+/* —— Ultra-narrow (≤360) containment for journey/contact/hero media —— */
+@media (max-width: 360px) {
+  .m-hero-visual-frame {
+    max-width: 100%;
+    width: 100%;
+    min-height: 14rem;
+  }
+
+  .m-journey-card,
+  .m-contact-card {
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+    padding: 1.15rem 1rem 1.2rem;
+    overflow-x: clip;
+  }
+
+  .m-journey-card-sheen,
+  .m-journey-card-orb,
+  .m-contact-card-sheen,
+  .m-how-hero-hex {
+    max-width: 100%;
+  }
+
+  .m-journey-card-orb,
+  .m-journey-card-sheen,
+  .m-contact-card-sheen {
+    pointer-events: none;
+  }
+
+  .m-journey-grid,
+  .m-contact-grid {
+    gap: 0.85rem;
+    padding-inline: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .m-journey-card-head,
+  .m-contact-card-head,
+  .m-contact-card-lede,
+  .m-contact-email,
+  .m-contact-checklist,
+  .m-contact-note,
+  .m-journey-timeline {
+    max-width: 100%;
+  }
+
+  .m-hiw-loop,
+  .m-hiw-loop-track,
+  .m-hiw-loop-card {
+    max-width: 100%;
+  }
+
+  .m-hiw-band,
+  .m-how-shell,
+  .m-journey-shell,
+  .m-contact-shell {
+    overflow-x: clip;
+  }
+
+  .m-section {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+}
+
+/* Home how-it-works step columns: keep copy from collapsing/overflowing */
+@media (max-width: 520px) {
+  .m-hiw-loop-card,
+  .m-hiw-step,
+  .m-hiw-float-card {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .m-hiw-loop-card p,
+  .m-hiw-loop-card strong,
+  .m-hiw-step p,
+  .m-hiw-step strong {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+/* Force nested marketing cards to honor parent width at phone sizes */
+@media (max-width: 430px) {
+  .m-contact-grid,
+  .m-journey-grid,
+  .m-audience-panel {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .m-contact-card,
+  .m-journey-card,
+  .m-audience-card,
+  .m-reveal {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .m-how-journeys-band {
+    overflow-x: clip;
+  }
+
+  .m-journey-card,
+  .m-journey-card.is-active {
+    transform: none !important;
+  }
+
+  .m-contact-card:hover {
+    transform: none;
+  }
+
+  .m-contact-motif,
+  .m-journey-motif {
+    width: 5.25rem;
+    max-width: 32%;
+  }
 }

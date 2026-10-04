@@ -29,6 +29,17 @@ const MARKETING_SOURCE_GLOBS = [
 ] as const;
 
 describe('marketing site contracts', () => {
+
+  it('keeps audience card mark in a mobile reflow header and avoids 100vw overflow calcs', async () => {
+    const audience = await readWeb('components/marketing/AudienceJourney.tsx');
+    const css = await readWeb('app/(marketing)/marketing.css');
+    expect(audience).toMatch(/m-audience-card-head/);
+    expect(css).toMatch(/m-audience-card-head/);
+    expect(css).toMatch(/Mobile responsive repair/);
+    expect(css).not.toMatch(/calc\(100vw\s*-/);
+    expect(css).not.toMatch(/html\s*,\s*body[^{]*\{[^}]*overflow-x:\s*hidden/);
+  });
+
   it('exposes the expected public marketing paths', () => {
     expect([...PUBLIC_MARKETING_PATHS]).toEqual([
       '/',

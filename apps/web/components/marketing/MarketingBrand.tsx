@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-/** Versioned official mark (navy-tile B + gold hex). Cache-safe filename. */
-const MARK_SRC = '/brand/bridge-hive-logo-v2-512.webp';
+/** Versioned official mark (navy-tile B + gold hex). PNG keeps the white B crisp. */
+const MARK_SRC = '/brand/bridge-hive-logo-v2-512.png';
 
 /** Official Bridge Hive mark + readable wordmark for marketing surfaces only. */
 export function MarketingBrand({

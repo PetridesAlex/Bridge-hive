@@ -265,7 +265,7 @@ describe('marketing site contracts', () => {
     const nav = await readWeb('components/marketing/MarketingNav.tsx');
     const footer = await readWeb('components/marketing/MarketingFooter.tsx');
 
-    expect(brand).toMatch(/\/brand\/bridge-hive-logo-v2-512\.webp/);
+    expect(brand).toMatch(/\/brand\/bridge-hive-logo-v2-512\.png/);
     expect(brand).toMatch(/next\/image/);
     expect(brand).toMatch(/Bridge Hive|m-brand-wordmark/);
     expect(brand).not.toMatch(/viewBox="0 0 32 32"/);

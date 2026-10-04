@@ -12,7 +12,8 @@
 | `audience-hex-pro.jpg` | Owner-supplied clinical professionals photo (JPEG @ q92) | Bridge Hive brand photography for public marketing | Home dual-audience hex — Professionals tab |
 | `flow-bg.jpg` | Owner-supplied abstract hive flow background (JPEG @ q92) | Bridge Hive brand graphic for public marketing | Home audience → FAQ continuous section background |
 | SVG motifs in `components/marketing/*` | Original Bridge Hive illustrations | Owner-created; no third-party template assets | Heroes, journeys, feature storytelling |
-| `../brand/bridge-hive-logo-v2-512.webp` | Official navy-tile mark (v2) | Bridge Hive brand identity | Marketing header/footer mark |
+| `../brand/bridge-hive-logo-v2-512.png` | Official navy-tile mark (v2) | Bridge Hive brand identity | Marketing header/footer mark |
+| `../brand/bridge-hive-logo-v2-512.webp` | Official navy-tile mark (v2) | Bridge Hive brand identity | Optional compressed derivative |
 | `../brand/bridge-hive-logo-v2-64.png` | Official navy-tile mark (v2) | Bridge Hive brand identity | Favicon / compact icon |
 | `../brand/bridge-hive-logo-v2-180.png` | Official navy-tile mark (v2) | Bridge Hive brand identity | Apple touch icon |
 | `../brand/bridge-hive-logo-v2-192.png` | Official navy-tile mark (v2) | Bridge Hive brand identity | Manifest / auth / dashboard mark |

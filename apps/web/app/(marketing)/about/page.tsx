@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { InquiryCta } from '@/components/marketing/blocks';
+import { Reveal } from '@/components/marketing/Reveal';
 import { MarketingButton, Section } from '@/components/marketing/Section';
 
 export const metadata: Metadata = {
@@ -13,24 +14,22 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <>
-      <Section className="!pb-10">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
-          About Bridge Hive
-        </p>
-        <h1 className="mt-3 max-w-3xl text-[var(--m-display)] font-semibold leading-[1.1] tracking-tight text-bh-sidebar">
-          Clarity between care organizations and professionals
-        </h1>
-        <p className="mt-5 max-w-2xl text-[var(--m-lede)] leading-relaxed text-bh-text-secondary">
-          Bridge Hive exists to make healthcare staffing workflows understandable:
-          who is invited, who is verified, which role a shift needs, and how wage
-          pay and platform commission stay separate.
-        </p>
+      <Section band="teal" className="!pb-0">
+        <Reveal>
+          <p className="m-eyebrow">About Bridge Hive</p>
+          <h1 className="mt-3 max-w-3xl text-[length:var(--m-display)] font-extrabold tracking-tight text-white">
+            Clarity between care organizations and professionals
+          </h1>
+          <p className="m-lede mt-5 max-w-2xl !text-[rgba(220,232,238,0.78)]">
+            Bridge Hive exists to make healthcare staffing workflows understandable:
+            who is invited, who is verified, which role a shift needs, and how wage
+            pay and platform commission stay separate.
+          </p>
+        </Reveal>
       </Section>
 
-      <div className="marketing-rule" />
-
-      <Section>
-        <div className="grid gap-10 lg:grid-cols-3">
+      <Section band="porcelain">
+        <div className="grid gap-6 lg:grid-cols-3">
           {[
             {
               title: 'Role honesty',
@@ -44,13 +43,17 @@ export default function AboutPage() {
               title: 'Separated responsibilities',
               body: 'Organizations pay workers for approved work. Workers settle Bridge Hive’s platform commission separately. Those paths are never blended.',
             },
-          ].map((item) => (
-            <div key={item.title} className="marketing-value border-t border-bh-border pt-5">
-              <h2 className="text-lg font-semibold text-bh-sidebar">{item.title}</h2>
-              <p className="mt-2 text-sm leading-relaxed text-bh-text-secondary">
-                {item.body}
-              </p>
-            </div>
+          ].map((item, index) => (
+            <Reveal key={item.title} delay={index * 70}>
+              <div className="m-panel h-full">
+                <h2 className="text-lg font-extrabold text-[var(--m-navy)]">
+                  {item.title}
+                </h2>
+                <p className="mt-2 text-sm leading-relaxed text-[color:var(--m-muted)]">
+                  {item.body}
+                </p>
+              </div>
+            </Reveal>
           ))}
         </div>
         <div className="mt-12 flex flex-wrap gap-3">
@@ -61,7 +64,7 @@ export default function AboutPage() {
         </div>
       </Section>
 
-      <Section className="!pt-0">
+      <Section band="white">
         <InquiryCta />
       </Section>
     </>

@@ -1,14 +1,21 @@
 'use client';
 
+import { Copy, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 type ContactEmailProps = {
   address: string;
   mailtoSubject: string;
-  label: string;
+  label?: string;
+  tone?: 'teal' | 'honey';
 };
 
-export function ContactEmail({ address, mailtoSubject, label }: ContactEmailProps) {
+export function ContactEmail({
+  address,
+  mailtoSubject,
+  label = 'Email',
+  tone = 'teal',
+}: ContactEmailProps) {
   const [copied, setCopied] = useState(false);
   const mailto = `mailto:${address}?subject=${encodeURIComponent(mailtoSubject)}`;
 
@@ -32,27 +39,24 @@ export function ContactEmail({ address, mailtoSubject, label }: ContactEmailProp
   }
 
   return (
-    <div className="mt-5">
-      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
-        {label}
-      </p>
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-        <a
-          href={mailto}
-          className="break-all text-lg font-semibold text-bh-teal-strong underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal-strong"
-        >
-          {address}
+    <div className={`m-contact-email m-contact-email--${tone}`}>
+      <p className="m-contact-email-label">{label}</p>
+      <div className="m-contact-email-row">
+        <a href={mailto} className="m-contact-email-link">
+          <Mail size={16} strokeWidth={2} aria-hidden="true" />
+          <span>{address}</span>
         </a>
         <button
           type="button"
           onClick={copyAddress}
-          className="inline-flex w-fit items-center justify-center rounded-md border border-bh-border-strong bg-bh-surface px-3 py-1.5 text-sm font-medium text-bh-text transition-colors hover:bg-bh-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal-strong"
+          className="m-contact-email-copy"
           aria-live="polite"
         >
+          <Copy size={14} strokeWidth={2} aria-hidden="true" />
           {copied ? 'Copied' : 'Copy address'}
         </button>
       </div>
-      <p className="mt-2 text-sm text-bh-text-muted">
+      <p className="m-contact-email-hint">
         Opens your email app with a short subject line. You can also copy the address
         if mail is not configured on this device.
       </p>

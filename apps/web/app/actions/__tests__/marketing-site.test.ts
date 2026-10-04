@@ -21,6 +21,8 @@ const MARKETING_SOURCE_GLOBS = [
   'components/marketing/MarketingFooter.tsx',
   'components/marketing/MarketingNav.tsx',
   'components/marketing/blocks.tsx',
+  'components/marketing/AudienceJourney.tsx',
+  'components/marketing/HowItWorksClient.tsx',
   'components/marketing/ContactEmail.tsx',
   'app/robots.ts',
   'app/sitemap.ts',
@@ -74,11 +76,18 @@ describe('marketing site contracts', () => {
   it('homepage CTAs use org sign-in and worker continuation, not open signup', async () => {
     const src = await readWeb('app/(marketing)/page.tsx');
     const hero = await readWeb('components/marketing/Hero.tsx');
+    const faq = await readWeb('components/marketing/HomeFaq.tsx');
     expect(hero).toMatch(/href="\/sign-in"/);
     expect(hero).toMatch(/href="\/auth\/worker\/login"/);
     expect(hero).toMatch(/\/contact#partnerships/);
     expect(hero).toMatch(/Prepare an inquiry|Send an inquiry/);
-    expect(hero).toMatch(/not a full web app/i);
+    expect(hero).toMatch(/Partnership inquiry|Explore for organizations/);
+    expect(hero).toMatch(/Explore for professionals/);
+    expect(hero).toMatch(/Illustrative/);
+    expect(src).toMatch(/HomeFaq/);
+    expect(faq).toMatch(/not a full\s+browser version of the app|not a full web/i);
+    expect(faq).toMatch(/Clear answers before you/);
+    expect(faq).toMatch(/prepare a partnership inquiry/);
     expect(hero).not.toMatch(/href="\/sign-up"/);
     expect(hero).not.toMatch(/Licensed clinical photography TBD/);
     expect(src).not.toMatch(/Organization Dashboard/);
@@ -149,7 +158,7 @@ describe('marketing site contracts', () => {
 
   it('professionals page distinguishes wage bank transfer from commission without published fee percentages', async () => {
     const src = await readWeb('app/(marketing)/professionals/page.tsx');
-    const how = await readWeb('app/(marketing)/how-it-works/page.tsx');
+    const how = await readWeb('components/marketing/HowItWorksClient.tsx');
     const home = await readWeb('app/(marketing)/page.tsx');
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
@@ -167,6 +176,21 @@ describe('marketing site contracts', () => {
     expect(src).toMatch(/\/contact#support/);
     expect(how).not.toMatch(/payout details for Bridge Hive commission invoicing/i);
     expect(how).toMatch(/bank details for wage payouts/i);
+  });
+
+  it('scopes marketing fonts and styles to the marketing layout shell', async () => {
+    const layout = await readWeb('app/(marketing)/layout.tsx');
+    const css = await readWeb('app/(marketing)/marketing.css');
+    const shell = await readWeb('components/marketing/MarketingShell.tsx');
+    const signIn = await readWeb('app/sign-in/page.tsx');
+    const adminSignIn = await readWeb('app/admin/sign-in/page.tsx');
+    expect(layout).toMatch(/DM_Sans|dm_sans|DM Sans/i);
+    expect(layout).toMatch(/--font-marketing/);
+    expect(css).toMatch(/\.marketing\s*\{/);
+    expect(shell).toMatch(/className="marketing/);
+    expect(signIn).not.toMatch(/marketing\.css/);
+    expect(signIn).not.toMatch(/--font-marketing/);
+    expect(adminSignIn).not.toMatch(/marketing\.css/);
   });
 
   it('marketing sources omit public scaffolding phrases', async () => {
@@ -230,6 +254,35 @@ describe('marketing site contracts', () => {
       'app/(marketing)/contact/page.tsx',
     ];
     for (const file of files) {
+      await expect(fs.access(path.join(webRoot, file))).resolves.toBeUndefined();
+    }
+  });
+
+  it('ships the official Bridge Hive mark in marketing brand and icon metadata', async () => {
+    const brand = await readWeb('components/marketing/MarketingBrand.tsx');
+    const layout = await readWeb('app/(marketing)/layout.tsx');
+    const nav = await readWeb('components/marketing/MarketingNav.tsx');
+    const footer = await readWeb('components/marketing/MarketingFooter.tsx');
+
+    expect(brand).toMatch(/\/brand\/bridge-hive-logo-512\.webp/);
+    expect(brand).toMatch(/next\/image/);
+    expect(brand).toMatch(/Bridge Hive|m-brand-wordmark/);
+    expect(brand).not.toMatch(/viewBox="0 0 32 32"/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-64\.png/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-180\.png/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-192\.png/);
+    expect(nav).toMatch(/MarketingBrand/);
+    expect(footer).toMatch(/MarketingBrand/);
+
+    for (const file of [
+      'public/brand/bridge-hive-logo-512.webp',
+      'public/brand/bridge-hive-logo-64.png',
+      'public/brand/bridge-hive-logo-180.png',
+      'public/brand/bridge-hive-logo-192.png',
+      'public/brand/bridge-hive-logo-original.png',
+      'app/favicon.ico',
+      'app/icon.png',
+    ]) {
       await expect(fs.access(path.join(webRoot, file))).resolves.toBeUndefined();
     }
   });

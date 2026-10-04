@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { AuthHeroPanel } from '@/components/auth/AuthHeroPanel';
+import { AuthSignInDynamics } from '@/components/auth/AuthSignInDynamics';
 import { BridgeHiveLogo } from '@/components/auth/BridgeHiveLogo';
 
 import '@/components/auth/auth-portal.css';
@@ -29,6 +30,8 @@ export function AuthShell({
 
         <div className="auth-form-column">
           <div className="auth-form-card auth-rise">
+            <div className="auth-form-card-glow" aria-hidden="true" />
+
             <div className="auth-mobile-brand">
               <BridgeHiveLogo />
               <p className="auth-hero-eyebrow" style={{ color: '#6b7c8a' }}>
@@ -36,9 +39,13 @@ export function AuthShell({
               </p>
             </div>
 
-            <p className="auth-form-eyebrow">{eyebrow}</p>
-            <h1 className="auth-form-title">{title}</h1>
-            <p className="auth-form-description">{description}</p>
+            <div className="auth-form-header">
+              <p className="auth-form-eyebrow">{eyebrow}</p>
+              <h1 className="auth-form-title">{title}</h1>
+              <p className="auth-form-description">{description}</p>
+            </div>
+
+            <AuthSignInDynamics variant={variant} />
 
             <div className="auth-form-body">{children}</div>
 
@@ -58,7 +65,7 @@ export function AuthFooterLink({
   children: React.ReactNode;
 }) {
   return (
-    <Link href={href} className="font-medium">
+    <Link href={href} className="auth-footer-link">
       {children}
     </Link>
   );

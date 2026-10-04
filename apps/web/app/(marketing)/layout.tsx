@@ -1,7 +1,15 @@
 import type { Metadata } from 'next';
+import { DM_Sans } from 'next/font/google';
 
 import './marketing.css';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
+
+const marketingFont = DM_Sans({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-marketing',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: {
@@ -29,6 +37,19 @@ export const metadata: Metadata = {
       },
     ],
   },
+  icons: {
+    icon: [
+      { url: '/brand/bridge-hive-logo-64.png', sizes: '64x64', type: 'image/png' },
+      { url: '/brand/bridge-hive-logo-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      {
+        url: '/brand/bridge-hive-logo-180.png',
+        sizes: '180x180',
+        type: 'image/png',
+      },
+    ],
+  },
   robots: {
     index: true,
     follow: true,
@@ -40,5 +61,9 @@ export default function MarketingLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <MarketingShell>{children}</MarketingShell>;
+  return (
+    <div className={marketingFont.variable}>
+      <MarketingShell>{children}</MarketingShell>
+    </div>
+  );
 }

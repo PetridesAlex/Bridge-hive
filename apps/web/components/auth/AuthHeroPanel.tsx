@@ -23,7 +23,7 @@ export function AuthHeroPanel({ variant }: { variant: AuthPortalVariant }) {
   const features = isAdmin ? ADMIN_FEATURES : ORG_FEATURES;
 
   return (
-    <aside className="auth-hero">
+    <aside className={isAdmin ? 'auth-hero' : 'auth-hero auth-hero--composite'}>
       <div className="auth-hero-media" aria-hidden="true">
         <Image
           src={isAdmin ? '/auth/admin-hero.jpg' : '/auth/healthcare-hero.webp'}
@@ -33,32 +33,14 @@ export function AuthHeroPanel({ variant }: { variant: AuthPortalVariant }) {
           sizes="(max-width: 1024px) 0px, 55vw"
           className="auth-hero-photo"
         />
-        <div className="auth-hero-photo-mask" />
-        {!isAdmin ? (
-          <svg className="auth-hero-curves" viewBox="0 0 640 520" fill="none">
-            <path
-              d="M80 420C180 300 280 220 420 180C500 158 560 120 620 40"
-              stroke="#f5c518"
-              strokeWidth="1.5"
-              strokeOpacity="0.55"
-            />
-            <path
-              d="M40 460C160 340 300 270 460 240C540 226 590 180 640 110"
-              stroke="#f5c518"
-              strokeWidth="1.2"
-              strokeOpacity="0.35"
-            />
-            <path
-              d="M120 480C220 380 340 330 500 300"
-              stroke="#f5c518"
-              strokeWidth="1"
-              strokeOpacity="0.25"
-            />
-          </svg>
-        ) : null}
+        {isAdmin ? <div className="auth-hero-photo-mask" /> : null}
       </div>
 
-      <div className="auth-hero-content">
+      <div
+        className={
+          isAdmin ? 'auth-hero-content' : 'auth-hero-content auth-hero-content--sr'
+        }
+      >
         <div className="auth-hero-top">
           <BridgeHiveLogo />
           <p className="auth-hero-eyebrow">

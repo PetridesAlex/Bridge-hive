@@ -4,17 +4,17 @@ export function Section({
   children,
   className = '',
   id,
+  band,
 }: {
   children: React.ReactNode;
   className?: string;
   id?: string;
+  band?: 'porcelain' | 'white' | 'dark' | 'teal';
 }) {
+  const bandClass = band ? `m-band m-band--${band}` : '';
   return (
-    <section
-      id={id}
-      className={`mx-auto w-full max-w-6xl px-5 py-[var(--m-section-y)] sm:px-8 ${className}`}
-    >
-      {children}
+    <section id={id} className={`${bandClass} ${className}`.trim()}>
+      <div className="m-section">{children}</div>
     </section>
   );
 }
@@ -24,27 +24,25 @@ export function SectionHeading({
   title,
   lede,
   align = 'left',
+  tone = 'light',
 }: {
   eyebrow?: string;
   title: string;
   lede?: string;
   align?: 'left' | 'center';
+  tone?: 'light' | 'dark';
 }) {
   return (
     <div className={align === 'center' ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'}>
-      {eyebrow ? (
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
-          {eyebrow}
-        </p>
-      ) : null}
-      <h2 className="mt-3 text-3xl font-semibold tracking-tight text-bh-sidebar sm:text-4xl">
+      {eyebrow ? <p className="m-eyebrow">{eyebrow}</p> : null}
+      <h2
+        className={`m-display mt-3 text-[length:var(--m-title)] ${
+          tone === 'dark' ? 'text-white' : 'text-[color:var(--m-navy)]'
+        }`}
+      >
         {title}
       </h2>
-      {lede ? (
-        <p className="mt-4 text-[var(--m-lede)] leading-relaxed text-bh-text-secondary">
-          {lede}
-        </p>
-      ) : null}
+      {lede ? <p className="m-lede">{lede}</p> : null}
     </div>
   );
 }
@@ -53,23 +51,26 @@ export function MarketingButton({
   href,
   children,
   variant = 'primary',
+  className = '',
 }: {
   href: string;
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'on-dark' | 'on-dark-secondary';
+  className?: string;
 }) {
   const styles =
     variant === 'primary'
-      ? 'bg-bh-sidebar text-white hover:bg-bh-sidebar-hover'
+      ? 'm-btn m-btn--primary'
       : variant === 'secondary'
-        ? 'border border-bh-border-strong bg-bh-surface text-bh-text hover:bg-bh-subtle'
-        : 'text-bh-teal-strong hover:text-bh-sidebar';
+        ? 'm-btn m-btn--secondary'
+        : variant === 'on-dark'
+          ? 'm-btn m-btn--on-dark'
+          : variant === 'on-dark-secondary'
+            ? 'm-btn m-btn--on-dark-secondary'
+            : 'm-btn m-btn--ghost';
 
   return (
-    <Link
-      href={href}
-      className={`inline-flex items-center justify-center rounded-md px-5 py-2.5 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal-strong ${styles}`}
-    >
+    <Link href={href} className={`${styles} ${className}`.trim()}>
       {children}
     </Link>
   );

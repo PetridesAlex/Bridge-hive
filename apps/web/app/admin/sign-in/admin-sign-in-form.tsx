@@ -18,11 +18,11 @@ export function AdminSignInForm({ next }: { next: string }) {
   );
 
   return (
-    <form action={formAction} className="flex w-full flex-col gap-4">
+    <form action={formAction} className="auth-form">
       <input type="hidden" name="next" value={next} />
 
-      <div className="auth-field">
-        <label htmlFor="admin-sign-in-email">Email</label>
+      <div className="auth-field auth-field-delay-1">
+        <label htmlFor="admin-sign-in-email">Admin email</label>
         <div className="auth-field-input">
           <Mail className="auth-field-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
           <input
@@ -36,7 +36,9 @@ export function AdminSignInForm({ next }: { next: string }) {
         </div>
       </div>
 
-      <AuthPasswordField id="admin-sign-in-password" />
+      <div className="auth-field-delay-2">
+        <AuthPasswordField id="admin-sign-in-password" />
+      </div>
 
       {state.error ? (
         <p className="auth-error" role="alert">
@@ -44,9 +46,16 @@ export function AdminSignInForm({ next }: { next: string }) {
         </p>
       ) : null}
 
-      <button type="submit" disabled={pending} className="auth-submit">
+      <button
+        type="submit"
+        disabled={pending}
+        className="auth-submit auth-field-delay-3"
+      >
         {pending ? (
-          'Signing in…'
+          <span className="auth-submit-pending">
+            <span className="auth-submit-spinner" aria-hidden="true" />
+            Signing in…
+          </span>
         ) : (
           <>
             Sign in to admin

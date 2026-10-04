@@ -19,17 +19,21 @@ export default async function SignInPage({
       description="Sign in with your provisioned organization account to manage locations, wards, and shifts. Access is by invitation only — there is no open self-registration."
       footer={
         <>
-          <p>
-            Need access? Contact{' '}
-            <a href="mailto:support@bridgehive.app">support@bridgehive.app</a>
-          </p>
-          <p>
+          <div className="auth-footer-support">
+            <p className="auth-footer-kicker">Need access?</p>
+            <a
+              className="auth-footer-mail"
+              href="mailto:support@bridgehive.app"
+            >
+              support@bridgehive.app
+            </a>
+          </div>
+          <nav className="auth-footer-nav" aria-label="Sign-in help">
             <AuthFooterLink href="/">Back to public site</AuthFooterLink>
-            {' · '}
             <AuthFooterLink href="/contact#partnerships">
               Contact partnerships
             </AuthFooterLink>
-          </p>
+          </nav>
         </>
       }
     >

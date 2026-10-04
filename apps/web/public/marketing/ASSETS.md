@@ -3,6 +3,8 @@
 | Asset | Source | Rights / usage | Marketing use |
 |-------|--------|----------------|---------------|
 | `og-default.svg` | Bridge Hive original | Owner-created brand graphic | Open Graph / social |
+| `organizations-hero.jpg` | Owner-supplied marketing hero (JPEG, 4K export) | Bridge Hive brand photography for public marketing | `/organizations` page hero background |
+| `organizations-hero-4k.jpg` | Same master, 3840×2160 JPEG @ q95 | Bridge Hive brand photography for public marketing | High-DPI `/organizations` hero (`next/image` quality 95) |
 | SVG motifs in `components/marketing/*` | Original Bridge Hive illustrations | Owner-created; no third-party template assets | Heroes, journeys, feature storytelling |
 | `../brand/bridge-hive-logo-512.webp` | Owner-supplied official mark | Bridge Hive brand identity | Marketing header/footer mark |
 | `../brand/bridge-hive-logo-64.png` | Owner-supplied official mark | Bridge Hive brand identity | Favicon / compact icon |

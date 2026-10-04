@@ -12,11 +12,11 @@ export function MarketingBrand({
 }: {
   href?: string;
   tone?: 'light' | 'dark';
-  /** Display size in CSS pixels (keep ~40–52 in header). */
+  /** Display size in CSS pixels (keep ~44–56 in header). */
   markSize?: number;
   priority?: boolean;
 }) {
-  const size = Math.min(52, Math.max(40, markSize));
+  const size = Math.min(56, Math.max(40, markSize));
 
   return (
     <Link

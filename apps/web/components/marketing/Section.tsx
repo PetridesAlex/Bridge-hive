@@ -51,10 +51,12 @@ export function MarketingButton({
   href,
   children,
   variant = 'primary',
+  className = '',
 }: {
   href: string;
   children: React.ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'on-dark' | 'on-dark-secondary';
+  className?: string;
 }) {
   const styles =
     variant === 'primary'
@@ -68,7 +70,7 @@ export function MarketingButton({
             : 'm-btn m-btn--ghost';
 
   return (
-    <Link href={href} className={styles}>
+    <Link href={href} className={`${styles} ${className}`.trim()}>
       {children}
     </Link>
   );

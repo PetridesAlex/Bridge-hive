@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
+import { ArrowRight, Mail } from 'lucide-react';
 
-import { FeatureRow, InquiryCta } from '@/components/marketing/blocks';
+import { InquiryCta } from '@/components/marketing/blocks';
+import { OrgWorkspaceSection } from '@/components/marketing/OrgWorkspaceSection';
 import { Reveal } from '@/components/marketing/Reveal';
-import {
-  MarketingButton,
-  Section,
-  SectionHeading,
-} from '@/components/marketing/Section';
+import { MarketingButton, Section } from '@/components/marketing/Section';
 
 export const metadata: Metadata = {
   title: 'Organizations',
@@ -18,68 +17,68 @@ export const metadata: Metadata = {
 export default function OrganizationsPage() {
   return (
     <>
-      <Section band="dark" className="!pb-0">
-        <Reveal>
-          <p className="m-eyebrow">For healthcare organizations</p>
-          <h1 className="mt-3 max-w-3xl text-[length:var(--m-display)] font-extrabold tracking-tight text-white">
-            Staffing requests with role and ward clarity
-          </h1>
-          <p className="m-lede mt-5 max-w-2xl !text-[rgba(220,232,238,0.78)]">
-            Bridge Hive helps hospitals and care organizations publish openings for
-            registered nurses and ward assistants, limit visibility to verified
-            professionals, and review completed timesheets — with operational
-            structure rather than fill-rate guarantees.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <MarketingButton href="/contact#partnerships" variant="on-dark">
-              Partnership inquiry
-            </MarketingButton>
-            <MarketingButton href="/sign-in" variant="on-dark-secondary">
-              Organization sign in
-            </MarketingButton>
-          </div>
-        </Reveal>
-      </Section>
+      <section className="m-org-page-hero">
+        <div className="m-org-page-hero-media" aria-hidden="true">
+          <Image
+            src="/marketing/organizations-hero-4k.jpg"
+            alt=""
+            fill
+            priority
+            quality={95}
+            sizes="100vw"
+            className="m-org-page-hero-image"
+          />
+          <div className="m-org-page-hero-wash" />
+        </div>
+        <div className="m-section m-org-page-hero-content">
+          <Reveal>
+            <p className="m-eyebrow m-org-page-hero-eyebrow">
+              For healthcare organizations
+            </p>
+            <h1 className="mt-3 max-w-xl text-[length:var(--m-display)] font-extrabold tracking-tight text-white">
+              Staffing requests with role and ward clarity
+            </h1>
+            <p className="m-lede mt-5 max-w-lg !text-[rgba(220,232,238,0.86)]">
+              Bridge Hive helps hospitals and care organizations publish openings for
+              registered nurses and ward assistants, limit visibility to verified
+              professionals, and review completed timesheets — with operational
+              structure rather than fill-rate guarantees.
+            </p>
+            <div className="m-org-page-hero-ctas">
+              <MarketingButton
+                href="/contact#partnerships"
+                variant="on-dark"
+                className="m-org-page-hero-btn m-org-page-hero-btn--primary"
+              >
+                <Mail size={18} strokeWidth={2} aria-hidden="true" />
+                Partnership inquiry
+                <ArrowRight
+                  className="m-org-page-hero-btn-arrow"
+                  size={18}
+                  strokeWidth={2.15}
+                  aria-hidden="true"
+                />
+              </MarketingButton>
+              <MarketingButton
+                href="/sign-in"
+                variant="on-dark-secondary"
+                className="m-org-page-hero-btn m-org-page-hero-btn--secondary"
+              >
+                Organization sign in
+                <ArrowRight
+                  className="m-org-page-hero-btn-arrow"
+                  size={18}
+                  strokeWidth={2.15}
+                  aria-hidden="true"
+                />
+              </MarketingButton>
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
-      <Section band="porcelain">
-        <SectionHeading
-          title="What you can operate in the dashboard"
-          lede="The organization workspace covers the staffing workflow from locations through timesheet review — with organization isolation after admin approval."
-        />
-        <FeatureRow
-          items={[
-            {
-              icon: 'locations',
-              title: 'Locations and wards',
-              body: 'Model where care is delivered so openings map to the right clinical context.',
-            },
-            {
-              icon: 'shifts',
-              title: 'Role-specific shifts',
-              body: 'Publish openings for registered nurses or ward assistants with schedule and acceptance windows.',
-            },
-            {
-              icon: 'verified',
-              title: 'Verified eligibility',
-              body: 'Only workers who complete platform verification and activation can see and accept matching shifts.',
-            },
-            {
-              icon: 'org',
-              title: 'Scheduling visibility',
-              body: 'Track published openings and assignments as work progresses through the organization workspace.',
-            },
-            {
-              icon: 'timesheets',
-              title: 'Timesheet review',
-              body: 'Review completed shifts before closing the operational loop on each assignment.',
-            },
-            {
-              icon: 'activation',
-              title: 'Admin approval first',
-              body: 'A platform administrator approves your organization before shift publishing is available.',
-            },
-          ]}
-        />
+      <Section band="porcelain" className="m-org-workspace-band">
+        <OrgWorkspaceSection />
       </Section>
 
       <Section band="white">

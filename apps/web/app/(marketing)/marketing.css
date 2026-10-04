@@ -1185,7 +1185,7 @@
 
 .m-hero-visual-image {
   object-fit: cover;
-  object-position: 90% 48%;
+  object-position: 72% 28%;
 }
 
 .m-hero-visual-caption {
@@ -1219,7 +1219,7 @@
   }
 
   .m-hero-visual-image {
-    object-position: 82% 45%;
+    object-position: 70% 26%;
   }
 }
 

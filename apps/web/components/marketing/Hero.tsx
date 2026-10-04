@@ -9,7 +9,7 @@ function HomeHeroPortrait() {
     <figure className="m-hero-visual">
       <div className="m-hero-visual-frame">
         <Image
-          src="/marketing/organizations-hero-4k.jpg"
+          src="/marketing/home-hero.jpg"
           alt="Smiling healthcare professional in Bridge Hive scrubs"
           fill
           priority

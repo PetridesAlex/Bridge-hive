@@ -33,12 +33,12 @@ const TRUST_ITEMS = [
   {
     icon: Building2,
     tone: 'honey' as const,
-    label: 'Trusted by healthcare organizations',
+    label: 'Organization workflows',
   },
   {
     icon: Users,
     tone: 'teal' as const,
-    label: 'Safer, more efficient staffing',
+    label: 'Clear roles and review steps',
   },
 ] as const;
 
@@ -127,7 +127,7 @@ export function MarketingFooter() {
               <ul>
                 <li>
                   <Link href="/auth/worker/login" className="m-footer-ext">
-                    Download worker app
+                    Worker app continuation
                     <ExternalLink size={15} strokeWidth={2.2} aria-hidden="true" />
                   </Link>
                 </li>
@@ -174,8 +174,8 @@ export function MarketingFooter() {
                 <Smartphone size={22} strokeWidth={1.9} />
               </span>
               <span className="m-footer-app-cta-copy">
-                <strong>Get the worker app</strong>
-                <em>Available on iOS and Android</em>
+                <strong>Return to the worker app</strong>
+                <em>Sign-in help for registered workers</em>
               </span>
               <ArrowRight
                 className="m-footer-app-cta-arrow"
@@ -197,11 +197,7 @@ export function MarketingFooter() {
               </span>
             </p>
             <div className="m-footer-legal">
-              <Link href="/contact#support">Privacy Policy</Link>
-              <span aria-hidden="true" />
-              <Link href="/contact#support">Terms of Service</Link>
-              <span aria-hidden="true" />
-              <Link href="/contact#support">Cookie Policy</Link>
+              <Link href="/contact#support">Privacy or terms questions? Contact support</Link>
             </div>
           </div>
           <div className="m-footer-social" aria-label="Social">

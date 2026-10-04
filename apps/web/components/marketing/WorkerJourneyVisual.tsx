@@ -5,25 +5,33 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { WORKER_JOURNEY_STEPS } from '@/components/marketing/worker-journey-data';
 
-/** Desktop flow: clear 1→2→3→4→5→6 spatial order (left column down, then right column up). */
-const NODE_POINTS = [
-  { x: 118, y: 78 },
-  { x: 96, y: 198 },
-  { x: 128, y: 328 },
-  { x: 372, y: 338 },
-  { x: 398, y: 208 },
-  { x: 372, y: 88 },
-] as const;
+/** Square canvas; six nodes on a symmetric ring, logo at center. */
+const VIEW_SIZE = 640;
+const RING_CX = VIEW_SIZE / 2;
+const RING_CY = VIEW_SIZE / 2;
+/** Path radius — leaves clear breathing room around the center mark. */
+const RING_R = 236;
+/** Start at top, then clockwise so order reads 1→6. */
+const RING_START_DEG = -90;
 
+function ringPoint(index: number) {
+  const rad = ((RING_START_DEG + index * 60) * Math.PI) / 180;
+  return {
+    x: RING_CX + RING_R * Math.cos(rad),
+    y: RING_CY + RING_R * Math.sin(rad),
+  };
+}
+
+const NODE_POINTS = WORKER_JOURNEY_STEPS.map((_, index) => ringPoint(index));
+
+/** Closed circular path through all six nodes (clockwise arcs). */
 const PATH_D = [
-  `M ${NODE_POINTS[0].x} ${NODE_POINTS[0].y}`,
-  `C 90 130, 70 160, ${NODE_POINTS[1].x} ${NODE_POINTS[1].y}`,
-  `C 110 250, 90 290, ${NODE_POINTS[2].x} ${NODE_POINTS[2].y}`,
-  `C 210 360, 290 360, ${NODE_POINTS[3].x} ${NODE_POINTS[3].y}`,
-  `C 420 300, 430 250, ${NODE_POINTS[4].x} ${NODE_POINTS[4].y}`,
-  `C 380 150, 390 120, ${NODE_POINTS[5].x} ${NODE_POINTS[5].y}`,
+  `M ${NODE_POINTS[0].x.toFixed(2)} ${NODE_POINTS[0].y.toFixed(2)}`,
+  ...NODE_POINTS.slice(1).map(
+    (point) => `A ${RING_R} ${RING_R} 0 0 1 ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
+  ),
+  `A ${RING_R} ${RING_R} 0 0 1 ${NODE_POINTS[0].x.toFixed(2)} ${NODE_POINTS[0].y.toFixed(2)}`,
 ].join(' ');
-
 export function WorkerJourneyVisual({
   activeStep,
   onStepChange,
@@ -110,16 +118,16 @@ export function WorkerJourneyVisual({
           <Image
             src="/brand/bridge-hive-logo-v2-192.png"
             alt=""
-            width={88}
-            height={88}
+            width={112}
+            height={112}
             className="m-wj-logo"
-            sizes="88px"
+            sizes="112px"
           />
         </div>
 
         <svg
           className="m-wj-svg"
-          viewBox="0 0 520 420"
+          viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
           role="img"
           aria-label="Illustrative six-step worker journey path from account creation to timesheets and commission"
         >
@@ -130,13 +138,21 @@ export function WorkerJourneyVisual({
               <stop offset="100%" stopColor="#e4b334" />
             </linearGradient>
           </defs>
+          <circle
+            className="m-wj-ring-guide"
+            cx={RING_CX}
+            cy={RING_CY}
+            r={RING_R}
+            fill="none"
+            aria-hidden="true"
+          />
           <path
             ref={pathRef}
             className={`m-wj-path${reduceMotion || pathReady ? ' is-drawn' : ''}`}
             d={PATH_D}
             fill="none"
             stroke={`url(#${gradId})`}
-            strokeWidth="3.5"
+            strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -148,14 +164,14 @@ export function WorkerJourneyVisual({
               }`}
               cx={point.x}
               cy={point.y}
-              r="5"
+              r="6"
               aria-hidden="true"
             />
           ))}
           <circle
             ref={particleRef}
             className="m-wj-particle"
-            r="6"
+            r="7"
             cx={NODE_POINTS[0].x}
             cy={NODE_POINTS[0].y}
             opacity="0"
@@ -173,8 +189,8 @@ export function WorkerJourneyVisual({
                 className={`m-wj-node${active ? ' is-active' : ''}`}
                 style={
                   {
-                    '--m-wj-x': `${(point.x / 520) * 100}%`,
-                    '--m-wj-y': `${(point.y / 420) * 100}%`,
+                    '--m-wj-x': `${(point.x / VIEW_SIZE) * 100}%`,
+                    '--m-wj-y': `${(point.y / VIEW_SIZE) * 100}%`,
                     '--m-wj-delay': `${120 + index * 70}ms`,
                   } as React.CSSProperties
                 }
@@ -194,7 +210,7 @@ export function WorkerJourneyVisual({
                     {index + 1}
                   </span>
                   <span className="m-wj-node-icon" aria-hidden="true">
-                    <step.Icon size={22} strokeWidth={1.85} />
+                    <step.Icon size={24} strokeWidth={1.85} />
                   </span>
                   <span className="m-wj-node-check" aria-hidden="true">
                     ✓

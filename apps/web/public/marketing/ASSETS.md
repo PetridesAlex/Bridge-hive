@@ -4,7 +4,8 @@
 |-------|--------|----------------|---------------|
 | `og-default.svg` | Bridge Hive original | Owner-created brand graphic | Open Graph / social |
 | `organizations-hero.jpg` | Owner-supplied marketing hero (JPEG, 4K export) | Bridge Hive brand photography for public marketing | Home hero portrait source |
-| `organizations-hero-4k.jpg` | Same master, 3840×2160 JPEG @ q95 | Bridge Hive brand photography for public marketing | Home hero portrait (`next/image` quality 95) |
+| `organizations-hero-4k.jpg` | Same master, 3840×2160 JPEG @ q95 | Bridge Hive brand photography for public marketing | Alternate/legacy marketing portrait |
+| `home-hero.jpg` | Owner-supplied home hero composite (JPEG, 967×1024) | Bridge Hive brand photography for public marketing | Home hero portrait (`next/image` quality 95) |
 | `contact-hero-bg.jpg` | Owner-supplied abstract hive background | Bridge Hive brand graphic for public marketing | `/contact` page hero + cards background |
 | `footer-bg.jpg` | Owner-supplied abstract hive background | Bridge Hive brand graphic for public marketing | Site-wide marketing footer background |
 | `audience-hex.jpg` | Owner-supplied hospital exterior (JPEG @ q95) | Bridge Hive brand photography for public marketing | Home dual-audience hex — Organizations tab |

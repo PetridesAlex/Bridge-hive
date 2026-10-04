@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ['@bridge-hive/domain', '@bridge-hive/supabase-types'],
   images: {
     unoptimized: true,
+    qualities: [75, 90, 92, 95],
   },
   // Monorepo: resolve workspace packages from the repo root.
   outputFileTracingRoot: path.join(__dirname, '../..'),

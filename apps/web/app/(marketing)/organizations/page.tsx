@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import { ArrowRight, Mail } from 'lucide-react';
 
 import { InquiryCta } from '@/components/marketing/blocks';
@@ -18,18 +17,7 @@ export default function OrganizationsPage() {
   return (
     <>
       <section className="m-org-page-hero">
-        <div className="m-org-page-hero-media" aria-hidden="true">
-          <Image
-            src="/marketing/organizations-hero-4k.jpg"
-            alt=""
-            fill
-            priority
-            quality={95}
-            sizes="100vw"
-            className="m-org-page-hero-image"
-          />
-          <div className="m-org-page-hero-wash" />
-        </div>
+        <div className="m-org-page-hero-glow" aria-hidden="true" />
         <div className="m-section m-org-page-hero-content">
           <Reveal>
             <p className="m-eyebrow m-org-page-hero-eyebrow">

@@ -76,6 +76,7 @@ describe('marketing site contracts', () => {
   it('homepage CTAs use org sign-in and worker continuation, not open signup', async () => {
     const src = await readWeb('app/(marketing)/page.tsx');
     const hero = await readWeb('components/marketing/Hero.tsx');
+    const faq = await readWeb('components/marketing/HomeFaq.tsx');
     expect(hero).toMatch(/href="\/sign-in"/);
     expect(hero).toMatch(/href="\/auth\/worker\/login"/);
     expect(hero).toMatch(/\/contact#partnerships/);
@@ -83,7 +84,10 @@ describe('marketing site contracts', () => {
     expect(hero).toMatch(/Partnership inquiry|Explore for organizations/);
     expect(hero).toMatch(/Explore for professionals/);
     expect(hero).toMatch(/Illustrative/);
-    expect(src).toMatch(/not a full\s+browser version of the app|not a full web/i);
+    expect(src).toMatch(/HomeFaq/);
+    expect(faq).toMatch(/not a full\s+browser version of the app|not a full web/i);
+    expect(faq).toMatch(/Clear answers before you/);
+    expect(faq).toMatch(/prepare a partnership inquiry/);
     expect(hero).not.toMatch(/href="\/sign-up"/);
     expect(hero).not.toMatch(/Licensed clinical photography TBD/);
     expect(src).not.toMatch(/Organization Dashboard/);

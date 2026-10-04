@@ -129,76 +129,6 @@ function WorkerAppIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-/** Apple App Store mark — black glyph on light badge. */
-function AppStoreMark({ size = 16 }: { size?: number }) {
-  return (
-    <span className="m-store-mark m-store-mark--apple" title="App Store" aria-hidden="true">
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M16.7 12.7c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.9-3.5.9-.7 0-1.9-.8-3.1-.8-1.6 0-3.1 1-3.9 2.4-1.7 2.9-.4 7.2 1.2 9.6.8 1.1 1.7 2.4 3 2.4 1.2 0 1.6-.8 3.1-.8s1.8.8 3.1.8c1.3 0 2.1-1.1 2.9-2.2.9-1.3 1.3-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8ZM15.2 5.5c.6-.8 1.1-1.9.9-3-.9 0-2 .6-2.6 1.4-.6.7-1.1 1.8-.9 2.9 1 .1 2-.5 2.6-1.3Z" />
-      </svg>
-    </span>
-  );
-}
-
-/** Google Play mark — official four-color triangle. */
-function GooglePlayMark({ size = 16 }: { size?: number }) {
-  const reactId = useId().replace(/:/g, '');
-  const blue = `gp-blue-${reactId}`;
-  const green = `gp-green-${reactId}`;
-  const yellow = `gp-yellow-${reactId}`;
-  const red = `gp-red-${reactId}`;
-
-  return (
-    <span className="m-store-mark m-store-mark--play" title="Google Play" aria-hidden="true">
-      <svg width={size} height={size} viewBox="0 0 24 24">
-        <path
-          d="M3.6 2.3c-.4.2-.6.7-.6 1.3v16.8c0 .6.2 1.1.6 1.3l.1.1 9.4-9.4v-.2L3.7 2.3l-.1 0Z"
-          fill={`url(#${green})`}
-        />
-        <path
-          d="m14.1 12.9-2.1-2.1v-.2l2.1-2.1.1.1 2.5 1.4c.7.4.7 1.1 0 1.5l-2.5 1.4-.1 0Z"
-          fill={`url(#${yellow})`}
-        />
-        <path
-          d="M14.2 13 12 10.8 3.6 21.7c.5.5 1.2.5 2.1 0l8.5-8.7Z"
-          fill={`url(#${red})`}
-        />
-        <path
-          d="M14.2 11 5.7 2.3c-.9-.5-1.6-.4-2.1 0L12 10.8 14.2 11Z"
-          fill={`url(#${blue})`}
-        />
-        <defs>
-          <linearGradient id={blue} x1="13.2" y1="2.8" x2="3.4" y2="12.6" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#00A0FF" />
-            <stop offset="1" stopColor="#006EFF" />
-          </linearGradient>
-          <linearGradient id={green} x1="3.1" y1="2.2" x2="3.1" y2="21.8" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#00F076" />
-            <stop offset="1" stopColor="#00D76A" />
-          </linearGradient>
-          <linearGradient id={yellow} x1="15.8" y1="10.2" x2="3.9" y2="12.4" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#FFE000" />
-            <stop offset="1" stopColor="#FFBD00" />
-          </linearGradient>
-          <linearGradient id={red} x1="3.8" y1="12.5" x2="14.5" y2="22.2" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#FF3A44" />
-            <stop offset="1" stopColor="#C31162" />
-          </linearGradient>
-        </defs>
-      </svg>
-    </span>
-  );
-}
-
-function WorkerStoreBadges() {
-  return (
-    <span className="m-nav-store-badges" aria-hidden="true">
-      <AppStoreMark size={13} />
-      <GooglePlayMark size={13} />
-    </span>
-  );
-}
-
 export function MarketingNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -286,18 +216,13 @@ export function MarketingNav() {
             <Link
               href="/auth/worker/login"
               className="m-nav-btn m-nav-btn--worker"
-              aria-label="Worker app — continue on App Store or Google Play"
+              aria-label="Worker app — iOS and Android"
             >
               <WorkerAppIcon size={22} />
               <span className="m-nav-worker-copy">
                 <span className="m-nav-worker-label">Worker app</span>
-                <span className="m-nav-worker-stores">
-                  <span>App Store</span>
-                  <span className="m-nav-worker-dot" aria-hidden="true" />
-                  <span>Play</span>
-                </span>
+                <span className="m-nav-worker-platforms">iOS and Android</span>
               </span>
-              <WorkerStoreBadges />
             </Link>
             <Link href="/sign-in" className="m-nav-btn m-nav-btn--org">
               Organization sign in
@@ -339,19 +264,14 @@ export function MarketingNav() {
               <Link
                 href="/auth/worker/login"
                 className="m-nav-btn m-nav-btn--worker"
-                aria-label="Worker app — continue on App Store or Google Play"
+                aria-label="Worker app — iOS and Android"
                 onClick={() => setOpen(false)}
               >
                 <WorkerAppIcon size={22} />
                 <span className="m-nav-worker-copy">
                   <span className="m-nav-worker-label">Worker app</span>
-                  <span className="m-nav-worker-stores">
-                    <span>App Store</span>
-                    <span className="m-nav-worker-dot" aria-hidden="true" />
-                    <span>Google Play</span>
-                  </span>
+                  <span className="m-nav-worker-platforms">iOS and Android</span>
                 </span>
-                <WorkerStoreBadges />
               </Link>
               <Link
                 href="/sign-in"

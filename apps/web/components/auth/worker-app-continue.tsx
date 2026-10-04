@@ -40,8 +40,9 @@ export function WorkerAppContinuePanel({
           <a href={WORKER_APP_LOGIN_DEEP_LINK}>Open Bridge Hive worker app</a>
         </Button>
         <p className="text-xs text-bh-text-secondary">
-          If the app does not open, install Bridge Hive from the App Store or Google Play,
-          then sign in with the same email you used to register.
+          If the app does not open, return to this page on your phone and use Open Bridge Hive
+          worker app again, or ask your organization admin for the current worker-app install
+          instructions. Then sign in with the same email you used to register.
         </p>
         <Button asChild variant="outline" className="w-full">
           <Link href="/">Back to Bridge Hive home</Link>

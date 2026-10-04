@@ -11,7 +11,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 
 import { InquiryCta } from '@/components/marketing/blocks';
 import { Reveal } from '@/components/marketing/Reveal';
@@ -208,6 +208,7 @@ function JourneyCard({
   steps,
   active,
   motif,
+  onSelect,
 }: {
   tone: 'teal' | 'honey';
   title: string;
@@ -215,13 +216,29 @@ function JourneyCard({
   steps: JourneyStep[];
   active: boolean;
   motif: 'hospital' | 'badge';
+  onSelect: () => void;
 }) {
   const HeaderIcon = tone === 'teal' ? Building2 : UserRound;
 
   return (
     <article
       className={`m-journey-card m-journey-card--${tone}${active ? ' is-active' : ''}`}
+      data-active={active ? 'true' : 'false'}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onSelect();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-pressed={active}
     >
+      <span className="m-journey-card-sheen" aria-hidden="true" />
+      <span className="m-journey-card-orb m-journey-card-orb--a" aria-hidden="true" />
+      <span className="m-journey-card-orb m-journey-card-orb--b" aria-hidden="true" />
+
       <header className="m-journey-card-head">
         <div className="m-journey-card-head-copy">
           <span className="m-journey-card-badge" aria-hidden="true">
@@ -239,7 +256,10 @@ function JourneyCard({
         {steps.map((step, index) => {
           const Icon = step.icon;
           return (
-            <li key={step.label}>
+            <li
+              key={step.label}
+              style={{ '--m-step-i': index } as CSSProperties}
+            >
               <span className="m-journey-timeline-index" aria-hidden="true">
                 {index + 1}
               </span>
@@ -280,24 +300,41 @@ export function HowItWorksClient() {
               destinations — so sign-in, verification, and payment responsibilities stay
               clear.
             </p>
-            <div className="m-how-toggle" role="tablist" aria-label="Emphasize journey">
+            <div
+              className={`m-how-toggle m-how-toggle--${emphasis}`}
+              role="tablist"
+              aria-label="Emphasize journey"
+            >
+              <span className="m-how-toggle-thumb" aria-hidden="true" />
               <button
                 type="button"
                 role="tab"
+                className="m-how-toggle-tab"
                 aria-selected={emphasis === 'organization'}
                 onClick={() => setEmphasis('organization')}
               >
-                <Building2 size={16} strokeWidth={1.9} aria-hidden="true" />
-                Organizations
+                <span className="m-how-toggle-icon" aria-hidden="true">
+                  <Building2 size={15} strokeWidth={2} />
+                </span>
+                <span className="m-how-toggle-copy">
+                  <span className="m-how-toggle-label">Organizations</span>
+                  <span className="m-how-toggle-hint">Hospital path</span>
+                </span>
               </button>
               <button
                 type="button"
                 role="tab"
+                className="m-how-toggle-tab"
                 aria-selected={emphasis === 'professional'}
                 onClick={() => setEmphasis('professional')}
               >
-                <UserRound size={16} strokeWidth={1.9} aria-hidden="true" />
-                Professionals
+                <span className="m-how-toggle-icon" aria-hidden="true">
+                  <UserRound size={15} strokeWidth={2} />
+                </span>
+                <span className="m-how-toggle-copy">
+                  <span className="m-how-toggle-label">Professionals</span>
+                  <span className="m-how-toggle-hint">Worker path</span>
+                </span>
               </button>
             </div>
             <div className="m-how-hero-ctas">
@@ -322,6 +359,7 @@ export function HowItWorksClient() {
               steps={ORG_STEPS}
               active={emphasis === 'organization'}
               motif="hospital"
+              onSelect={() => setEmphasis('organization')}
             />
           </Reveal>
           <Reveal delay={80}>
@@ -332,6 +370,7 @@ export function HowItWorksClient() {
               steps={PRO_STEPS}
               active={emphasis === 'professional'}
               motif="badge"
+              onSelect={() => setEmphasis('professional')}
             />
           </Reveal>
         </div>

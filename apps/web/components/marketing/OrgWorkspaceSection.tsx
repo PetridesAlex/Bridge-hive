@@ -8,6 +8,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
+import { OrgDashboardMock } from '@/components/marketing/OrgDashboardMock';
 import { Reveal } from '@/components/marketing/Reveal';
 
 const FEATURES = [
@@ -49,85 +50,6 @@ const FEATURES = [
   },
 ];
 
-function DashboardMockup() {
-  return (
-    <div className="m-org-mock" aria-hidden="true">
-      <div className="m-org-mock-blob m-org-mock-blob--teal" />
-      <div className="m-org-mock-blob m-org-mock-blob--honey" />
-
-      <div className="m-org-mock-stage">
-        <div className="m-org-mock-panel">
-          <aside className="m-org-mock-side">
-            <span className="m-org-mock-side-mark" />
-            <span />
-            <span />
-            <span className="is-active" />
-            <span />
-          </aside>
-          <div className="m-org-mock-main">
-            <div className="m-org-mock-kpis">
-              <article>
-                <p>Total shifts</p>
-                <strong>128</strong>
-              </article>
-              <article>
-                <p>Workers</p>
-                <strong>42</strong>
-              </article>
-              <article>
-                <p>Open positions</p>
-                <strong>17</strong>
-              </article>
-            </div>
-            <div className="m-org-mock-body">
-              <div className="m-org-mock-chart">
-                <p>Shift activity</p>
-                <div className="m-org-mock-bars">
-                  <i style={{ height: '42%' }} />
-                  <i style={{ height: '68%' }} />
-                  <i style={{ height: '54%' }} />
-                  <i style={{ height: '86%' }} />
-                  <i style={{ height: '62%' }} />
-                  <i style={{ height: '74%' }} />
-                </div>
-              </div>
-              <div className="m-org-mock-list">
-                <p>Upcoming shifts</p>
-                <ul>
-                  <li>
-                    <span>RN · Night</span>
-                    <em>Ward A</em>
-                  </li>
-                  <li>
-                    <span>WA · Day</span>
-                    <em>Ward B</em>
-                  </li>
-                  <li>
-                    <span>RN · Evening</span>
-                    <em>ICU</em>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="m-org-mock-float">
-          <p>Verified workers</p>
-          <strong>24</strong>
-          <div className="m-org-mock-avatars">
-            <span />
-            <span />
-            <span />
-          </div>
-        </div>
-      </div>
-
-      <p className="m-org-mock-caption">Illustrative workspace motif · not live data</p>
-    </div>
-  );
-}
-
 export function OrgWorkspaceSection() {
   return (
     <div className="m-org-workspace">
@@ -145,7 +67,7 @@ export function OrgWorkspaceSection() {
         </Reveal>
 
         <Reveal delay={80}>
-          <DashboardMockup />
+          <OrgDashboardMock />
         </Reveal>
       </div>
 

@@ -24,6 +24,10 @@ const MARKETING_SOURCE_GLOBS = [
   'components/marketing/AudienceJourney.tsx',
   'components/marketing/HowItWorksClient.tsx',
   'components/marketing/ContactEmail.tsx',
+  'components/marketing/WorkerJourneySection.tsx',
+  'components/marketing/WorkerJourneyCard.tsx',
+  'components/marketing/WorkerJourneyVisual.tsx',
+  'components/marketing/worker-journey-data.ts',
   'app/robots.ts',
   'app/sitemap.ts',
 ] as const;
@@ -169,8 +173,12 @@ describe('marketing site contracts', () => {
 
   it('professionals page distinguishes wage bank transfer from commission without published fee percentages', async () => {
     const src = await readWeb('app/(marketing)/professionals/page.tsx');
+    const journey = await readWeb('components/marketing/worker-journey-data.ts');
+    const section = await readWeb('components/marketing/WorkerJourneySection.tsx');
     const how = await readWeb('components/marketing/HowItWorksClient.tsx');
     const home = await readWeb('app/(marketing)/page.tsx');
+    const css = await readWeb('app/(marketing)/marketing.css');
+    expect(src).toMatch(/WorkerJourneySection/);
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
     expect(src).toMatch(/bank transfer/);
@@ -182,6 +190,17 @@ describe('marketing site contracts', () => {
     expect(home).not.toMatch(/10 calendar days/);
     expect(src).toMatch(/does not hold or disburse/);
     expect(src).toMatch(/does not use them to collect platform fees|not used to collect commission|does not collect commission/i);
+    expect(journey).toMatch(/does not use them to collect platform fees/);
+    expect(journey).toMatch(/Create your account/);
+    expect(journey).toMatch(/Upload role-specific documents/);
+    expect(journey).toMatch(/Submit bank details for wage payouts/);
+    expect(journey).toMatch(/Platform admin review/);
+    expect(journey).toMatch(/Browse and accept eligible shifts/);
+    expect(journey).toMatch(/Timesheets, wages, and commission/);
+    expect(section).toMatch(/How account setup/);
+    expect(section).toMatch(/Illustrative journey|WorkerJourneyVisual/);
+    expect(css).toMatch(/\.m-wj-band/);
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
     expect(src).not.toMatch(/bank details Bridge Hive needs for commission invoicing/i);
     expect(src).not.toMatch(/subject to legal/);
     expect(src).toMatch(/\/contact#support/);

@@ -59,4 +59,62 @@ describe('official Bridge Hive logo v2', () => {
       expect(src).not.toMatch(/bridge-hive-logo-(?:64|180|192|512|original)\./);
     }
   });
+
+  it('retains the full blue tile at its top-left, left, and bottom edges', async () => {
+    const sharp = (await import('sharp')).default;
+    const file = path.join(webRoot, 'public/brand/bridge-hive-logo-v2-1024.png');
+    const { data, info } = await sharp(file)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    expect(info.width).toBe(1024);
+    expect(info.height).toBe(1024);
+
+    // These are inside the original navy tile, but were erased by the halo-only export.
+    for (const [x, y] of [[222, 112], [145, 178], [79, 267], [189, 936], [499, 947]]) {
+      const i = (info.width * y + x) * 4;
+      expect(data[i + 3]).toBeGreaterThan(240);
+      expect(data[i + 2]).toBeGreaterThan((data[i] ?? 0) + 12);
+    }
+  });
+
+  it('keeps marketing header marks free of outer light presentation halo', async () => {
+    const sharp = (await import('sharp')).default;
+    const file = path.join(webRoot, 'public/brand/bridge-hive-logo-v2-512.png');
+    const { data, info } = await sharp(file)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const { width, height } = info;
+
+    let whiteB = 0;
+    let outerLight = 0;
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const i = (width * y + x) * 4;
+        const r = data[i] ?? 0;
+        const g = data[i + 1] ?? 0;
+        const b = data[i + 2] ?? 0;
+        const a = data[i + 3] ?? 0;
+        if (a > 240 && r > 230 && g > 230 && b > 230) {
+          if (
+            y > height * 0.22 &&
+            y < height * 0.78 &&
+            x > width * 0.22 &&
+            x < width * 0.78
+          ) {
+            whiteB += 1;
+          }
+        }
+        const onOuterBand =
+          x < 4 || y < 4 || x >= width - 4 || y >= height - 4;
+        if (onOuterBand && a > 20 && r > 200 && g > 200 && b > 200) {
+          outerLight += 1;
+        }
+      }
+    }
+
+    expect(whiteB).toBeGreaterThan(1000);
+    expect(outerLight).toBe(0);
+  });
 });

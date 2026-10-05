@@ -49,6 +49,7 @@ export function WorkerJourneySection() {
   return (
     <section
       ref={sectionRef}
+      id="m-wj"
       className={`m-band m-wj-band${entered ? ' is-entered' : ''}${
         reduceMotion ? ' m-wj-band--reduced' : ''
       }`}
@@ -56,7 +57,7 @@ export function WorkerJourneySection() {
     >
       <div className="m-wj-atmosphere" aria-hidden="true" />
       <div className="m-section m-wj-section">
-        <header className="m-wj-header">
+        <header className="m-wj-header" id="m-wj-heading-block">
           <p className="m-wj-eyebrow">How it works</p>
           <h2 id="m-wj-heading" className="m-wj-heading">
             How account setup <span className="m-wj-heading-accent">works</span>

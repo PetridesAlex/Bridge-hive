@@ -5,33 +5,31 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { WORKER_JOURNEY_STEPS } from '@/components/marketing/worker-journey-data';
 
-/** Square canvas; six nodes on a symmetric ring, logo at center. */
-const VIEW_SIZE = 640;
-const RING_CX = VIEW_SIZE / 2;
-const RING_CY = VIEW_SIZE / 2;
-/** Path radius — leaves clear breathing room around the center mark. */
-const RING_R = 236;
-/** Start at top, then clockwise so order reads 1→6. */
-const RING_START_DEG = -90;
+const VIEW_W = 760;
+const VIEW_H = 520;
 
-function ringPoint(index: number) {
-  const rad = ((RING_START_DEG + index * 60) * Math.PI) / 180;
-  return {
-    x: RING_CX + RING_R * Math.cos(rad),
-    y: RING_CY + RING_R * Math.sin(rad),
-  };
-}
+/**
+ * Open directional journey 1→6 (no closed loop).
+ * Wide S / soft zigzag: start top-left, finish bottom-left — never returns to 1.
+ */
+const NODE_POINTS = [
+  { x: 96, y: 118 },
+  { x: 300, y: 72 },
+  { x: 520, y: 118 },
+  { x: 620, y: 268 },
+  { x: 360, y: 368 },
+  { x: 118, y: 444 },
+] as const;
 
-const NODE_POINTS = WORKER_JOURNEY_STEPS.map((_, index) => ringPoint(index));
-
-/** Closed circular path through all six nodes (clockwise arcs). */
 const PATH_D = [
-  `M ${NODE_POINTS[0].x.toFixed(2)} ${NODE_POINTS[0].y.toFixed(2)}`,
-  ...NODE_POINTS.slice(1).map(
-    (point) => `A ${RING_R} ${RING_R} 0 0 1 ${point.x.toFixed(2)} ${point.y.toFixed(2)}`,
-  ),
-  `A ${RING_R} ${RING_R} 0 0 1 ${NODE_POINTS[0].x.toFixed(2)} ${NODE_POINTS[0].y.toFixed(2)}`,
+  `M ${NODE_POINTS[0].x} ${NODE_POINTS[0].y}`,
+  `C 170 88, 230 62, ${NODE_POINTS[1].x} ${NODE_POINTS[1].y}`,
+  `C 390 88, 450 70, ${NODE_POINTS[2].x} ${NODE_POINTS[2].y}`,
+  `C 590 170, 640 210, ${NODE_POINTS[3].x} ${NODE_POINTS[3].y}`,
+  `C 580 340, 470 380, ${NODE_POINTS[4].x} ${NODE_POINTS[4].y}`,
+  `C 250 355, 180 410, ${NODE_POINTS[5].x} ${NODE_POINTS[5].y}`,
 ].join(' ');
+
 export function WorkerJourneyVisual({
   activeStep,
   onStepChange,
@@ -45,6 +43,7 @@ export function WorkerJourneyVisual({
 }) {
   const reactId = useId();
   const gradId = `m-wj-grad-${reactId.replace(/:/g, '')}`;
+  const glowId = `m-wj-glow-${reactId.replace(/:/g, '')}`;
   const pathRef = useRef<SVGPathElement>(null);
   const particleRef = useRef<SVGCircleElement>(null);
   const [pathReady, setPathReady] = useState(reduceMotion);
@@ -72,10 +71,10 @@ export function WorkerJourneyVisual({
     path.style.strokeDasharray = `${length}`;
     path.style.strokeDashoffset = `${length}`;
     void path.getBoundingClientRect();
-    path.style.transition = 'stroke-dashoffset 1.8s cubic-bezier(0.22, 1, 0.36, 1)';
+    path.style.transition = 'stroke-dashoffset 2s cubic-bezier(0.22, 1, 0.36, 1)';
     path.style.strokeDashoffset = '0';
 
-    const done = window.setTimeout(() => setPathReady(true), 1850);
+    const done = window.setTimeout(() => setPathReady(true), 2050);
     return () => window.clearTimeout(done);
   }, [playMotion, reduceMotion]);
 
@@ -89,15 +88,17 @@ export function WorkerJourneyVisual({
     const length = path.getTotalLength();
     let raf = 0;
     let start: number | null = null;
-    const duration = 5200;
+    const duration = 5600;
 
     const tick = (ts: number) => {
       if (start === null) start = ts;
       const t = ((ts - start) % duration) / duration;
-      const point = path.getPointAtLength(t * length);
+      // Ease slightly so the particle rests briefly at the end before restarting.
+      const eased = t < 0.88 ? t / 0.88 : 1;
+      const point = path.getPointAtLength(eased * length);
       particle.setAttribute('cx', String(point.x));
       particle.setAttribute('cy', String(point.y));
-      particle.setAttribute('opacity', '1');
+      particle.setAttribute('opacity', t < 0.92 ? '1' : '0.35');
       raf = window.requestAnimationFrame(tick);
     };
 
@@ -114,36 +115,46 @@ export function WorkerJourneyVisual({
 
       <div className="m-wj-visual-desktop" hidden={!isDesktopVisual}>
         <div className="m-wj-visual-ambience" aria-hidden="true" />
+
         <div className="m-wj-logo-anchor">
           <Image
             src="/brand/bridge-hive-logo-v2-192.png"
             alt=""
-            width={112}
-            height={112}
+            width={96}
+            height={96}
             className="m-wj-logo"
-            sizes="112px"
+            sizes="96px"
           />
         </div>
 
         <svg
           className="m-wj-svg"
-          viewBox={`0 0 ${VIEW_SIZE} ${VIEW_SIZE}`}
+          viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           role="img"
-          aria-label="Illustrative six-step worker journey path from account creation to timesheets and commission"
+          aria-label="Illustrative open six-step worker journey from account creation to timesheets and commission"
         >
           <defs>
             <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#60a5fa" />
-              <stop offset="55%" stopColor="#2563eb" />
+              <stop offset="50%" stopColor="#2563eb" />
               <stop offset="100%" stopColor="#e4b334" />
             </linearGradient>
+            <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
-          <circle
-            className="m-wj-ring-guide"
-            cx={RING_CX}
-            cy={RING_CY}
-            r={RING_R}
+          <path
+            className="m-wj-path-glow"
+            d={PATH_D}
             fill="none"
+            stroke="rgba(96, 165, 250, 0.35)"
+            strokeWidth="10"
+            strokeLinecap="round"
+            strokeLinejoin="round"
             aria-hidden="true"
           />
           <path
@@ -155,6 +166,7 @@ export function WorkerJourneyVisual({
             strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
+            filter={`url(#${glowId})`}
           />
           {NODE_POINTS.map((point, index) => (
             <circle
@@ -164,7 +176,7 @@ export function WorkerJourneyVisual({
               }`}
               cx={point.x}
               cy={point.y}
-              r="6"
+              r="5.5"
               aria-hidden="true"
             />
           ))}
@@ -189,9 +201,9 @@ export function WorkerJourneyVisual({
                 className={`m-wj-node${active ? ' is-active' : ''}`}
                 style={
                   {
-                    '--m-wj-x': `${(point.x / VIEW_SIZE) * 100}%`,
-                    '--m-wj-y': `${(point.y / VIEW_SIZE) * 100}%`,
-                    '--m-wj-delay': `${120 + index * 70}ms`,
+                    '--m-wj-x': `${(point.x / VIEW_W) * 100}%`,
+                    '--m-wj-y': `${(point.y / VIEW_H) * 100}%`,
+                    '--m-wj-delay': `${100 + index * 80}ms`,
                   } as React.CSSProperties
                 }
               >
@@ -210,10 +222,7 @@ export function WorkerJourneyVisual({
                     {index + 1}
                   </span>
                   <span className="m-wj-node-icon" aria-hidden="true">
-                    <step.Icon size={24} strokeWidth={1.85} />
-                  </span>
-                  <span className="m-wj-node-check" aria-hidden="true">
-                    ✓
+                    <step.Icon size={22} strokeWidth={1.9} />
                   </span>
                   <span className="m-wj-node-label">{step.shortLabel}</span>
                 </button>
@@ -229,10 +238,10 @@ export function WorkerJourneyVisual({
           <Image
             src="/brand/bridge-hive-logo-v2-192.png"
             alt=""
-            width={64}
-            height={64}
+            width={72}
+            height={72}
             className="m-wj-logo"
-            sizes="64px"
+            sizes="72px"
           />
         </div>
         <ul className="m-wj-nodes m-wj-nodes--mobile">
@@ -256,7 +265,7 @@ export function WorkerJourneyVisual({
                     {index + 1}
                   </span>
                   <span className="m-wj-node-icon" aria-hidden="true">
-                    <step.Icon size={18} strokeWidth={1.85} />
+                    <step.Icon size={18} strokeWidth={1.9} />
                   </span>
                   <span className="m-wj-node-label">{step.shortLabel}</span>
                 </button>

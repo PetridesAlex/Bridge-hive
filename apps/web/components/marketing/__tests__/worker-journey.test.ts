@@ -46,7 +46,7 @@ describe('worker journey section', () => {
     expect(bodies).not.toMatch(/16%/);
   });
 
-  it('wires interactive nodes and reduced-motion static path in sources', async () => {
+  it('uses an open directional path without completion ticks or a closed orbit', async () => {
     const visual = await readWeb('components/marketing/WorkerJourneyVisual.tsx');
     const section = await readWeb('components/marketing/WorkerJourneySection.tsx');
     const card = await readWeb('components/marketing/WorkerJourneyCard.tsx');
@@ -54,16 +54,27 @@ describe('worker journey section', () => {
 
     expect(visual).toMatch(/bridge-hive-logo-v2-192\.png/);
     expect(visual).toMatch(/Illustrative journey/);
+    expect(visual).toMatch(/Open directional journey|open six-step/i);
     expect(visual).toMatch(/getPointAtLength|getTotalLength/);
     expect(visual).toMatch(/prefers-reduced-motion|reduceMotion/);
+    expect(visual).not.toMatch(/ringPoint|RING_R|aspect-ratio:\s*1/);
+    expect(visual).not.toMatch(/m-wj-node-check|✓/);
+    expect(visual).not.toMatch(/A \$\{RING_R\} \$\{RING_R\} 0 0 1 \$\{NODE_POINTS\[0\]/);
     expect(section).toMatch(/IntersectionObserver/);
     expect(section).toMatch(/activeStep/);
     expect(card).toMatch(/aria-label=\{`Step \$\{index \+ 1\}/);
     expect(visual).toMatch(/aria-label=\{`Step \$\{index \+ 1\}/);
     expect(css).toMatch(/\.m-wj-path/);
     expect(css).toMatch(/\.m-wj-particle/);
+    expect(css).toMatch(/scroll-margin-top:\s*calc\(var\(--m-header-h/);
     expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
     expect(css).toMatch(/\.m-wj-visual-mobile/);
+    const desktopBlock = css.match(/\.m-wj-visual-desktop\s*\{([\s\S]*?)\n\}/);
+    expect(desktopBlock?.[1]).toMatch(/min-height:\s*30rem/);
+    expect(desktopBlock?.[1]).not.toMatch(/aspect-ratio:\s*1/);
+    expect(css).not.toMatch(/\.m-wj-node-check/);
+    expect(visual).toMatch(/VIEW_W\s*=\s*760/);
+    expect(visual).toMatch(/no closed loop/i);
   });
 
   it('ships the official v2 mark used by the journey diagram', async () => {

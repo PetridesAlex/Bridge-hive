@@ -7416,13 +7416,16 @@
 .m-wj-visual-desktop {
   position: relative;
   display: none;
-  flex: 1;
-  min-height: 30rem;
+  /* The path and node percentages must share this exact 760:520 canvas. */
+  flex: none;
+  width: min(100%, 45rem);
+  aspect-ratio: 760 / 520;
+  min-height: 0;
+  margin-inline: auto;
   border-radius: 1.7rem;
   overflow: visible;
-  padding: 0.5rem 0.4rem 0.65rem;
+  padding: 0;
 }
-
 .m-wj-visual-mobile {
   position: relative;
   display: block;
@@ -7498,12 +7501,13 @@
 }
 
 .m-wj-svg {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   overflow: visible;
 }
-
 .m-wj-path-glow {
   opacity: 0.85;
 }
@@ -7556,11 +7560,20 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .m-wj-band.is-entered .m-wj-node:not(.m-wj-node--mobile) {
-    animation: m-wj-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: m-wj-node-enter 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: var(--m-wj-delay, 0ms);
   }
 }
-
+@keyframes m-wj-node-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 12px)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
 .m-wj-nodes--mobile {
   position: relative;
   inset: auto;
@@ -7721,8 +7734,13 @@
     animation: none !important;
     transition: none !important;
     opacity: 1 !important;
-    transform: none !important;
     translate: none !important;
+  }
+  .m-wj-node:not(.m-wj-node--mobile) {
+    transform: translate(-50%, -50%) !important;
+  }
+  .m-wj-node--mobile {
+    transform: none !important;
   }
 
   .m-wj-path {

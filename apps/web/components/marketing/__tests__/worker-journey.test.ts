@@ -76,8 +76,15 @@ describe('worker journey section', () => {
     expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
     expect(css).toMatch(/\.m-wj-visual-mobile/);
     const desktopBlock = css.match(/\.m-wj-visual-desktop\s*\{([\s\S]*?)\n\}/);
-    expect(desktopBlock?.[1]).toMatch(/min-height:\s*30rem/);
-    expect(desktopBlock?.[1]).not.toMatch(/aspect-ratio:\s*1/);
+    expect(desktopBlock?.[1]).toMatch(/aspect-ratio:\s*760\s*\/\s*520/);
+    expect(desktopBlock?.[1]).toMatch(/min-height:\s*0/);
+    const svgBlock = css.match(/\.m-wj-svg\s*\{([\s\S]*?)\n\}/);
+    expect(svgBlock?.[1]).toMatch(/position:\s*absolute/);
+    expect(svgBlock?.[1]).toMatch(/inset:\s*0/);
+    expect(svgBlock?.[1]).toMatch(/height:\s*100%/);
+    expect(css).toMatch(/animation:\s*m-wj-node-enter/);
+    expect(css).toMatch(/@keyframes m-wj-node-enter[\s\S]*?transform:\s*translate\(-50%,\s*-50%\) scale\(1\)/);
+    expect(css).toMatch(/\.m-wj-node:not\(\.m-wj-node--mobile\)\s*\{\s*transform:\s*translate\(-50%,\s*-50%\)\s*!important/);
     expect(css).not.toMatch(/\.m-wj-node-check/);
     expect(visual).toMatch(/VIEW_W\s*=\s*760/);
     expect(visual).toMatch(/no closed loop/i);

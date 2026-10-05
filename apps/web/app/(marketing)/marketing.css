@@ -7219,6 +7219,7 @@
   z-index: 1;
   padding-top: 0.35rem;
   padding-bottom: 1.25rem;
+  max-width: min(80rem, 100%);
 }
 
 .m-wj-header {
@@ -7252,15 +7253,36 @@
 
 .m-wj-layout {
   display: grid;
-  gap: 1.75rem;
+  gap: 2.25rem;
   align-items: stretch;
 }
 
 @media (min-width: 960px) {
   .m-wj-layout {
-    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-    gap: 2rem;
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.22fr);
+    gap: 2.5rem;
+    column-gap: 2.75rem;
     align-items: start;
+  }
+
+  .m-wj-card {
+    justify-self: stretch;
+    width: 100%;
+    max-width: none;
+  }
+
+  .m-wj-visual {
+    justify-self: stretch;
+    width: 100%;
+    max-width: none;
+    padding-left: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .m-wj-layout {
+    grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.26fr);
+    column-gap: 3rem;
   }
 }
 
@@ -7398,9 +7420,10 @@
 
 @media (min-width: 768px) {
   .m-wj-visual {
-    min-height: 30rem;
+    min-height: 0;
     display: flex;
     flex-direction: column;
+    align-items: stretch;
   }
 }
 
@@ -7416,15 +7439,17 @@
 .m-wj-visual-desktop {
   position: relative;
   display: none;
-  /* The path and node percentages must share this exact 760:520 canvas. */
-  flex: none;
-  width: min(100%, 45rem);
-  aspect-ratio: 760 / 520;
-  min-height: 0;
-  margin-inline: auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-width: 100%;
+  margin-left: 0;
+  margin-right: 0;
   border-radius: 1.7rem;
   overflow: visible;
-  padding: 0;
+  padding: clamp(0.55rem, 2cqi, 1rem);
+  container-type: inline-size;
+  container-name: m-wj-diagram;
 }
 .m-wj-visual-mobile {
   position: relative;
@@ -7468,18 +7493,19 @@
 
 .m-wj-logo-anchor {
   position: absolute;
-  top: 0.15rem;
-  right: 0.35rem;
+  top: 50%;
+  left: 50%;
   z-index: 4;
-  width: 6.25rem;
-  height: 6.25rem;
+  width: clamp(7.25rem, 20cqi, 10.75rem);
+  height: clamp(7.25rem, 20cqi, 10.75rem);
   display: grid;
   place-items: center;
-  border-radius: 1.25rem;
+  border-radius: 1.55rem;
+  transform: translate(-50%, -50%);
   background: transparent;
   box-shadow:
-    0 0 40px rgba(37, 99, 235, 0.3),
-    0 16px 32px rgba(11, 32, 50, 0.12);
+    0 0 60px rgba(37, 99, 235, 0.34),
+    0 22px 44px rgba(11, 32, 50, 0.15);
   pointer-events: none;
 }
 
@@ -7490,6 +7516,7 @@
   width: 4.25rem;
   height: 4.25rem;
   border-radius: 1rem;
+  transform: none;
 }
 
 .m-wj-logo {
@@ -7508,13 +7535,44 @@
   height: 100%;
   overflow: visible;
 }
+
+.m-wj-orbit-guide {
+  pointer-events: none;
+}
+
+.m-wj-spoke {
+  stroke: rgba(37, 99, 235, 0.16);
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  pointer-events: none;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.m-wj-spoke.is-active {
+  stroke: rgba(37, 99, 235, 0.45);
+  stroke-width: 2.5;
+}
+
+.m-wj-join {
+  stroke: rgba(37, 99, 235, 0.28);
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  pointer-events: none;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.m-wj-join.is-active {
+  stroke: rgba(228, 179, 52, 0.85);
+  stroke-width: 3;
+}
+
 .m-wj-path-glow {
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 .m-wj-path {
   fill: none;
-  opacity: 0.95;
+  opacity: 1;
 }
 
 .m-wj-path.is-drawn {
@@ -7522,13 +7580,16 @@
 }
 
 .m-wj-path-dot {
-  fill: #e4b334;
-  opacity: 0.45;
-  transition: opacity 0.2s ease;
+  fill: #2563eb;
+  stroke: #fff;
+  stroke-width: 2.5;
+  opacity: 0.85;
+  transition: opacity 0.2s ease, fill 0.2s ease;
 }
 
 .m-wj-path-dot.is-passed,
 .m-wj-path-dot.is-active {
+  fill: #e4b334;
   opacity: 1;
 }
 
@@ -7599,24 +7660,30 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.4rem;
-  width: 9.25rem;
-  min-height: 6.15rem;
-  padding: 0.8rem 0.85rem 0.8rem;
+  align-items: stretch;
+  gap: clamp(0.45rem, 1.5cqi, 0.72rem);
+  width: clamp(10.25rem, 27.5cqi, 14rem);
+  min-height: clamp(5.9rem, 16.5cqi, 8rem);
+  padding: clamp(0.8rem, 2.3cqi, 1.15rem) clamp(0.85rem, 2.5cqi, 1.2rem) clamp(0.85rem, 2.4cqi, 1.15rem);
   border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 1.2rem;
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.98), rgba(242, 248, 252, 0.94));
+  border-radius: 1.4rem;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.99), rgba(242, 248, 252, 0.96));
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.98) inset,
-    0 16px 34px rgba(11, 32, 50, 0.12);
+    0 20px 42px rgba(11, 32, 50, 0.14);
   cursor: pointer;
   color: inherit;
   font: inherit;
   transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    border-color 0.22s ease;
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.28s ease,
+    border-color 0.28s ease;
+}
+
+.m-wj-node-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .m-wj-node--mobile .m-wj-node-btn {
@@ -7632,14 +7699,18 @@
   border-radius: 1.05rem;
 }
 
+.m-wj-node--mobile .m-wj-node-row {
+  flex-shrink: 0;
+}
+
 .m-wj-node.is-active .m-wj-node-btn,
 .m-wj-node-btn:hover {
-  transform: translateY(-3px);
-  border-color: rgba(37, 99, 235, 0.38);
+  transform: translateY(-5px) scale(1.03);
+  border-color: rgba(37, 99, 235, 0.42);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.98) inset,
-    0 0 0 3px rgba(37, 99, 235, 0.12),
-    0 18px 34px rgba(37, 99, 235, 0.16);
+    0 0 0 4px rgba(37, 99, 235, 0.14),
+    0 22px 40px rgba(37, 99, 235, 0.18);
 }
 
 .m-wj-node--mobile.is-active .m-wj-node-btn,
@@ -7654,16 +7725,16 @@
 
 .m-wj-node-badge {
   display: inline-flex;
-  width: 1.65rem;
-  height: 1.65rem;
+  width: clamp(2rem, 5.4cqi, 2.45rem);
+  height: clamp(2rem, 5.4cqi, 2.45rem);
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #2563eb;
+  background: #0b2032;
   color: #fff;
-  font-size: 0.76rem;
-  font-weight: 750;
-  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.28);
+  font-size: clamp(0.88rem, 2.35cqi, 1.05rem);
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(11, 32, 50, 0.28);
 }
 
 .m-wj-node--mobile .m-wj-node-badge {
@@ -7672,12 +7743,12 @@
 
 .m-wj-node-icon {
   display: inline-flex;
-  width: 2.55rem;
-  height: 2.55rem;
+  width: clamp(2.55rem, 7cqi, 3.2rem);
+  height: clamp(2.55rem, 7cqi, 3.2rem);
   align-items: center;
   justify-content: center;
-  border-radius: 0.8rem;
-  background: rgba(37, 99, 235, 0.1);
+  border-radius: 0.9rem;
+  background: rgba(37, 99, 235, 0.12);
   color: #2563eb;
   flex-shrink: 0;
 }
@@ -7688,8 +7759,8 @@
 }
 
 .m-wj-node-label {
-  font-size: 0.84rem;
-  font-weight: 750;
+  font-size: clamp(0.9rem, 2.55cqi, 1.12rem);
+  font-weight: 780;
   letter-spacing: -0.015em;
   line-height: 1.25;
   color: var(--m-navy);
@@ -7727,6 +7798,18 @@
   }
 }
 
+/* Keep orbit centering (translate -50/-50) while rising in. */
+@keyframes m-wj-node-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 18px)) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .m-wj-band.is-entered .m-wj-header,
   .m-wj-band.is-entered .m-wj-card,
@@ -7741,6 +7824,16 @@
   }
   .m-wj-node--mobile {
     transform: none !important;
+  }
+
+  .m-wj-band.is-entered .m-wj-header,
+  .m-wj-band.is-entered .m-wj-card,
+  .m-wj-band.is-entered .m-wj-node--mobile {
+    transform: none !important;
+  }
+
+  .m-wj-band.is-entered .m-wj-node:not(.m-wj-node--mobile) {
+    transform: translate(-50%, -50%) !important;
   }
 
   .m-wj-path {

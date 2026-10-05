@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/marketing/og-default.svg',
+        url: '/marketing/og-default.png',
         width: 1200,
         height: 630,
         alt: 'Bridge Hive',
@@ -39,12 +39,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/brand/bridge-hive-logo-64.png', sizes: '64x64', type: 'image/png' },
-      { url: '/brand/bridge-hive-logo-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/brand/bridge-hive-logo-v2-64.png', sizes: '64x64', type: 'image/png' },
+      { url: '/brand/bridge-hive-logo-v2-192.png', sizes: '192x192', type: 'image/png' },
     ],
     apple: [
       {
-        url: '/brand/bridge-hive-logo-180.png',
+        url: '/brand/bridge-hive-logo-v2-180.png',
         sizes: '180x180',
         type: 'image/png',
       },

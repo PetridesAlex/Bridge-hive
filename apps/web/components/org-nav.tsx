@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { signOutAction } from '@/app/actions/auth';
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { Button } from '@/components/ui/button';
 import { roleLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -32,12 +33,15 @@ export function OrgNav({
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
-              Bridge Hive
-            </p>
-            <h1 className="text-lg font-semibold text-slate-900">{orgName}</h1>
-            <p className="text-xs text-slate-500">{roleLabel(role)}</p>
+          <div className="flex min-w-0 items-start gap-2.5">
+            <BridgeHiveMark size={32} className="mt-0.5 h-8 w-8 shrink-0 rounded-lg" />
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+                Bridge Hive
+              </p>
+              <h1 className="text-lg font-semibold text-slate-900">{orgName}</h1>
+              <p className="text-xs text-slate-500">{roleLabel(role)}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" asChild>

@@ -60,6 +60,24 @@ describe('official Bridge Hive logo v2', () => {
     }
   });
 
+  it('retains the full blue tile at its top-left, left, and bottom edges', async () => {
+    const sharp = (await import('sharp')).default;
+    const file = path.join(webRoot, 'public/brand/bridge-hive-logo-v2-1024.png');
+    const { data, info } = await sharp(file)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    expect(info.width).toBe(1024);
+    expect(info.height).toBe(1024);
+
+    // These are inside the original navy tile, but were erased by the halo-only export.
+    for (const [x, y] of [[222, 112], [145, 178], [79, 267], [189, 936], [499, 947]]) {
+      const i = (info.width * y + x) * 4;
+      expect(data[i + 3]).toBeGreaterThan(240);
+      expect(data[i + 2]).toBeGreaterThan((data[i] ?? 0) + 12);
+    }
+  });
+
   it('keeps marketing header marks free of outer light presentation halo', async () => {
     const sharp = (await import('sharp')).default;
     const file = path.join(webRoot, 'public/brand/bridge-hive-logo-v2-512.png');

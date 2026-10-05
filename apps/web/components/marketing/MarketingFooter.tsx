@@ -13,6 +13,7 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { CookieSettingsButton } from '@/components/marketing/CookieSettingsButton';
 import { MarketingBrand } from '@/components/marketing/MarketingBrand';
 import { MARKETING_NAV } from '@/components/marketing/nav-config';
 
@@ -197,6 +198,8 @@ export function MarketingFooter() {
               </span>
             </p>
             <div className="m-footer-legal">
+              <CookieSettingsButton />
+              <span aria-hidden="true" />
               <Link href="/contact#support">Privacy or terms questions? Contact support</Link>
             </div>
           </div>

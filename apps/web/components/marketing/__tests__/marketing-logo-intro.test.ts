@@ -9,13 +9,19 @@ describe('marketing logo intro', () => {
     const shell = await read('components/marketing/MarketingShell.tsx');
     const intro = await read('components/marketing/MarketingLogoIntro.tsx');
     const layout = await read('app/(marketing)/layout.tsx');
+    const rootLayout = await read('app/layout.tsx');
 
     expect(layout).toMatch(/MarketingShell/);
     expect(shell).toMatch(/MarketingLogoIntro/);
     expect(intro).toMatch(/bridge-hive-logo-v2-512\.png/);
     expect(intro).toMatch(/BridgeHive\s*<span>Medical Recruitment Limited<\/span>/);
     expect(intro).toMatch(/aria-hidden="true"/);
-    expect(intro).not.toMatch(/setTimeout|localStorage|loading percentage|Build\. better\. future/);
+    expect(intro).toMatch(/sessionStorage/);
+    expect(intro).toMatch(/bh:m-intro/);
+    expect(intro).not.toMatch(/localStorage|loading percentage|Build\. better\. future/);
+    expect(rootLayout).toMatch(/bh-m-intro-session/);
+    expect(rootLayout).toMatch(/beforeInteractive/);
+    expect(rootLayout).toMatch(/bh:m-intro/);
     await expect(fs.access(path.join(webRoot, 'public/brand/bridge-hive-logo-v2-512.png'))).resolves.toBeUndefined();
   });
 
@@ -28,5 +34,18 @@ describe('marketing logo intro', () => {
     expect(css).toMatch(/\.marketing:focus-within \.m-intro/);
     expect(css).toMatch(/prefers-reduced-motion: reduce/);
     expect(css).toMatch(/\.marketing \.m-intro\s*\{\s*display: none; animation: none;/);
+    expect(css).toMatch(/html\[data-m-intro="done"\] \.marketing \.m-intro/);
+  });
+
+  it('keeps the intro only in the marketing shell (not auth/admin/org dashboards)', async () => {
+    const shell = await read('components/marketing/MarketingShell.tsx');
+    const workerLogin = await read('app/auth/worker/login/page.tsx');
+    const adminLayout = await read('app/admin/(console)/layout.tsx');
+    const orgLayout = await read('app/org/[slug]/layout.tsx');
+
+    expect(shell).toMatch(/MarketingLogoIntro/);
+    expect(adminLayout).not.toMatch(/MarketingLogoIntro/);
+    expect(orgLayout).not.toMatch(/MarketingLogoIntro/);
+    expect(workerLogin).not.toMatch(/MarketingLogoIntro/);
   });
 });

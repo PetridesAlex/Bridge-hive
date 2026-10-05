@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 
+import { AboutStructureSection } from '@/components/marketing/AboutStructureSection';
 import { InquiryCta } from '@/components/marketing/blocks';
 import { Reveal } from '@/components/marketing/Reveal';
-import { MarketingButton, Section } from '@/components/marketing/Section';
+import { Section } from '@/components/marketing/Section';
 
 export const metadata: Metadata = {
   title: 'About',
@@ -28,41 +29,7 @@ export default function AboutPage() {
         </Reveal>
       </Section>
 
-      <Section band="porcelain">
-        <div className="grid gap-6 lg:grid-cols-3">
-          {[
-            {
-              title: 'Role honesty',
-              body: 'We speak precisely about registered nurses and ward assistants — and about what platform review does and does not decide.',
-            },
-            {
-              title: 'Operational structure',
-              body: 'Locations, wards, shifts, timesheets, and invoices are modeled as real workflows with clear ownership on each side.',
-            },
-            {
-              title: 'Separated responsibilities',
-              body: 'Organizations pay workers for approved work. Workers settle Bridge Hive’s platform commission separately. Those paths are never blended.',
-            },
-          ].map((item, index) => (
-            <Reveal key={item.title} delay={index * 70}>
-              <div className="m-panel h-full">
-                <h2 className="text-lg font-extrabold text-[var(--m-navy)]">
-                  {item.title}
-                </h2>
-                <p className="mt-2 text-sm leading-relaxed text-[color:var(--m-muted)]">
-                  {item.body}
-                </p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
-        <div className="mt-12 flex flex-wrap gap-3">
-          <MarketingButton href="/how-it-works">How it works</MarketingButton>
-          <MarketingButton href="/contact#partnerships" variant="secondary">
-            Partnership inquiry
-          </MarketingButton>
-        </div>
-      </Section>
+      <AboutStructureSection />
 
       <Section band="white">
         <InquiryCta />

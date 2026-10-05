@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { friendlyAuthLinkError } from '@bridge-hive/domain';
 
+import { BridgeHiveLogo } from '@/components/auth/BridgeHiveLogo';
 import { Button } from '@/components/ui/button';
 
 export default async function AuthErrorPage({
@@ -16,10 +17,8 @@ export default async function AuthErrorPage({
 
   return (
     <main className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-4 px-6 text-center">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-honey-strong">
-        Bridge Hive
-      </p>
-      <h1 className="text-2xl font-semibold text-bh-text">{title}</h1>
+      <BridgeHiveLogo tone="light" markSize={32} />
+      <h1 className="mt-2 text-2xl font-semibold text-bh-text">{title}</h1>
       <p className="text-sm text-bh-text-secondary">{body}</p>
       <Button asChild className="mt-2">
         <Link href="/sign-in">Back to sign in</Link>

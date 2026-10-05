@@ -8,6 +8,7 @@ import {
   isWorkerSignupConfirmNext,
 } from '@bridge-hive/domain';
 
+import { BridgeHiveLogo } from '@/components/auth/BridgeHiveLogo';
 import { ConfirmActivationForm } from '@/components/auth/confirm-activation-form';
 import { Button } from '@/components/ui/button';
 
@@ -73,10 +74,7 @@ export default async function AuthConfirmPage({
 
   return (
     <Shell>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-honey-strong">
-        Bridge Hive
-      </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-bh-text">
+      <h1 className="text-2xl font-semibold tracking-tight text-bh-text">
         {title}
       </h1>
       <p className="mt-2 text-sm text-bh-text-secondary">{body}</p>
@@ -102,7 +100,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-bh-subtle to-bh-surface px-4 py-12">
       <div className="w-full max-w-lg rounded-3xl border border-bh-border bg-bh-surface p-6 shadow-[0_8px_30px_rgba(7,29,48,0.06)] sm:p-8">
-        {children}
+        <BridgeHiveLogo tone="light" markSize={32} />
+        <div className="mt-4">{children}</div>
       </div>
     </div>
   );

@@ -189,7 +189,10 @@ export function ProfessionalsPaymentsSection() {
         <div className="m-pay-intro">
           <Reveal>
             <div className="m-pay-copy">
-              <p className="m-pay-eyebrow">How payments work</p>
+              <p className="m-pay-eyebrow">
+                <span className="m-pay-eyebrow-mark" aria-hidden="true" />
+                <span className="m-pay-eyebrow-text">How payments work</span>
+              </p>
               <h2 id="m-pay-heading" className="m-pay-heading">
                 How payments <span className="m-pay-heading-accent">work</span>
               </h2>

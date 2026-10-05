@@ -6948,19 +6948,47 @@
 }
 
 .m-pay-eyebrow {
+  position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 0.55rem;
   margin: 0;
-  padding: 0.38rem 0.85rem;
+  padding: 0.48rem 1rem 0.48rem 0.72rem;
   border-radius: 999px;
-  border: 1px solid rgba(37, 99, 235, 0.16);
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
-  font-size: 0.72rem;
-  font-weight: 750;
-  letter-spacing: 0.14em;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(239, 246, 255, 0.88) 55%, rgba(255, 255, 255, 0.92));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.98) inset,
+    0 0 0 1px rgba(37, 99, 235, 0.08),
+    0 14px 28px rgba(37, 99, 235, 0.1),
+    0 4px 10px rgba(11, 32, 50, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 0.7rem;
+  font-weight: 780;
+  letter-spacing: 0.168em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: #1d4ed8;
+}
+
+.m-pay-eyebrow-mark {
+  display: inline-flex;
+  width: 0.55rem;
+  height: 0.55rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 30%, #fff7d6 0 28%, transparent 40%),
+    linear-gradient(145deg, #f0c14a, #e4b334 55%, #c9920f);
+  box-shadow:
+    0 0 0 3px rgba(228, 179, 52, 0.16),
+    0 0 12px rgba(37, 99, 235, 0.18);
+}
+
+.m-pay-eyebrow-text {
+  position: relative;
+  top: 0.02em;
 }
 
 .m-pay-heading {

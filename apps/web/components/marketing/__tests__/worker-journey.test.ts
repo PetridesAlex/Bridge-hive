@@ -52,8 +52,14 @@ describe('worker journey section', () => {
     const card = await readWeb('components/marketing/WorkerJourneyCard.tsx');
     const css = await readWeb('app/(marketing)/marketing.css');
 
-    expect(visual).toMatch(/bridge-hive-logo-v2-192\.png/);
+    expect(visual).toMatch(/BRIDGE_HIVE_MARK_SRC/);
+    expect(visual).toMatch(/from '@\/components\/brand\/BridgeHiveMark'/);
     expect(visual).toMatch(/Illustrative journey/);
+    const brand = await readWeb('components/marketing/MarketingBrand.tsx');
+    expect(brand).toMatch(/bridge-hive-logo-v2-512\.png/);
+    expect(brand).not.toMatch(/bridge-hive-logo-512\.webp/);
+    const mark = await readWeb('components/brand/BridgeHiveMark.tsx');
+    expect(mark).toMatch(/bridge-hive-logo-v2-192\.png/);
     expect(visual).toMatch(/Open directional journey|open six-step/i);
     expect(visual).toMatch(/getPointAtLength|getTotalLength/);
     expect(visual).toMatch(/prefers-reduced-motion|reduceMotion/);

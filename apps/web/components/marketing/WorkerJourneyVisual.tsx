@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { BRIDGE_HIVE_MARK_SRC } from '@/components/brand/BridgeHiveMark';
 import { WORKER_JOURNEY_STEPS } from '@/components/marketing/worker-journey-data';
 
 const VIEW_W = 760;
@@ -118,7 +119,7 @@ export function WorkerJourneyVisual({
 
         <div className="m-wj-logo-anchor">
           <Image
-            src="/brand/bridge-hive-logo-v2-192.png"
+            src={BRIDGE_HIVE_MARK_SRC}
             alt=""
             width={96}
             height={96}
@@ -236,7 +237,7 @@ export function WorkerJourneyVisual({
         <div className="m-wj-mobile-spine" aria-hidden="true" />
         <div className="m-wj-logo-anchor m-wj-logo-anchor--mobile">
           <Image
-            src="/brand/bridge-hive-logo-v2-192.png"
+            src={BRIDGE_HIVE_MARK_SRC}
             alt=""
             width={72}
             height={72}

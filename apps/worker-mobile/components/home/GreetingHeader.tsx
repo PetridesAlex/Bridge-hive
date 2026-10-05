@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { Avatar } from '@/components/ui/Avatar';
 import { IconButton } from '@/components/ui/IconButton';
 import { colors, spacing, typography } from '@/constants/theme';
@@ -30,7 +31,10 @@ export function GreetingHeader({ firstName, roleLabel, initials, unreadCount = 0
             textColor={colors.tealStrong}
           />
           <View style={styles.textCol}>
-            <Text style={styles.kicker}>Bridge Hive</Text>
+            <View style={styles.kickerRow}>
+              <BridgeHiveMark size={16} />
+              <Text style={styles.kicker}>Bridge Hive</Text>
+            </View>
             <Text style={styles.greeting} numberOfLines={1}>
               {greeting}, {firstName}
             </Text>
@@ -73,6 +77,12 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   textCol: { flex: 1, gap: 2, minWidth: 0 },
+  kickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minWidth: 0,
+  },
   kicker: {
     fontFamily: typography.fonts.semibold,
     fontSize: typography.size.sm,

@@ -213,8 +213,9 @@ describe('marketing site contracts', () => {
       const src = await readWeb(file);
       expect(src).not.toContain(forbidden);
     }
-    const og = await readWeb('public/marketing/og-default.svg');
-    expect(og).not.toContain(forbidden);
+    await expect(
+      fs.access(path.join(webRoot, 'public/marketing/og-default.png')),
+    ).resolves.toBeUndefined();
   });
 
   it('marketing metadata is not organization-dashboard copy', async () => {
@@ -264,22 +265,23 @@ describe('marketing site contracts', () => {
     const nav = await readWeb('components/marketing/MarketingNav.tsx');
     const footer = await readWeb('components/marketing/MarketingFooter.tsx');
 
-    expect(brand).toMatch(/\/brand\/bridge-hive-logo-512\.webp/);
+    expect(brand).toMatch(/\/brand\/bridge-hive-logo-v2-512\.png/);
     expect(brand).toMatch(/next\/image/);
     expect(brand).toMatch(/Bridge Hive|m-brand-wordmark/);
     expect(brand).not.toMatch(/viewBox="0 0 32 32"/);
-    expect(layout).toMatch(/\/brand\/bridge-hive-logo-64\.png/);
-    expect(layout).toMatch(/\/brand\/bridge-hive-logo-180\.png/);
-    expect(layout).toMatch(/\/brand\/bridge-hive-logo-192\.png/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-v2-64\.png/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-v2-180\.png/);
+    expect(layout).toMatch(/\/brand\/bridge-hive-logo-v2-192\.png/);
     expect(nav).toMatch(/MarketingBrand/);
     expect(footer).toMatch(/MarketingBrand/);
 
     for (const file of [
-      'public/brand/bridge-hive-logo-512.webp',
-      'public/brand/bridge-hive-logo-64.png',
-      'public/brand/bridge-hive-logo-180.png',
-      'public/brand/bridge-hive-logo-192.png',
-      'public/brand/bridge-hive-logo-original.png',
+      'public/brand/bridge-hive-logo-v2-512.webp',
+      'public/brand/bridge-hive-logo-v2-512.png',
+      'public/brand/bridge-hive-logo-v2-64.png',
+      'public/brand/bridge-hive-logo-v2-180.png',
+      'public/brand/bridge-hive-logo-v2-192.png',
+      'public/brand/bridge-hive-logo-v2-1024.png',
       'app/favicon.ico',
       'app/icon.png',
     ]) {

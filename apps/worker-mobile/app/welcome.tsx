@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { Button } from '@/components/ui/Button';
 import { colors, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
@@ -18,9 +19,7 @@ export default function WelcomeScreen() {
     <View style={styles.root}>
       <SafeAreaView style={styles.safe}>
         <View style={styles.hero}>
-          <View style={styles.mark}>
-            <Text style={styles.markLetter}>B</Text>
-          </View>
+          <BridgeHiveMark size={56} />
           <Text style={styles.brand}>Bridge Hive</Text>
           <Text style={styles.title}>Healthcare shifts,{'\n'}built for workers</Text>
           <Text style={styles.subtitle}>
@@ -62,19 +61,6 @@ const styles = StyleSheet.create({
   hero: {
     marginTop: spacing.huge,
     gap: spacing.md,
-  },
-  mark: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  markLetter: {
-    fontFamily: typography.fonts.displayExtra,
-    fontSize: 26,
-    color: colors.yellow,
   },
   brand: {
     fontFamily: typography.fonts.semibold,

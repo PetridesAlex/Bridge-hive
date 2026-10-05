@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, spacing, typography } from '@/constants/theme';
 import { layout, useLayout } from '@/hooks/useLayout';
 
@@ -93,9 +94,7 @@ export function AuthShell({
             showsVerticalScrollIndicator={false}
           >
             <Animated.View style={[styles.hero, motion]}>
-              <View style={styles.mark}>
-                <Text style={styles.markLetter}>B</Text>
-              </View>
+              <BridgeHiveMark size={52} style={styles.mark} />
               <Text style={styles.brand}>Bridge Hive</Text>
               <Text style={styles.title}>{title}</Text>
               <Text style={styles.subtitle}>{subtitle}</Text>
@@ -160,19 +159,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   mark: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: colors.navy,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: spacing.xs,
-  },
-  markLetter: {
-    fontFamily: typography.fonts.displayExtra,
-    fontSize: 22,
-    color: colors.yellow,
-    letterSpacing: -0.5,
   },
   brand: {
     fontFamily: typography.fonts.semibold,

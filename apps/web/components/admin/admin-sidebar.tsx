@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import { signOutAction } from '@/app/actions/auth';
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { Button } from '@/components/ui/button';
 import type { PlatformCapabilities } from '@/lib/admin/capabilities';
 import { cn } from '@/lib/utils';
@@ -128,12 +129,10 @@ export function AdminSidebar({
     >
       <div className="border-b border-white/10 px-5 py-6">
         <div className="flex items-center gap-2.5">
-          <span
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-bh-honey text-sm font-bold text-bh-text shadow-sm"
-            aria-hidden
-          >
-            BH
-          </span>
+          <BridgeHiveMark
+            size={36}
+            className="h-9 w-9 shrink-0 rounded-[0.65rem] shadow-sm ring-1 ring-white/10"
+          />
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey">
               Bridge Hive

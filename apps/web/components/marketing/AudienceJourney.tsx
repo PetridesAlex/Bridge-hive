@@ -242,15 +242,17 @@ export function AudienceJourney() {
           }
         >
           <article className="m-audience-card m-audience-card--story">
-            <span
-              className={`m-audience-card-mark m-audience-card-mark--${
-                audience === 'organization' ? 'teal' : 'honey'
-              }`}
-              aria-hidden="true"
-            >
-              <CardIcon size={34} strokeWidth={1.7} />
-            </span>
-            <p className="m-eyebrow">{active.eyebrow}</p>
+            <div className="m-audience-card-head">
+              <p className="m-eyebrow">{active.eyebrow}</p>
+              <span
+                className={`m-audience-card-mark m-audience-card-mark--${
+                  audience === 'organization' ? 'teal' : 'honey'
+                }`}
+                aria-hidden="true"
+              >
+                <CardIcon size={34} strokeWidth={1.7} />
+              </span>
+            </div>
             <h3>{active.title}</h3>
             <p className="m-audience-card-body">{active.body}</p>
             <Link href={active.href} className="m-audience-card-link">

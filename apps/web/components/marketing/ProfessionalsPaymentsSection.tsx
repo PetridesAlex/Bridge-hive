@@ -28,7 +28,7 @@ const PAY_STEPS: readonly PayStep[] = [
   {
     id: 'approved',
     title: 'Work is approved',
-    body: 'The worker completes a shift. The organization reviews the timesheet and approves completed work before wages are owed.',
+    body: 'The worker completes a shift. The organization reviews the timesheet and approves the completed work before the payment steps below.',
     bullets: ['Shift completed', 'Timesheet reviewed', 'Work approved'],
     Icon: ClipboardCheck,
   },

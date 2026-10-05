@@ -25,11 +25,26 @@ const MARKETING_SOURCE_GLOBS = [
   'components/marketing/AudienceJourney.tsx',
   'components/marketing/HowItWorksClient.tsx',
   'components/marketing/ContactEmail.tsx',
+  'components/marketing/WorkerJourneySection.tsx',
+  'components/marketing/WorkerJourneyCard.tsx',
+  'components/marketing/WorkerJourneyVisual.tsx',
+  'components/marketing/worker-journey-data.ts',
   'app/robots.ts',
   'app/sitemap.ts',
 ] as const;
 
 describe('marketing site contracts', () => {
+
+  it('keeps audience card mark in a mobile reflow header and avoids 100vw overflow calcs', async () => {
+    const audience = await readWeb('components/marketing/AudienceJourney.tsx');
+    const css = await readWeb('app/(marketing)/marketing.css');
+    expect(audience).toMatch(/m-audience-card-head/);
+    expect(css).toMatch(/m-audience-card-head/);
+    expect(css).toMatch(/Mobile responsive repair/);
+    expect(css).not.toMatch(/calc\(100vw\s*-/);
+    expect(css).not.toMatch(/html\s*,\s*body[^{]*\{[^}]*overflow-x:\s*hidden/);
+  });
+
   it('exposes the expected public marketing paths', () => {
     expect([...PUBLIC_MARKETING_PATHS]).toEqual([
       '/',
@@ -160,13 +175,16 @@ describe('marketing site contracts', () => {
   it('professionals page distinguishes wage bank transfer from commission without published fee percentages', async () => {
     const src = await readWeb('app/(marketing)/professionals/page.tsx');
     const payments = await readWeb('components/marketing/ProfessionalsPaymentsSection.tsx');
+    const journey = await readWeb('components/marketing/worker-journey-data.ts');
+    const section = await readWeb('components/marketing/WorkerJourneySection.tsx');
     const how = await readWeb('components/marketing/HowItWorksClient.tsx');
     const home = await readWeb('app/(marketing)/page.tsx');
     const css = await readWeb('app/(marketing)/marketing.css');
+    expect(src).toMatch(/WorkerJourneySection/);
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
     expect(src).toMatch(/ProfessionalsPaymentsSection/);
-    expect(src).toMatch(/bank transfer/);
+    expect(payments).toMatch(/bank transfer/);
     expect(payments).toMatch(/separate Bridge Hive commission invoice/i);
     expect(payments).toMatch(/on its own schedule/i);
     expect(payments).toMatch(/Paid separately by the worker/);
@@ -182,7 +200,17 @@ describe('marketing site contracts', () => {
     expect(home).not.toMatch(/16%/);
     expect(home).not.toMatch(/10 calendar days/);
     expect(payments).toMatch(/does not collect, hold, or disburse|does not hold or disburse/i);
-    expect(src).toMatch(/does not use them to collect platform fees|not used to collect commission|does not collect commission/i);
+    expect(journey).toMatch(/does not use them to collect platform fees/);
+    expect(journey).toMatch(/Create your account/);
+    expect(journey).toMatch(/Upload role-specific documents/);
+    expect(journey).toMatch(/Submit bank details for wage payouts/);
+    expect(journey).toMatch(/Platform admin review/);
+    expect(journey).toMatch(/Browse and accept eligible shifts/);
+    expect(journey).toMatch(/Timesheets, wages, and commission/);
+    expect(section).toMatch(/How account setup/);
+    expect(section).toMatch(/Illustrative journey|WorkerJourneyVisual/);
+    expect(css).toMatch(/\.m-wj-band/);
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
     expect(src).not.toMatch(/bank details Bridge Hive needs for commission invoicing/i);
     expect(src).not.toMatch(/subject to legal/);
     expect(src).toMatch(/\/contact#support/);

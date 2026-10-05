@@ -1,13 +1,10 @@
 import type { Metadata } from 'next';
 
-import { InquiryCta, ProcessSteps } from '@/components/marketing/blocks';
+import { InquiryCta } from '@/components/marketing/blocks';
 import { ProfessionalsPaymentsSection } from '@/components/marketing/ProfessionalsPaymentsSection';
 import { Reveal } from '@/components/marketing/Reveal';
-import {
-  MarketingButton,
-  Section,
-  SectionHeading,
-} from '@/components/marketing/Section';
+import { MarketingButton, Section } from '@/components/marketing/Section';
+import { WorkerJourneySection } from '@/components/marketing/WorkerJourneySection';
 
 export const metadata: Metadata = {
   title: 'Professionals',
@@ -53,41 +50,7 @@ export default function ProfessionalsPage() {
         </Reveal>
       </Section>
 
-      <Section band="porcelain">
-        <SectionHeading title="How account setup works" />
-        <div className="mt-10 max-w-2xl">
-          <ProcessSteps
-            title="Worker journey"
-            steps={[
-              {
-                label: 'Create your account',
-                body: 'Register in the Bridge Hive worker app and confirm your email address.',
-              },
-              {
-                label: 'Upload role-specific documents',
-                body: 'Submit credentials and information required for your role — registered nurse or ward assistant.',
-              },
-              {
-                label: 'Submit bank details for wage payouts',
-                body: 'Provide bank account details so healthcare organizations can pay your approved wages by bank transfer. Bridge Hive reviews those details as part of account verification — it does not use them to collect platform fees.',
-              },
-              {
-                label: 'Platform admin review',
-                body: 'A Bridge Hive administrator reviews your package. Shifts are available only after verification and activation.',
-              },
-              {
-                label: 'Browse and accept eligible shifts',
-                body: 'Once activated, view openings that match your role and accept work you can complete.',
-              },
-              {
-                label: 'Timesheets, wages, and commission',
-                body: 'Complete timesheets in the app. Organizations pay approved wages by bank transfer. Separately, Bridge Hive invoices you for its platform commission.',
-              },
-            ]}
-          />
-        </div>
-      </Section>
-
+      <WorkerJourneySection />
       <ProfessionalsPaymentsSection />
 
       <Section band="porcelain">

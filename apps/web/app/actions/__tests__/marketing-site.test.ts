@@ -13,6 +13,7 @@ const MARKETING_SOURCE_GLOBS = [
   'app/(marketing)/page.tsx',
   'app/(marketing)/organizations/page.tsx',
   'app/(marketing)/professionals/page.tsx',
+  'components/marketing/ProfessionalsPaymentsSection.tsx',
   'app/(marketing)/how-it-works/page.tsx',
   'app/(marketing)/about/page.tsx',
   'app/(marketing)/contact/page.tsx',
@@ -158,24 +159,38 @@ describe('marketing site contracts', () => {
 
   it('professionals page distinguishes wage bank transfer from commission without published fee percentages', async () => {
     const src = await readWeb('app/(marketing)/professionals/page.tsx');
+    const payments = await readWeb('components/marketing/ProfessionalsPaymentsSection.tsx');
     const how = await readWeb('components/marketing/HowItWorksClient.tsx');
     const home = await readWeb('app/(marketing)/page.tsx');
+    const css = await readWeb('app/(marketing)/marketing.css');
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
+    expect(src).toMatch(/ProfessionalsPaymentsSection/);
     expect(src).toMatch(/bank transfer/);
-    expect(src).toMatch(/separate Bridge Hive commission invoice/i);
-    expect(src).toMatch(/on its own schedule/i);
+    expect(payments).toMatch(/separate Bridge Hive commission invoice/i);
+    expect(payments).toMatch(/on its own schedule/i);
+    expect(payments).toMatch(/Paid separately by the worker/);
+    expect(payments).toMatch(/Work is approved/);
+    expect(payments).toMatch(/Organizations pay workers directly/);
+    expect(payments).toMatch(/BRIDGE_HIVE_MARK_SRC|bridge-hive-logo-v2/);
+    expect(payments).not.toMatch(/Paid by the organization via bank transfer/);
+    expect(payments).not.toMatch(/16%/);
+    expect(payments).not.toMatch(/10 calendar days/);
+    expect(payments).not.toMatch(/Apple Pay|Stripe/);
     expect(src).not.toMatch(/16%/);
     expect(src).not.toMatch(/10 calendar days/);
     expect(home).not.toMatch(/16%/);
     expect(home).not.toMatch(/10 calendar days/);
-    expect(src).toMatch(/does not hold or disburse/);
+    expect(payments).toMatch(/does not collect, hold, or disburse|does not hold or disburse/i);
     expect(src).toMatch(/does not use them to collect platform fees|not used to collect commission|does not collect commission/i);
     expect(src).not.toMatch(/bank details Bridge Hive needs for commission invoicing/i);
     expect(src).not.toMatch(/subject to legal/);
     expect(src).toMatch(/\/contact#support/);
     expect(how).not.toMatch(/payout details for Bridge Hive commission invoicing/i);
     expect(how).toMatch(/bank details for wage payouts/i);
+    expect(css).toMatch(/\.m-pay-band/);
+    expect(css).toMatch(/\.m-pay-card/);
+    expect(css).toMatch(/prefers-reduced-motion:\s*reduce/);
   });
 
   it('scopes marketing fonts and styles to the marketing layout shell', async () => {

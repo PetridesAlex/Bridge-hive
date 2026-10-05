@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
-import { FeatureRow, InquiryCta, ProcessSteps } from '@/components/marketing/blocks';
+import { InquiryCta, ProcessSteps } from '@/components/marketing/blocks';
+import { ProfessionalsPaymentsSection } from '@/components/marketing/ProfessionalsPaymentsSection';
 import { Reveal } from '@/components/marketing/Reveal';
 import {
   MarketingButton,
@@ -87,31 +88,7 @@ export default function ProfessionalsPage() {
         </div>
       </Section>
 
-      <Section band="white">
-        <SectionHeading
-          title="How payments work"
-          lede="Wage pay and platform commission are separate obligations with separate payment methods."
-        />
-        <FeatureRow
-          items={[
-            {
-              icon: 'payments',
-              title: 'Organizations pay your wages',
-              body: 'For approved work, the healthcare organization pays you directly by bank transfer of approved gross shift pay. Bridge Hive does not hold or disburse hospital wages.',
-            },
-            {
-              icon: 'verified',
-              title: 'Bank details support wage transfer',
-              body: 'Your verified bank details exist so organizations can transfer wages to you. Bridge Hive stores verification records for account review; it does not collect commission through those bank details.',
-            },
-            {
-              icon: 'timesheets',
-              title: 'Separate platform commission invoice',
-              body: 'Workers settle a separate Bridge Hive commission invoice on its own schedule after approved work. Commission is not deducted from the organization wage transfer.',
-            },
-          ]}
-        />
-      </Section>
+      <ProfessionalsPaymentsSection />
 
       <Section band="porcelain">
         <InquiryCta />

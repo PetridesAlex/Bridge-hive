@@ -1,21 +1,26 @@
 import Image from 'next/image';
 
-import { BRIDGE_HIVE_MARK_SRC } from '@/components/brand/BridgeHiveMark';
-
-/** Brief decorative reveal on a full marketing-page load; the page remains rendered underneath. */
+/** Decorative marketing-page intro; the site remains server-rendered underneath. */
 export function MarketingLogoIntro() {
   return (
     <div className="m-intro" aria-hidden="true">
-      <Image
-        src={BRIDGE_HIVE_MARK_SRC}
-        alt=""
-        width={192}
-        height={192}
-        sizes="(max-width: 600px) 96px, 128px"
-        priority
-        draggable={false}
-        className="m-intro-mark"
-      />
+      <div className="m-intro-lockup">
+        <span className="m-intro-mark-wrap">
+          <Image
+            src="/brand/bridge-hive-logo-v2-512.png"
+            alt=""
+            width={512}
+            height={512}
+            sizes="(max-width: 600px) 144px, 192px"
+            priority
+            draggable={false}
+            className="m-intro-mark"
+          />
+        </span>
+        <p className="m-intro-name">
+          BridgeHive <span>Medical Recruitment Limited</span>
+        </p>
+      </div>
     </div>
   );
 }

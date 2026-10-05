@@ -8476,25 +8476,69 @@
   display: grid;
   place-items: center;
   background: #fff;
-  animation: m-intro-reveal 1.2s cubic-bezier(0.77, 0, 0.175, 1) both;
+  animation: m-intro-reveal 3s cubic-bezier(0.77, 0, 0.175, 1) both;
+}
+
+.marketing .m-intro-lockup {
+  display: flex;
+  width: min(36rem, 100%);
+  box-sizing: border-box;
+  padding-inline: 1rem;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(1.25rem, 3vw, 1.75rem);
+  animation: m-intro-lockup 3s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.marketing .m-intro-mark-wrap {
+  display: block;
+  width: clamp(9rem, 15vw, 12rem);
+  transform-origin: center;
+  animation: m-intro-breathe 1.6s ease-in-out 0.35s infinite;
 }
 
 .marketing .m-intro-mark {
-  width: clamp(6rem, 9vw, 8rem);
+  display: block;
+  width: 100%;
   height: auto;
   object-fit: contain;
-  animation: m-intro-mark 1.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.marketing .m-intro-name {
+  margin: 0;
+  color: #0b2032;
+  font-family: var(--m-font);
+  font-size: clamp(1.4rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.marketing .m-intro-name span {
+  display: block;
+  margin-top: 0.4rem;
+  color: #365666;
+  font-size: clamp(0.82rem, 1.4vw, 0.97rem);
+  font-weight: 600;
+  letter-spacing: 0.055em;
+  line-height: 1.4;
 }
 
 @keyframes m-intro-reveal {
-  0%, 48% { transform: translateY(0); visibility: visible; }
+  0%, 80% { transform: translateY(0); visibility: visible; }
   100% { transform: translateY(-105%); visibility: hidden; }
 }
 
-@keyframes m-intro-mark {
+@keyframes m-intro-lockup {
   0% { opacity: 0; transform: translateY(8px) scale(0.95); }
-  22%, 58% { opacity: 1; transform: translateY(0) scale(1); }
-  88%, 100% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+  12%, 81% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-10px) scale(0.98); }
+}
+
+@keyframes m-intro-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
 }
 
 /* Keyboard users can see the site immediately rather than tabbing behind the overlay. */
@@ -8504,7 +8548,13 @@
   pointer-events: none;
 }
 
+.marketing:focus-within .m-intro-lockup,
+.marketing:focus-within .m-intro-mark-wrap {
+  animation: none;
+}
+
 @media (prefers-reduced-motion: reduce), print {
   .marketing .m-intro { display: none; animation: none; }
-  .marketing .m-intro-mark { animation: none; }
+  .marketing .m-intro-lockup,
+  .marketing .m-intro-mark-wrap { animation: none; }
 }

@@ -47,6 +47,42 @@ describe('official Bridge Hive logo v2', () => {
     expect(layout).toMatch(/og-default\.png/);
   });
 
+  it('places BridgeHiveLogo on worker web auth, confirm, error, and activation shells', async () => {
+    const pages = [
+      'app/auth/worker/login/page.tsx',
+      'app/auth/worker/reset-password/page.tsx',
+      'app/auth/confirm/page.tsx',
+      'app/auth/error/page.tsx',
+      'app/activate-organization-account/page.tsx',
+    ];
+    for (const file of pages) {
+      const src = await readWeb(file);
+      expect(src).toMatch(/BridgeHiveLogo/);
+      expect(src).toMatch(/tone=["']light["']/);
+    }
+  });
+
+  it('keeps Expo OAuth callback on the local BridgeHiveMark (no teal placeholder)', async () => {
+    const callback = await fs.readFile(
+      path.join(repoRoot, 'apps/worker-mobile/app/auth/callback.tsx'),
+      'utf8',
+    );
+    expect(callback).toMatch(/from '@\/components\/brand\/BridgeHiveMark'/);
+    expect(callback).toMatch(/<BridgeHiveMark/);
+    expect(callback).not.toMatch(/styles\.mark\b/);
+    expect(callback).not.toMatch(/\n\s*mark:\s*\{/);
+  });
+
+  it('keeps Expo brand-mark.png byte-identical to web v2-192', async () => {
+    const web = await fs.readFile(
+      path.join(webRoot, 'public/brand/bridge-hive-logo-v2-192.png'),
+    );
+    const expo = await fs.readFile(
+      path.join(repoRoot, 'apps/worker-mobile/assets/images/brand-mark.png'),
+    );
+    expect(Buffer.compare(web, expo)).toBe(0);
+  });
+
   it('does not leave superseded public brand filenames referenced', async () => {
     const sources = [
       'components/marketing/MarketingBrand.tsx',

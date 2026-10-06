@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { createSessionFromUrl } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
@@ -108,7 +109,10 @@ export default function AuthCallbackScreen() {
     return (
       <View style={styles.root}>
         <Animated.View entering={FadeIn.duration(280)} style={styles.card}>
-          <Text style={styles.brand}>Bridge Hive</Text>
+          <BridgeHiveMark size={48} />
+          <Text style={styles.brand} accessibilityRole="header">
+            Bridge Hive
+          </Text>
           <Text style={styles.title}>You are signed in</Text>
           <Text style={styles.copy}>Taking you to your workspace…</Text>
           <ActivityIndicator color={colors.tealStrong} style={styles.spinner} />
@@ -121,6 +125,7 @@ export default function AuthCallbackScreen() {
     return (
       <View style={styles.root}>
         <Animated.View entering={FadeInDown.duration(320)} style={styles.card}>
+          <BridgeHiveMark size={48} />
           <Text style={styles.brand}>Bridge Hive</Text>
           <Text style={styles.title}>Sign-in interrupted</Text>
           <Text style={styles.copy}>
@@ -143,7 +148,7 @@ export default function AuthCallbackScreen() {
     <View style={styles.root}>
       <Animated.View entering={FadeIn.duration(280)} style={styles.card}>
         <Animated.View style={[styles.markWrap, markStyle]}>
-          <View style={styles.mark} />
+          <BridgeHiveMark size={48} />
         </Animated.View>
         <Text style={styles.brand}>Bridge Hive</Text>
         <Text style={styles.title}>Securing your session</Text>
@@ -172,13 +177,6 @@ const styles = StyleSheet.create({
   },
   markWrap: {
     marginBottom: spacing.sm,
-  },
-  mark: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.lg,
-    backgroundColor: colors.tealStrong,
-    opacity: 0.92,
   },
   brand: {
     fontFamily: typography.fonts.semibold,

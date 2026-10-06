@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { BridgeHiveLogo } from '@/components/auth/BridgeHiveLogo';
 import { WorkerAppContinuePanel } from '@/components/auth/worker-app-continue';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
@@ -44,10 +45,8 @@ export default function WorkerResetPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-bh-subtle to-bh-surface px-4 py-12">
       <div className="w-full max-w-lg rounded-3xl border border-bh-border bg-bh-surface p-6 shadow-[0_8px_30px_rgba(7,29,48,0.06)] sm:p-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-honey-strong">
-          Bridge Hive
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-bh-text">
+        <BridgeHiveLogo tone="light" markSize={32} />
+        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-bh-text">
           Set a new password
         </h1>
         <p className="mt-2 text-sm text-bh-text-secondary">

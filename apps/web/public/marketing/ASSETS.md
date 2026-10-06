@@ -19,8 +19,10 @@
 | `../brand/bridge-hive-logo-v2-192.png` | Official navy-tile mark (v2) | Bridge Hive brand identity | Manifest / auth / dashboard mark |
 | `../brand/bridge-hive-logo-v2-1024.png` | Official navy-tile mark (v2) | Bridge Hive brand identity | Large display mark |
 | `../../../brand/source/bridge-hive-logo-blue-background.png` | Owner-supplied master PNG | Untouched source of truth | Derivatives only |
-| `../auth/healthcare-hero.*` | Owner-supplied portal branding | Bridge Hive brand photography | Organization sign-in hero |
-| `../auth/admin-hero.*` | Owner-supplied portal branding | Intended for admin sign-in hero | **Not used on marketing pages** |
+| `../auth/healthcare-hero.*` | Owner-supplied portal branding (composite with baked UI) | Bridge Hive brand photography | Source for org photo crop only; **not** used as the live login background |
+| `../auth/org-hero-photo.*` | Crop of `healthcare-hero.jpg` (right/upper ward photography; baked copy and “Pay workers” card removed) | Same owner rights as the source composite | Organization sign-in photographic pane |
+| `../auth/admin-hero.*` | Owner-supplied portal branding (includes a standalone B mark) | Intended for admin sign-in source | **Not used on marketing pages**; not used as the live login background |
+| `../auth/admin-hero-photo.*` | Crop of `admin-hero.jpg` (clinicians + hospital; standalone B excluded) | Same owner rights as the source composite | Admin sign-in photographic pane |
 | `../org/bridge-hive-dashboard-banner.*` | Owner-supplied dashboard chrome | Intended for organization dashboard banner | **Not used on marketing pages** |
 
 No third-party stock photographs, clinic-template screenshots, or watermarked search images are published on marketing routes. Photographic hero slots remain illustrative SVG until a rights-cleared healthcare-team image is approved for public marketing.

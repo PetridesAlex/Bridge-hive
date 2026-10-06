@@ -1,39 +1,26 @@
-'use client';
-
 import { CalendarDays } from 'lucide-react';
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
 
 export function DashboardGreeting({
   firstName,
   orgName,
   dateLabel,
   weekLabel,
+  greeting,
 }: {
   firstName: string;
   orgName: string;
   orgLogoUrl?: string | null;
-  /** e.g. Monday, 29 Sept 2026 */
   dateLabel: string;
-  /** e.g. Week 40 */
   weekLabel?: string;
+  greeting: string;
 }) {
-  const [greeting, setGreeting] = useState('Hello');
-
-  useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) setGreeting('Good morning');
-    else if (hour < 18) setGreeting('Good afternoon');
-    else setGreeting('Good evening');
-  }, []);
-
   return (
     <div
       className={[
         'relative overflow-hidden border border-bh-border/80',
         'shadow-[0_18px_48px_rgba(7,29,48,0.16)]',
-        /* Full-bleed across the main content column */
-        '-mx-4 w-[calc(100%+2rem)] rounded-none sm:-mx-6 sm:w-[calc(100%+3rem)] sm:rounded-2xl lg:-mx-8 lg:w-[calc(100%+4rem)]',
+        '-mx-4 -mt-6 w-[calc(100%+2rem)] rounded-none sm:-mx-6 sm:w-[calc(100%+3rem)] sm:rounded-2xl lg:-mx-8 lg:-mt-8 lg:w-[calc(100%+4rem)]',
       ].join(' ')}
     >
       <div className="relative min-h-[260px] w-full sm:min-h-[300px] lg:min-h-[340px] xl:min-h-[380px]">
@@ -46,7 +33,6 @@ export function DashboardGreeting({
           className="object-cover object-[center_42%]"
         />
 
-        {/* Light scrims — keep the art dominant */}
         <div
           className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#061726]/72 via-[#061726]/18 to-[#061726]/10"
           aria-hidden

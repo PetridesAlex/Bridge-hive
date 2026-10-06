@@ -151,7 +151,8 @@ export function CoverageTrendChart({
         </div>
       </div>
 
-      <table className="sr-only">
+      <div className="sr-only">
+      <table>
         <caption>Shift coverage by week</caption>
         <thead>
           <tr>
@@ -172,6 +173,7 @@ export function CoverageTrendChart({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -250,7 +252,8 @@ export function RoleCoverageBars({
         })}
       </div>
 
-      <table className="sr-only">
+      <div className="sr-only">
+      <table>
         <caption>Coverage by role for {periodLabel}</caption>
         <thead>
           <tr>
@@ -269,6 +272,7 @@ export function RoleCoverageBars({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

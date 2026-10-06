@@ -27,7 +27,11 @@ export function OrganizationShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-bh-canvas">
+    <div className="relative flex min-h-dvh bg-[#e8eef2]">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_0%_0%,rgba(7,29,48,0.07),transparent_55%),radial-gradient(ellipse_60%_40%_at_100%_0%,rgba(14,116,144,0.08),transparent_50%),linear-gradient(180deg,#e8eef2_0%,#f4f7f9_42%,#eef3f6_100%)]"
+      />
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-bh-surface focus:px-3 focus:py-2 focus:shadow"
@@ -35,18 +39,20 @@ export function OrganizationShell({
         Skip to content
       </a>
 
-      <div className="sticky top-0 hidden h-screen shrink-0 min-[1180px]:block">
-        <OrganizationSidebar
-          slug={slug}
-          current={current}
-          memberships={memberships}
-          capabilities={capabilities}
-          userLabel={userLabel}
-          userEmail={userEmail}
-        />
+      <div className="relative z-10 hidden w-[280px] shrink-0 self-stretch bg-bh-sidebar min-[1180px]:block">
+        <div className="sticky top-0 flex h-dvh flex-col">
+          <OrganizationSidebar
+            slug={slug}
+            current={current}
+            memberships={memberships}
+            capabilities={capabilities}
+            userLabel={userLabel}
+            userEmail={userEmail}
+          />
+        </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
         <OrganizationTopbar
           slug={slug}
           orgName={orgName}
@@ -60,7 +66,7 @@ export function OrganizationShell({
         />
         <main
           id="main-content"
-          className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
+          className="mx-auto w-full max-w-[1440px] flex-1 px-4 pb-6 pt-6 sm:px-6 lg:px-8 lg:pt-8"
         >
           {children}
         </main>

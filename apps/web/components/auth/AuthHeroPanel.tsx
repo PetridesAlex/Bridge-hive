@@ -74,7 +74,7 @@ export function AuthHeroPanel({ variant }: { variant: AuthPortalVariant }) {
           className="auth-hero-photo"
         />
         <div className="auth-hero-photo-mask" />
-        <HexMotifs />
+        {isAdmin ? <HexMotifs /> : null}
       </div>
 
       <div className="auth-hero-content">

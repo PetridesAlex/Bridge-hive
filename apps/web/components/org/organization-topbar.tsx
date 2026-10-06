@@ -75,7 +75,7 @@ export function OrganizationTopbar({
       </div>
 
       {canCreateShift ? (
-        <Button asChild variant="honey" className="relative z-10 rounded-xl font-semibold shadow-[0_6px_16px_rgba(245,197,24,0.28)]">
+        <Button asChild variant="default" className="relative z-10 rounded-xl font-semibold shadow-[0_8px_18px_rgba(7,29,48,0.22)]">
           <Link href={`/org/${slug}/shifts/new`}>
             <Plus className="h-4 w-4" aria-hidden />
             Create shift

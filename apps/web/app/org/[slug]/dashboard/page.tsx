@@ -26,7 +26,6 @@ import Link from 'next/link';
 import { CoverageTrendChart, LocationWorkloadList, RoleCoverageBars } from '@/components/org/charts';
 import { DashboardGreeting } from '@/components/org/dashboard-greeting';
 import { DashboardQuickActions } from '@/components/org/dashboard-quick-actions';
-import { OrgDashboardBanner } from '@/components/org/org-dashboard-banner';
 import {
   AttentionQueueList,
   DashboardPanel,
@@ -409,20 +408,22 @@ export default async function OrgDashboardPage({
 
   const dateLabel = formatInTimeZone(now, timeZone, 'EEEE, d MMM yyyy');
   const weekLabel = `Week ${formatInTimeZone(now, timeZone, 'I')}`;
+  const hour = Number(formatInTimeZone(now, timeZone, 'H'));
+  const greeting =
+    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   // Forward-looking weekly buckets from real schedule data (not fabricated).
   const openSeries = trend.map((b) => b.published);
   const filledSeries = trend.map((b) => b.filled);
 
   return (
     <div className="space-y-6 bh-fade-up">
-      <OrgDashboardBanner />
-
       <DashboardGreeting
         firstName={firstName}
         orgName={ctx.org.display_name}
         orgLogoUrl={orgLogoUrl}
         dateLabel={dateLabel}
         weekLabel={weekLabel}
+        greeting={greeting}
       />
 
       {statusMessage ? (

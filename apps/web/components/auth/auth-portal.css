@@ -71,7 +71,7 @@
 
 .auth-hero-photo {
   object-fit: cover;
-  object-position: 70% 22%;
+  object-position: 82% 48%;
 }
 
 .auth-portal[data-variant='admin'] .auth-hero-photo {
@@ -84,16 +84,16 @@
   background:
     linear-gradient(
       100deg,
-      rgba(7, 29, 48, 0.88) 0%,
-      rgba(7, 29, 48, 0.62) 28%,
-      rgba(7, 29, 48, 0.18) 58%,
-      rgba(7, 29, 48, 0.12) 100%
+      rgba(7, 29, 48, 0.42) 0%,
+      rgba(7, 29, 48, 0.18) 26%,
+      rgba(7, 29, 48, 0.04) 52%,
+      transparent 72%
     ),
     linear-gradient(
       180deg,
-      rgba(7, 29, 48, 0.12) 0%,
-      transparent 36%,
-      rgba(7, 29, 48, 0.42) 100%
+      rgba(7, 29, 48, 0.08) 0%,
+      transparent 40%,
+      rgba(7, 29, 48, 0.22) 100%
     );
 }
 

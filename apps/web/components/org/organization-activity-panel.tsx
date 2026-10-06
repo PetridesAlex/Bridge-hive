@@ -244,7 +244,8 @@ export function OrganizationActivityPanel({
               </table>
             </div>
           ) : (
-            <table className="sr-only">
+            <div className="sr-only">
+            <table>
               <caption>
                 Organization activity by {series.granularity} for {series.periodLabel}
               </caption>
@@ -269,6 +270,7 @@ export function OrganizationActivityPanel({
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>

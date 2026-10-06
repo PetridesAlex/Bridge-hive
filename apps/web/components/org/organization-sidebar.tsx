@@ -66,7 +66,7 @@ export function OrganizationSidebar({
   return (
     <aside
       className={cn(
-        'flex h-full w-[280px] flex-col bg-bh-sidebar text-bh-sidebar-text',
+        'flex h-full min-h-0 w-[280px] flex-col bg-bh-sidebar text-bh-sidebar-text',
         className,
       )}
     >
@@ -104,7 +104,7 @@ export function OrganizationSidebar({
         <SidebarLiveClock />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3.5 pb-5" aria-label="Organization">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-5" aria-label="Organization">
         {groups.map((group) => (
           <div key={group} className="mb-5">
             <p className="mb-2.5 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-sidebar-muted">
@@ -150,7 +150,7 @@ export function OrganizationSidebar({
         ))}
       </nav>
 
-      <div className="border-t border-white/10 p-3.5">
+      <div className="mt-auto shrink-0 border-t border-white/10 p-3.5">
         <div className="mb-2.5 flex items-center gap-3 rounded-xl px-2 py-2">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bh-honey/20 text-sm font-bold text-bh-honey">
             {(userLabel || 'U')

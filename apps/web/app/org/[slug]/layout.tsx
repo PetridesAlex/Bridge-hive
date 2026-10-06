@@ -14,7 +14,7 @@ export async function generateMetadata({
   try {
     const { slug } = await params;
     const ctx = await requireOrgMembership(slug);
-    return { title: `${ctx.org.display_name} · Bridge Hive` };
+    return { title: ctx.org.display_name };
   } catch {
     return { title: 'Organization · Bridge Hive' };
   }

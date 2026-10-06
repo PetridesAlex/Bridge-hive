@@ -187,7 +187,7 @@ export default function ContactPage() {
               <header className="m-contact-card-head">
                 <div className="m-contact-card-head-copy">
                   <span className="m-contact-card-badge" aria-hidden="true">
-                    <Building2 size={18} strokeWidth={1.9} />
+                    <Building2 size={26} strokeWidth={2.05} />
                   </span>
                   <div>
                     <p className="m-contact-card-kicker">Partnerships</p>
@@ -245,7 +245,7 @@ export default function ContactPage() {
               <header className="m-contact-card-head">
                 <div className="m-contact-card-head-copy">
                   <span className="m-contact-card-badge" aria-hidden="true">
-                    <Headset size={18} strokeWidth={1.9} />
+                    <Headset size={26} strokeWidth={2.05} />
                   </span>
                   <div>
                     <p className="m-contact-card-kicker">Support</p>

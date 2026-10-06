@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { ArrowRight, Mail } from 'lucide-react';
+import { ArrowRight, Lock, Mail, Scale, ShieldOff, Workflow } from 'lucide-react';
 
 import { InquiryCta } from '@/components/marketing/blocks';
 import { OrgWorkspaceSection } from '@/components/marketing/OrgWorkspaceSection';
@@ -69,19 +69,45 @@ export default function OrganizationsPage() {
         <OrgWorkspaceSection />
       </Section>
 
-      <Section band="white">
+      <Section band="white" className="m-org-boundary-band">
         <Reveal>
-          <div className="m-panel max-w-2xl">
-            <h2 className="text-xl font-extrabold text-[var(--m-navy)]">
-              Built as workflow software
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-[color:var(--m-muted)]">
-              Bridge Hive structures publishing, eligibility, and timesheet review. It
-              does not guarantee that every shift will fill, that a specific professional
-              will be available, or that platform verification replaces your clinical
-              hiring standards or local employment policy. Organization data stays
-              isolated to your account after approval.
-            </p>
+          <div className="m-org-boundary">
+            <span className="m-org-boundary-orb m-org-boundary-orb--teal" aria-hidden="true" />
+            <span className="m-org-boundary-orb m-org-boundary-orb--honey" aria-hidden="true" />
+            <header className="m-org-boundary-head">
+              <p className="m-org-boundary-eyebrow">Built as workflow software</p>
+              <h2>Operational control, with the limits stated up front</h2>
+            </header>
+            <ul className="m-org-boundary-grid">
+              <li>
+                <span className="m-org-boundary-icon" aria-hidden="true">
+                  <Workflow size={20} strokeWidth={1.9} />
+                </span>
+                <h3>Structured operations</h3>
+                <p>Publishing, eligibility, and timesheet review run as one workflow.</p>
+              </li>
+              <li>
+                <span className="m-org-boundary-icon m-org-boundary-icon--honey" aria-hidden="true">
+                  <ShieldOff size={20} strokeWidth={1.9} />
+                </span>
+                <h3>No fill-rate promise</h3>
+                <p>A shift is not guaranteed to fill, and a specific professional may be unavailable.</p>
+              </li>
+              <li>
+                <span className="m-org-boundary-icon" aria-hidden="true">
+                  <Scale size={20} strokeWidth={1.9} />
+                </span>
+                <h3>Your clinical standards</h3>
+                <p>Platform verification does not replace hiring standards or local employment policy.</p>
+              </li>
+              <li>
+                <span className="m-org-boundary-icon m-org-boundary-icon--honey" aria-hidden="true">
+                  <Lock size={20} strokeWidth={1.9} />
+                </span>
+                <h3>Isolated accounts</h3>
+                <p>Organization data stays inside your account after approval.</p>
+              </li>
+            </ul>
           </div>
         </Reveal>
       </Section>

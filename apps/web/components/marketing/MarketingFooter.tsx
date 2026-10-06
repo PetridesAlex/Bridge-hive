@@ -2,13 +2,14 @@ import {
   ArrowRight,
   Building2,
   ExternalLink,
+  Facebook,
+  Instagram,
   Linkedin,
   Lock,
   Mail,
   ShieldCheck,
   Smartphone,
   Users,
-  Youtube,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,13 +18,23 @@ import { CookieSettingsButton } from '@/components/marketing/CookieSettingsButto
 import { MarketingBrand } from '@/components/marketing/MarketingBrand';
 import { MARKETING_NAV } from '@/components/marketing/nav-config';
 
-function XIcon({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.727-8.835L1.254 2.25H8.08l4.258 5.686L18.244 2.25Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
-    </svg>
-  );
-}
+const SOCIAL_LINKS = [
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/bridgehive.app/',
+    icon: Instagram,
+  },
+  {
+    label: 'LinkedIn',
+    href: 'https://www.linkedin.com/company/bridgehive-medical-recruitment/',
+    icon: Linkedin,
+  },
+  {
+    label: 'Facebook',
+    href: 'https://www.facebook.com/profile.php?id=61595007450717',
+    icon: Facebook,
+  },
+] as const;
 
 const TRUST_ITEMS = [
   {
@@ -190,29 +201,34 @@ export function MarketingFooter() {
 
         <div className="m-footer-note">
           <div className="m-footer-note-left">
-            <p className="m-footer-copy">
-              © {year} Bridge Hive. All rights reserved.
-              <span className="m-footer-disclaimer">
-                {' '}
-                Healthcare staffing platform — not a clinical service provider.
-              </span>
+            <p className="m-footer-copy">© {year} Bridge Hive</p>
+            <p className="m-footer-disclaimer">
+              All rights reserved. Healthcare staffing platform — not a clinical service provider.
             </p>
-            <div className="m-footer-legal">
+          </div>
+          <div className="m-footer-note-actions">
+            <nav className="m-footer-legal" aria-label="Legal">
               <CookieSettingsButton />
               <span aria-hidden="true" />
-              <Link href="/contact#support">Privacy or terms questions? Contact support</Link>
-            </div>
-          </div>
-          <div className="m-footer-social" aria-label="Social">
-            <span className="m-footer-social-btn" aria-hidden="true">
-              <Linkedin size={16} strokeWidth={2} />
-            </span>
-            <span className="m-footer-social-btn" aria-hidden="true">
-              <XIcon />
-            </span>
-            <span className="m-footer-social-btn" aria-hidden="true">
-              <Youtube size={16} strokeWidth={2} />
-            </span>
+              <Link href="/contact#support">Privacy & terms</Link>
+            </nav>
+            <nav className="m-footer-social" aria-label="Social">
+              {SOCIAL_LINKS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className="m-footer-social-btn"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={item.label}
+                  >
+                    <Icon size={16} strokeWidth={2} aria-hidden="true" />
+                  </a>
+                );
+              })}
+            </nav>
           </div>
         </div>
       </div>

@@ -22,6 +22,7 @@ describe('marketing logo intro', () => {
     expect(rootLayout).toMatch(/bh-m-intro-session/);
     expect(rootLayout).toMatch(/beforeInteractive/);
     expect(rootLayout).toMatch(/bh:m-intro/);
+    expect(rootLayout).toMatch(/<html[^>]*suppressHydrationWarning/);
     await expect(fs.access(path.join(webRoot, 'public/brand/bridge-hive-logo-v2-512.png'))).resolves.toBeUndefined();
   });
 

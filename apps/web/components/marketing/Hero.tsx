@@ -55,6 +55,7 @@ export function Hero() {
 
             <nav className="m-hero-meta" aria-label="Hero quick access">
               <Link href="/organizations" className="m-hero-access-link">
+                <span className="m-hero-access-step" aria-hidden="true">1</span>
                 <span className="m-hero-access-icon" aria-hidden="true">
                   <Building2 size={15} strokeWidth={2} />
                 </span>
@@ -62,6 +63,7 @@ export function Hero() {
                 <ArrowUpRight size={14} strokeWidth={2.1} aria-hidden="true" />
               </Link>
               <Link href="/sign-in" className="m-hero-access-link">
+                <span className="m-hero-access-step" aria-hidden="true">2</span>
                 <span className="m-hero-access-icon" aria-hidden="true">
                   <LogIn size={15} strokeWidth={2} />
                 </span>
@@ -69,6 +71,7 @@ export function Hero() {
                 <ArrowUpRight size={14} strokeWidth={2.1} aria-hidden="true" />
               </Link>
               <Link href="/auth/worker/login" className="m-hero-access-link">
+                <span className="m-hero-access-step" aria-hidden="true">3</span>
                 <span className="m-hero-access-icon" aria-hidden="true">
                   <Smartphone size={15} strokeWidth={2} />
                 </span>

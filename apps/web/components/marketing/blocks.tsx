@@ -106,32 +106,58 @@ export function TrustPanel() {
   );
 }
 
+const INQUIRY_STEPS = [
+  {
+    title: 'Partnership inquiry',
+    body: 'New hospitals start here. Accounts are provisioned after review — sign-in is not a substitute.',
+    href: '/contact#partnerships',
+    label: 'Prepare an inquiry',
+    tone: 'primary' as const,
+  },
+  {
+    title: 'Organization sign in',
+    body: 'Organizations sign in once Bridge Hive has invited them.',
+    href: '/sign-in',
+    label: 'Organization sign in',
+    tone: 'secondary' as const,
+  },
+  {
+    title: 'Worker app continuation',
+    body: 'Professionals return to the worker app after email confirmation.',
+    href: '/auth/worker/login',
+    label: 'Worker app continuation',
+    tone: 'quiet' as const,
+  },
+];
+
 export function InquiryCta() {
   return (
     <Reveal>
-      <div className="overflow-hidden rounded-[1.4rem] bg-[var(--m-navy)] px-6 py-12 text-center sm:px-12">
-        <h2 className="text-[length:var(--m-title)] font-extrabold tracking-tight text-white">
-          Ready to structure your staffing workflow?
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-[rgba(220,232,238,0.72)]">
-          Organizations sign in when invited. Professionals use the worker app
-          continuation page after email confirmation. New hospital partnerships start
-          with a partnership inquiry — not organization sign-in as a substitute.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <Link href="/contact#partnerships" className="m-btn m-btn--on-dark">
-            Partnership inquiry
-          </Link>
-          <Link href="/sign-in" className="m-btn m-btn--on-dark-secondary">
-            Organization sign in
-          </Link>
-          <Link
-            href="/auth/worker/login"
-            className="m-btn m-btn--ghost !text-[var(--m-honey)] hover:!text-white"
-          >
-            Worker app continuation
-          </Link>
-        </div>
+      <div className="m-inquiry">
+        <h2>Ready to structure your staffing workflow?</h2>
+        <ol className="m-inquiry-steps">
+          {INQUIRY_STEPS.map((step, index) => (
+            <li key={step.href} className="m-inquiry-step">
+              <span className="m-inquiry-index" aria-hidden="true">
+                {index + 1}
+              </span>
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+              <Link
+                href={step.href}
+                className={
+                  step.tone === 'primary'
+                    ? 'm-btn m-btn--on-dark'
+                    : step.tone === 'secondary'
+                      ? 'm-btn m-btn--on-dark-secondary'
+                      : 'm-btn m-btn--ghost m-inquiry-quiet'
+                }
+              >
+                {step.label}
+              </Link>
+            </li>
+          ))}
+        </ol>
       </div>
     </Reveal>
   );

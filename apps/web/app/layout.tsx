@@ -31,6 +31,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // beforeInteractive sets data-m-intro on return visits before hydration.
   return (
     <html lang="en" suppressHydrationWarning>
       <body

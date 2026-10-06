@@ -1,6 +1,7 @@
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { MarketingLogoIntro } from '@/components/marketing/MarketingLogoIntro';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
+import { MarketingStorageNotice } from '@/components/marketing/MarketingStorageNotice';
 
 export function MarketingShell({ children }: { children: React.ReactNode }) {
   return (
@@ -11,6 +12,7 @@ export function MarketingShell({ children }: { children: React.ReactNode }) {
         {children}
       </main>
       <MarketingFooter />
+      <MarketingStorageNotice />
     </div>
   );
 }

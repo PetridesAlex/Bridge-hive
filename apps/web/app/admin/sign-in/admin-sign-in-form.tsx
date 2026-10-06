@@ -16,13 +16,14 @@ export function AdminSignInForm({ next }: { next: string }) {
     signInPlatformAdminAction,
     initialState,
   );
+  const errorId = 'admin-sign-in-error';
 
   return (
     <form action={formAction} className="auth-form">
       <input type="hidden" name="next" value={next} />
 
       <div className="auth-field auth-field-delay-1">
-        <label htmlFor="admin-sign-in-email">Admin email</label>
+        <label htmlFor="admin-sign-in-email">Email</label>
         <div className="auth-field-input">
           <Mail className="auth-field-icon" size={16} strokeWidth={1.75} aria-hidden="true" />
           <input
@@ -31,7 +32,9 @@ export function AdminSignInForm({ next }: { next: string }) {
             type="email"
             autoComplete="email"
             required
-            placeholder="Enter your email address"
+            placeholder="name@email.com"
+            aria-invalid={state.error ? true : undefined}
+            aria-describedby={state.error ? errorId : undefined}
           />
         </div>
       </div>
@@ -41,7 +44,7 @@ export function AdminSignInForm({ next }: { next: string }) {
       </div>
 
       {state.error ? (
-        <p className="auth-error" role="alert">
+        <p id={errorId} className="auth-error" role="alert">
           {state.error}
         </p>
       ) : null}
@@ -49,7 +52,8 @@ export function AdminSignInForm({ next }: { next: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="auth-submit auth-field-delay-3"
+        className="auth-submit"
+        aria-busy={pending}
       >
         {pending ? (
           <span className="auth-submit-pending">
@@ -58,7 +62,7 @@ export function AdminSignInForm({ next }: { next: string }) {
           </span>
         ) : (
           <>
-            Sign in to admin
+            Sign in
             <ArrowRight size={17} strokeWidth={2} aria-hidden="true" />
           </>
         )}

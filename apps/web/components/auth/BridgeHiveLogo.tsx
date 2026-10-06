@@ -4,15 +4,20 @@ const MARK_SRC = '/brand/bridge-hive-logo-v2-192.png';
 
 export function BridgeHiveLogo({
   className = '',
-  markSize = 28,
+  markSize = 40,
+  tone = 'dark',
 }: {
   className?: string;
   markSize?: number;
+  tone?: 'dark' | 'light';
 }) {
-  const size = Math.min(40, Math.max(24, markSize));
+  const size = Math.min(52, Math.max(24, markSize));
 
   return (
-    <div className={`auth-logo ${className}`.trim()} aria-label="Bridge Hive">
+    <div
+      className={`auth-logo auth-logo--${tone} ${className}`.trim()}
+      aria-label="Bridge Hive"
+    >
       <Image
         src={MARK_SRC}
         alt=""

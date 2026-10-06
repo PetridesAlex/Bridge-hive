@@ -22,9 +22,9 @@ export default async function AdminSignInPage({
   return (
     <AuthShell
       variant="admin"
-      eyebrow="Admin Console"
-      title="Platform Admin Sign In"
-      description="Access the Bridge Hive administration dashboard. Manage organizations, monitor activity, and oversee the platform."
+      eyebrow="Admin console"
+      title="Platform admin sign in"
+      description="Sign in to the Bridge Hive administration console. This is platform oversight for authorized operators — not an organization account invitation."
       footer={
         <>
           <div className="auth-footer-support">
@@ -40,7 +40,7 @@ export default async function AdminSignInPage({
             <span className="auth-footer-note">
               Looking for your hospital workspace?
             </span>
-            <AuthFooterLink href="/sign-in">Organization Sign In</AuthFooterLink>
+            <AuthFooterLink href="/sign-in">Organization sign in</AuthFooterLink>
           </nav>
         </>
       }

@@ -1048,7 +1048,8 @@ function TimeGrid({
           Attention
         </li>
       </ul>
-      <table className="sr-only">
+      <div className="sr-only">
+      <table>
         <caption>Shift schedule list equivalent</caption>
         <thead>
           <tr>
@@ -1071,6 +1072,7 @@ function TimeGrid({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

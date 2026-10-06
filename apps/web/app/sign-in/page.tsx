@@ -14,9 +14,9 @@ export default async function SignInPage({
   return (
     <AuthShell
       variant="organization"
-      eyebrow="Organization Portal"
-      title="Organization Sign In"
-      description="Sign in with your provisioned organization account to manage locations, wards, and shifts. Access is by invitation only — there is no open self-registration."
+      eyebrow="Organization portal"
+      title="Organization sign in"
+      description="Access is provisioned by invitation; there is no open self-registration."
       footer={
         <>
           <div className="auth-footer-support">

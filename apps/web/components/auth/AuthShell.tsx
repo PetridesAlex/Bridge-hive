@@ -1,7 +1,6 @@
 import Link from 'next/link';
 
 import { AuthHeroPanel } from '@/components/auth/AuthHeroPanel';
-import { AuthSignInDynamics } from '@/components/auth/AuthSignInDynamics';
 import { BridgeHiveLogo } from '@/components/auth/BridgeHiveLogo';
 
 import '@/components/auth/auth-portal.css';
@@ -33,10 +32,8 @@ export function AuthShell({
             <div className="auth-form-card-glow" aria-hidden="true" />
 
             <div className="auth-mobile-brand">
-              <BridgeHiveLogo />
-              <p className="auth-hero-eyebrow" style={{ color: '#6b7c8a' }}>
-                Healthcare Staffing Platform
-              </p>
+              <BridgeHiveLogo markSize={40} tone="light" />
+              <p className="auth-mobile-eyebrow">Healthcare staffing platform</p>
             </div>
 
             <div className="auth-form-header">
@@ -44,8 +41,6 @@ export function AuthShell({
               <h1 className="auth-form-title">{title}</h1>
               <p className="auth-form-description">{description}</p>
             </div>
-
-            <AuthSignInDynamics variant={variant} />
 
             <div className="auth-form-body">{children}</div>
 

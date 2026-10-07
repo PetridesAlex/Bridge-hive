@@ -13,18 +13,18 @@ const marketingFont = DM_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Bridge Hive — Healthcare staffing platform',
+    default: 'BridgeHive Medical Recruitment Limited | Healthcare Staffing & Recruitment',
     template: '%s | Bridge Hive',
   },
   description:
-    'Bridge Hive connects healthcare organizations with verified registered nurses and ward assistants through structured shifts, review workflows, and clear account activation.',
+    'Connecting healthcare organizations with verified registered nurses and ward assistants through professional medical recruitment and flexible staffing solutions',
   alternates: {
     canonical: 'https://bridgehive.app',
   },
   openGraph: {
-    title: 'Bridge Hive — Healthcare staffing platform',
+    title: 'BridgeHive Medical Recruitment Limited | Healthcare Staffing & Recruitment',
     description:
-      'Connect organizations with verified registered nurses and ward assistants.',
+      'Connecting healthcare organizations with verified registered nurses and ward assistants through professional medical recruitment and flexible staffing solutions',
     url: 'https://bridgehive.app',
     siteName: 'Bridge Hive',
     type: 'website',

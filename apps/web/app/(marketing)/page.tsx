@@ -14,9 +14,12 @@ import { Reveal } from '@/components/marketing/Reveal';
 import { Section, SectionHeading } from '@/components/marketing/Section';
 
 export const metadata: Metadata = {
-  title: 'Bridge Hive — Healthcare staffing platform',
+  title: {
+    absolute:
+      'BridgeHive Medical Recruitment Limited | Healthcare Staffing & Recruitment',
+  },
   description:
-    'Healthcare staffing platform connecting organizations with verified registered nurses and ward assistants.',
+    'Connecting healthcare organizations with verified registered nurses and ward assistants through professional medical recruitment and flexible staffing solutions',
   alternates: { canonical: 'https://bridgehive.app/' },
 };
 

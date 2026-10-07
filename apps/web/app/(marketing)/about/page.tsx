@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { AboutStructureSection } from '@/components/marketing/AboutStructureSection';
 import { InquiryCta } from '@/components/marketing/blocks';
+import { MarketingFlowShell } from '@/components/marketing/MarketingFlowShell';
 import { Reveal } from '@/components/marketing/Reveal';
 import { Section } from '@/components/marketing/Section';
 
@@ -29,11 +30,12 @@ export default function AboutPage() {
         </Reveal>
       </Section>
 
-      <AboutStructureSection />
-
-      <Section band="white">
-        <InquiryCta />
-      </Section>
+      <MarketingFlowShell>
+        <AboutStructureSection />
+        <Section band="white" className="m-flow-band">
+          <InquiryCta />
+        </Section>
+      </MarketingFlowShell>
     </>
   );
 }

@@ -5,7 +5,9 @@
 | `og-default.png` | Official v2 mark on navy brand field | Owner-created brand graphic | Open Graph / social |
 | `organizations-hero.jpg` | Owner-supplied marketing hero (JPEG, 4K export) | Bridge Hive brand photography for public marketing | Home hero portrait source |
 | `organizations-hero-4k.jpg` | Same master, 3840×2160 JPEG @ q95 | Bridge Hive brand photography for public marketing | Alternate/legacy marketing portrait |
-| `home-hero.jpg` | Owner-supplied home hero composite (JPEG, 967×1024) | Bridge Hive brand photography for public marketing | Home hero portrait (`next/image` quality 95) |
+| `home-hero.jpg` | Owner-supplied home hero composite (JPEG, 1024×576) | Bridge Hive brand photography for public marketing | Earlier home hero frame; not the current hero scene |
+| `home-hero-ward.jpg` | Owner-supplied ward scene (JPEG, 1024×577) | Bridge Hive brand photography for public marketing | Ward photography; not the current hero scene |
+| `home-hero-scene.jpg` | Owner-supplied pharmacy scene with hospital exterior (JPEG, 1024×576) | Bridge Hive brand photography for public marketing | Current home hero scene. Illustrative. Includes the Bridge Hive mark in the photograph |
 | `contact-hero-bg.jpg` | Owner-supplied abstract hive background | Bridge Hive brand graphic for public marketing | `/contact` page hero + cards background |
 | `footer-bg.jpg` | Owner-supplied abstract hive background | Bridge Hive brand graphic for public marketing | Site-wide marketing footer background |
 | `audience-hex.jpg` | Owner-supplied hospital exterior (JPEG @ q95) | Bridge Hive brand photography for public marketing | Home dual-audience hex — Organizations tab |

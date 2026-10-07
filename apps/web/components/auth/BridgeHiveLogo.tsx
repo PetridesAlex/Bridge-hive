@@ -11,7 +11,7 @@ export function BridgeHiveLogo({
   markSize?: number;
   tone?: 'dark' | 'light';
 }) {
-  const size = Math.min(52, Math.max(24, markSize));
+  const size = Math.min(72, Math.max(24, markSize));
 
   return (
     <div

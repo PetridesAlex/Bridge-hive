@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import Image from 'next/image';
 
 const KPIS = [
   { label: 'Total shifts', value: 128 },
@@ -103,7 +104,14 @@ export function OrgDashboardMock() {
       <div className="m-org-mock-stage">
         <div className="m-org-mock-panel">
           <aside className="m-org-mock-side">
-            <span className="m-org-mock-side-mark" />
+            <span className="m-org-mock-side-mark">
+              <Image
+                src="/brand/bridge-hive-logo-v2-64.png"
+                alt=""
+                width={25}
+                height={25}
+              />
+            </span>
             <span />
             <span />
             <span className="is-active" />

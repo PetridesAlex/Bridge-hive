@@ -179,10 +179,11 @@ export function AudienceJourney() {
             </p>
 
             <div
-              className="m-audience-tabs"
+              className={`m-audience-tabs m-audience-tabs--${audience}`}
               role="tablist"
               aria-label="Audience journey"
             >
+              <span className="m-audience-tabs-indicator" aria-hidden="true" />
               <button
                 type="button"
                 role="tab"
@@ -192,7 +193,9 @@ export function AudienceJourney() {
                 tabIndex={audience === 'organization' ? 0 : -1}
                 onClick={() => setAudience('organization')}
               >
-                <Building2 size={18} strokeWidth={2.1} aria-hidden="true" />
+                <span className="m-audience-tab-icon" aria-hidden="true">
+                  <Building2 size={15} strokeWidth={2.35} />
+                </span>
                 Organizations
               </button>
               <button
@@ -204,7 +207,9 @@ export function AudienceJourney() {
                 tabIndex={audience === 'professional' ? 0 : -1}
                 onClick={() => setAudience('professional')}
               >
-                <UserRound size={18} strokeWidth={2.1} aria-hidden="true" />
+                <span className="m-audience-tab-icon" aria-hidden="true">
+                  <UserRound size={15} strokeWidth={2.35} />
+                </span>
                 Professionals
               </button>
             </div>

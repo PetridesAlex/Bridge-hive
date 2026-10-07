@@ -79,7 +79,7 @@ export function AuthHeroPanel({ variant }: { variant: AuthPortalVariant }) {
 
       <div className="auth-hero-content">
         <div className="auth-hero-top">
-          <BridgeHiveLogo markSize={48} tone="dark" />
+          <BridgeHiveLogo markSize={64} tone="dark" />
           <p className="auth-hero-eyebrow">
             {isAdmin ? 'Platform administration' : 'Healthcare staffing platform'}
           </p>
@@ -102,12 +102,8 @@ export function AuthHeroPanel({ variant }: { variant: AuthPortalVariant }) {
             </>
           ) : (
             <>
-              <h2 className="auth-hero-title">
-                Connecting
-                <br />
-                <span className="auth-hero-accent">care teams</span>
-                <br />
-                for a stronger tomorrow
+              <h2 className="auth-hero-title auth-hero-title--tile">
+                Connecting <span className="auth-hero-accent">care teams</span> for a stronger tomorrow
               </h2>
               <p className="auth-hero-body">
                 Bridge Hive brings hospitals, nurses, and ward assistants
@@ -121,7 +117,7 @@ export function AuthHeroPanel({ variant }: { variant: AuthPortalVariant }) {
             {features.map(({ label, Icon }) => (
               <li key={label} className="auth-hero-feature">
                 <span className="auth-hero-feature-icon" aria-hidden="true">
-                  <Icon size={18} strokeWidth={1.75} />
+                  <Icon size={22} strokeWidth={2.1} />
                 </span>
                 <span>{label}</span>
               </li>

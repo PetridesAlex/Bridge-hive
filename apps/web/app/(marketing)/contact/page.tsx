@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import {
   Building2,
-  CheckCircle2,
+  Check,
   Headset,
   Info,
   Lightbulb,
@@ -218,19 +218,26 @@ export default function ContactPage() {
                   'Locations or wards you intend to staff first',
                 ].map((item) => (
                   <li key={item}>
-                    <CheckCircle2 size={18} strokeWidth={2} aria-hidden="true" />
+                    <span className="m-contact-check" aria-hidden="true">
+                      <Check size={13} strokeWidth={2.6} />
+                    </span>
                     <span>{item}</span>
                   </li>
                 ))}
               </ul>
 
               <div className="m-contact-note">
-                <Info size={16} strokeWidth={2} aria-hidden="true" />
-                <p>
-                  Do not email identity documents, IBANs, tax IDs, or medical records.
-                  Credential and bank-detail verification for professionals happens inside
-                  the Bridge Hive worker app after account creation.
-                </p>
+                <span className="m-contact-note-icon" aria-hidden="true">
+                  <Info size={15} strokeWidth={2.35} />
+                </span>
+                <div>
+                  <p className="m-contact-note-kicker">Keep this out of email</p>
+                  <p>
+                    Do not email identity documents, IBANs, tax IDs, or medical records.
+                    Credential and bank-detail verification for professionals happens inside
+                    the Bridge Hive worker app after account creation.
+                  </p>
+                </div>
               </div>
             </article>
           </Reveal>
@@ -270,7 +277,9 @@ export default function ContactPage() {
               <h3 className="m-contact-card-list-title">Quick guidance</h3>
               <ul className="m-contact-checklist">
                 <li>
-                  <CheckCircle2 size={18} strokeWidth={2} aria-hidden="true" />
+                  <span className="m-contact-check" aria-hidden="true">
+                    <Check size={13} strokeWidth={2.6} />
+                  </span>
                   <span>
                     Professionals: use the{' '}
                     <Link href="/auth/worker/login">worker app continuation</Link> page
@@ -278,14 +287,18 @@ export default function ContactPage() {
                   </span>
                 </li>
                 <li>
-                  <CheckCircle2 size={18} strokeWidth={2} aria-hidden="true" />
+                  <span className="m-contact-check" aria-hidden="true">
+                    <Check size={13} strokeWidth={2.6} />
+                  </span>
                   <span>
-                    Organization members with provisioned accounts:{' '}
+                    Organization members with a provisioned account:{' '}
                     <Link href="/sign-in">organization sign in</Link>.
                   </span>
                 </li>
                 <li>
-                  <CheckCircle2 size={18} strokeWidth={2} aria-hidden="true" />
+                  <span className="m-contact-check" aria-hidden="true">
+                    <Check size={13} strokeWidth={2.6} />
+                  </span>
                   <span>
                     Keep support messages free of passwords, OTPs, and full bank details.
                   </span>
@@ -293,11 +306,16 @@ export default function ContactPage() {
               </ul>
 
               <div className="m-contact-note">
-                <Lightbulb size={16} strokeWidth={2} aria-hidden="true" />
-                <p>
-                  Existing organization members still sign in with their provisioned
-                  account — contact is not a substitute for organization sign-in.
-                </p>
+                <span className="m-contact-note-icon" aria-hidden="true">
+                  <Lightbulb size={15} strokeWidth={2.35} />
+                </span>
+                <div>
+                  <p className="m-contact-note-kicker">Sign-in stays separate</p>
+                  <p>
+                    Existing organization members still sign in with their provisioned
+                    account — contact is not a substitute for organization sign-in.
+                  </p>
+                </div>
               </div>
             </article>
           </Reveal>

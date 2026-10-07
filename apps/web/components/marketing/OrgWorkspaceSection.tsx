@@ -79,7 +79,7 @@ export function OrgWorkspaceSection() {
               <li className={`m-org-card m-org-card--${feature.tone}`}>
                 <div className="m-org-card-top">
                   <span className="m-org-card-icon" aria-hidden="true">
-                    <Icon size={18} strokeWidth={1.85} />
+                    <Icon size={20} strokeWidth={2.35} />
                   </span>
                   <ChevronRight
                     className="m-org-card-chevron"

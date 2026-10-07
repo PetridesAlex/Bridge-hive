@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Mail } from 'lucide-react';
+import { Check, Copy, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 type ContactEmailProps = {

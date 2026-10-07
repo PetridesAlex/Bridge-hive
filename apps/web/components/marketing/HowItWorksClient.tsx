@@ -14,6 +14,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 
 import { InquiryCta } from '@/components/marketing/blocks';
+import { MarketingFlowShell } from '@/components/marketing/MarketingFlowShell';
 import { Reveal } from '@/components/marketing/Reveal';
 import { MarketingButton, Section } from '@/components/marketing/Section';
 
@@ -376,9 +377,11 @@ export function HowItWorksClient() {
         </div>
       </Section>
 
-      <Section band="white">
-        <InquiryCta />
-      </Section>
+      <MarketingFlowShell>
+        <Section band="white" className="m-flow-band">
+          <InquiryCta />
+        </Section>
+      </MarketingFlowShell>
     </>
   );
 }

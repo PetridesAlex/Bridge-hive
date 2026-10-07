@@ -2,7 +2,7 @@
 
 | Asset | Source | Rights / usage | Marketing use |
 |-------|--------|----------------|---------------|
-| `og-default.png` | Official v2 mark on navy brand field | Owner-created brand graphic | Open Graph / social |
+| `og-default.png` | Owner-supplied pharmacy scene, cropped to 1200×630 | Bridge Hive brand photography for public marketing | Open Graph / social preview for bridgehive.app |
 | `organizations-hero.jpg` | Owner-supplied marketing hero (JPEG, 4K export) | Bridge Hive brand photography for public marketing | Home hero portrait source |
 | `organizations-hero-4k.jpg` | Same master, 3840×2160 JPEG @ q95 | Bridge Hive brand photography for public marketing | Alternate/legacy marketing portrait |
 | `home-hero.jpg` | Owner-supplied home hero composite (JPEG, 1024×576) | Bridge Hive brand photography for public marketing | Earlier home hero frame; not the current hero scene |

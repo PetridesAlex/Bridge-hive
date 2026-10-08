@@ -35,37 +35,37 @@ export function ResendActivationButton({
       : null;
 
   return (
-    <div className="space-y-1">
-      <form action={action} className="inline">
+    <div className="space-y-2 sm:max-w-xs sm:text-right">
+      <form action={action}>
         <input type="hidden" name="invitationId" value={invitationId} />
         <input type="hidden" name="organizationId" value={organizationId} />
-        <Button type="submit" size="sm" variant="secondary" disabled={pending}>
+        <Button type="submit" className="h-10 w-full rounded-full px-4 sm:w-auto" disabled={pending}>
           {pending ? 'Sending…' : 'Resend activation email'}
         </Button>
       </form>
       {state.error ? (
-        <p className="text-xs text-red-700">{state.error}</p>
+        <p className="text-xs text-bh-danger">{state.error}</p>
       ) : null}
       {state.success ? (
-        <div className="text-xs text-green-800">
-          <p>
+        <div className="rounded-xl border border-bh-border bg-bh-subtle/70 px-3 py-2 text-left text-xs text-bh-text">
+          <p className="font-semibold">
             Activation email sent
             {formatSentAt(new Date().toISOString())
               ? ` at ${formatSentAt(new Date().toISOString())}`
               : ''}
             .
           </p>
-          <p className="mt-0.5 text-bh-text-secondary">
+          <p className="mt-1 text-bh-text-secondary">
             Use the newest email. Previous activation emails are no longer valid.
           </p>
           {redirectTo ? (
-            <p className="mt-0.5 break-all font-mono text-[11px] text-bh-text-secondary">
-              redirectTo: {redirectTo}
+            <p className="mt-1 break-all font-mono text-[11px] text-bh-text-secondary">
+              {redirectTo}
             </p>
           ) : null}
         </div>
       ) : sentLabel ? (
-        <p className="text-xs text-bh-text-secondary">
+        <p className="text-left text-xs leading-5 text-bh-text-secondary sm:text-right">
           Activation email sent at {sentLabel}. Use the newest email. Previous
           activation emails are no longer valid.
         </p>
@@ -91,19 +91,34 @@ export function CheckActivationRedirectButton() {
       : null;
 
   return (
-    <div className="space-y-1">
-      <form action={action}>
-        <Button type="submit" size="sm" variant="outline" disabled={pending}>
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-text-muted">
+          Delivery check
+        </p>
+        <p className="mt-0.5 text-xs text-bh-text-secondary">
+          Shows the activation address this deployment would use. No email is sent.
+        </p>
+      </div>
+      <form action={action} className="shrink-0">
+        <Button
+          type="submit"
+          variant="outline"
+          className="h-10 rounded-full px-4"
+          disabled={pending}
+        >
           {pending ? 'Checking…' : 'Check activation redirect'}
         </Button>
       </form>
       {state.error ? (
-        <p className="text-xs text-red-700">{state.error}</p>
+        <p className="text-xs text-bh-danger sm:basis-full">{state.error}</p>
       ) : null}
       {data?.redirectTo ? (
-        <div className="text-xs text-bh-text-secondary">
-          <p className="break-all font-mono text-[11px]">{data.redirectTo}</p>
-          <p className="mt-0.5">
+        <div className="text-xs text-bh-text-secondary sm:basis-full">
+          <p className="break-all rounded-lg border border-bh-border bg-white px-3 py-2 font-mono text-[11px] text-bh-text">
+            {data.redirectTo}
+          </p>
+          <p className="mt-1">
             source={data.source ?? 'unknown'}
             {data.isLoopback ? ' · loopback (do not send)' : ''}
           </p>
@@ -139,29 +154,47 @@ export function ReplaceAdminInviteForm({
   );
 
   return (
-    <form action={action} className="space-y-2 rounded-md border border-slate-200 p-3">
-      <p className="text-sm font-medium text-slate-800">
-        Replace invited administrator email
-      </p>
-      <p className="text-xs text-slate-500">
-        Revokes the current open invitation and issues a new activation email.
-      </p>
+    <form
+      action={action}
+      className="space-y-3 rounded-2xl border border-bh-border bg-bh-surface p-4 shadow-[0_4px_16px_rgba(7,29,48,0.04)]"
+    >
+      <div>
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey-strong">
+          Replace
+        </p>
+        <p className="mt-1 text-sm font-semibold text-bh-text">
+          Replace invited administrator email
+        </p>
+        <p className="mt-1 text-xs leading-5 text-bh-text-secondary">
+          Revokes the current open invitation and issues a new activation email.
+        </p>
+      </div>
       {invitationId ? (
         <input type="hidden" name="invitationId" value={invitationId} />
       ) : null}
       <input type="hidden" name="organizationId" value={organizationId} />
-      <Input name="adminFullName" placeholder="Full name (optional)" />
-      <Input name="email" type="email" required placeholder="New admin email" />
-      <Button type="submit" size="sm" disabled={pending}>
+      <Input
+        name="adminFullName"
+        placeholder="Full name (optional)"
+        className="h-11 rounded-xl border-bh-border"
+      />
+      <Input
+        name="email"
+        type="email"
+        required
+        placeholder="New admin email"
+        className="h-11 rounded-xl border-bh-border"
+      />
+      <Button type="submit" variant="honey" className="h-10 rounded-full px-4" disabled={pending}>
         {pending ? 'Replacing…' : 'Revoke and reissue'}
       </Button>
       {state.error ? (
-        <p className="text-xs text-red-700">{state.error}</p>
+        <p className="text-xs text-bh-danger">{state.error}</p>
       ) : null}
       {state.success ? (
-        <div className="text-xs text-green-800">
-          <p>Activation email sent.</p>
-          <p className="mt-0.5 text-bh-text-secondary">
+        <div className="rounded-xl border border-bh-border bg-bh-subtle/70 px-3 py-2 text-xs text-bh-text">
+          <p className="font-semibold">Activation email sent.</p>
+          <p className="mt-1 text-bh-text-secondary">
             Use the newest email. Previous activation emails are no longer valid.
           </p>
         </div>

@@ -14,6 +14,14 @@ import {
 
 const PAGE_SIZE = 20;
 
+function organizationMark(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+  return name.trim().slice(0, 2).toUpperCase() || '·';
+}
+
 export default async function OrganizationsPage({
   searchParams,
 }: {
@@ -254,63 +262,101 @@ export default async function OrganizationsPage({
         />
       ) : (
         <div className="space-y-3">
-          {rows.map((row) => (
-            <article
-              key={row.id}
-              className="rounded-lg border border-slate-200 bg-white p-4"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="mb-1 flex items-center gap-2">
-                    <Badge
-                      variant={
-                        row.status === 'active'
-                          ? 'success'
-                          : row.status === 'suspended'
-                            ? 'danger'
-                            : row.status === 'rejected'
-                              ? 'danger'
-                              : row.status === 'under_review'
-                                ? 'warning'
-                                : 'muted'
-                      }
+          {rows.map((row) => {
+            const typeLabel = row.organization_type
+              ? (ORGANIZATION_TYPE_LABELS[
+                  row.organization_type as OrganizationType
+                ] ?? row.organization_type)
+              : null;
+            const stats = [
+              { label: 'Members', value: row.member_count },
+              { label: 'Locations', value: row.location_count },
+              { label: 'Published shifts', value: row.published_shift_count },
+            ];
+
+            return (
+              <article
+                key={row.id}
+                className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_4px_16px_rgba(7,29,48,0.04)]"
+              >
+                <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bh-sidebar text-sm font-semibold tracking-wide text-white"
+                      aria-hidden
                     >
-                      {ORG_STATUS_LABELS[row.status as OrgStatus] ?? row.status}
-                    </Badge>
-                    {row.organization_type ? (
-                      <span className="text-xs text-slate-500">
-                        {ORGANIZATION_TYPE_LABELS[
-                          row.organization_type as OrganizationType
-                        ] ?? row.organization_type}
-                      </span>
-                    ) : null}
+                      {organizationMark(row.display_name)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="truncate text-base font-semibold tracking-tight text-bh-text">
+                          {row.display_name}
+                        </h3>
+                        <Badge
+                          variant={
+                            row.status === 'active'
+                              ? 'success'
+                              : row.status === 'suspended' ||
+                                  row.status === 'rejected'
+                                ? 'danger'
+                                : row.status === 'under_review'
+                                  ? 'warning'
+                                  : 'muted'
+                          }
+                        >
+                          {ORG_STATUS_LABELS[row.status as OrgStatus] ??
+                            row.status}
+                        </Badge>
+                      </div>
+                      <p className="mt-0.5 truncate text-sm text-bh-text-secondary">
+                        {[typeLabel, row.legal_name].filter(Boolean).join(' · ')}
+                      </p>
+                      <p className="mt-1 font-mono text-[11px] tracking-[0.14em] text-bh-text-muted">
+                        {row.short_reference}
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {row.display_name}
-                  </h3>
-                  <p className="text-sm text-slate-600">
-                    {row.legal_name} · {row.short_reference}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {row.member_count} members · {row.location_count} locations ·{' '}
-                    {row.published_shift_count} published shifts
-                  </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Link
+                      href={`/admin/organizations/${row.id}#profile`}
+                      aria-label={`View profile for ${row.display_name}`}
+                      className="rounded-full border border-bh-border bg-white px-3.5 py-2 text-sm font-medium text-bh-text transition hover:border-bh-border-strong hover:bg-bh-subtle"
+                    >
+                      Profile
+                    </Link>
+                    <Link
+                      href={`/admin/organizations/${row.id}`}
+                      aria-label={`View details for ${row.display_name}`}
+                      className="rounded-full bg-bh-sidebar px-3.5 py-2 text-sm font-medium text-white transition hover:bg-bh-sidebar-raised"
+                    >
+                      View details
+                    </Link>
+                  </div>
                 </div>
-                <Link
-                  href={`/admin/organizations/${row.id}`}
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white"
-                >
-                  View details
-                </Link>
-              </div>
-              <div className="mt-3 text-sm text-slate-500">
-                Created {formatDateTime(row.created_at)}
-                {row.status === 'under_review'
-                  ? ` · Last activity ${formatDateTime(row.last_activity)}`
-                  : ''}
-              </div>
-            </article>
-          ))}
+                <dl className="grid grid-cols-3 border-t border-bh-border">
+                  {stats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="px-4 py-3 sm:px-5"
+                    >
+                      <dt className="text-[11px] font-medium uppercase tracking-[0.12em] text-bh-text-muted">
+                        {stat.label}
+                      </dt>
+                      <dd className="mt-0.5 text-sm font-semibold tabular-nums text-bh-text">
+                        {stat.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+                <p className="border-t border-bh-border px-4 py-2.5 text-xs text-bh-text-muted sm:px-5">
+                  Created {formatDateTime(row.created_at)}
+                  {row.status === 'under_review'
+                    ? ` · Last activity ${formatDateTime(row.last_activity)}`
+                    : ''}
+                </p>
+              </article>
+            );
+          })}
         </div>
       )}
 

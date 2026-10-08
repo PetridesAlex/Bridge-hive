@@ -34,8 +34,8 @@ export function OrganizationInvitationForm({
         ? `${window.location.origin}/organization-invitations/accept?token=${result.raw_token}`
         : null;
     return (
-      <div className="space-y-3 rounded-lg border border-green-200 bg-green-50 p-4">
-        <p className="font-medium text-green-900">
+      <div className="space-y-3 rounded-xl border border-bh-border bg-bh-subtle/60 p-4">
+        <p className="text-sm font-semibold text-bh-text">
           {result.delivery_status === 'sent'
             ? 'Activation email sent'
             : 'Invitation created'}
@@ -45,7 +45,7 @@ export function OrganizationInvitationForm({
         ) : null}
         {invitationUrl ? (
           <div>
-            <label className="mb-1 block text-sm font-medium text-green-900">
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
               Local development link (shown once)
             </label>
             <div className="flex gap-2">
@@ -53,12 +53,12 @@ export function OrganizationInvitationForm({
                 type="text"
                 value={invitationUrl}
                 readOnly
-                className="flex-1 rounded-md border border-green-300 bg-white px-2 py-1 font-mono text-sm"
+                className="h-10 flex-1 rounded-xl border border-bh-border bg-white px-3 font-mono text-xs"
               />
               <Button
                 type="button"
-                size="sm"
                 variant="secondary"
+                className="h-10 rounded-full px-4"
                 onClick={() => navigator.clipboard.writeText(invitationUrl)}
               >
                 Copy
@@ -66,7 +66,7 @@ export function OrganizationInvitationForm({
             </div>
           </div>
         ) : null}
-        <Button size="sm" onClick={() => setResult(null)}>
+        <Button className="h-10 rounded-full px-4" onClick={() => setResult(null)}>
           Close
         </Button>
       </div>
@@ -75,7 +75,11 @@ export function OrganizationInvitationForm({
 
   if (!showForm) {
     return (
-      <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+      <Button
+        variant="outline"
+        className="h-10 rounded-full px-4"
+        onClick={() => setShowForm(true)}
+      >
         Send invitation
       </Button>
     );
@@ -84,27 +88,27 @@ export function OrganizationInvitationForm({
   return (
     <form
       action={formAction}
-      className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4"
+      className="space-y-3 rounded-xl border border-bh-border bg-bh-subtle/50 p-4"
     >
       <input type="hidden" name="organizationId" value={organizationId} />
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3">
         <label className="text-sm">
-          <span className="mb-1 block font-medium text-slate-700">
-            Email <span className="text-red-500">*</span>
+          <span className="mb-1.5 block text-sm font-medium text-bh-text">
+            Email <span className="text-bh-danger">*</span>
           </span>
           <input
             type="email"
             name="email"
             required
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            className="h-11 w-full rounded-xl border border-bh-border bg-white px-3 text-sm outline-none focus-visible:border-bh-sidebar focus-visible:ring-2 focus-visible:ring-bh-honey/40"
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block font-medium text-slate-700">Role</span>
+          <span className="mb-1.5 block text-sm font-medium text-bh-text">Role</span>
           <select
             name="role"
             defaultValue="org_admin"
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            className="h-11 w-full rounded-xl border border-bh-border bg-white px-3 text-sm outline-none focus-visible:border-bh-sidebar focus-visible:ring-2 focus-visible:ring-bh-honey/40"
           >
             <option value="org_admin">Organization Admin</option>
             <option value="org_scheduler">Scheduler</option>
@@ -113,16 +117,16 @@ export function OrganizationInvitationForm({
         </label>
       </div>
       {state.error ? (
-        <p className="text-sm text-red-700">{state.error}</p>
+        <p className="text-sm text-bh-danger">{state.error}</p>
       ) : null}
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={isPending}>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" className="h-10 rounded-full px-4" disabled={isPending}>
           {isPending ? 'Sending…' : 'Send activation email'}
         </Button>
         <Button
           type="button"
-          size="sm"
           variant="ghost"
+          className="h-10 rounded-full px-4"
           onClick={() => setShowForm(false)}
         >
           Cancel

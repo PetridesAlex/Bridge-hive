@@ -98,7 +98,7 @@ export function PackageReviewPanel({
       ) : null}
 
       {canReview ? (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-bh-border bg-bh-subtle/50 p-3">
           <Button
             type="button"
             size="sm"
@@ -140,7 +140,7 @@ export function PackageReviewPanel({
           return (
             <li
               key={cred.id}
-              className="rounded-lg border border-slate-200 bg-white p-4"
+              className="rounded-2xl border border-bh-border bg-bh-surface p-4 shadow-[0_4px_16px_rgba(7,29,48,0.04)]"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="space-y-1">
@@ -154,10 +154,10 @@ export function PackageReviewPanel({
                       Select for package approve
                     </label>
                   ) : null}
-                  <p className="font-medium text-slate-900">
+                  <p className="font-semibold text-bh-text">
                     {credentialTypeLabel(cred.credential_type)}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-bh-text-muted">
                     {cred.isRequired ? 'Required' : 'Optional'}
                     {cred.created_at
                       ? ` · Submitted ${formatDateTime(cred.created_at)}`
@@ -221,11 +221,11 @@ export function PackageReviewPanel({
                 </div>
               </div>
               {rejectId === cred.id ? (
-                <form action={reviewAction} className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                <form action={reviewAction} className="mt-3 space-y-2 border-t border-bh-border pt-3">
                   <input type="hidden" name="credentialId" value={cred.id} />
                   <input type="hidden" name="decision" value="reject" />
                   <label className="block text-sm">
-                    <span className="mb-1 block text-slate-600">
+                    <span className="mb-1 block text-bh-text-secondary">
                       Rejection reason (required)
                     </span>
                     <textarea
@@ -234,7 +234,7 @@ export function PackageReviewPanel({
                       minLength={1}
                       maxLength={2000}
                       rows={3}
-                      className="w-full rounded-md border border-slate-300 px-3 py-2"
+                      className="w-full rounded-xl border border-bh-border px-3 py-2"
                     />
                   </label>
                   <Button type="submit" size="sm" variant="destructive" disabled={reviewPending}>
@@ -250,7 +250,7 @@ export function PackageReviewPanel({
       {canReview ? (
         <form
           action={approveAction}
-          className="space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-4"
+          className="space-y-3 rounded-2xl border border-bh-honey/50 bg-bh-honey-soft/70 p-4 shadow-[0_4px_16px_rgba(224,170,24,0.12)]"
         >
           <input type="hidden" name="workerId" value={workerId} />
           <input type="hidden" name="credentialIds" value={selected.join(',')} />
@@ -266,14 +266,17 @@ export function PackageReviewPanel({
               value={expectedLastActivity}
             />
           ) : null}
-          <p className="text-sm font-medium text-slate-900">
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey-strong">
+            Package decision
+          </p>
+          <p className="text-sm font-semibold text-bh-text">
             Approve selected reviewed documents
           </p>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs leading-5 text-bh-text-secondary">
             Only eligible pending or under-review documents with uploaded files
             for this worker. Does not approve the worker for marketplace access.
           </p>
-          <label className="flex items-start gap-2 text-sm text-slate-800">
+          <label className="flex items-start gap-2 text-sm text-bh-text">
             <input
               type="checkbox"
               checked={confirmReviewed}
@@ -287,6 +290,7 @@ export function PackageReviewPanel({
           </label>
           <Button
             type="submit"
+            className="h-10 rounded-full px-4"
             disabled={
               approvePending || selected.length === 0 || !confirmReviewed
             }

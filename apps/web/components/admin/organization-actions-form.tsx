@@ -34,12 +34,14 @@ export function OrganizationActionsForm({
   invitationId,
   buttonText,
   requiresReason,
+  buttonClassName,
 }: {
   action: ActionType;
   organizationId?: string;
   invitationId?: string;
   buttonText: string;
   requiresReason?: boolean;
+  buttonClassName?: string;
 }) {
   const [showForm, setShowForm] = useState(false);
   const [state, formAction, isPending] = useActionState(getAction(action), {});
@@ -85,7 +87,13 @@ export function OrganizationActionsForm({
           </div>
         </div>
       ) : (
-        <Button type="submit" variant="outline" size="sm" disabled={isPending}>
+        <Button
+          type="submit"
+          variant="outline"
+          size="sm"
+          className={buttonClassName}
+          disabled={isPending}
+        >
           {isPending ? 'Processing...' : buttonText}
         </Button>
       )}

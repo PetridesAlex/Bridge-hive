@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import {
@@ -9,17 +10,15 @@ import { OrganizationActionsForm } from '@/components/admin/organization-actions
 import { OrganizationInvitationForm } from '@/components/admin/organization-invitation-form';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { formatDateTime, roleLabel } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
+import { cn } from '@/lib/utils';
 import {
-  ORG_STATUS_LABELS,
   ORGANIZATION_TYPE_LABELS,
   administratorAccessLabel,
   organizationLifecycleLabel,
   organizationProfileLabel,
-  type OrgStatus,
   type OrganizationType,
 } from '@bridge-hive/domain';
 
@@ -122,303 +121,287 @@ export default async function OrganizationDetailPage({
     submittedAt: org.submitted_at,
     hasContact: Boolean(org.primary_contact_name || org.primary_contact_email),
   });
+  const typeLabel = org.organization_type
+    ? (ORGANIZATION_TYPE_LABELS[org.organization_type as OrganizationType] ??
+      org.organization_type)
+    : 'Organization';
+  const shiftTotal = detail.counts.shifts_total ?? detail.counts.shifts ?? 0;
+  const hasStatusAction =
+    org.status === 'under_review' ||
+    org.status === 'active' ||
+    org.status === 'suspended';
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link
-          href="/admin/organizations"
-          className="text-sm text-slate-600 hover:text-slate-900"
-        >
-          ← Back to organizations
-        </Link>
-      </div>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <Link
+        href="/admin/organizations"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-bh-text-secondary transition hover:text-bh-text"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden />
+        Back to organizations
+      </Link>
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <Badge
-              variant={
-                org.status === 'active'
-                  ? 'success'
-                  : org.status === 'suspended' || org.status === 'rejected'
-                    ? 'danger'
-                    : 'muted'
-              }
-            >
-              {organizationLifecycleLabel(org.status)}
-            </Badge>
-            {org.organization_type ? (
-              <span className="text-sm text-slate-500">
-                {ORGANIZATION_TYPE_LABELS[org.organization_type as OrganizationType] ??
-                  org.organization_type}
+      <header className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
+        <div
+          aria-hidden
+          className="h-1 bg-gradient-to-r from-bh-sidebar via-bh-honey to-bh-sidebar"
+        />
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:p-6">
+          <span
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-bh-sidebar text-base font-semibold tracking-wide text-white shadow-[0_10px_24px_rgba(7,29,48,0.28)]"
+            aria-hidden
+          >
+            {organizationMark(org.display_name)}
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant={
+                  org.status === 'active'
+                    ? 'success'
+                    : org.status === 'suspended' || org.status === 'rejected'
+                      ? 'danger'
+                      : org.status === 'under_review'
+                        ? 'warning'
+                        : 'muted'
+                }
+              >
+                {organizationLifecycleLabel(org.status)}
+              </Badge>
+              <span className="text-xs font-medium uppercase tracking-[0.12em] text-bh-text-muted">
+                {typeLabel}
               </span>
-            ) : null}
+            </div>
+            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-bh-text">
+              {org.display_name}
+            </h2>
+            <p className="mt-1 text-sm text-bh-text-secondary">
+              {org.legal_name} · @{org.slug}
+            </p>
+            <p className="mt-1 font-mono text-[11px] tracking-[0.14em] text-bh-text-muted">
+              REF {org.short_reference}
+            </p>
           </div>
-          <h2 className="text-2xl font-semibold text-slate-900">
-            {org.display_name}
-          </h2>
-          <p className="text-sm text-slate-600">
-            {org.legal_name} · @{org.slug}
-          </p>
-          <p className="mt-1 text-xs text-slate-500">Ref {org.short_reference}</p>
         </div>
+      </header>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <SummaryTile
+          label="Organization"
+          value={organizationLifecycleLabel(org.status)}
+          detail={`Updated ${formatDateTime(org.updated_at)}`}
+        />
+        <SummaryTile
+          label="Administrator access"
+          value={administratorAccessLabel(accessStatus)}
+          detail={
+            latestInvite?.expires_at
+              ? `Expires ${formatDateTime(latestInvite.expires_at)}`
+              : 'No invitation yet'
+          }
+        />
+        <SummaryTile
+          label="Organization profile"
+          value={profileLabel}
+          detail={
+            org.primary_contact_email
+              ? org.primary_contact_email
+              : 'No primary contact email'
+          }
+        />
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Organization</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm font-medium">
-            {organizationLifecycleLabel(org.status)}
-            <p className="mt-1 text-xs font-normal text-slate-500">
-              {ORG_STATUS_LABELS[org.status as OrgStatus] ?? org.status}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Administrator access</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm font-medium">
-            {administratorAccessLabel(accessStatus)}
-            {latestInvite?.expires_at ? (
-              <p className="mt-1 text-xs font-normal text-slate-500">
-                Expires {formatDateTime(latestInvite.expires_at)}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs font-normal text-slate-500">No invitation yet</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Organization profile</CardTitle>
-          </CardHeader>
-          <CardContent className="text-sm font-medium">{profileLabel}</CardContent>
-        </Card>
-      </div>
+      <section id="profile" className="scroll-mt-6 space-y-6">
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Panel kicker="Profile" title="Organization profile">
+            <dl className="grid gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border">
+              <Detail label="Display name" value={org.display_name} />
+              <Detail label="Legal name" value={org.legal_name} />
+              <Detail label="Slug" value={org.slug} mono />
+              <Detail label="Type" value={typeLabel} />
+              <Detail label="Timezone" value={org.timezone} />
+              <Detail label="Country" value={org.country_code} />
+            </dl>
+          </Panel>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Organization profile</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
-            <div>
-              <p className="text-slate-500">Display name</p>
-              <p className="font-medium">{org.display_name}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Legal name</p>
-              <p className="font-medium">{org.legal_name}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Slug</p>
-              <p className="font-medium font-mono">{org.slug}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Type</p>
-              <p className="font-medium">
-                {org.organization_type
-                  ? ORGANIZATION_TYPE_LABELS[org.organization_type as OrganizationType]
-                  : '—'}
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-500">Timezone</p>
-              <p className="font-medium">{org.timezone}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Country</p>
-              <p className="font-medium">{org.country_code}</p>
-            </div>
-          </CardContent>
-        </Card>
+          <Panel kicker="Profile" title="Contact and billing">
+            <dl className="grid gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border">
+              <Detail label="Primary contact" value={org.primary_contact_name} />
+              <Detail label="Contact email" value={org.primary_contact_email} />
+              <Detail label="Billing email" value={org.billing_email} />
+              <Detail label="Tax/VAT number" value={org.tax_vat_number} />
+              <Detail label="Registration number" value={org.registration_number} />
+            </dl>
+          </Panel>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Contact & billing</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 text-sm">
-            <div>
-              <p className="text-slate-500">Primary contact</p>
-              <p className="font-medium">{org.primary_contact_name ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Contact email</p>
-              <p className="font-medium">{org.primary_contact_email ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Billing email</p>
-              <p className="font-medium">{org.billing_email ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Tax/VAT number</p>
-              <p className="font-medium">{org.tax_vat_number ?? '—'}</p>
-            </div>
-            <div>
-              <p className="text-slate-500">Registration number</p>
-              <p className="font-medium">{org.registration_number ?? '—'}</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <Panel kicker="Profile" title="Address">
+          <dl className="grid gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border sm:grid-cols-2">
+            <Detail label="Address line 1" value={org.address_line1} />
+            <Detail label="Address line 2" value={org.address_line2} />
+            <Detail label="City" value={org.city} />
+            <Detail label="Postal code" value={org.postal_code} />
+          </dl>
+        </Panel>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Address</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm sm:grid-cols-2">
-          <div>
-            <p className="text-slate-500">Address line 1</p>
-            <p className="font-medium">{org.address_line1 ?? '—'}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Address line 2</p>
-            <p className="font-medium">{org.address_line2 ?? '—'}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">City</p>
-            <p className="font-medium">{org.city ?? '—'}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Postal code</p>
-            <p className="font-medium">{org.postal_code ?? '—'}</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Status history</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm">
-          <div>
-            <p className="text-slate-500">Created</p>
-            <p className="font-medium">{formatDateTime(org.created_at)}</p>
-          </div>
-          {org.submitted_at ? (
-            <div>
-              <p className="text-slate-500">Submitted for review</p>
-              <p className="font-medium">{formatDateTime(org.submitted_at)}</p>
-            </div>
-          ) : null}
-          {org.reviewed_at ? (
-            <div>
-              <p className="text-slate-500">Reviewed</p>
-              <p className="font-medium">{formatDateTime(org.reviewed_at)}</p>
-            </div>
-          ) : null}
-          {org.status_reason ? (
-            <div>
-              <p className="text-slate-500">Status reason</p>
-              <p className="font-medium">{org.status_reason}</p>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Activity summary</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 text-sm sm:grid-cols-3">
-          <div>
-            <p className="text-slate-500">Locations</p>
-            <p className="text-2xl font-semibold">{detail.counts.locations}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Wards</p>
-            <p className="text-2xl font-semibold">{detail.counts.wards}</p>
-          </div>
-          <div>
-            <p className="text-slate-500">Shifts</p>
-            <p className="text-2xl font-semibold">
-              {detail.counts.shifts_total ?? detail.counts.shifts ?? 0}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Members ({detail.members.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {detail.members.length === 0 ? (
-            <p className="text-sm text-slate-500">No members yet.</p>
-          ) : (
-            <div className="space-y-2">
-              {detail.members.map((member) => (
-                <div
-                  key={member.user_id}
-                  className="flex items-center justify-between rounded-md border border-slate-200 p-3"
-                >
-                  <div>
-                    <p className="font-medium text-slate-900">
-                      {member.full_name ?? 'Unnamed'}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {roleLabel(member.role)} · {member.status}
-                    </p>
-                  </div>
-                  {member.accepted_at ? (
-                    <p className="text-xs text-slate-500">
-                      Joined {formatDateTime(member.accepted_at)}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Invitations ({detail.invitations.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <CheckActivationRedirectButton />
-          <OrganizationInvitationForm organizationId={org.id} />
-          <ReplaceAdminInviteForm
-            organizationId={org.id}
-            invitationId={
-              latestInvite && latestInvite.status === 'open'
-                ? latestInvite.id
-                : undefined
-            }
+      <Panel kicker="Record" title="Status history">
+        <dl className="grid gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border sm:grid-cols-2">
+          <Detail label="Created" value={formatDateTime(org.created_at)} />
+          <Detail label="Updated" value={formatDateTime(org.updated_at)} />
+          <Detail
+            label="Submitted for review"
+            value={org.submitted_at ? formatDateTime(org.submitted_at) : null}
           />
+          <Detail
+            label="Reviewed"
+            value={org.reviewed_at ? formatDateTime(org.reviewed_at) : null}
+          />
+          <Detail label="Reviewed by" value={org.reviewed_by} mono />
+          <Detail label="Status reason" value={org.status_reason} />
+        </dl>
+      </Panel>
+
+      <Panel kicker="Operations" title="Activity summary">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border sm:grid-cols-4">
+          <Metric label="Locations" value={detail.counts.locations} />
+          <Metric label="Wards" value={detail.counts.wards} />
+          <Metric
+            label="Published shifts"
+            value={detail.counts.shifts_published ?? 0}
+          />
+          <Metric label="Shifts" value={shiftTotal} />
+        </dl>
+      </Panel>
+
+      <Panel kicker="People" title={`Members (${detail.members.length})`}>
+        {detail.members.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-bh-border px-4 py-6 text-sm text-bh-text-secondary">
+            No members yet.
+          </p>
+        ) : (
+          <ul className="overflow-hidden rounded-xl border border-bh-border">
+            {detail.members.map((member) => (
+              <li
+                key={member.user_id}
+                className="flex flex-wrap items-center justify-between gap-3 border-b border-bh-border px-4 py-3 last:border-b-0"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium text-bh-text">
+                    {member.full_name ?? 'Unnamed'}
+                  </p>
+                  <p className="mt-0.5 text-sm capitalize text-bh-text-secondary">
+                    {roleLabel(member.role)} · {member.status.replaceAll('_', ' ')}
+                  </p>
+                </div>
+                <p className="text-xs text-bh-text-muted">
+                  {member.accepted_at
+                    ? `Joined ${formatDateTime(member.accepted_at)}`
+                    : 'Not joined yet'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel
+        kicker="Access"
+        title={`Invitations (${detail.invitations.length})`}
+        description="Send a new activation, replace an open administrator email, or resend the current link."
+      >
+        <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-2xl border border-bh-border bg-bh-surface p-4 shadow-[0_4px_16px_rgba(7,29,48,0.04)]">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey-strong">
+                New invitation
+              </p>
+              <p className="mt-1 text-sm font-semibold text-bh-text">Send invitation</p>
+              <p className="mt-1 text-xs leading-5 text-bh-text-secondary">
+                The recipient gets a secure link to create a password. This does not
+                approve the organization.
+              </p>
+              <div className="mt-4">
+                <OrganizationInvitationForm organizationId={org.id} />
+              </div>
+            </div>
+            <ReplaceAdminInviteForm
+              organizationId={org.id}
+              invitationId={
+                latestInvite && latestInvite.status === 'open'
+                  ? latestInvite.id
+                  : undefined
+              }
+            />
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-bh-border bg-bh-subtle/40 px-4 py-3">
+            <CheckActivationRedirectButton />
+          </div>
+
           {detail.invitations.length === 0 ? (
-            <p className="text-sm text-slate-500">No invitations sent.</p>
+            <p className="rounded-2xl border border-dashed border-bh-border px-4 py-6 text-sm text-bh-text-secondary">
+              No invitations sent.
+            </p>
           ) : (
-            <div className="space-y-2">
+            <ul className="overflow-hidden rounded-2xl border border-bh-border">
               {detail.invitations.map((inv) => (
-                <div
+                <li
                   key={inv.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 p-3"
+                  className="grid gap-4 border-b border-bh-border px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start"
                 >
-                  <div>
-                    <p className="font-medium text-slate-900">{inv.email_hint}</p>
-                    <p className="text-sm text-slate-500">
-                      {roleLabel(inv.role)} · {inv.status} ·{' '}
-                      {administratorAccessLabel(
-                        inv.access_status ?? inv.delivery_status ?? inv.status,
-                      )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-bh-text">
+                      {inv.email_hint}
                     </p>
-                    <p className="text-xs text-slate-500">
-                      Expires {formatDateTime(inv.expires_at)}
-                      {inv.last_sent_at
-                        ? ` · Last sent ${formatDateTime(inv.last_sent_at)}`
-                        : ''}
-                      {typeof inv.send_attempt_count === 'number'
-                        ? ` · Attempts ${inv.send_attempt_count}`
-                        : ''}
-                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-bh-subtle px-2.5 py-1 text-[11px] font-semibold text-bh-text">
+                        {roleLabel(inv.role)}
+                      </span>
+                      <span className="rounded-full bg-bh-sidebar px-2.5 py-1 text-[11px] font-semibold capitalize text-white">
+                        {inv.status.replaceAll('_', ' ')}
+                      </span>
+                      <span className="rounded-full bg-bh-honey-soft px-2.5 py-1 text-[11px] font-semibold text-bh-text">
+                        {administratorAccessLabel(
+                          inv.access_status ?? inv.delivery_status ?? inv.status,
+                        )}
+                      </span>
+                    </div>
+                    <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3">
+                      <div>
+                        <dt className="font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+                          Expires
+                        </dt>
+                        <dd className="mt-0.5 font-medium text-bh-text">
+                          {formatDateTime(inv.expires_at)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+                          Last sent
+                        </dt>
+                        <dd className="mt-0.5 font-medium text-bh-text">
+                          {inv.last_sent_at ? formatDateTime(inv.last_sent_at) : '—'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+                          Attempts
+                        </dt>
+                        <dd className="mt-0.5 font-medium tabular-nums text-bh-text">
+                          {typeof inv.send_attempt_count === 'number'
+                            ? inv.send_attempt_count
+                            : '—'}
+                        </dd>
+                      </div>
+                    </dl>
+                    {inv.last_delivery_error_category ? (
+                      <p className="mt-2 text-xs capitalize text-bh-danger">
+                        {inv.last_delivery_error_category.replaceAll('_', ' ')}
+                      </p>
+                    ) : null}
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
+                  <div className="flex flex-col items-stretch gap-2 sm:items-end">
                     {inv.status === 'open' ? (
                       <>
                         <ResendActivationButton
@@ -430,10 +413,11 @@ export default async function OrganizationDetailPage({
                           action="revoke_invitation"
                           invitationId={inv.id}
                           buttonText="Revoke"
+                          buttonClassName="h-10 rounded-full px-4"
                         />
                       </>
                     ) : (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-bh-text-muted">
                         {inv.accepted_at
                           ? `Accepted ${formatDateTime(inv.accepted_at)}`
                           : inv.revoked_at
@@ -442,18 +426,15 @@ export default async function OrganizationDetailPage({
                       </p>
                     )}
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </Panel>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Admin actions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <Panel kicker="Control" title="Admin actions">
+        {hasStatusAction ? (
           <div className="flex flex-wrap gap-2">
             {org.status === 'under_review' ? (
               <>
@@ -487,8 +468,108 @@ export default async function OrganizationDetailPage({
               />
             ) : null}
           </div>
-        </CardContent>
-      </Card>
+        ) : (
+          <p className="rounded-xl border border-dashed border-bh-border px-4 py-6 text-sm text-bh-text-secondary">
+            No status change is available while this organization is{' '}
+            {organizationLifecycleLabel(org.status).toLowerCase()}.
+          </p>
+        )}
+      </Panel>
+    </div>
+  );
+}
+
+function organizationMark(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+  return name.trim().slice(0, 2).toUpperCase() || '·';
+}
+
+function SummaryTile({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <article className="rounded-2xl border border-bh-border bg-bh-surface px-4 py-4 shadow-[0_4px_16px_rgba(7,29,48,0.04)]">
+      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-text-muted">
+        {label}
+      </p>
+      <p className="mt-2 text-lg font-semibold tracking-tight text-bh-text">{value}</p>
+      <p className="mt-1 truncate text-xs text-bh-text-secondary">{detail}</p>
+    </article>
+  );
+}
+
+function Panel({
+  kicker,
+  title,
+  description,
+  children,
+}: {
+  kicker: string;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]">
+      <div className="border-b border-bh-border px-5 py-4">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
+          {kicker}
+        </p>
+        <h3 className="mt-1 text-base font-semibold tracking-tight text-bh-text">{title}</h3>
+        {description ? (
+          <p className="mt-1 max-w-2xl text-sm leading-5 text-bh-text-secondary">
+            {description}
+          </p>
+        ) : null}
+      </div>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function Detail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value: string | null | undefined;
+  mono?: boolean;
+}) {
+  const shown = value && value.trim() ? value : '—';
+  return (
+    <div className="bg-bh-surface px-4 py-3">
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+        {label}
+      </dt>
+      <dd
+        className={cn(
+          'mt-1 break-words text-sm font-medium text-bh-text',
+          mono && shown !== '—' && 'font-mono text-[13px] tracking-wide',
+        )}
+      >
+        {shown}
+      </dd>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-bh-surface px-4 py-4">
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+        {label}
+      </dt>
+      <dd className="mt-1 text-2xl font-semibold tabular-nums text-bh-text">{value}</dd>
     </div>
   );
 }

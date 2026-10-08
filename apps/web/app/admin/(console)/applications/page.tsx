@@ -16,6 +16,25 @@ import type { WorkerRole } from '@bridge-hive/domain';
 
 const PAGE_SIZE = 20;
 
+function workerMark(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  }
+  return name.trim().slice(0, 2).toUpperCase() || '·';
+}
+
+function QueueStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-bh-surface px-4 py-3">
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm font-medium text-bh-text">{value}</dd>
+    </div>
+  );
+}
+
 export default async function VerificationApplicationsPage({
   searchParams,
 }: {
@@ -105,46 +124,50 @@ export default async function VerificationApplicationsPage({
   if (params.payout) qs.set('payout', params.payout);
   if (params.sort) qs.set('sort', params.sort);
 
+  const fieldClass =
+    'h-11 w-full rounded-xl border border-bh-border bg-white px-3 text-sm text-bh-text outline-none focus-visible:border-bh-sidebar focus-visible:ring-2 focus-visible:ring-bh-honey/40';
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-slate-900">
+        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
+          Verification
+        </p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-bh-text">
           Verification applications
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-bh-text-secondary">
           One application per worker. Review the full package from a single workspace.
         </p>
       </div>
 
-      <form className="grid gap-3 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5">
+      <form className="grid gap-4 rounded-2xl border border-bh-border bg-bh-surface p-5 shadow-[0_8px_28px_rgba(7,29,48,0.05)] sm:grid-cols-2 lg:grid-cols-5">
         <label className="text-sm lg:col-span-2">
-          <span className="mb-1 block text-slate-600">Search</span>
+          <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+            Search
+          </span>
           <input
             name="q"
             defaultValue={params.q ?? ''}
             placeholder="Name, email, phone, or reference"
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
+            className={fieldClass}
           />
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Role</span>
-          <select
-            name="role"
-            defaultValue={params.role ?? ''}
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-          >
+          <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+            Role
+          </span>
+          <select name="role" defaultValue={params.role ?? ''} className={fieldClass}>
             <option value="">All roles</option>
             <option value="registered_nurse">Registered nurse</option>
             <option value="ward_assistant">Ward assistant</option>
           </select>
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Application status</span>
-          <select
-            name="status"
-            defaultValue={params.status ?? ''}
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-          >
+          <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+            Application status
+          </span>
+          <select name="status" defaultValue={params.status ?? ''} className={fieldClass}>
             <option value="">All statuses</option>
             {VERIFICATION_APPLICATION_STATUS_CODES.map((code) => (
               <option key={code} value={code}>
@@ -154,12 +177,10 @@ export default async function VerificationApplicationsPage({
           </select>
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Payout status</span>
-          <select
-            name="payout"
-            defaultValue={params.payout ?? ''}
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-          >
+          <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+            Payout status
+          </span>
+          <select name="payout" defaultValue={params.payout ?? ''} className={fieldClass}>
             <option value="">All payouts</option>
             <option value="pending">Pending</option>
             <option value="verified">Verified</option>
@@ -169,12 +190,10 @@ export default async function VerificationApplicationsPage({
           </select>
         </label>
         <label className="text-sm">
-          <span className="mb-1 block text-slate-600">Sort</span>
-          <select
-            name="sort"
-            defaultValue={sort}
-            className="w-full rounded-md border border-slate-300 px-3 py-2"
-          >
+          <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+            Sort
+          </span>
+          <select name="sort" defaultValue={sort} className={fieldClass}>
             <option value="last_activity">Last activity</option>
             <option value="submitted_at">Newest submission</option>
             <option value="oldest_waiting">Oldest waiting</option>
@@ -183,7 +202,7 @@ export default async function VerificationApplicationsPage({
         <div className="flex items-end lg:col-span-5">
           <button
             type="submit"
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+            className="h-11 rounded-full bg-bh-sidebar px-5 text-sm font-medium text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)]"
           >
             Apply filters
           </button>
@@ -200,71 +219,69 @@ export default async function VerificationApplicationsPage({
           {cards.map((card) => (
             <article
               key={card.workerId}
-              className="rounded-lg border border-slate-200 bg-white p-4"
+              className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    {card.fullName ?? 'Worker'}
-                  </h3>
-                  <p className="text-sm text-slate-600">
-                    {card.workerRole
-                      ? roleLabel(card.workerRole as WorkerRole)
-                      : 'Role not set'}
-                    {' · '}
-                    Ref {card.applicationRef}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {[card.email, card.phone].filter(Boolean).join(' · ') ||
-                      'No contact on file'}
-                  </p>
+              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3.5">
+                  <span
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-bh-sidebar text-sm font-semibold tracking-wide text-white"
+                    aria-hidden
+                  >
+                    {workerMark(card.fullName ?? 'Worker')}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="truncate text-base font-semibold tracking-tight text-bh-text">
+                        {card.fullName ?? 'Worker'}
+                      </h3>
+                      <span className="rounded-full bg-bh-honey-soft px-2.5 py-1 text-[11px] font-semibold text-bh-text">
+                        {card.applicationStatusLabel}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-sm text-bh-text-secondary">
+                      {card.workerRole
+                        ? roleLabel(card.workerRole as WorkerRole)
+                        : 'Role not set'}
+                      {' · '}
+                      Ref {card.applicationRef}
+                    </p>
+                    <p className="mt-1 truncate text-xs text-bh-text-muted">
+                      {[card.email, card.phone].filter(Boolean).join(' · ') ||
+                        'No contact on file'}
+                    </p>
+                  </div>
                 </div>
                 <Link
                   href={`/admin/applications/${card.workerId}`}
-                  className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white"
+                  className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-bh-sidebar px-4 text-sm font-medium text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)]"
                 >
                   Review application
                 </Link>
               </div>
-              <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <dt className="text-slate-500">Documents</dt>
-                  <dd className="font-medium text-slate-900">
-                    {card.submittedFileCount} of {card.requiredTotal} required
-                    submitted
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">Review progress</dt>
-                  <dd className="font-medium text-slate-900">
-                    {card.awaitingReviewCount} awaiting · {card.approvedCount}{' '}
-                    approved · {card.rejectedCount} rejected
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">Payout account</dt>
-                  <dd className="font-medium text-slate-900">
-                    {payoutSummaryLabel(card.payoutStatus as never)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">Status</dt>
-                  <dd className="font-medium text-slate-900">
-                    {card.applicationStatusLabel}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">Submitted</dt>
-                  <dd>{card.submittedAt ? formatDateTime(card.submittedAt) : '—'}</dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500">Last activity</dt>
-                  <dd>
-                    {card.lastActivityAt
-                      ? formatDateTime(card.lastActivityAt)
-                      : '—'}
-                  </dd>
-                </div>
+              <dl className="grid gap-px border-t border-bh-border bg-bh-border sm:grid-cols-2 lg:grid-cols-3">
+                <QueueStat
+                  label="Documents"
+                  value={`${card.submittedFileCount} of ${card.requiredTotal} required submitted`}
+                />
+                <QueueStat
+                  label="Review progress"
+                  value={`${card.awaitingReviewCount} awaiting · ${card.approvedCount} approved · ${card.rejectedCount} rejected`}
+                />
+                <QueueStat
+                  label="Payout account"
+                  value={payoutSummaryLabel(card.payoutStatus as never)}
+                />
+                <QueueStat label="Status" value={card.applicationStatusLabel} />
+                <QueueStat
+                  label="Submitted"
+                  value={card.submittedAt ? formatDateTime(card.submittedAt) : '—'}
+                />
+                <QueueStat
+                  label="Last activity"
+                  value={
+                    card.lastActivityAt ? formatDateTime(card.lastActivityAt) : '—'
+                  }
+                />
               </dl>
             </article>
           ))}

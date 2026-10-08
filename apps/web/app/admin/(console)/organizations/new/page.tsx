@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { CreateOrganizationForm } from '@/components/admin/create-organization-form';
@@ -16,20 +17,22 @@ export default async function NewOrganizationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <Link
           href="/admin/organizations"
-          className="text-sm text-slate-600 hover:text-slate-900"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-bh-text-secondary transition hover:text-bh-text"
         >
-          ← Back to organizations
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          Back to organizations
         </Link>
-      </div>
-      <div>
-        <h2 className="text-2xl font-semibold text-slate-900">
+        <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
+          Provisioning
+        </p>
+        <h2 className="mt-1 text-2xl font-semibold tracking-tight text-bh-text">
           Create organization
         </h2>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-2 max-w-xl text-sm leading-6 text-bh-text-secondary">
           Organization will be created in pending status. The admin invitation will
           be sent immediately.
         </p>

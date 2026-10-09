@@ -1,8 +1,10 @@
 # Physiotherapist production release notes
 
 **Project:** `hfnymqjrbppculcofaag`  
-**Branch:** `feat/physiotherapist-role`  
-**Status:** Unmerged PR only until schema approvals (B/C). **028 is database-untested — not a PASS.**
+**PR:** https://github.com/PetridesAlex/Bridge-hive/pull/25 (**unmerged**)  
+**Commit:** `a209e82`  
+**Status:** B/C payload finalized for approval. **No history write, migrate, merge, or deploy until you reply `Approve B and C`.**  
+**028:** database-untested — **not a PASS.**
 
 Seven physiotherapist documents (product checklist, not a statutory claim):
 
@@ -14,138 +16,128 @@ Seven physiotherapist documents (product checklist, not a statutory claim):
 6. tax_identification_proof  
 7. social_insurance_proof  
 
-Migrations in this PR: **025 → 026 → 027 → 028**.  
-`027_revoke_activation_rpc_anon.sql` is the TEST-validated original (org invitation/admin anon revokes).  
-Do **not** re-apply `024` DDL (live RPCs already 024-equivalent; history row still pending evidence).
+Migrations: **025 → 026 → 027 → 028** (TEST-validated original 027 preserved).
 
 ---
 
-## Sequence (authorized so far: P1 only)
+## Pre-migration snapshot coverage (verified)
 
-1. **P1 (this PR):** commit + push + open **unmerged** PR.  
-2. **B (not authorized):** 024 history-only insert after documented evidence.  
-3. **C (not authorized):** apply 025→028 on production.  
-4. **D (not authorized):** merge this PR.  
-5. **E/F (not authorized):** Vercel production + mobile publish.
+Private archive (gitignored): `reconcile-artifacts/private/pre-026-028-object-snapshot-2026-10-09.csv`
 
-Schema must land (**C**) before merge/deploy (**D/E**). Code is versioned here first.
+| Check | Result |
+| --- | --- |
+| History | 001–023 only |
+| Enum `worker_role` | `registered_nurse`, `ward_assistant` only — **no `physiotherapist`** |
+| Existing 026 replace targets | Present (anon EXECUTE true) except new objects below |
+| 027 invitation/admin targets | All seven present (anon EXECUTE true) |
+| 028 targets present | `create_shifts_batch`, `ensure_my_worker_profile`, `submit_worker_verification_package` |
+
+### Does not exist yet (026 will create; expected)
+
+- `credential_expiry_is_valid` (028 will revoke anon after create)
+- `correct_credential_expires_at`
+- `worker_profiles_guard_role`
 
 ---
 
-## Pre-migration read-only capture (before C)
+## Correction: Dashboard paste ≠ bookkeeping
 
-Private local snapshots (never commit). Run on production read-only; save under a gitignored path.
+Running migration SQL in the Dashboard applies DDL only. It does **not** register rows in `supabase_migrations.schema_migrations`. Partial Dashboard applies + guessed history inserts are forbidden.
 
-Two-function CSV already captured covers **only**:
+---
 
-- `ensure_my_worker_profile`  
-- `submit_worker_verification_package`  
+## ONE supported apply method (C)
 
-**Not** covered by that CSV — export before 026–028:
+**Supabase CLI `db push --db-url <percent-encoded Session pooler URI>`** from the feature worktree.
+
+- **`--db-url` only** — do not combine with `--password` (CLI 2.120.0 mutual exclusion).
+- Host: `aws-1-eu-west-1.pooler.supabase.com`; user: `postgres.hfnymqjrbppculcofaag`; `sslmode=require`.
+- CLI applies each pending file in order and **records each version** on success.
+- Separate files ⇒ **025 commits before 026** starts (enum usable).
+
+On mid-push failure: stop; inspect history + objects; targeted fix or restore-from-private-snapshot; resume CLI for **remaining** pending versions only — never invent history rows.
+
+---
+
+## 024 history reconciliation (B — separate; evidence complete)
+
+PK `version`; columns `version`, `name`, `statements` (nullable). Live RPC bodies already 024-equivalent. **Do not re-apply 024 DDL.**
 
 ```sql
--- Privileges for objects 026–028 will replace or revoke
-select
-  n.nspname as schema,
-  p.proname as function_name,
-  pg_get_function_identity_arguments(p.oid) as args,
-  has_function_privilege('anon', p.oid, 'EXECUTE') as anon_execute,
-  has_function_privilege('authenticated', p.oid, 'EXECUTE') as authenticated_execute
-from pg_proc p
-join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = 'public'
-  and p.proname in (
-    'create_shifts_batch',
-    'ensure_my_worker_profile',
-    'submit_worker_verification_package',
-    'credential_expiry_is_valid',
-    'worker_credential_requirements',
-    'worker_required_credential_types',
-    'mark_organization_invitation_delivery',
-    'assert_invitation_resend_allowed',
-    'accept_organization_invitation_by_id',
-    'get_organization_invitation_preview_by_id',
-    'revoke_organization_invitation',
-    'accept_organization_invitation',
-    'get_admin_organization_detail'
-  )
-order by p.proname;
+begin;
 
--- Optional definitions (large): save privately, do not paste into chat
--- select pg_get_functiondef(p.oid) ...
+insert into supabase_migrations.schema_migrations (version, name)
+values (
+  '024',
+  'worker_package_submit_and_profile_bootstrap'
+);
+
+select version, name
+from supabase_migrations.schema_migrations
+where version = '024';
+
+commit;
 ```
 
-Also re-run migration history evidence (E1–E3) from the release package before any 024 history insert.
+---
+
+## Final B/C payload
+
+### Order
+
+1. **B** — 024 history-only insert (above).  
+2. **C** — `supabase db push --db-url '…'` applying **025 → 026 → 027 → 028**.  
+3. Verify (below).  
+4. **Not included:** merge PR #25, Vercel prod, mobile publish.
+
+### C command shape (password never logged)
+
+```bash
+cd /Users/petridesaalex/Desktop/Bridge-Hive-physiotherapist
+# Build URI with percent-encoded password; do not echo.
+npx supabase db push --db-url "$PROD_DB_URL"
+```
+
+Expect CLI to apply only 025, 026, 027, 028. **028 is first production execution (untested).**
+
+### Verification after C
+
+```sql
+select version, name from supabase_migrations.schema_migrations
+where version >= '024' order by version;
+-- expect 024,025,026,027,028
+
+select e.enumlabel from pg_type t
+join pg_enum e on e.enumtypid = t.oid
+join pg_namespace n on n.oid = t.typnamespace
+where n.nspname='public' and t.typname='worker_role'
+order by e.enumsortorder;
+-- includes physiotherapist
+
+select p.proname,
+  has_function_privilege('anon', p.oid, 'EXECUTE') as anon_x,
+  has_function_privilege('authenticated', p.oid, 'EXECUTE') as auth_x
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname='public' and p.proname in (
+  'create_shifts_batch','ensure_my_worker_profile',
+  'submit_worker_verification_package','credential_expiry_is_valid',
+  'mark_organization_invitation_delivery','get_admin_organization_detail'
+);
+-- anon_x false; auth_x true; credential_expiry_is_valid exists
+```
+
+Smoke (authenticated): RN/Ward; physio selectable. No fixtures; no auto-approve applicants.
+
+### Recovery
+
+1. Targeted forward fix / privilege repair.  
+2. Restore individual defs from private snapshot.  
+3. Last resort: scheduled backup `2026-10-09 00:55:01 UTC` (never automatic; storage excluded).
 
 ---
 
-## 025 before 026 (enum transaction rule)
+## Approval
 
-PostgreSQL cannot use a newly added enum value in the **same** transaction that adds it.
-
-- **025** only: `alter type public.worker_role add value if not exists 'physiotherapist';` — must **commit**.  
-- **026** then references `'physiotherapist'` in functions/checklists.  
-
-Apply as separate migrations in order; never squash 025+026 into one transaction for production.
-
----
-
-## 024 history reconciliation (pending evidence)
-
-Accepted: history ends at **023**; two worker RPCs are body-equivalent to 024.  
-**Pending:** full `schema_migrations` list + table shape (E1–E3).  
-**Then (approval B only):** history-only insert for version `024` / name `worker_package_submit_and_profile_bootstrap`.  
-**Never** re-run `024_*.sql` DDL.
-
----
-
-## Recovery (no automatic full-database restore)
-
-| Approach | Use when |
-| --- | --- |
-| **Targeted forward fix** | Prefer: corrective migration or privilege `GRANT`/`REVOKE` for a specific RPC |
-| **Targeted rollback of a function** | Restore definition from private pre-migrate export for that object only |
-| **Scheduled backup restore** | Last resort: Dashboard backup `2026-10-09 00:55:01 UTC` — loses post-backup DB rows; **storage not included**; **never auto-restore** |
-| **PITR** | Only if later verified — restore to T0 before Phase 2 |
-
-Agent/CI must **never** trigger a whole-database restore automatically.
-
----
-
-## Mobile build / update route
-
-| Item | Actual route |
-| --- | --- |
-| App | `apps/worker-mobile` (Expo SDK **54**, Expo Router) |
-| Config | `app.json` only — **no `eas.json`**, **no `expo-updates`** |
-| Dev / QA | `npm start -w @bridge-hive/worker-mobile` → Expo Go / simulators |
-| Web bundle check | `npx expo export --platform web` (from worker-mobile) |
-| Store / OTA | **Not configured in-repo.** Production publish (approval F) requires the team’s existing manual/EAS path outside this tree |
-| Compatibility before C | Preview/web can load; physiotherapist RPC/enum paths **fail or mis-label** until 025–028 are on the DB the app points at |
-
----
-
-## Vercel Preview (may run on this push)
-
-| Check | Expectation before C |
-| --- | --- |
-| Preview DB | **Same production Supabase project** if Preview env uses prod URL/keys (typical). Preview does **not** create an isolated migrated DB. |
-| UI with physio copy/forms | May render |
-| Creating/claiming physio shifts, enum casts, new RPCs | **Cannot fully pass** until production (or a dedicated DB) has 025–028 |
-| 028 anon-EXECUTE / pgTAP | **Not run in Preview** — database-untested |
-| Fixtures | Must **not** run against production |
-
-Do not change production configuration for Preview.
-
----
-
-## Migration test status
-
-| Migration | Status |
-| --- | --- |
-| 025 | Untested on production this cycle |
-| 026 | Untested on production this cycle |
-| 027 | TEST-validated file preserved; untested on production this cycle |
-| 028 | **Database-untested. Not a PASS.** |
-
-Local suite `physiotherapist_role.test.sql` (`plan(48)`) prepared; not executed this cycle.
+Reply **`Approve B and C`** to authorize production history insert + `db push`.  
+Until then: no production writes.

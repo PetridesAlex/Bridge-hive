@@ -10,6 +10,9 @@ import { formatDateTime, roleLabel } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
 import {
   VERIFICATION_APPLICATION_STATUS_CODES,
+  WORKER_ROLE_LABELS,
+  WORKER_ROLES,
+  isWorkerRole,
   payoutSummaryLabel,
 } from '@bridge-hive/domain';
 import type { WorkerRole } from '@bridge-hive/domain';
@@ -67,10 +70,7 @@ export default async function VerificationApplicationsPage({
   const supabase = await createClient();
   const { data, error } = await supabase.rpc('list_verification_applications', {
     p_search: params.q?.trim() || undefined,
-    p_role:
-      params.role === 'registered_nurse' || params.role === 'ward_assistant'
-        ? params.role
-        : undefined,
+    p_role: params.role && isWorkerRole(params.role) ? params.role : undefined,
     p_application_status: params.status?.trim() || undefined,
     p_payout_status:
       params.payout === 'pending' ||
@@ -159,8 +159,11 @@ export default async function VerificationApplicationsPage({
           </span>
           <select name="role" defaultValue={params.role ?? ''} className={fieldClass}>
             <option value="">All roles</option>
-            <option value="registered_nurse">Registered nurse</option>
-            <option value="ward_assistant">Ward assistant</option>
+            {WORKER_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {WORKER_ROLE_LABELS[role]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="text-sm">

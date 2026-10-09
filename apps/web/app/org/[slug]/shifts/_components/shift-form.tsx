@@ -59,9 +59,16 @@ const CREDENTIAL_GROUPS: Array<{
   {
     id: 'professional',
     title: 'Professional',
-    hint: 'Nursing and employment evidence for specialized openings.',
+    hint: 'Nursing, physiotherapy, and employment evidence for specialized openings.',
     icon: FileBadge2,
-    types: ['nursing_licence', 'nursing_degree', 'employment_certificate'],
+    types: [
+      'nursing_licence',
+      'nursing_degree',
+      'employment_certificate',
+      'physiotherapy_degree',
+      'physiotherapist_registration_certificate',
+      'physiotherapy_practising_licence',
+    ],
   },
   {
     id: 'compliance',
@@ -85,6 +92,10 @@ const CREDENTIAL_BLURBS: Partial<Record<CredentialType, string>> = {
   nursing_licence: 'Valid licence to practise',
   nursing_degree: 'Degree or diploma evidence',
   employment_certificate: 'Job title confirmation',
+  physiotherapy_degree: 'Physiotherapy degree evidence',
+  physiotherapist_registration_certificate:
+    'Cyprus Physiotherapists Register certificate',
+  physiotherapy_practising_licence: 'Current annual practising licence',
   tax_identification_proof: 'Tax ID documentation',
   social_insurance_proof: 'Social insurance evidence',
   cv: 'Curriculum vitae',

@@ -2,7 +2,7 @@
 -- Auth, cross-tenant, bounds, rollback, idempotency, draft not worker-visible.
 
 begin;
-select plan(28);
+select plan(26);
 
 -- ---------------------------------------------------------------------------
 -- Seed: Org A (active) + Org B (active) + suspended org + users
@@ -124,7 +124,7 @@ values
     'Bulk Clinic B', 'Europe/Nicosia', '2 Bulk St', 'Limassol', 'CY'
   ),
   (
-    'c0s00001-0000-4000-8000-000000000001',
+    'c0f00001-0000-4000-8000-000000000001',
     'c2c2c2c2-c2c2-42c2-82c2-c2c2c2c2c2c2',
     'Bulk Clinic Susp', 'Europe/Nicosia', '3 Bulk St', 'Nicosia', 'CY'
   )
@@ -139,6 +139,7 @@ values
   )
 on conflict (id) do nothing;
 
+select set_config('bridgehive.allow_platform_verify', 'on', true);
 insert into public.worker_profiles (
   user_id, worker_role, verification_status, onboarding_status
 )
@@ -150,7 +151,9 @@ values (
 )
 on conflict (user_id) do update
 set worker_role = excluded.worker_role,
-    verification_status = excluded.verification_status;
+    verification_status = excluded.verification_status,
+    onboarding_status = excluded.onboarding_status;
+select set_config('bridgehive.allow_platform_verify', 'off', true);
 
 -- Schema / grants
 select ok(
@@ -531,16 +534,16 @@ select set_config('request.jwt.claim.sub', 'c1000001-0000-4000-8000-000000000005
 select set_config('request.jwt.claim.role', 'authenticated', true);
 set local role authenticated;
 
+-- Query shifts directly: workers have no SELECT on shift_creation_batches.
 select ok(
   (
     select count(*)::integer
     from public.shifts
-    where creation_batch_id = (
-      select id from public.shift_creation_batches
-      where request_key = 'req-pub-1'
-    )
+    where organization_id = 'c0c0c0c0-c0c0-40c0-80c0-c0c0c0c0c0c0'
+      and location_id = 'c0a00001-0000-4000-8000-000000000001'
       and status = 'published'
       and required_role = 'registered_nurse'
+      and creation_batch_id is not null
   ) >= 1,
   'verified worker can see matching published batch shift'
 );
@@ -563,7 +566,7 @@ select throws_ok(
       'req-susp-pub',
       'published',
       'individual',
-      pg_temp.bulk_payload('c0s00001-0000-4000-8000-000000000001')
+      pg_temp.bulk_payload('c0f00001-0000-4000-8000-000000000001')
     )
   $$,
   'ORG_NOT_ACTIVE',
@@ -578,7 +581,7 @@ select lives_ok(
       'req-susp-draft',
       'draft',
       'individual',
-      pg_temp.bulk_payload('c0s00001-0000-4000-8000-000000000001')
+      pg_temp.bulk_payload('c0f00001-0000-4000-8000-000000000001')
     )
   $$,
   'suspended org can create draft batch'

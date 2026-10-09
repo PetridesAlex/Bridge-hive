@@ -106,7 +106,7 @@ export function AuthHeroPanel({ variant }: { variant: AuthPortalVariant }) {
                 Connecting <span className="auth-hero-accent">care teams</span> for a stronger tomorrow
               </h2>
               <p className="auth-hero-body">
-                Bridge Hive brings hospitals, nurses, and ward assistants
+                Bridge Hive brings hospitals, nurses, ward assistants, and physiotherapists
                 together with verified credentials, structured shifts, and
                 clear workflows.
               </p>

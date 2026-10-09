@@ -76,7 +76,7 @@ type AudienceContent = {
 const ORG: AudienceContent = {
   eyebrow: 'Organizations',
   title: 'Publish shifts with role and ward clarity',
-  body: 'Configure locations and wards, create openings for registered nurses or ward assistants, and review completed timesheets. Platform approval is required before your organization can publish shifts.',
+  body: 'Configure locations and wards, create openings for registered nurses, ward assistants, or physiotherapists, and review completed timesheets. Platform approval is required before your organization can publish shifts.',
   href: '/organizations',
   cta: 'How organizations use Bridge Hive',
   cardIcon: Building2,

@@ -1,4 +1,4 @@
-import { Stethoscope, Users } from 'lucide-react';
+import { Activity, Stethoscope, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
@@ -210,7 +210,8 @@ export function RoleCoverageBars({
         {coverage.map((row) => {
           const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
           const isRn = row.role === 'registered_nurse';
-          const Icon = isRn ? Stethoscope : Users;
+          const isPhysio = row.role === 'physiotherapist';
+          const Icon = isRn ? Stethoscope : isPhysio ? Activity : Users;
           return (
             <div
               key={row.role}
@@ -218,14 +219,20 @@ export function RoleCoverageBars({
                 'rounded-2xl border px-3.5 py-3',
                 isRn
                   ? 'border-bh-teal/25 bg-gradient-to-br from-bh-teal-soft/70 to-bh-surface'
-                  : 'border-bh-honey/30 bg-gradient-to-br from-bh-honey-soft/80 to-bh-surface',
+                  : isPhysio
+                    ? 'border-bh-accent-blue/25 bg-gradient-to-br from-bh-accent-blue-soft/70 to-bh-surface'
+                    : 'border-bh-honey/30 bg-gradient-to-br from-bh-honey-soft/80 to-bh-surface',
               )}
             >
               <div className="mb-2.5 flex items-center gap-2.5">
                 <span
                   className={cn(
                     'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm',
-                    isRn ? 'bg-bh-teal' : 'bg-bh-sidebar',
+                    isRn
+                      ? 'bg-bh-teal'
+                      : isPhysio
+                        ? 'bg-bh-accent-blue'
+                        : 'bg-bh-sidebar',
                   )}
                 >
                   <Icon className="h-4 w-4" aria-hidden />
@@ -242,7 +249,11 @@ export function RoleCoverageBars({
                 <div
                   className={cn(
                     'h-full rounded-full transition-[width]',
-                    isRn ? 'bg-bh-teal' : 'bg-bh-honey',
+                    isRn
+                      ? 'bg-bh-teal'
+                      : isPhysio
+                        ? 'bg-bh-accent-blue'
+                        : 'bg-bh-honey',
                   )}
                   style={{ width: `${Math.max(pct, row.count > 0 ? 6 : 0)}%` }}
                 />

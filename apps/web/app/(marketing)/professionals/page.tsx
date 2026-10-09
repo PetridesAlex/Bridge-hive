@@ -9,7 +9,7 @@ import { WorkerJourneySection } from '@/components/marketing/WorkerJourneySectio
 export const metadata: Metadata = {
   title: 'Professionals',
   description:
-    'How registered nurses and ward assistants create accounts, complete verification, and accept eligible shifts on Bridge Hive.',
+    'How registered nurses, ward assistants, and physiotherapists create accounts, complete verification, and accept eligible shifts on Bridge Hive.',
   alternates: { canonical: 'https://bridgehive.app/professionals' },
 };
 
@@ -18,12 +18,12 @@ export default function ProfessionalsPage() {
     <>
       <Section band="dark" className="!pb-0">
         <Reveal>
-          <p className="m-eyebrow">For registered nurses & ward assistants</p>
+          <p className="m-eyebrow">For registered nurses, ward assistants & physiotherapists</p>
           <h1 className="mt-3 max-w-3xl text-[length:var(--m-display)] font-extrabold tracking-tight text-white">
             Your path from account to eligible shifts
           </h1>
           <p className="m-lede mt-5 max-w-2xl !text-[rgba(220,232,238,0.78)]">
-            Bridge Hive is built for registered nurses and ward assistants who complete
+            Bridge Hive is built for registered nurses, ward assistants, and physiotherapists who complete
             a clear verification path before accessing openings. Email confirmation is
             only the first step — platform review activates your account.
           </p>

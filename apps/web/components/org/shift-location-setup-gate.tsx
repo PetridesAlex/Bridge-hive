@@ -197,7 +197,7 @@ export function ShiftLocationSetupGate({
               },
               {
                 title: 'Role-matched staffing',
-                copy: 'Registered Nurse and Ward Assistant openings stay correctly scoped.',
+                copy: 'Registered Nurse, Ward Assistant, and Physiotherapist openings stay correctly scoped.',
                 Icon: Users,
               },
             ].map((item) => {

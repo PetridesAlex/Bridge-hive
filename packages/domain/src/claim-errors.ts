@@ -61,12 +61,6 @@ export function claimErrorMessage(
 
   if (reason === 'role_mismatch' || upper.includes('ROLE_MISMATCH')) {
     const role = options?.requiredRole;
-    if (role === 'registered_nurse') {
-      return 'This shift requires a Registered Nurse.';
-    }
-    if (role === 'ward_assistant') {
-      return 'This shift requires a Ward Assistant.';
-    }
     if (role && role in WORKER_ROLE_LABELS) {
       return `This shift requires a ${WORKER_ROLE_LABELS[role as WorkerRole]}.`;
     }

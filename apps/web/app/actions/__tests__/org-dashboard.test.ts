@@ -67,6 +67,7 @@ describe('org dashboard helpers', () => {
     expect(roles.map((r) => r.role)).toEqual([
       'registered_nurse',
       'ward_assistant',
+      'physiotherapist',
     ]);
     expect(roles.reduce((s, r) => s + r.count, 0)).toBe(roles[0]!.total);
   });

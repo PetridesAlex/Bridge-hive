@@ -7,10 +7,15 @@ import {
 } from '@bridge-hive/domain';
 
 describe('Shift required worker role', () => {
-  it('exposes Registered Nurse and Ward Assistant labels', () => {
+  it('exposes Registered Nurse, Ward Assistant, and Physiotherapist labels', () => {
     expect(WORKER_ROLE_LABELS.registered_nurse).toBe('Registered Nurse');
     expect(WORKER_ROLE_LABELS.ward_assistant).toBe('Ward Assistant');
-    expect(WORKER_ROLES).toEqual(['registered_nurse', 'ward_assistant']);
+    expect(WORKER_ROLE_LABELS.physiotherapist).toBe('Physiotherapist');
+    expect(WORKER_ROLES).toEqual([
+      'registered_nurse',
+      'ward_assistant',
+      'physiotherapist',
+    ]);
   });
 
   it('rejects missing required role with readable message', () => {
@@ -95,6 +100,28 @@ describe('claimErrorMessage', () => {
         requiredRole: 'ward_assistant',
       }),
     ).toBe('This shift requires a Ward Assistant.');
+    expect(
+      claimErrorMessage('NOT_ELIGIBLE:role_mismatch', {
+        requiredRole: 'physiotherapist',
+      }),
+    ).toBe('This shift requires a Physiotherapist.');
+  });
+
+  it('accepts physiotherapist as a valid required role', () => {
+    const result = createShiftDraftSchema.safeParse({
+      organizationId: '123e4567-e89b-12d3-a456-426614174000',
+      locationId: '123e4567-e89b-12d3-a456-426614174001',
+      requiredRole: 'physiotherapist',
+      startsAt: '2030-01-02T08:00:00.000Z',
+      endsAt: '2030-01-02T16:00:00.000Z',
+      breakMinutes: 0,
+      rateMinor: 2800,
+      currency: 'EUR',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.requiredRole).toBe('physiotherapist');
+    }
   });
 
   it('maps missing credentials specifically', () => {

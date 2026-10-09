@@ -7,6 +7,7 @@ import {
   countFilledUpcoming,
   countOpenShifts,
   filterCalendarShifts,
+  isWorkerRole,
   mapShiftToCalendarEvent,
   type ShiftStatus,
 } from '@bridge-hive/domain';
@@ -117,10 +118,7 @@ export default async function ShiftsPage({
     now,
   });
 
-  const roleFilter =
-    roleFilterRaw === 'registered_nurse' || roleFilterRaw === 'ward_assistant'
-      ? roleFilterRaw
-      : null;
+  const roleFilter = isWorkerRole(roleFilterRaw) ? roleFilterRaw : null;
   const locationFilter =
     locationRaw && UUID_RE.test(locationRaw) ? locationRaw : null;
   const batchFilter = batchRaw && UUID_RE.test(batchRaw) ? batchRaw : null;
@@ -760,8 +758,11 @@ export default async function ShiftsPage({
                               'bg-bh-accent-blue-soft text-bh-accent-blue',
                             shift.required_role === 'ward_assistant' &&
                               'bg-bh-success-soft text-bh-success',
+                            shift.required_role === 'physiotherapist' &&
+                              'bg-bh-honey-soft text-bh-honey-strong',
                             shift.required_role !== 'registered_nurse' &&
                               shift.required_role !== 'ward_assistant' &&
+                              shift.required_role !== 'physiotherapist' &&
                               'bg-bh-subtle text-bh-text-secondary',
                           )}
                         >

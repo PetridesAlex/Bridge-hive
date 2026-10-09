@@ -8,6 +8,7 @@ import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/TextInput';
 import { APP_CONFIG, WORKER_ROLE_LABELS } from '@/constants/config';
+import { WORKER_ROLE_OPTIONS } from '@/constants/workerRoleOptions';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { setPendingConfirmEmail } from '@/lib/pending-confirm-email';
 import { useAuth } from '@/providers/AuthProvider';
@@ -104,7 +105,7 @@ export default function WorkerRegisterScreen() {
   return (
     <AuthShell
       title="Join Bridge Hive"
-      subtitle="Create a worker account for Registered Nurses and Ward Assistants across Cyprus."
+      subtitle="Create a worker account for nurses, ward assistants, and physiotherapists across Cyprus."
       centered={false}
       footer={
         <View style={styles.footer}>
@@ -146,22 +147,7 @@ export default function WorkerRegisterScreen() {
             Selection uses a clear label and description — not color alone. This value is sent to
             the server unchanged.
           </Text>
-          {(
-            [
-              {
-                role: 'registered_nurse' as WorkerRole,
-                title: WORKER_ROLE_LABELS.registered_nurse,
-                description:
-                  'Licensed nursing professionals eligible for RN-rated clinical shifts.',
-              },
-              {
-                role: 'ward_assistant' as WorkerRole,
-                title: WORKER_ROLE_LABELS.ward_assistant,
-                description:
-                  'Ward assistants supporting patient care on eligible assistant shifts.',
-              },
-            ] as const
-          ).map((option) => {
+          {WORKER_ROLE_OPTIONS.map((option) => {
             const selected = workerRole === option.role;
             return (
               <Pressable

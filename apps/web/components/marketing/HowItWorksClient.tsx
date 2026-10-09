@@ -38,7 +38,7 @@ const ORG_STEPS: JourneyStep[] = [
   {
     icon: MapPin,
     label: 'Configure & publish',
-    body: 'Set up locations and wards, then publish role-specific openings for registered nurses or ward assistants.',
+    body: 'Set up locations and wards, then publish role-specific openings for registered nurses, ward assistants, or physiotherapists.',
   },
   {
     icon: ClipboardList,

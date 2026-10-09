@@ -4,7 +4,7 @@
  */
 
 import type { WorkerRole } from './types';
-import { WORKER_ROLE_LABELS } from './types';
+import { WORKER_ROLE_LABELS, WORKER_ROLES } from './types';
 
 export const BULK_SHIFT_MIN = 2;
 export const BULK_SHIFT_MAX = 100;
@@ -321,10 +321,9 @@ export type BulkBatchSummary = {
 
 /** Gross estimate = sum of rate_minor × duration hours (break excluded). */
 export function summarizeBulkBatch(shifts: BulkPreviewShift[]): BulkBatchSummary {
-  const roleMap: Record<WorkerRole, number> = {
-    registered_nurse: 0,
-    ward_assistant: 0,
-  };
+  const roleMap = Object.fromEntries(
+    WORKER_ROLES.map((role) => [role, 0]),
+  ) as Record<WorkerRole, number>;
   let estimatedGrossMinor = 0;
   let firstStartsAtIso: string | null = null;
   let lastEndsAtIso: string | null = null;
@@ -348,7 +347,7 @@ export function summarizeBulkBatch(shifts: BulkPreviewShift[]): BulkBatchSummary
 
   return {
     shiftCount: shifts.length,
-    roleCounts: (['registered_nurse', 'ward_assistant'] as const).map((role) => ({
+    roleCounts: WORKER_ROLES.map((role) => ({
       role,
       label: WORKER_ROLE_LABELS[role],
       count: roleMap[role],

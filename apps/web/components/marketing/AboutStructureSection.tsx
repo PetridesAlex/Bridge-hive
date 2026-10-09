@@ -12,7 +12,7 @@ const PRINCIPLES: {
 }[] = [
   {
     title: 'Role honesty',
-    body: 'We speak precisely about registered nurses and ward assistants — and about what platform review does and does not decide.',
+    body: 'We speak precisely about registered nurses, ward assistants, and physiotherapists — and about what platform review does and does not decide.',
     tone: 'blue',
     icon: Users,
   },

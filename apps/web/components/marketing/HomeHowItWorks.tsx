@@ -42,7 +42,7 @@ const LOOP: readonly LoopStep[] = [
   },
   {
     label: 'Professional claims',
-    body: 'Eligible nurses and ward assistants browse and accept shifts that match their activation.',
+    body: 'Eligible nurses, ward assistants, and physiotherapists browse and accept shifts that match their activation.',
     icon: Users,
     tone: 'honey',
   },
@@ -68,7 +68,7 @@ const ORG_STEPS: readonly PathStep[] = [
   },
   {
     label: 'Set up and publish',
-    body: 'Configure locations and wards, then publish shifts for registered nurses or ward assistants after platform approval.',
+    body: 'Configure locations and wards, then publish shifts for registered nurses, ward assistants, or physiotherapists after platform approval.',
     icon: Settings2,
   },
   {

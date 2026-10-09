@@ -1,6 +1,6 @@
 # Bridge Hive Worker Mobile
 
-Expo React Native app for nurses and ward assistants.
+Expo React Native app for nurses, ward assistants, and physiotherapists.
 
 ## Prerequisites
 

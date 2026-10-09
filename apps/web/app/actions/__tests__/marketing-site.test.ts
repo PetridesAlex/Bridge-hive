@@ -183,6 +183,7 @@ describe('marketing site contracts', () => {
     expect(src).toMatch(/WorkerJourneySection/);
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
+    expect(src).toMatch(/physiotherapists/);
     expect(src).toMatch(/ProfessionalsPaymentsSection/);
     expect(payments).toMatch(/bank transfer/);
     expect(payments).toMatch(/separate Bridge Hive commission invoice/i);

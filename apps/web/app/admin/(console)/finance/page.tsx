@@ -1,5 +1,11 @@
 import Link from 'next/link';
-import { formatMoneyMinor, workerInvoiceStatusLabel } from '@bridge-hive/domain';
+import {
+  WORKER_ROLE_LABELS,
+  WORKER_ROLES,
+  formatMoneyMinor,
+  isWorkerRole,
+  workerInvoiceStatusLabel,
+} from '@bridge-hive/domain';
 
 import { EmptyState } from '@/components/empty-state';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
@@ -62,7 +68,8 @@ export default async function AdminFinancePage({
 
   const supabase = await createClient();
   const statusFilter = params.status?.trim() || null;
-  const roleFilter = params.role?.trim() || null;
+  const roleFilter =
+    params.role && isWorkerRole(params.role) ? params.role : null;
   const search = params.q?.trim() || null;
 
   const [{ data: metricsRaw, error: metricsError }, { data: invoicesRaw, error: listError }] =
@@ -151,8 +158,11 @@ export default async function AdminFinancePage({
             className="mt-1 block rounded-md border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="">All</option>
-            <option value="registered_nurse">Registered Nurse</option>
-            <option value="ward_assistant">Ward Assistant</option>
+            {WORKER_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {WORKER_ROLE_LABELS[role]}
+              </option>
+            ))}
           </select>
         </label>
         <label className="text-sm text-slate-700">

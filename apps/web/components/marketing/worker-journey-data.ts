@@ -28,7 +28,7 @@ export const WORKER_JOURNEY_STEPS: WorkerJourneyStep[] = [
   {
     id: 'upload-documents',
     label: 'Upload role-specific documents',
-    body: 'Submit credentials and information required for your role — registered nurse or ward assistant.',
+    body: 'Submit credentials and information required for your role — registered nurse, ward assistant, or physiotherapist.',
     shortLabel: 'Documents',
     Icon: FileUp,
   },

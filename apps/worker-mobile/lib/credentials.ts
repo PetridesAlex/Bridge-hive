@@ -14,6 +14,7 @@ import type { WorkerRole } from '@bridge-hive/domain';
 import type { Tables } from '@bridge-hive/supabase-types';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
 
@@ -190,9 +191,12 @@ export async function pickCredentialImage(): Promise<
     }
   | { ok: false; error: string; cancelled?: boolean }
 > {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  if (!permission.granted) {
-    return { ok: false, error: 'Photo library permission is required.' };
+  // Web uses a file input; native needs an explicit media-library grant.
+  if (Platform.OS !== 'web') {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      return { ok: false, error: 'Photo library permission is required.' };
+    }
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({

@@ -19,7 +19,7 @@ export const metadata: Metadata = {
       'BridgeHive Medical Recruitment Limited | Healthcare Staffing & Recruitment',
   },
   description:
-    'Connecting healthcare organizations with verified registered nurses and ward assistants through professional medical recruitment and flexible staffing solutions',
+    'Connecting healthcare organizations with verified registered nurses, ward assistants, and physiotherapists through professional medical recruitment and flexible staffing solutions',
   alternates: { canonical: 'https://bridgehive.app/' },
 };
 

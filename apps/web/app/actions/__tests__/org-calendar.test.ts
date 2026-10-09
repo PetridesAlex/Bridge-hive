@@ -53,6 +53,7 @@ describe('org calendar helpers', () => {
       'amber',
     );
     expect(calendarEventTone('cancelled', 'ward_assistant')).toBe('danger');
+    expect(calendarEventTone('scheduled', 'physiotherapist')).toBe('physio');
     expect(coverageLabelForStatus('filled')).toBe('Filled');
   });
 

@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: '%s | Bridge Hive',
   },
   description:
-    'Bridge Hive connects healthcare organizations with verified registered nurses and ward assistants.',
+    'Bridge Hive connects healthcare organizations with verified registered nurses, ward assistants, and physiotherapists.',
 };
 
 export default function RootLayout({

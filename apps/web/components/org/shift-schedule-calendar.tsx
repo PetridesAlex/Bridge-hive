@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  WORKER_ROLE_LABELS,
+  WORKER_ROLES,
   layoutOverlappingEvents,
   splitCrossMidnightSegments,
   type CalendarEvent,
@@ -41,6 +43,7 @@ function pxPerHourForView(view: CalendarViewMode): number {
 const TONE_CLASS: Record<CalendarEvent['tone'], string> = {
   rn: 'border-bh-accent-blue/25 bg-bh-accent-blue-soft/90 text-bh-text',
   ward: 'border-bh-success/25 bg-bh-success-soft/90 text-bh-text',
+  physio: 'border-bh-honey/35 bg-bh-honey-soft/90 text-bh-text',
   draft: 'border-bh-border bg-bh-subtle text-bh-text-secondary',
   open: 'border-bh-teal/30 bg-bh-teal-soft/90 text-bh-text',
   filled: 'border-emerald-300/50 bg-emerald-50 text-bh-text',
@@ -502,8 +505,11 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
             }}
           >
             <option value="">All roles</option>
-            <option value="registered_nurse">Registered Nurse</option>
-            <option value="ward_assistant">Ward Assistant</option>
+            {WORKER_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {WORKER_ROLE_LABELS[role]}
+              </option>
+            ))}
           </select>
           {hasFilters ? (
             <Link

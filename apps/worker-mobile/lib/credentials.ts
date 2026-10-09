@@ -1,7 +1,10 @@
 import {
   canWorkerEditCredentialFile,
+  credentialExpiryIsValid,
+  credentialRequiresKnownExpiry,
   credentialRequirementsForRole,
   credentialTypeLabel,
+  endOfCyprusBusinessDayIso,
   mapCredentialStatusToChecklistStatus,
   validateCredentialUpload,
   type CredentialRequirement,
@@ -87,6 +90,49 @@ function extensionForMime(mime: string): string {
 
 function randomObjectId(): string {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+export function resolveCredentialExpiresAt(params: {
+  credentialType: string;
+  expiresAtYmd?: string | null;
+}): { expiresAt: string | null } | { error: string } {
+  if (!credentialRequiresKnownExpiry(params.credentialType)) {
+    return { expiresAt: null };
+  }
+
+  const ymd = params.expiresAtYmd?.trim() ?? '';
+  if (!ymd) {
+    return {
+      error: 'Enter the licence expiry date (YYYY-MM-DD) before uploading.',
+    };
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    return { error: 'Use date format YYYY-MM-DD for the licence expiry.' };
+  }
+
+  let expiresAt: string;
+  try {
+    expiresAt = endOfCyprusBusinessDayIso(ymd);
+  } catch {
+    return {
+      error:
+        'Enter a real calendar date (YYYY-MM-DD). Impossible dates such as 31 February are rejected.',
+    };
+  }
+
+  if (
+    !credentialExpiryIsValid({
+      credentialType: params.credentialType,
+      expiresAt,
+    })
+  ) {
+    return {
+      error:
+        'Licence expiry must still be valid now. Same-day Cyprus dates remain valid through end of that day.',
+    };
+  }
+
+  return { expiresAt };
 }
 
 async function readFileAsArrayBuffer(uri: string): Promise<ArrayBuffer> {
@@ -190,6 +236,7 @@ export async function uploadCredentialDocument(params: {
   sizeBytes: number;
   fileName: string;
   existingCredential?: Credential | null;
+  expiresAtYmd?: string | null;
 }): Promise<{ data: Credential | null; error?: string }> {
   const validation = validateCredentialUpload({
     mimeType: params.mimeType,
@@ -197,6 +244,14 @@ export async function uploadCredentialDocument(params: {
   });
   if (!validation.ok) {
     return { data: null, error: validation.error };
+  }
+
+  const expiry = resolveCredentialExpiresAt({
+    credentialType: params.credentialType,
+    expiresAtYmd: params.expiresAtYmd,
+  });
+  if ('error' in expiry) {
+    return { data: null, error: expiry.error };
   }
 
   const {
@@ -225,6 +280,7 @@ export async function uploadCredentialDocument(params: {
         worker_id: user.id,
         credential_type: params.credentialType,
         status: 'pending',
+        expires_at: expiry.expiresAt,
       })
       .select('*')
       .single();
@@ -267,12 +323,21 @@ export async function uploadCredentialDocument(params: {
 
   const previousPath = credential.storage_path;
 
+  const metadataPatch: {
+    storage_path: string;
+    storage_paths: string[];
+    expires_at?: string | null;
+  } = {
+    storage_path: objectName,
+    storage_paths: [objectName],
+  };
+  if (credentialRequiresKnownExpiry(params.credentialType)) {
+    metadataPatch.expires_at = expiry.expiresAt;
+  }
+
   const { data: updated, error: updateError } = await supabase
     .from('credentials')
-    .update({
-      storage_path: objectName,
-      storage_paths: [objectName],
-    } as never)
+    .update(metadataPatch as never)
     .eq('id', credential.id)
     .eq('worker_id', user.id)
     .select('*')

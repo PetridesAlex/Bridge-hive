@@ -23,8 +23,8 @@ export default function WelcomeScreen() {
           <Text style={styles.brand}>Bridge Hive</Text>
           <Text style={styles.title}>Healthcare shifts,{'\n'}built for workers</Text>
           <Text style={styles.subtitle}>
-            Find verified nursing and ward assistant shifts across Cyprus. Claim once — first
-            eligible worker wins.
+            Find verified nursing, ward assistant, and physiotherapy shifts across Cyprus. Claim
+            once — first eligible worker wins.
           </Text>
         </View>
 

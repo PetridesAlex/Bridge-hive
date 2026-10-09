@@ -8,6 +8,7 @@ const ROLE_LABELS: Record<string, string> = {
   org_billing: 'Billing',
   registered_nurse: 'Registered Nurse',
   ward_assistant: 'Ward Assistant',
+  physiotherapist: 'Physiotherapist',
 };
 
 const SHIFT_STATUS_LABELS: Record<string, string> = {

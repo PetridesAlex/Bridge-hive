@@ -10,7 +10,12 @@ import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { getWorkerPackageLabel } from '@/lib/admin/document-status';
 import { roleLabel } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
-import type { WorkerRole } from '@bridge-hive/domain';
+import {
+  WORKER_ROLE_LABELS,
+  WORKER_ROLES,
+  isWorkerRole,
+  type WorkerRole,
+} from '@bridge-hive/domain';
 
 const PAGE_SIZE = 20;
 
@@ -70,7 +75,7 @@ export default async function AdminWorkersPage({
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    if (params.role === 'registered_nurse' || params.role === 'ward_assistant') {
+    if (params.role && isWorkerRole(params.role)) {
       query = query.eq('worker_role', params.role);
     }
     if (
@@ -108,7 +113,7 @@ export default async function AdminWorkersPage({
 
   // Apply client-side filters for function results
   if (useFunction) {
-    if (params.role === 'registered_nurse' || params.role === 'ward_assistant') {
+    if (params.role && isWorkerRole(params.role)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       rows = rows.filter((row: any) => row.worker_role === params.role);
     }
@@ -274,8 +279,11 @@ export default async function AdminWorkersPage({
           aria-label="Worker role"
         >
           <option value="">All roles</option>
-          <option value="registered_nurse">Registered nurse</option>
-          <option value="ward_assistant">Ward assistant</option>
+          {WORKER_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {WORKER_ROLE_LABELS[role]}
+            </option>
+          ))}
         </select>
         <select
           name="verification"

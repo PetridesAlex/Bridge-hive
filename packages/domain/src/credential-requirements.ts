@@ -10,7 +10,23 @@ export const CREDENTIAL_TYPES = [
   'tax_identification_proof',
   'social_insurance_proof',
   'cv',
+  'physiotherapy_degree',
+  'physiotherapist_registration_certificate',
+  'physiotherapy_practising_licence',
 ] as const;
+
+/**
+ * Credential types that must carry a known future expires_at.
+ * Physiotherapy annual practising licence is distinct from the registration certificate.
+ */
+export const CREDENTIAL_TYPES_REQUIRING_EXPIRY = [
+  'physiotherapy_practising_licence',
+] as const;
+
+export type CredentialTypeRequiringExpiry =
+  (typeof CREDENTIAL_TYPES_REQUIRING_EXPIRY)[number];
+
+export const CYPRUS_BUSINESS_TIME_ZONE = 'Europe/Nicosia';
 
 export type CredentialType = (typeof CREDENTIAL_TYPES)[number];
 
@@ -58,6 +74,18 @@ const CREDENTIAL_TYPE_LABELS: Record<
     en: 'CV',
     el: 'Βιογραφικό',
   },
+  physiotherapy_degree: {
+    en: 'Physiotherapy degree',
+    el: 'Πτυχίο Φυσιοθεραπείας',
+  },
+  physiotherapist_registration_certificate: {
+    en: 'Certificate of registration in the Cyprus Physiotherapists Register',
+    el: 'Πιστοποιητικό εγγραφής στο Μητρώο Φυσιοθεραπευτών Κύπρου',
+  },
+  physiotherapy_practising_licence: {
+    en: 'Current annual practising licence',
+    el: 'Ισχύουσα ετήσια άδεια άσκησης επαγγέλματος',
+  },
 };
 
 const RN_REQUIREMENTS: CredentialRequirement[] = [
@@ -78,6 +106,29 @@ const WARD_REQUIREMENTS: CredentialRequirement[] = [
   { credentialType: 'social_insurance_proof', isRequired: true, sortOrder: 5 },
 ];
 
+/**
+ * Physiotherapist checklist: owner-confirmed product requirement (seven
+ * documents). Shared identity/tax/social baseline plus three distinct
+ * professional documents. Not a claim about statutory legal requirements.
+ */
+const PHYSIOTHERAPIST_REQUIREMENTS: CredentialRequirement[] = [
+  { credentialType: 'identity_document_front', isRequired: true, sortOrder: 1 },
+  { credentialType: 'identity_document_back', isRequired: true, sortOrder: 2 },
+  { credentialType: 'physiotherapy_degree', isRequired: true, sortOrder: 3 },
+  {
+    credentialType: 'physiotherapist_registration_certificate',
+    isRequired: true,
+    sortOrder: 4,
+  },
+  {
+    credentialType: 'physiotherapy_practising_licence',
+    isRequired: true,
+    sortOrder: 5,
+  },
+  { credentialType: 'tax_identification_proof', isRequired: true, sortOrder: 6 },
+  { credentialType: 'social_insurance_proof', isRequired: true, sortOrder: 7 },
+];
+
 export const MAX_CREDENTIAL_FILE_BYTES = 10 * 1024 * 1024;
 
 export const ALLOWED_CREDENTIAL_MIME_TYPES = [
@@ -95,7 +146,105 @@ export function credentialRequirementsForRole(
 ): CredentialRequirement[] {
   if (role === 'registered_nurse') return RN_REQUIREMENTS;
   if (role === 'ward_assistant') return WARD_REQUIREMENTS;
+  if (role === 'physiotherapist') return PHYSIOTHERAPIST_REQUIREMENTS;
   return [];
+}
+
+export function credentialRequiresKnownExpiry(credentialType: string): boolean {
+  return (CREDENTIAL_TYPES_REQUIRING_EXPIRY as readonly string[]).includes(
+    credentialType,
+  );
+}
+
+/**
+ * Mirror of SQL credential_expiry_is_valid.
+ * Annual practising licence requires a known future expires_at; other types
+ * keep null-or-future semantics.
+ */
+export function credentialExpiryIsValid(params: {
+  credentialType: string;
+  expiresAt: string | Date | null | undefined;
+  now?: Date;
+}): boolean {
+  const now = params.now ?? new Date();
+  const raw = params.expiresAt;
+  if (raw == null || raw === '') {
+    return !credentialRequiresKnownExpiry(params.credentialType);
+  }
+  const expiresAt = raw instanceof Date ? raw : new Date(raw);
+  if (Number.isNaN(expiresAt.getTime())) {
+    return false;
+  }
+  return expiresAt.getTime() > now.getTime();
+}
+
+/**
+ * True when ymd is a real Gregorian civil date (rejects 2026-02-31, non-leap
+ * 29 Feb, month 00/13, etc.). Date.UTC overflow alone is not enough.
+ */
+export function isValidCivilDateYmd(ymd: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return false;
+  const [year, month, day] = ymd.split('-').map(Number);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+}
+
+/**
+ * Store licence expiry as the last instant of the chosen civil date in
+ * Europe/Nicosia so the document stays valid through that Cyprus business day.
+ * Same-day Cyprus dates remain valid until that day's last millisecond
+ * (`expires_at > now()`), including across EET (UTC+2) and EEST (UTC+3).
+ */
+export function endOfCyprusBusinessDayIso(ymd: string): string {
+  if (!isValidCivilDateYmd(ymd)) {
+    throw new Error('INVALID_DATE');
+  }
+  const [year, month, day] = ymd.split('-').map(Number);
+  const next = new Date(Date.UTC(year, month - 1, day + 1, 0, 0, 0, 0));
+  const nextYmd = `${next.getUTCFullYear()}-${String(next.getUTCMonth() + 1).padStart(2, '0')}-${String(next.getUTCDate()).padStart(2, '0')}`;
+
+  // Convert Europe/Nicosia midnight of the following civil day to UTC, then
+  // subtract 1ms so the licence covers the full selected Cyprus date.
+  const guess = new Date(`${nextYmd}T00:00:00+02:00`);
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: CYPRUS_BUSINESS_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  });
+  let utcMs = guess.getTime();
+  for (let i = 0; i < 4; i += 1) {
+    const parts = formatter.formatToParts(new Date(utcMs));
+    const get = (type: Intl.DateTimeFormatPartTypes) =>
+      Number(parts.find((p) => p.type === type)?.value ?? '0');
+    const asLocalMs = Date.UTC(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour'),
+      get('minute'),
+      get('second'),
+    );
+    const desiredLocalMs = Date.UTC(
+      next.getUTCFullYear(),
+      next.getUTCMonth(),
+      next.getUTCDate(),
+      0,
+      0,
+      0,
+    );
+    utcMs += desiredLocalMs - asLocalMs;
+  }
+  return new Date(utcMs - 1).toISOString();
 }
 
 export function requiredCredentialTypesForRole(

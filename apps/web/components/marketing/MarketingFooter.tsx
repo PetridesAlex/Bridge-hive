@@ -76,7 +76,7 @@ export function MarketingFooter() {
             <MarketingBrand tone="dark" markSize={56} />
             <p className="m-footer-brand-copy">
               A staffing platform that connects healthcare organizations with verified
-              registered nurses and ward assistants — with clear roles, review workflows,
+              registered nurses, ward assistants, and physiotherapists — with clear roles, review workflows,
               and accountability on both sides.
             </p>
             <ul className="m-footer-trust">

@@ -213,7 +213,7 @@ export default function ContactPage() {
               <ul className="m-contact-checklist">
                 {[
                   'Organization name and country',
-                  'Approximate staffing needs for registered nurses and/or ward assistants',
+                  'Approximate staffing needs for registered nurses, ward assistants, and/or physiotherapists',
                   'Primary contact name, role, and preferred email',
                   'Locations or wards you intend to staff first',
                 ].map((item) => (

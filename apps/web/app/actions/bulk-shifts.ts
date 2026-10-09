@@ -8,6 +8,7 @@ import {
   findExactDuplicateShifts,
   findOverlappingShifts,
   summarizeBulkBatch,
+  workerRoleSchema,
   type BulkCreationMode,
   type BulkPreviewShift,
   type BulkRequestedStatus,
@@ -46,7 +47,7 @@ export type CreateShiftsBatchResult =
 const bulkShiftRowSchema = z.object({
   locationId: z.string().uuid(),
   wardId: z.string().uuid().nullable().optional(),
-  requiredRole: z.enum(['registered_nurse', 'ward_assistant']),
+  requiredRole: workerRoleSchema,
   startsAt: z.string().datetime({ offset: true }),
   endsAt: z.string().datetime({ offset: true }),
   breakMinutes: z.number().int().min(0).default(0),

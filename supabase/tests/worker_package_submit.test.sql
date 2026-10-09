@@ -31,13 +31,22 @@ insert into auth.users (
     now(), '{"provider":"email","providers":["email"]}'::jsonb,
     '{"full_name":"Pkg Ward","worker_role":"ward_assistant"}'::jsonb,
     now(), now()
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000',
+    'c2400001-0000-4000-8000-000000000004',
+    'authenticated', 'authenticated', 'pkg-physio@test.local', 'x',
+    now(), '{"provider":"email","providers":["email"]}'::jsonb,
+    '{"full_name":"Pkg Physio","worker_role":"physiotherapist"}'::jsonb,
+    now(), now()
   )
 on conflict (id) do nothing;
 
 insert into public.profiles (id, full_name, phone, account_status) values
   ('c2400001-0000-4000-8000-000000000001', 'Pkg Nurse', '+35799111111', 'active'),
   ('c2400001-0000-4000-8000-000000000002', 'Pkg Verifier', null, 'active'),
-  ('c2400001-0000-4000-8000-000000000003', 'Pkg Ward', '+35799222222', 'active')
+  ('c2400001-0000-4000-8000-000000000003', 'Pkg Ward', '+35799222222', 'active'),
+  ('c2400001-0000-4000-8000-000000000004', 'Pkg Physio', '+35799333333', 'active')
 on conflict (id) do nothing;
 
 insert into public.platform_admin_roles (user_id, role) values
@@ -144,6 +153,18 @@ select is(
    where user_id = 'c2400001-0000-4000-8000-000000000003'),
   'ward_assistant',
   'ward assistant profile role persisted'
+);
+
+select set_config(
+  'request.jwt.claim.sub',
+  'c2400001-0000-4000-8000-000000000004',
+  true
+);
+
+select is(
+  (public.ensure_my_worker_profile('physiotherapist', null)).worker_role::text,
+  'physiotherapist',
+  'ensure_my_worker_profile accepts explicit physiotherapist role'
 );
 
 select * from finish();

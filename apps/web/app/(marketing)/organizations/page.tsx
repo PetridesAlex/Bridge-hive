@@ -28,7 +28,7 @@ export default function OrganizationsPage() {
             </h1>
             <p className="m-lede mt-5 max-w-lg !text-[rgba(220,232,238,0.86)]">
               Bridge Hive helps hospitals and care organizations publish openings for
-              registered nurses and ward assistants, limit visibility to verified
+              registered nurses, ward assistants, and physiotherapists, limit visibility to verified
               professionals, and review completed timesheets — with operational
               structure rather than fill-rate guarantees.
             </p>

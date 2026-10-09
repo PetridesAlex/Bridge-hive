@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 const TONE_BAR: Record<CalendarEvent['tone'], string> = {
   rn: 'bg-bh-accent-blue',
   ward: 'bg-bh-success',
+  physio: 'bg-bh-honey',
   draft: 'bg-bh-text-muted',
   open: 'bg-bh-teal',
   filled: 'bg-emerald-500',

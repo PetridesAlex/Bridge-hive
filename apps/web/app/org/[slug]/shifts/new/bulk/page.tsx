@@ -1,3 +1,4 @@
+import type { WorkerRole } from '@bridge-hive/domain';
 import { formatInTimeZone } from 'date-fns-tz';
 import { redirect } from 'next/navigation';
 
@@ -74,7 +75,7 @@ export default async function BulkNewShiftsPage({
       defaults = {
         locationId: shift.location_id,
         wardId: shift.ward_id,
-        requiredRole: shift.required_role as 'registered_nurse' | 'ward_assistant',
+        requiredRole: shift.required_role as WorkerRole,
         startHm,
         endHm,
         breakMinutes: shift.break_minutes,

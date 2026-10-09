@@ -5,7 +5,9 @@ import {
   DEFAULT_WORKER_RECOVERY_NEXT,
   DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT,
   buildAuthConfirmRedirectTo,
+  isWorkerRole,
   workerExistingAccountMessage,
+  WORKER_ROLE_LABELS,
   type WorkerRole,
 } from '@bridge-hive/domain';
 import * as Linking from 'expo-linking';
@@ -19,7 +21,6 @@ import React, {
 } from 'react';
 import { Platform } from 'react-native';
 
-import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { clearAvatarUrlCache } from '@/lib/avatar';
 import { createSessionFromUrl, signInWithGoogleOAuth } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
@@ -91,7 +92,7 @@ function homeRouteForWorker(params: {
 
 function workerRoleFromUser(user: User): WorkerRole | null {
   const raw = user.user_metadata?.worker_role;
-  if (raw === 'registered_nurse' || raw === 'ward_assistant') return raw;
+  if (isWorkerRole(raw)) return raw;
   return null;
 }
 
@@ -179,8 +180,8 @@ async function bootstrapWorkerProfile(user: User): Promise<WorkerProfile | null>
   const { data: rpcData, error: rpcError } = await supabase.rpc(
     'ensure_my_worker_profile',
     {
-      p_worker_role: role,
-      p_bio: bio,
+      p_worker_role: role ?? undefined,
+      p_bio: bio ?? undefined,
     },
   );
 
@@ -457,7 +458,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data, error } = await supabase.rpc('ensure_my_worker_profile', {
         p_worker_role: input.workerRole,
-        p_bio: null,
+        p_bio: undefined,
       });
 
       if (error) {
@@ -521,9 +522,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     accountRejectionReason,
   });
   const firstName = firstNameFromFullName(profile?.full_name);
-  const roleLabel = workerProfile?.worker_role
-    ? WORKER_ROLE_LABELS[workerProfile.worker_role]
-    : 'Worker';
+  const roleLabel =
+    workerProfile?.worker_role && isWorkerRole(workerProfile.worker_role)
+      ? WORKER_ROLE_LABELS[workerProfile.worker_role]
+      : 'Worker';
 
   const value = useMemo<AuthContextValue>(
     () => ({

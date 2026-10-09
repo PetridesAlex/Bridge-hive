@@ -6,6 +6,7 @@ import {
   submitCredentialReviewAction,
 } from '@/app/actions/admin';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
+import { CorrectExpiresAtForm } from '@/components/admin/correct-expires-at-form';
 import { CredentialStatusBadge } from '@/components/admin/status-badges';
 import { EmptyState } from '@/components/empty-state';
 import {
@@ -18,6 +19,7 @@ import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { credentialTypeLabel } from '@/lib/admin/labels';
 import { formatDateTime } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
+import { credentialRequiresKnownExpiry } from '@bridge-hive/domain';
 
 export default async function AdminCredentialDetailPage({
   params,
@@ -130,6 +132,15 @@ export default async function AdminCredentialDetailPage({
                 <span className="text-slate-500">Rejection reason:</span>{' '}
                 {credential.rejection_reason}
               </p>
+            ) : null}
+            {ctx.capabilities.canReviewCredentials &&
+            credentialRequiresKnownExpiry(credential.credential_type) ? (
+              <div className="pt-2">
+                <CorrectExpiresAtForm
+                  credentialId={credential.id}
+                  currentExpiresAt={credential.expires_at}
+                />
+              </div>
             ) : null}
           </CardContent>
         </Card>

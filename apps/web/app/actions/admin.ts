@@ -2,6 +2,8 @@
 
 import {
   approveReviewedCredentialsSchema,
+  correctCredentialExpiresAtSchema,
+  endOfCyprusBusinessDayIso,
   markCredentialsUnderReviewSchema,
   reactivateWorkerAccountSchema,
   reviewCredentialSchema,
@@ -244,6 +246,58 @@ export async function reviewCredentialAction(
     ...(parsed.data.rejectionReason
       ? { p_rejection_reason: parsed.data.rejectionReason }
       : {}),
+  });
+
+  if (error) {
+    return { error: rpcErrorMessage(error) };
+  }
+
+  revalidatePath('/admin/credentials');
+  revalidatePath(`/admin/credentials/${parsed.data.credentialId}`);
+  revalidatePath('/admin/applications');
+  revalidatePath('/admin');
+  revalidatePath('/admin/audit');
+  return { success: true };
+}
+
+/**
+ * Correct expires_at after comparing the private document. Does not approve
+ * the credential or activate the worker.
+ */
+export async function correctCredentialExpiresAtAction(
+  _prev: AdminActionResult,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  const ctx = await getPlatformAdminContext();
+  if (!ctx?.capabilities.canReviewCredentials) {
+    return { error: 'You do not have permission to correct credential expiry.' };
+  }
+
+  const ymd = String(formData.get('expiresAtYmd') ?? '').trim();
+  let expiresAt: string | undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
+    try {
+      expiresAt = endOfCyprusBusinessDayIso(ymd);
+    } catch {
+      return { error: 'Enter a valid licence expiry date (YYYY-MM-DD).' };
+    }
+  } else {
+    const raw = String(formData.get('expiresAt') ?? '').trim();
+    expiresAt = raw || undefined;
+  }
+
+  const parsed = correctCredentialExpiresAtSchema.safeParse({
+    credentialId: String(formData.get('credentialId') ?? ''),
+    expiresAt,
+  });
+  if (!parsed.success) {
+    return { error: zodErrorMessage(parsed.error) };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('correct_credential_expires_at', {
+    p_credential_id: parsed.data.credentialId,
+    p_expires_at: parsed.data.expiresAt,
   });
 
   if (error) {

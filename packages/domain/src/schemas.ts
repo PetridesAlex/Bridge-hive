@@ -167,6 +167,12 @@ export const reviewCredentialSchema = z.object({
   rejectionReason: z.string().max(2000).optional(),
 });
 
+/** Verifier corrects expires_at after reviewing the private document; does not approve. */
+export const correctCredentialExpiresAtSchema = z.object({
+  credentialId: z.string().uuid(),
+  expiresAt: z.string().datetime({ offset: true }),
+});
+
 export const reviewPayoutAccountSchema = z.object({
   payoutAccountId: z.string().uuid(),
   decision: z.enum(['approve', 'reject']),
@@ -226,6 +232,9 @@ export type ReportOrganizationPaymentInput = z.infer<
   typeof reportOrganizationPaymentSchema
 >;
 export type ReviewCredentialInput = z.infer<typeof reviewCredentialSchema>;
+export type CorrectCredentialExpiresAtInput = z.infer<
+  typeof correctCredentialExpiresAtSchema
+>;
 export type ReviewPayoutAccountInput = z.infer<typeof reviewPayoutAccountSchema>;
 export type SetWorkerVerificationInput = z.infer<typeof setWorkerVerificationSchema>;
 export type SuspendWorkerAccountInput = z.infer<typeof suspendWorkerAccountSchema>;

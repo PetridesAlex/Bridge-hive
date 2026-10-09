@@ -2,7 +2,7 @@
 -- Delivery columns, mark/resend guards, accept_by_id, cross-tenant denial.
 
 begin;
-select plan(18);
+select plan(15);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -127,6 +127,9 @@ select is(
 
 -- Clear cooldown so assert can pass once
 reset role;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
 update public.organization_invitations
 set last_send_attempt_at = now() - interval '5 minutes'
 where id = 'd1d1d1d1-d1d1-41d1-81d1-d1d1d1d1d1d1';
@@ -151,6 +154,9 @@ select lives_ok(
 
 -- Force recent attempt for rate limit
 reset role;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
 update public.organization_invitations
 set last_send_attempt_at = now()
 where id = 'd1d1d1d1-d1d1-41d1-81d1-d1d1d1d1d1d1';
@@ -176,6 +182,9 @@ select throws_ok(
 
 -- Wrong email cannot accept
 reset role;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
 update public.organization_invitations
 set last_send_attempt_at = now() - interval '5 minutes'
 where id = 'd1d1d1d1-d1d1-41d1-81d1-d1d1d1d1d1d1';
@@ -219,6 +228,12 @@ select ok(
   'matching email accepts invitation by id'
 );
 
+-- Privileged reads after accept (not as invitee JWT)
+reset role;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
+
 select is(
   (
     select delivery_status
@@ -240,7 +255,16 @@ select ok(
   'membership created on accept_by_id'
 );
 
--- Reuse rejected
+-- Reuse rejected (re-auth as invitee)
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"d1000001-0000-4000-8000-000000000002","role":"authenticated","aud":"authenticated"}',
+  true
+);
+select set_config('request.jwt.claim.sub', 'd1000001-0000-4000-8000-000000000002', true);
+select set_config('request.jwt.claim.role', 'authenticated', true);
+set local role authenticated;
+
 select throws_ok(
   $$
     select public.accept_organization_invitation_by_id(
@@ -307,6 +331,9 @@ select ok(
 
 -- Revoked invite cannot be accepted (fresh invite)
 reset role;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
 insert into public.organization_invitations (
   id, organization_id, email_normalized, role, token_hash, expires_at, created_by,
   delivery_status, revoked_at, revoked_by

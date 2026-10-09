@@ -8,6 +8,7 @@ import {
   countOpenShifts,
   filterCalendarShifts,
   isOwnedOrganizationLogoPath,
+  isWorkerRole,
   locationWorkload,
   mapShiftToCalendarEvent,
   orgActivityFetchStartYmd,
@@ -77,10 +78,7 @@ export default async function OrgDashboardPage({
     )
       ? sp.location
       : null;
-  const roleFilter =
-    sp.role === 'registered_nurse' || sp.role === 'ward_assistant'
-      ? sp.role
-      : null;
+  const roleFilter = isWorkerRole(sp.role) ? sp.role : null;
 
   // Pad fetch window for cross-midnight segments
   const fetchStart = new Date(

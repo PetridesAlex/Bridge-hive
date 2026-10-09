@@ -80,7 +80,7 @@ async function sendActivationAndMark(
     const { error } = await supabase.rpc('mark_organization_invitation_delivery', {
       p_invitation_id: params.invitationId,
       p_delivery_status: 'sent',
-      p_error_category: null,
+      p_error_category: undefined,
     });
     if (error) {
       return {

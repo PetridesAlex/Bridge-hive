@@ -80,7 +80,7 @@ export type Database = {
       }>;
       worker_profiles: GenericTable<{
         user_id: string;
-        worker_role: 'registered_nurse' | 'ward_assistant' | null;
+        worker_role: 'registered_nurse' | 'ward_assistant' | 'physiotherapist' | null;
         bio: string | null;
         onboarding_status: 'not_started' | 'in_progress' | 'completed';
         verification_status:
@@ -118,7 +118,7 @@ export type Database = {
         organization_id: string;
         location_id: string;
         ward_id: string | null;
-        required_role: 'registered_nurse' | 'ward_assistant';
+        required_role: 'registered_nurse' | 'ward_assistant' | 'physiotherapist';
         starts_at: string;
         ends_at: string;
         break_minutes: number;
@@ -415,10 +415,21 @@ export type Database = {
       };
       ensure_my_worker_profile: {
         Args: {
-          p_worker_role?: 'registered_nurse' | 'ward_assistant' | null;
+          p_worker_role?:
+            | 'registered_nurse'
+            | 'ward_assistant'
+            | 'physiotherapist'
+            | null;
           p_bio?: string | null;
         };
         Returns: Database['public']['Tables']['worker_profiles']['Row'];
+      };
+      correct_credential_expires_at: {
+        Args: {
+          p_credential_id: string;
+          p_expires_at: string;
+        };
+        Returns: Database['public']['Tables']['credentials']['Row'];
       };
       submit_worker_verification_package: {
         Args: Record<string, never>;

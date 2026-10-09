@@ -1,5 +1,6 @@
 import {
   canWorkerEditCredentialFile,
+  credentialRequiresKnownExpiry,
   credentialTypeLabel,
 } from '@bridge-hive/domain';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -18,6 +19,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { TextInput } from '@/components/ui/TextInput';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useCredentials } from '@/hooks/useCredentials';
 import {
@@ -26,6 +28,7 @@ import {
   pickCredentialFile,
   pickCredentialImage,
   submitCredentialForReview,
+  resolveCredentialExpiresAt,
   uploadCredentialDocument,
   type ChecklistRow,
 } from '@/lib/credentials';
@@ -69,6 +72,8 @@ export default function DocumentsScreen() {
     error: null,
   });
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [practisingLicenceExpiryYmd, setPractisingLicenceExpiryYmd] =
+    useState('');
 
   const checklist = useMemo(
     () =>
@@ -89,6 +94,23 @@ export default function DocumentsScreen() {
   const handlePick = useCallback(
     async (row: ChecklistRow, mode: 'document' | 'image') => {
       setUploadState({ type: row.credentialType, uploading: false, error: null });
+
+      const expiryYmd = credentialRequiresKnownExpiry(row.credentialType)
+        ? practisingLicenceExpiryYmd
+        : undefined;
+      const expiryCheck = resolveCredentialExpiresAt({
+        credentialType: row.credentialType,
+        expiresAtYmd: expiryYmd,
+      });
+      if ('error' in expiryCheck) {
+        setUploadState({
+          type: row.credentialType,
+          uploading: false,
+          error: expiryCheck.error,
+        });
+        return;
+      }
+
       const picked =
         mode === 'image' ? await pickCredentialImage() : await pickCredentialFile();
       if (!picked.ok) {
@@ -110,6 +132,7 @@ export default function DocumentsScreen() {
         sizeBytes: picked.sizeBytes,
         fileName: picked.fileName,
         existingCredential: row.credential,
+        expiresAtYmd: expiryYmd,
       });
 
       if (result.error) {
@@ -124,7 +147,7 @@ export default function DocumentsScreen() {
       setUploadState({ type: null, uploading: false, error: null });
       await refresh();
     },
-    [refresh],
+    [practisingLicenceExpiryYmd, refresh],
   );
 
   const handleDelete = useCallback(
@@ -232,6 +255,18 @@ export default function DocumentsScreen() {
             const isUploading =
               uploadState.uploading && uploadState.type === row.credentialType;
             const rowBusy = busyId === row.credential?.id;
+            const requiresExpiry = credentialRequiresKnownExpiry(
+              row.credentialType,
+            );
+            const expiryReady =
+              !requiresExpiry ||
+              !('error' in
+                resolveCredentialExpiresAt({
+                  credentialType: row.credentialType,
+                  expiresAtYmd: practisingLicenceExpiryYmd,
+                }));
+            const uploadDisabled =
+              uploadState.uploading || rowBusy || !expiryReady;
 
             return (
               <View key={row.credentialType} style={styles.card}>
@@ -268,10 +303,22 @@ export default function DocumentsScreen() {
                   </View>
                 ) : editable ? (
                   <View style={styles.rowActions}>
+                    {requiresExpiry ? (
+                      <TextInput
+                        label="Licence expiry date"
+                        value={practisingLicenceExpiryYmd}
+                        onChangeText={setPractisingLicenceExpiryYmd}
+                        placeholder="YYYY-MM-DD"
+                        autoCapitalize="none"
+                        keyboardType="numbers-and-punctuation"
+                        containerStyle={styles.expiryField}
+                        helpText="Required for your annual practising licence. Valid through the end of that Cyprus business day (Europe/Nicosia)."
+                      />
+                    ) : null}
                     <Pressable
                       style={styles.secondaryBtn}
                       onPress={() => void handlePick(row, 'image')}
-                      disabled={uploadState.uploading || rowBusy}
+                      disabled={uploadDisabled}
                     >
                       <Text style={styles.secondaryBtnText}>
                         {row.fileName ? 'Replace photo' : 'Upload photo'}
@@ -280,7 +327,7 @@ export default function DocumentsScreen() {
                     <Pressable
                       style={styles.secondaryBtn}
                       onPress={() => void handlePick(row, 'document')}
-                      disabled={uploadState.uploading || rowBusy}
+                      disabled={uploadDisabled}
                     >
                       <Text style={styles.secondaryBtnText}>
                         {row.fileName ? 'Replace PDF' : 'Upload PDF'}
@@ -399,6 +446,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     alignItems: 'center',
+  },
+  expiryField: {
+    width: '100%',
+    flexGrow: 1,
+    flexBasis: '100%',
+    minWidth: 0,
   },
   secondaryBtn: {
     borderRadius: 10,

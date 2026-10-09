@@ -43,6 +43,7 @@ export type CalendarEvent = {
 export type CalendarEventTone =
   | 'rn'
   | 'ward'
+  | 'physio'
   | 'draft'
   | 'open'
   | 'filled'
@@ -99,6 +100,7 @@ export function calendarEventTone(
   if (status === 'published') return 'open';
   if (requiredRole === 'ward_assistant') return 'ward';
   if (requiredRole === 'registered_nurse') return 'rn';
+  if (requiredRole === 'physiotherapist') return 'physio';
   return 'open';
 }
 

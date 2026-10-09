@@ -41,5 +41,16 @@ npm-debug.log*
 # Local-only helper scripts (never ship bypass tools)
 scripts/local/
 
+# Local reconciliation / private prod snapshots (never commit)
+reconcile-artifacts/
+scripts/bh-prod-*.sh
+scripts/bh-prod-*.py
+scripts/bh-test-*.sh
+scripts/bh-test-*.py
+scripts/bh-psql-stdio.py
+scripts/bh-enable-pgtap.sql
+/tmp/bh-prod*
+/tmp/bh-test*
+
 # Vercel local link (never commit)
 .vercel

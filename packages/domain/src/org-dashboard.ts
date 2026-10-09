@@ -4,7 +4,7 @@
  */
 
 import type { OrgRole, OrgStatus, WorkerRole } from './types';
-import { WORKER_ROLE_LABELS } from './types';
+import { WORKER_ROLE_LABELS, WORKER_ROLES } from './types';
 import { isOrgOperational, orgOperationalBlockedMessage } from './organization-onboarding';
 
 export type OrgNavItemId =
@@ -195,23 +195,22 @@ export function buildRoleCoverage(
   const end = new Date(monday);
   end.setUTCDate(monday.getUTCDate() + weekCount * 7);
 
-  const counts: Record<WorkerRole, number> = {
-    registered_nurse: 0,
-    ward_assistant: 0,
-  };
+  const counts = Object.fromEntries(
+    WORKER_ROLES.map((role) => [role, 0]),
+  ) as Record<WorkerRole, number>;
 
   for (const shift of shifts) {
     const t = new Date(shift.starts_at).getTime();
     if (t < monday.getTime() || t >= end.getTime()) continue;
     if (shift.status === 'cancelled' || shift.status === 'draft') continue;
     const role = shift.required_role as WorkerRole | null | undefined;
-    if (role === 'registered_nurse' || role === 'ward_assistant') {
+    if (role && WORKER_ROLES.includes(role)) {
       counts[role] += 1;
     }
   }
 
-  const total = counts.registered_nurse + counts.ward_assistant;
-  return (['registered_nurse', 'ward_assistant'] as const).map((role) => ({
+  const total = WORKER_ROLES.reduce((sum, role) => sum + counts[role], 0);
+  return WORKER_ROLES.map((role) => ({
     role,
     label: WORKER_ROLE_LABELS[role],
     count: counts[role],

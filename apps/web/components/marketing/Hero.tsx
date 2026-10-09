@@ -26,7 +26,7 @@ const HERO_METRICS = [
   {
     icon: Users,
     title: 'Role-specific shifts',
-    detail: 'Nurses and ward assistants',
+    detail: 'Nurses, ward assistants, and physiotherapists',
   },
   {
     icon: ClipboardCheck,
@@ -59,8 +59,8 @@ export function Hero() {
                   strokeLinecap="round"
                 />
               </svg>
-            </span>{' '}
-            and ward assistants
+            </span>
+            , ward assistants, and physiotherapists
           </h1>
           <p className="m-hero-sub m-rise m-rise-d2">
             Bridge Hive structures role-specific shifts, credential review, timesheets,
@@ -118,7 +118,7 @@ export function Hero() {
               </span>
               <p>
                 <strong>Role-matched shifts</strong>
-                <span>Nurses and ward assistants</span>
+                <span>Nurses, ward assistants, and physiotherapists</span>
               </p>
             </div>
           </div>

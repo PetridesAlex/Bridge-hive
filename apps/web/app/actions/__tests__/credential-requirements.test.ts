@@ -1,14 +1,19 @@
 import {
   accountSetupNextStep,
   canSubmitWorkerVerificationPackage,
+  credentialExpiryIsValid,
   credentialRequirementsForRole,
+  credentialRequiresKnownExpiry,
   credentialTypeLabel,
   documentProgressCounts,
   documentsSummaryLabel,
+  endOfCyprusBusinessDayIso,
   finalApprovalSummaryLabel,
   isOwnedAvatarPath,
+  isValidCivilDateYmd,
   isWorkerAccountSetupRouteAllowed,
   isWorkerMarketplaceRoute,
+  isWorkerRole,
   invoicesMenuTrailingStatus,
   personalInformationTrailingStatus,
   payoutAccountActionLabel,
@@ -17,6 +22,8 @@ import {
   requiredCredentialTypesForRole,
   validateCredentialUpload,
   WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE,
+  WORKER_ROLE_LABELS,
+  WORKER_ROLES,
   workerDocumentPackageLabel,
   credentialsMenuTrailingStatus,
   notificationsMenuTrailingStatus,
@@ -42,6 +49,90 @@ describe('credential requirements', () => {
       'tax_identification_proof',
       'social_insurance_proof',
     ]);
+    expect(requiredCredentialTypesForRole('physiotherapist')).toEqual([
+      'identity_document_front',
+      'identity_document_back',
+      'physiotherapy_degree',
+      'physiotherapist_registration_certificate',
+      'physiotherapy_practising_licence',
+      'tax_identification_proof',
+      'social_insurance_proof',
+    ]);
+    expect(requiredCredentialTypesForRole('physiotherapist')).toHaveLength(7);
+    expect(credentialRequirementsForRole(null)).toEqual([]);
+    expect(
+      credentialRequirementsForRole('unknown_role' as never),
+    ).toEqual([]);
+  });
+
+  it('keeps physiotherapist professional document keys separate', () => {
+    const types = requiredCredentialTypesForRole('physiotherapist');
+    expect(types).toContain('physiotherapy_degree');
+    expect(types).toContain('physiotherapist_registration_certificate');
+    expect(types).toContain('physiotherapy_practising_licence');
+    expect(types).not.toContain('nursing_licence');
+    expect(credentialTypeLabel('physiotherapy_practising_licence')).toContain(
+      'practising licence',
+    );
+  });
+
+  it('registers physiotherapist in the shared role registry', () => {
+    expect(WORKER_ROLES).toContain('physiotherapist');
+    expect(WORKER_ROLE_LABELS.physiotherapist).toBe('Physiotherapist');
+    expect(isWorkerRole('physiotherapist')).toBe(true);
+    expect(isWorkerRole('doctor')).toBe(false);
+    expect(isWorkerRole(null)).toBe(false);
+  });
+
+  it('requires a known future expiry only for the annual practising licence', () => {
+    expect(
+      credentialRequiresKnownExpiry('physiotherapy_practising_licence'),
+    ).toBe(true);
+    expect(credentialRequiresKnownExpiry('physiotherapy_degree')).toBe(false);
+    expect(credentialRequiresKnownExpiry('nursing_licence')).toBe(false);
+    expect(
+      credentialExpiryIsValid({
+        credentialType: 'physiotherapy_practising_licence',
+        expiresAt: null,
+      }),
+    ).toBe(false);
+    expect(
+      credentialExpiryIsValid({
+        credentialType: 'nursing_licence',
+        expiresAt: null,
+      }),
+    ).toBe(true);
+  });
+
+  it('rejects impossible civil dates and keeps same-day Cyprus licences valid through end of day', () => {
+    expect(isValidCivilDateYmd('2026-02-31')).toBe(false);
+    expect(isValidCivilDateYmd('2026-02-29')).toBe(false);
+    expect(isValidCivilDateYmd('2024-02-29')).toBe(true);
+    expect(() => endOfCyprusBusinessDayIso('2026-02-31')).toThrow(
+      'INVALID_DATE',
+    );
+
+    const winter = endOfCyprusBusinessDayIso('2026-01-15');
+    const summer = endOfCyprusBusinessDayIso('2026-07-15');
+    // EET = UTC+2 → end of day is 21:59:59.999Z; EEST = UTC+3 → 20:59:59.999Z
+    expect(winter).toBe('2026-01-15T21:59:59.999Z');
+    expect(summer).toBe('2026-07-15T20:59:59.999Z');
+
+    const middayCyprusWinter = new Date('2026-01-15T10:00:00.000Z');
+    expect(
+      credentialExpiryIsValid({
+        credentialType: 'physiotherapy_practising_licence',
+        expiresAt: winter,
+        now: middayCyprusWinter,
+      }),
+    ).toBe(true);
+    expect(
+      credentialExpiryIsValid({
+        credentialType: 'physiotherapy_practising_licence',
+        expiresAt: winter,
+        now: new Date('2026-01-15T22:00:00.000Z'),
+      }),
+    ).toBe(false);
   });
 
   it('uses approved terminology', () => {

@@ -378,10 +378,9 @@ select throws_ok(
 
 -- Insert remaining required docs (licence already pending as d3 from resubmit)
 reset role;
--- Make the pending licence expired before approval
-update public.credentials
-set expires_at = now() - interval '1 day'
-where id = 'b1000001-cccc-4000-8000-0000000000d3';
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
 
 insert into public.credentials (
   id, worker_id, credential_type, status, expires_at, storage_path, storage_paths
@@ -398,8 +397,21 @@ select lives_ok($$ select public.verify_credential('b1000001-cccc-4000-8000-0000
 select lives_ok($$ select public.verify_credential('b1000001-cccc-4000-8000-0000000000e3', 'approve') $$, 'approve degree');
 select lives_ok($$ select public.verify_credential('b1000001-cccc-4000-8000-0000000000e4', 'approve') $$, 'approve tax');
 select lives_ok($$ select public.verify_credential('b1000001-cccc-4000-8000-0000000000e5', 'approve') $$, 'approve social');
-select lives_ok($$ select public.verify_credential('b1000001-cccc-4000-8000-0000000000d3', 'approve') $$, 'approve expired licence row');
+select lives_ok($$ select public.verify_credential('b1000001-cccc-4000-8000-0000000000d3', 'approve') $$, 'approve nursing licence row');
 
+-- Expire after approval: verify_credential rejects expired rows (CREDENTIAL_EXPIRED),
+-- so satisfaction is checked at final verification time.
+reset role;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
+select set_config('bridgehive.allow_platform_verify', 'on', true);
+update public.credentials
+set expires_at = now() - interval '1 day'
+where id = 'b1000001-cccc-4000-8000-0000000000d3';
+select set_config('bridgehive.allow_platform_verify', 'off', true);
+
+select pg_temp.auth_as('b1000001-0000-4000-8000-000000000003');
 select throws_ok(
   $$ select public.set_worker_verification(
        'b1000001-0000-4000-8000-000000000001',
@@ -412,6 +424,9 @@ select throws_ok(
 
 -- Fix licence expiry + payout; CV remains optional
 reset role;
+select set_config('request.jwt.claims', '', true);
+select set_config('request.jwt.claim.sub', '', true);
+select set_config('request.jwt.claim.role', '', true);
 select set_config('bridgehive.allow_platform_verify', 'on', true);
 update public.credentials
 set expires_at = now() + interval '1 year'

@@ -22,7 +22,7 @@ const FEATURES = [
     icon: CalendarDays,
     tone: 'honey' as const,
     title: 'Role-specific shifts',
-    body: 'Publish openings for registered nurses or ward assistants with schedule and acceptance windows.',
+    body: 'Publish openings for registered nurses, ward assistants, or physiotherapists with schedule and acceptance windows.',
   },
   {
     icon: ShieldCheck,

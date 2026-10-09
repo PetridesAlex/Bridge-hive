@@ -176,6 +176,41 @@ describe('bulk shift domain helpers', () => {
       expect(summary.estimatedGrossMinor).toBe(18750 + 14400);
     });
 
+    it('preserves physiotherapist rows in a mixed-role bulk batch', () => {
+      const summary = summarizeBulkBatch([
+        base,
+        {
+          ...base,
+          rowIndex: 1,
+          requiredRole: 'ward_assistant',
+          startsAtIso: '2026-10-06T06:00:00.000Z',
+          endsAtIso: '2026-10-06T14:00:00.000Z',
+        },
+        {
+          ...base,
+          rowIndex: 2,
+          requiredRole: 'physiotherapist',
+          rateMinor: 3000,
+          breakMinutes: 0,
+          startsAtIso: '2026-10-07T06:00:00.000Z',
+          endsAtIso: '2026-10-07T14:00:00.000Z',
+        },
+      ]);
+      expect(summary.shiftCount).toBe(3);
+      expect(
+        summary.roleCounts.find((r) => r.role === 'registered_nurse')?.count,
+      ).toBe(1);
+      expect(
+        summary.roleCounts.find((r) => r.role === 'ward_assistant')?.count,
+      ).toBe(1);
+      expect(
+        summary.roleCounts.find((r) => r.role === 'physiotherapist')?.count,
+      ).toBe(1);
+      expect(
+        summary.roleCounts.find((r) => r.role === 'physiotherapist')?.label,
+      ).toBe('Physiotherapist');
+    });
+
     it('enforces min/max counts', () => {
       expect(assertBulkShiftCount(1).ok).toBe(false);
       expect(assertBulkShiftCount(BULK_SHIFT_MIN).ok).toBe(true);

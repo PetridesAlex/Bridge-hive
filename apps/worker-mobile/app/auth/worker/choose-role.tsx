@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/TextInput';
-import { WORKER_ROLE_LABELS } from '@/constants/config';
+import { WORKER_ROLE_OPTIONS } from '@/constants/workerRoleOptions';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -72,7 +72,7 @@ export default function WorkerChooseRoleScreen() {
   return (
     <AuthShell
       title="Choose your role"
-      subtitle="Welcome to Bridge Hive. Select Registered Nurse or Ward Assistant, confirm your details, then complete Account Setup before claiming shifts."
+      subtitle="Welcome to Bridge Hive. Choose your professional role, confirm your details, then complete Account Setup before claiming shifts."
       showBack={false}
       centered={false}
     >
@@ -85,20 +85,7 @@ export default function WorkerChooseRoleScreen() {
           keyboardType="phone-pad"
         />
         <Text style={styles.section}>Professional role</Text>
-        {(
-          [
-            {
-              role: 'registered_nurse' as WorkerRole,
-              title: WORKER_ROLE_LABELS.registered_nurse,
-              description: 'Licensed nursing professionals for RN-rated clinical shifts.',
-            },
-            {
-              role: 'ward_assistant' as WorkerRole,
-              title: WORKER_ROLE_LABELS.ward_assistant,
-              description: 'Ward assistants supporting care on eligible assistant shifts.',
-            },
-          ] as const
-        ).map((option) => {
+        {WORKER_ROLE_OPTIONS.map((option) => {
           const selected = workerRole === option.role;
           return (
             <Pressable
@@ -107,6 +94,7 @@ export default function WorkerChooseRoleScreen() {
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               accessibilityLabel={option.title}
+              accessibilityHint={option.description}
               style={[styles.roleCard, selected && styles.roleCardSelected]}
             >
               <View style={[styles.roleIcon, selected && styles.roleIconSelected]}>

@@ -10,13 +10,29 @@ export type AccountStatus = (typeof ACCOUNT_STATUSES)[number];
 export const WORKER_ROLES = [
   'registered_nurse',
   'ward_assistant',
+  'physiotherapist',
 ] as const;
 export type WorkerRole = (typeof WORKER_ROLES)[number];
 
 export const WORKER_ROLE_LABELS: Record<WorkerRole, string> = {
   registered_nurse: 'Registered Nurse',
   ward_assistant: 'Ward Assistant',
+  physiotherapist: 'Physiotherapist',
 };
+
+/** Greek role labels where locale-aware UI is supported. */
+export const WORKER_ROLE_LABELS_EL: Record<WorkerRole, string> = {
+  registered_nurse: 'Νοσηλευτής',
+  ward_assistant: 'Βοηθός θαλάμου',
+  physiotherapist: 'Φυσιοθεραπευτής',
+};
+
+export function isWorkerRole(value: unknown): value is WorkerRole {
+  return (
+    typeof value === 'string' &&
+    (WORKER_ROLES as readonly string[]).includes(value)
+  );
+}
 
 export const VERIFICATION_STATUSES = [
   'draft',

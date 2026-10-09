@@ -1,5 +1,7 @@
 /** App configuration for Bridge Hive worker mobile. */
 
+export { WORKER_ROLE_LABELS } from '@bridge-hive/domain';
+
 export const APP_CONFIG = {
   timezone: 'Europe/Nicosia',
   locale: 'en-CY',
@@ -7,9 +9,4 @@ export const APP_CONFIG = {
   countryCode: 'CY',
   supportEmail: 'support@bridgehive.com',
   cities: ['Limassol', 'Nicosia', 'Larnaca', 'Paphos', 'Famagusta'] as const,
-} as const;
-
-export const WORKER_ROLE_LABELS = {
-  registered_nurse: 'Registered Nurse',
-  ward_assistant: 'Ward Assistant',
 } as const;

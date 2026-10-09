@@ -52,5 +52,8 @@ scripts/bh-enable-pgtap.sql
 /tmp/bh-prod*
 /tmp/bh-test*
 
+# Local Python driver install for prod B/C helpers (never commit)
+.python-vendor/
+
 # Vercel local link (never commit)
 .vercel

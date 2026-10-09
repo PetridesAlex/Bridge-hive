@@ -258,15 +258,16 @@ export default function DocumentsScreen() {
             const requiresExpiry = credentialRequiresKnownExpiry(
               row.credentialType,
             );
-            const expiryReady =
-              !requiresExpiry ||
-              !('error' in
-                resolveCredentialExpiresAt({
+            const expiryGate = requiresExpiry
+              ? resolveCredentialExpiresAt({
                   credentialType: row.credentialType,
                   expiresAtYmd: practisingLicenceExpiryYmd,
-                }));
-            const uploadDisabled =
-              uploadState.uploading || rowBusy || !expiryReady;
+                })
+              : null;
+            const expiryReady = !expiryGate || !('error' in expiryGate);
+            // Only block while an upload/submit is in flight. Expiry is validated in
+            // handlePick so an empty date shows an error instead of a dead control.
+            const uploadDisabled = uploadState.uploading || rowBusy;
 
             return (
               <View key={row.credentialType} style={styles.card}>
@@ -288,7 +289,9 @@ export default function DocumentsScreen() {
                       </Text>
                     ) : null}
                     {uploadState.type === row.credentialType && uploadState.error ? (
-                      <Text style={styles.reject}>{uploadState.error}</Text>
+                      <Text style={styles.reject} accessibilityLiveRegion="polite">
+                        {uploadState.error}
+                      </Text>
                     ) : null}
                   </View>
                   <View style={styles.badge}>
@@ -312,11 +315,28 @@ export default function DocumentsScreen() {
                         autoCapitalize="none"
                         keyboardType="numbers-and-punctuation"
                         containerStyle={styles.expiryField}
-                        helpText="Required for your annual practising licence. Valid through the end of that Cyprus business day (Europe/Nicosia)."
+                        helpText="Required before upload. Valid through the end of that Cyprus business day (Europe/Nicosia)."
                       />
                     ) : null}
+                    {requiresExpiry && expiryGate && 'error' in expiryGate ? (
+                      <Text style={styles.expiryGateHint} accessibilityLiveRegion="polite">
+                        {expiryGate.error}
+                      </Text>
+                    ) : null}
                     <Pressable
-                      style={styles.secondaryBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        row.fileName ? 'Replace photo' : 'Upload photo'
+                      }
+                      accessibilityHint={
+                        requiresExpiry && !expiryReady
+                          ? 'Enter the licence expiry date first'
+                          : undefined
+                      }
+                      style={[
+                        styles.secondaryBtn,
+                        uploadDisabled && styles.btnDisabled,
+                      ]}
                       onPress={() => void handlePick(row, 'image')}
                       disabled={uploadDisabled}
                     >
@@ -325,7 +345,17 @@ export default function DocumentsScreen() {
                       </Text>
                     </Pressable>
                     <Pressable
-                      style={styles.secondaryBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={row.fileName ? 'Replace PDF' : 'Upload PDF'}
+                      accessibilityHint={
+                        requiresExpiry && !expiryReady
+                          ? 'Enter the licence expiry date first'
+                          : undefined
+                      }
+                      style={[
+                        styles.secondaryBtn,
+                        uploadDisabled && styles.btnDisabled,
+                      ]}
                       onPress={() => void handlePick(row, 'document')}
                       disabled={uploadDisabled}
                     >
@@ -460,6 +490,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: colors.background,
+  },
+  btnDisabled: {
+    opacity: 0.45,
+  },
+  expiryGateHint: {
+    width: '100%',
+    flexBasis: '100%',
+    fontFamily: typography.fonts.regular,
+    fontSize: 12,
+    color: colors.error,
+    lineHeight: 17,
   },
   secondaryBtnText: {
     fontFamily: typography.fonts.medium,

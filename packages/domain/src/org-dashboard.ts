@@ -13,13 +13,14 @@ export type OrgNavItemId =
   | 'timesheets'
   | 'locations'
   | 'payments'
+  | 'recruitment'
   | 'settings';
 
 export type OrgNavItem = {
   id: OrgNavItemId;
   href: string;
   label: string;
-  group: 'overview' | 'operations' | 'finance' | 'organization';
+  group: 'overview' | 'operations' | 'finance' | 'recruitment' | 'organization';
 };
 
 export type OrgNavCapabilities = {
@@ -29,6 +30,7 @@ export type OrgNavCapabilities = {
   canReviewTimesheets: boolean;
   canAccessBilling: boolean;
   canEditOrgSettings: boolean;
+  canAccessRecruitment?: boolean;
 };
 
 /** Role-aware navigation from real routes only (no dead links). */
@@ -83,6 +85,15 @@ export function orgNavItemsForCapabilities(
     });
   }
 
+  if (caps.canAccessRecruitment) {
+    items.push({
+      id: 'recruitment',
+      href: `${base}/recruitment`,
+      label: 'Recruitment',
+      group: 'recruitment',
+    });
+  }
+
   items.push({
     id: 'settings',
     href: `${base}/settings`,
@@ -97,6 +108,7 @@ export const ORG_NAV_GROUP_LABELS: Record<OrgNavItem['group'], string> = {
   overview: 'Overview',
   operations: 'Operations',
   finance: 'Finance',
+  recruitment: 'Recruitment',
   organization: 'Organization',
 };
 

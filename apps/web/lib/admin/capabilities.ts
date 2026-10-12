@@ -17,6 +17,8 @@ export type PlatformCapabilities = {
   canViewFinancePlaceholder: boolean;
   canViewFinance: boolean;
   canManageOrganizations: boolean;
+  canReviewRecruitment: boolean;
+  canManageRecruitmentAccess: boolean;
 };
 
 /**
@@ -48,6 +50,8 @@ export function capabilitiesForPlatformRole(
     canViewFinancePlaceholder: isFinance || isSuper,
     canViewFinance: isFinance || isSuper,
     canManageOrganizations: isSuper,
+    canReviewRecruitment: isVerifier || isSuper,
+    canManageRecruitmentAccess: isSuper,
   };
 }
 

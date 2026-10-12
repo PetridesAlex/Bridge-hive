@@ -12,6 +12,8 @@ const PUBLIC_PATHS = [
   '/activate-organization-account',
   '/organizations',
   '/professionals',
+  '/recruitment',
+  '/recruitment/apply',
   '/how-it-works',
   '/about',
   '/contact',
@@ -22,6 +24,9 @@ const PUBLIC_PATHS = [
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
   if (pathname.startsWith('/auth/')) return true;
+  if (pathname === '/recruitment' || pathname.startsWith('/recruitment/')) {
+    return true;
+  }
   return false;
 }
 

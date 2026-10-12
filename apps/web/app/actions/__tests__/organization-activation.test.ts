@@ -211,11 +211,14 @@ describe('auth confirm route contracts', () => {
     const src = await readWeb('app/auth/confirm/page.tsx');
     expect(src).not.toMatch(/\.verifyOtp\s*\(/);
     expect(src).not.toMatch(/exchangeCodeForSession/);
+    expect(src).toMatch(/Continue your organization activation/);
     expect(src).toMatch(/Continue activation/);
     expect(src).toMatch(/Continue password reset/);
     expect(src).toMatch(/Confirm your worker email/);
     expect(src).toMatch(/isAuthConfirmEmailOtpType|isWorkerSignupConfirmNext/);
+    expect(src).toMatch(/OrganizationActivationShell/);
     expect(src).toMatch(/robots:\s*\{\s*index:\s*false/);
+    expect(src).not.toMatch(/Google|Apple|GitHub/);
   });
 
   it('POST action calls verifyOtp exactly once with allow-listed types', async () => {
@@ -235,6 +238,7 @@ describe('auth confirm route contracts', () => {
     expect(src).toMatch(/token_hash/);
     expect(src).toMatch(/disabled=\{pending\}/);
     expect(src).toMatch(/Continue activation/);
+    expect(src).not.toMatch(/console\.(log|info|debug|error).*token/i);
   });
 
   it('next.config sets no-store / no-referrer / noindex for confirm', async () => {
@@ -250,6 +254,59 @@ describe('auth confirm route contracts', () => {
     expect(src).toMatch(/friendlyAuthLinkError/);
     expect(src).toMatch(/Back to sign in/);
     expect(src).not.toMatch(/error_description/);
+  });
+
+  it('activate page keeps masked invitation summary and org shell', async () => {
+    const src = await readWeb('app/activate-organization-account/page.tsx');
+    expect(src).toMatch(/maskEmail/);
+    expect(src).toMatch(/OrganizationActivationShell/);
+    expect(src).toMatch(/Activate your organization account/);
+    expect(src).toMatch(/Organization Administrator/);
+    expect(src).not.toMatch(/Google|Apple|GitHub/);
+    expect(src).not.toMatch(/console\.(log|info|debug|error).*token/i);
+  });
+
+  it('activate form keeps password policy and post-success settings link', async () => {
+    const src = await readWeb('components/activate-organization-form.tsx');
+    expect(src).toMatch(/Activate account/);
+    expect(src).toMatch(/autoComplete="new-password"/);
+    expect(src).toMatch(/ORG_ACTIVATION_MIN_PASSWORD_LENGTH/);
+    expect(src).toMatch(/\/org\/\$\{state\.slug\}\/settings/);
+    expect(src).toMatch(/Show password|Hide password/);
+    expect(src).toMatch(/disabled=\{pending\}/);
+    expect(src).not.toMatch(/Google|Apple|GitHub/);
+  });
+});
+
+describe('organization activation UI helpers', () => {
+  it('evaluates length and match without echoing passwords', async () => {
+    const {
+      getOrgActivationPasswordFeedback,
+      passwordMeetsMinLength,
+      passwordsMatch,
+    } = await import('@/lib/organization-activation-ui');
+
+    expect(passwordMeetsMinLength('')).toBe(false);
+    expect(passwordMeetsMinLength('short')).toBe(false);
+    expect(passwordMeetsMinLength('longenough')).toBe(true);
+    expect(passwordsMatch('', '')).toBe(false);
+    expect(passwordsMatch('password1', 'password2')).toBe(false);
+    expect(passwordsMatch('password1', 'password1')).toBe(true);
+
+    const empty = getOrgActivationPasswordFeedback('', '');
+    expect(empty.lengthMet).toBe(false);
+    expect(empty.matchVisible).toBe(false);
+    expect(empty.mismatchMessage).toBeNull();
+
+    const mismatch = getOrgActivationPasswordFeedback('longenough', 'different');
+    expect(mismatch.lengthMet).toBe(true);
+    expect(mismatch.matchMet).toBe(false);
+    expect(mismatch.mismatchMessage).toBe('Passwords do not match.');
+    expect(JSON.stringify(mismatch)).not.toMatch(/longenough|different/);
+
+    const match = getOrgActivationPasswordFeedback('longenough', 'longenough');
+    expect(match.matchMet).toBe(true);
+    expect(match.mismatchMessage).toBeNull();
   });
 });
 

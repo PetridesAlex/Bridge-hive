@@ -1,0 +1,413 @@
+/* Organization activation journey — confirm + activate screens only. */
+
+.org-activation-canvas {
+  --oa-navy: #071d30;
+  --oa-navy-soft: rgba(7, 29, 48, 0.12);
+  --oa-teal: #16a6b6;
+  --oa-gold: #c9920f;
+  --oa-gold-soft: #e0aa18;
+  --oa-ivory: #faf8f4;
+  --oa-card: #ffffff;
+  --oa-border: rgba(7, 29, 48, 0.1);
+  --oa-muted: #5f6f79;
+  --oa-text: #102331;
+
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  min-height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  padding: max(1.25rem, env(safe-area-inset-top))
+    max(1rem, env(safe-area-inset-right))
+    max(1.5rem, env(safe-area-inset-bottom))
+    max(1rem, env(safe-area-inset-left));
+  color: var(--oa-text);
+  background-color: #e8eef2;
+  background-image:
+    radial-gradient(
+      ellipse 90% 55% at -8% -10%,
+      rgba(7, 29, 48, 0.18),
+      transparent 58%
+    ),
+    radial-gradient(
+      ellipse 60% 50% at 108% -4%,
+      rgba(22, 166, 182, 0.22),
+      transparent 54%
+    ),
+    radial-gradient(
+      ellipse 48% 36% at 92% 108%,
+      rgba(224, 170, 24, 0.16),
+      transparent 56%
+    ),
+    linear-gradient(
+      165deg,
+      rgba(255, 252, 245, 0.72) 0%,
+      rgba(244, 247, 249, 0.35) 38%,
+      #e8eef2 100%
+    );
+}
+
+.org-activation-canvas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(rgba(7, 29, 48, 0.06) 1px, transparent 1px),
+    linear-gradient(
+      115deg,
+      transparent 0%,
+      transparent 46%,
+      rgba(22, 166, 182, 0.04) 50%,
+      transparent 54%,
+      transparent 100%
+    );
+  background-size:
+    22px 22px,
+    100% 100%;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.5), transparent 82%);
+}
+
+.org-activation-canvas::after {
+  content: '';
+  position: absolute;
+  right: -12%;
+  bottom: -14%;
+  z-index: 0;
+  width: min(36rem, 62%);
+  height: 20rem;
+  pointer-events: none;
+  border-radius: 999px;
+  background: rgba(22, 166, 182, 0.14);
+  filter: blur(64px);
+}
+
+.org-activation-card {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 28rem;
+  border-radius: 1.35rem;
+  border: 1px solid var(--oa-border);
+  background: var(--oa-card);
+  box-shadow:
+    0 1px 2px rgba(7, 29, 48, 0.04),
+    0 12px 40px rgba(7, 29, 48, 0.08);
+  padding: 1.5rem 1.35rem 1.65rem;
+}
+
+@media (min-width: 390px) {
+  .org-activation-card {
+    padding: 1.75rem 1.65rem 1.85rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .org-activation-card {
+    max-width: 30rem;
+    padding: 2rem 2rem 2.1rem;
+  }
+}
+
+.org-activation-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 1.35rem;
+}
+
+.org-activation-brand .auth-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.org-activation-brand .auth-logo-mark {
+  display: block;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.org-activation-brand .auth-logo-wordmark {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.org-activation-brand .auth-logo-bridge {
+  color: var(--oa-navy);
+}
+
+.org-activation-brand .auth-logo-hive {
+  color: var(--oa-gold-soft);
+}
+
+.org-activation-eyebrow {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--oa-gold);
+}
+
+.org-activation-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.org-activation-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 1.75rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--oa-muted);
+  background: #f4f7f9;
+  border: 1px solid transparent;
+}
+
+.org-activation-step[data-state='current'] {
+  color: var(--oa-navy);
+  background: rgba(22, 166, 182, 0.1);
+  border-color: rgba(22, 166, 182, 0.28);
+}
+
+.org-activation-step[data-state='upcoming'] {
+  opacity: 0.72;
+}
+
+.org-activation-step-dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.org-activation-step[data-state='current'] .org-activation-step-dot {
+  background: var(--oa-gold-soft);
+}
+
+.org-activation-step-rule {
+  flex: 1;
+  height: 1px;
+  min-width: 0.75rem;
+  background: linear-gradient(
+    90deg,
+    rgba(7, 29, 48, 0.14),
+    rgba(22, 166, 182, 0.2)
+  );
+}
+
+.org-activation-header {
+  margin-bottom: 1.15rem;
+}
+
+.org-activation-title {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.6vw, 1.65rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  color: var(--oa-text);
+}
+
+.org-activation-description {
+  margin: 0.55rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--oa-muted);
+}
+
+.org-activation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.org-activation-secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 550;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--oa-muted);
+}
+
+.org-activation-secure-dot {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: var(--oa-teal);
+  flex-shrink: 0;
+}
+
+.org-activation-summary {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 1rem 1.05rem;
+  border-radius: 1rem;
+  border: 1px solid var(--oa-border);
+  background:
+    linear-gradient(180deg, rgba(237, 243, 245, 0.65), rgba(255, 255, 255, 0.9));
+}
+
+.org-activation-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.org-activation-summary-row dt {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 550;
+  color: var(--oa-muted);
+}
+
+.org-activation-summary-row dd {
+  margin: 0;
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--oa-text);
+  word-break: break-word;
+}
+
+.org-activation-password-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.org-activation-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.org-activation-password-wrap input {
+  padding-right: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.org-activation-password-toggle {
+  position: absolute;
+  right: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--oa-muted);
+  cursor: pointer;
+}
+
+.org-activation-password-toggle:hover {
+  color: var(--oa-navy);
+  background: rgba(7, 29, 48, 0.04);
+}
+
+.org-activation-reqs {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.org-activation-req {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--oa-muted);
+}
+
+.org-activation-req[data-met='true'] {
+  color: #0f5c3a;
+}
+
+.org-activation-req-mark {
+  display: inline-flex;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.62rem;
+  line-height: 1;
+}
+
+.org-activation-req[data-met='true'] .org-activation-req-mark {
+  background: rgba(25, 135, 84, 0.12);
+  border-color: #198754;
+  color: #198754;
+}
+
+.org-activation-success {
+  border-radius: 1rem;
+  border: 1px solid rgba(25, 135, 84, 0.28);
+  background: rgba(231, 246, 237, 0.55);
+  padding: 1rem 1.05rem;
+}
+
+.org-activation-success-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  color: var(--oa-text);
+}
+
+.org-activation-success-body {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--oa-muted);
+}
+
+.org-activation-footer-link {
+  margin-top: 0.35rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--oa-muted);
+}
+
+.org-activation-footer-link a {
+  color: var(--oa-navy);
+  font-weight: 550;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.org-activation-footer-link a:hover {
+  color: var(--oa-teal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .org-activation-card.bh-fade-up {
+    animation: none;
+  }
+}

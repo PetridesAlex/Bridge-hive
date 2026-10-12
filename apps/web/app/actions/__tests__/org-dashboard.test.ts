@@ -111,6 +111,20 @@ describe('org dashboard helpers', () => {
       'settings',
     ]);
 
+    const adminWithRecruitment = orgNavItemsForCapabilities('acme', {
+      canOperate: true,
+      canManageShifts: true,
+      canManageLocations: true,
+      canReviewTimesheets: true,
+      canAccessBilling: true,
+      canEditOrgSettings: true,
+      canAccessRecruitment: true,
+    });
+    expect(adminWithRecruitment.map((i) => i.id)).toContain('recruitment');
+    expect(
+      adminWithRecruitment.find((i) => i.id === 'recruitment')?.href,
+    ).toBe('/org/acme/recruitment');
+
     const billing = orgNavItemsForCapabilities('acme', {
       canOperate: true,
       canManageShifts: false,

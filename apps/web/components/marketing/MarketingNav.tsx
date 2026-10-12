@@ -2,6 +2,7 @@
 
 import {
   ArrowRight,
+  Briefcase,
   Building2,
   Info,
   Mail,
@@ -18,6 +19,7 @@ import { MARKETING_NAV } from '@/components/marketing/nav-config';
 const NAV_ICONS = {
   '/organizations': Building2,
   '/professionals': UserRound,
+  '/recruitment': Briefcase,
   '/how-it-works': Zap,
   '/about': Info,
   '/contact': Mail,

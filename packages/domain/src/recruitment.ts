@@ -4,9 +4,14 @@
  */
 
 import {
+  CREDENTIAL_TYPES,
   CREDENTIAL_TYPES_REQUIRING_EXPIRY,
+  credentialExpiryIsValid,
   credentialRequirementsForRole,
+  credentialRequiresKnownExpiry,
   credentialTypeLabel,
+  endOfCyprusBusinessDayIso,
+  isValidCivilDateYmd,
   type CredentialType,
 } from './credential-requirements';
 import { WORKER_ROLE_LABELS, WORKER_ROLES, type WorkerRole } from './types';
@@ -68,11 +73,16 @@ export const RECRUITMENT_SUCCESS_MESSAGE =
   'Your Bridge Hive talent profile has been received.';
 
 export const RECRUITMENT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+/** Hard ceiling across all files in one submission (before body parse + storage). */
+export const RECRUITMENT_MAX_TOTAL_UPLOAD_BYTES = 32 * 1024 * 1024;
+/** Absolute max files per submission (role checklist is typically 5–7). */
+export const RECRUITMENT_MAX_UPLOAD_FILES = 8;
 export const RECRUITMENT_ALLOWED_MIME = [
   'application/pdf',
   'image/jpeg',
   'image/png',
 ] as const;
+export const RECRUITMENT_DOCUMENT_TYPE_PATTERN = /^[a-z0-9_]+$/;
 
 export function isRecruitmentWorkerRole(value: unknown): value is WorkerRole {
   return (
@@ -101,19 +111,214 @@ export function recruitmentDocumentRequirementsForRole(role: WorkerRole): Array<
   }));
 }
 
+export function isSafeRecruitmentDocumentType(value: string): boolean {
+  if (!value || !RECRUITMENT_DOCUMENT_TYPE_PATTERN.test(value)) return false;
+  if (value.includes('..') || value.includes('/') || value.includes('\\')) {
+    return false;
+  }
+  return (CREDENTIAL_TYPES as readonly string[]).includes(value);
+}
+
+export function recruitmentUploadExtensionForMime(
+  mimeType: string,
+): 'pdf' | 'png' | 'jpg' | null {
+  const mime = mimeType.toLowerCase();
+  if (mime === 'application/pdf') return 'pdf';
+  if (mime === 'image/png') return 'png';
+  if (mime === 'image/jpeg') return 'jpg';
+  return null;
+}
+
+export function sanitizeRecruitmentOriginalFilename(name: string): string {
+  const base = name.replace(/\\/g, '/').split('/').pop() ?? '';
+  const cleaned = base
+    .replace(/[^\w.\- ()[\]]+/g, '_')
+    .replace(/^\.+/, '')
+    .slice(0, 200);
+  return cleaned || 'document';
+}
+
+export function buildRecruitmentStoragePath(params: {
+  candidateId: string;
+  documentType: string;
+  extension: 'pdf' | 'png' | 'jpg';
+  objectId?: string;
+}): string | null {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      params.candidateId,
+    )
+  ) {
+    return null;
+  }
+  if (!isSafeRecruitmentDocumentType(params.documentType)) return null;
+  const objectId =
+    params.objectId ??
+    (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}`);
+  return `${params.candidateId}/${params.documentType}/${objectId}.${params.extension}`;
+}
+
+/**
+ * Resolve a civil YYYY-MM-DD expiry for recruitment_documents.expires_at (date).
+ * Uses Cyprus end-of-day validity rules; only types that require expiry store a date.
+ */
+export function resolveRecruitmentDocumentExpiresAt(params: {
+  documentType: string;
+  expiresAtYmd?: string | null;
+  now?: Date;
+}): { expiresAt: string | null } | { error: string } {
+  const raw = params.expiresAtYmd?.trim() ?? '';
+  const requiresExpiry = credentialRequiresKnownExpiry(params.documentType);
+
+  if (!requiresExpiry) {
+    if (!raw) return { expiresAt: null };
+    // Ignore valid client-supplied expiry for types that do not require it.
+    if (isValidCivilDateYmd(raw)) return { expiresAt: null };
+    return { error: 'Invalid document expiry date.' };
+  }
+
+  if (!raw) {
+    return { error: 'Enter an expiry date for this document.' };
+  }
+  if (!isValidCivilDateYmd(raw)) {
+    return { error: 'Enter a valid expiry date (YYYY-MM-DD).' };
+  }
+
+  let endOfDayIso: string;
+  try {
+    endOfDayIso = endOfCyprusBusinessDayIso(raw);
+  } catch {
+    return { error: 'Enter a valid expiry date (YYYY-MM-DD).' };
+  }
+
+  if (
+    !credentialExpiryIsValid({
+      credentialType: params.documentType,
+      expiresAt: endOfDayIso,
+      now: params.now,
+    })
+  ) {
+    return { error: 'Expiry date must be in the future.' };
+  }
+
+  return { expiresAt: raw };
+}
+
 export function validateRecruitmentUpload(file: {
   type: string;
   size: number;
 }): { ok: true } | { ok: false; error: string } {
-  if (
-    !(RECRUITMENT_ALLOWED_MIME as readonly string[]).includes(file.type)
-  ) {
+  const mime = file.type.toLowerCase();
+  if (!(RECRUITMENT_ALLOWED_MIME as readonly string[]).includes(mime)) {
     return { ok: false, error: 'Upload a PDF, JPEG, or PNG file.' };
   }
   if (file.size <= 0 || file.size > RECRUITMENT_MAX_UPLOAD_BYTES) {
     return { ok: false, error: 'Each file must be under 10 MB.' };
   }
   return { ok: true };
+}
+
+export type RecruitmentDocumentUploadInput = {
+  documentType: string;
+  mimeType: string;
+  sizeBytes: number;
+  expiresAtYmd?: string | null;
+};
+
+/**
+ * Validate document types, counts, sizes, and expiry against the server-side role checklist.
+ * Call before any service-role RPC or storage write.
+ */
+export function validateRecruitmentDocumentBatch(params: {
+  role: WorkerRole;
+  documents: RecruitmentDocumentUploadInput[];
+  now?: Date;
+}):
+  | {
+      ok: true;
+      documents: Array<{
+        documentType: CredentialType;
+        mimeType: string;
+        sizeBytes: number;
+        extension: 'pdf' | 'png' | 'jpg';
+        expiresAt: string | null;
+      }>;
+    }
+  | { ok: false; error: string } {
+  const checklist = recruitmentDocumentRequirementsForRole(params.role);
+  const allowed = new Set(checklist.map((d) => d.credentialType));
+  const maxForRole = Math.min(checklist.length, RECRUITMENT_MAX_UPLOAD_FILES);
+
+  if (params.documents.length === 0) {
+    return { ok: false, error: 'Upload at least one supporting document.' };
+  }
+  if (params.documents.length > RECRUITMENT_MAX_UPLOAD_FILES) {
+    return { ok: false, error: 'Too many documents uploaded.' };
+  }
+  if (params.documents.length > maxForRole) {
+    return { ok: false, error: 'Too many documents uploaded.' };
+  }
+
+  let totalBytes = 0;
+  const seen = new Set<string>();
+  const normalized: Array<{
+    documentType: CredentialType;
+    mimeType: string;
+    sizeBytes: number;
+    extension: 'pdf' | 'png' | 'jpg';
+    expiresAt: string | null;
+  }> = [];
+
+  for (const doc of params.documents) {
+    if (!isSafeRecruitmentDocumentType(doc.documentType)) {
+      return { ok: false, error: 'Invalid document type for the selected role.' };
+    }
+    if (!allowed.has(doc.documentType as CredentialType)) {
+      return { ok: false, error: 'Invalid document type for the selected role.' };
+    }
+    if (seen.has(doc.documentType)) {
+      return { ok: false, error: 'Each document type may be uploaded once.' };
+    }
+    seen.add(doc.documentType);
+
+    const upload = validateRecruitmentUpload({
+      type: doc.mimeType,
+      size: doc.sizeBytes,
+    });
+    if (!upload.ok) return upload;
+
+    const extension = recruitmentUploadExtensionForMime(doc.mimeType);
+    if (!extension) {
+      return { ok: false, error: 'Upload a PDF, JPEG, or PNG file.' };
+    }
+
+    totalBytes += doc.sizeBytes;
+    if (totalBytes > RECRUITMENT_MAX_TOTAL_UPLOAD_BYTES) {
+      return {
+        ok: false,
+        error: 'Total upload size must be 32 MB or less.',
+      };
+    }
+
+    const expiry = resolveRecruitmentDocumentExpiresAt({
+      documentType: doc.documentType,
+      expiresAtYmd: doc.expiresAtYmd,
+      now: params.now,
+    });
+    if ('error' in expiry) return { ok: false, error: expiry.error };
+
+    normalized.push({
+      documentType: doc.documentType as CredentialType,
+      mimeType: doc.mimeType.toLowerCase(),
+      sizeBytes: doc.sizeBytes,
+      extension,
+      expiresAt: expiry.expiresAt,
+    });
+  }
+
+  return { ok: true, documents: normalized };
 }
 
 export type RecruitmentApplicationDraft = {

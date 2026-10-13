@@ -50,6 +50,8 @@ describe('marketing site contracts', () => {
       '/',
       '/organizations',
       '/professionals',
+      '/recruitment',
+      '/recruitment/apply',
       '/how-it-works',
       '/about',
       '/contact',
@@ -61,6 +63,8 @@ describe('marketing site contracts', () => {
     for (const pathName of [
       '/organizations',
       '/professionals',
+      '/recruitment',
+      '/recruitment/apply',
       '/how-it-works',
       '/about',
       '/contact',

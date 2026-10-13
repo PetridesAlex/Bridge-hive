@@ -15,5 +15,8 @@
     "packages/domain/src/**/*.ts",
     "packages/supabase-types/src/**/*.ts",
     "packages/design-tokens/src/**/*.ts"
+  ],
+  "exclude": [
+    "packages/domain/src/__tests__/**"
   ]
 }

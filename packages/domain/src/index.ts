@@ -13,3 +13,4 @@ export * from './org-calendar';
 export * from './bulk-shifts';
 export * from './organization-activation';
 export * from './worker-google-oauth';
+export * from './recruitment';

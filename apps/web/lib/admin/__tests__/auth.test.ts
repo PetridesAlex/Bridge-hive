@@ -32,6 +32,8 @@ describe('capabilitiesForPlatformRole', () => {
     expect(caps.canApprovePayoutAccounts).toBe(false);
     expect(caps.canViewPayoutProof).toBe(false);
     expect(caps.canSuspendAccounts).toBe(false);
+    expect(caps.canReviewRecruitment).toBe(true);
+    expect(caps.canManageRecruitmentAccess).toBe(false);
   });
 
   it('grants finance placeholder access without verification powers', () => {
@@ -57,6 +59,8 @@ describe('capabilitiesForPlatformRole', () => {
     expect(caps.canViewAudit).toBe(true);
     expect(caps.canViewFinancePlaceholder).toBe(true);
     expect(caps.canViewFinance).toBe(true);
+    expect(caps.canReviewRecruitment).toBe(true);
+    expect(caps.canManageRecruitmentAccess).toBe(true);
   });
 
   it('covers every platform role', () => {

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Briefcase,
   CalendarDays,
   ClipboardList,
   LayoutDashboard,
@@ -35,6 +36,7 @@ const ICONS: Record<OrgNavItem['id'], typeof LayoutDashboard> = {
   timesheets: ClipboardList,
   locations: MapPin,
   payments: Wallet,
+  recruitment: Briefcase,
   settings: Settings,
 };
 
@@ -59,9 +61,9 @@ export function OrganizationSidebar({
 }) {
   const pathname = usePathname();
   const items = orgNavItemsForCapabilities(slug, capabilities);
-  const groups = (['overview', 'operations', 'finance', 'organization'] as const).filter(
-    (g) => items.some((i) => i.group === g),
-  );
+  const groups = (
+    ['overview', 'operations', 'finance', 'recruitment', 'organization'] as const
+  ).filter((g) => items.some((i) => i.group === g));
 
   return (
     <aside

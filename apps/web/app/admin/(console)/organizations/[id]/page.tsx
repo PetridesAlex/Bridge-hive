@@ -8,10 +8,13 @@ import {
 } from '@/components/admin/activation-controls';
 import { OrganizationActionsForm } from '@/components/admin/organization-actions-form';
 import { OrganizationInvitationForm } from '@/components/admin/organization-invitation-form';
+import { setOrganizationRecruitmentEnabledAction } from '@/app/actions/recruitment-admin';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { formatDateTime, roleLabel } from '@/lib/format';
+import { asUntypedDb } from '@/lib/recruitment-db';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
 import {
@@ -111,6 +114,18 @@ export default async function OrganizationDetailPage({
   };
 
   const org = detail.organization;
+  const db = asUntypedDb(supabase);
+  const recruitmentLookup = await db
+    .from('organizations')
+    .select('recruitment_enabled')
+    .eq('id', org.id)
+    .maybeSingle();
+  const recruitmentEnabled = recruitmentLookup.error
+    ? false
+    : Boolean(
+        (recruitmentLookup.data as { recruitment_enabled?: boolean } | null)
+          ?.recruitment_enabled,
+      );
   const latestInvite = detail.invitations[0];
   const accessStatus =
     latestInvite?.access_status ??
@@ -433,9 +448,17 @@ export default async function OrganizationDetailPage({
         </div>
       </Panel>
 
-      <Panel kicker="Control" title="Admin actions">
+      <Panel
+        kicker="Control"
+        title="Admin actions"
+        description={
+          org.status === 'under_review'
+            ? 'Decide whether this organization may enter the live Bridge Hive network.'
+            : undefined
+        }
+      >
         {hasStatusAction ? (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">
             {org.status === 'under_review' ? (
               <>
                 <OrganizationActionsForm
@@ -474,6 +497,35 @@ export default async function OrganizationDetailPage({
             {organizationLifecycleLabel(org.status).toLowerCase()}.
           </p>
         )}
+      </Panel>
+
+      <Panel
+        kicker="Recruitment"
+        title="Recruitment access"
+        description="Enable the private organization recruitment portal for org admins. Requires an active organization. Does not grant marketplace worker access."
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-bh-text-secondary">
+            Current:{' '}
+            <span className="font-semibold text-bh-text">
+              {recruitmentEnabled ? 'Enabled' : 'Disabled'}
+            </span>
+            {org.status !== 'active'
+              ? ' · Organization must be active for portal use.'
+              : null}
+          </p>
+          <form action={setOrganizationRecruitmentEnabledAction}>
+            <input type="hidden" name="organizationId" value={org.id} />
+            <input
+              type="hidden"
+              name="enabled"
+              value={recruitmentEnabled ? 'false' : 'true'}
+            />
+            <Button type="submit" className="rounded-full" variant="outline">
+              {recruitmentEnabled ? 'Disable recruitment' : 'Enable recruitment'}
+            </Button>
+          </form>
+        </div>
       </Panel>
     </div>
   );

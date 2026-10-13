@@ -39,16 +39,24 @@ export function ConfirmActivationForm({
           e.preventDefault();
         }
       }}
-      className="mt-8"
+      className="space-y-3"
     >
       <input type="hidden" name="token_hash" value={tokenHash} />
       <input type="hidden" name="type" value={type} />
       <input type="hidden" name="next" value={next} />
-      <Button type="submit" className="w-full" disabled={pending}>
+      <Button
+        type="submit"
+        className="w-full min-h-11"
+        size="lg"
+        disabled={pending}
+        aria-busy={pending}
+      >
         {pending ? 'Continuing…' : submitLabel}
       </Button>
       {state.error ? (
-        <p className="mt-3 text-sm text-red-700">{state.error}</p>
+        <p className="text-sm text-bh-danger" role="alert">
+          {state.error}
+        </p>
       ) : null}
     </form>
   );

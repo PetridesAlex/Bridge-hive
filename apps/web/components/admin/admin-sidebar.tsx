@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Briefcase,
   Building2,
   ClipboardCheck,
   FileSearch,
@@ -58,6 +59,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: ClipboardCheck,
     badgeKey: 'applications',
     visible: (c) => c.canViewWorkers,
+  },
+  {
+    href: '/admin/recruitment',
+    label: 'Recruitment',
+    icon: Briefcase,
+    visible: (c) => c.canReviewRecruitment,
   },
   {
     href: '/admin/workers',

@@ -23,6 +23,56 @@ const NAV_ICONS = {
   '/contact': Mail,
 } as const;
 
+/** Premium talent-credential mark for Recruitment — badge + brand honey. */
+function RecruitmentNavIcon({
+  size = 18,
+  className,
+}: {
+  size?: number;
+  className?: string;
+}) {
+  return (
+    <span
+      className={`m-nav-recruitment-icon ${className ?? ''}`.trim()}
+      aria-hidden="true"
+    >
+      <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+        <rect
+          className="m-nav-recruitment-plate"
+          x="3.75"
+          y="2.75"
+          width="16.5"
+          height="18.5"
+          rx="4"
+          fill="currentColor"
+          fillOpacity="0.07"
+          stroke="currentColor"
+          strokeWidth="1.55"
+        />
+        <circle
+          className="m-nav-recruitment-person"
+          cx="12"
+          cy="9.2"
+          r="2.55"
+          fill="currentColor"
+        />
+        <path
+          className="m-nav-recruitment-person"
+          d="M7.2 17.05c.75-2.55 2.4-3.85 4.8-3.85s4.05 1.3 4.8 3.85"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          strokeLinecap="round"
+        />
+        <path
+          className="m-nav-recruitment-hex"
+          d="M15.35 4.95 17.45 3.75l2.1 1.2v2.45l-2.1 1.2-2.1-1.2V4.95Z"
+          fill="#E4B334"
+        />
+      </svg>
+    </span>
+  );
+}
+
 /** Premium iPhone-style mark for the Worker app CTA. */
 function WorkerAppIcon({ size = 22 }: { size?: number }) {
   const reactId = useId().replace(/:/g, '');
@@ -189,7 +239,10 @@ export function MarketingNav() {
 
           <nav className="m-nav-desktop" aria-label="Primary">
             {MARKETING_NAV.map((item) => {
-              const Icon = NAV_ICONS[item.href];
+              const Icon =
+                item.href in NAV_ICONS
+                  ? NAV_ICONS[item.href as keyof typeof NAV_ICONS]
+                  : null;
               const current = pathname === item.href;
               return (
                 <Link
@@ -198,7 +251,12 @@ export function MarketingNav() {
                   className="m-nav-link"
                   aria-current={current ? 'page' : undefined}
                 >
-                  {Icon ? (
+                  {item.href === '/recruitment' ? (
+                    <RecruitmentNavIcon
+                      className="m-nav-link-icon"
+                      size={18}
+                    />
+                  ) : Icon ? (
                     <Icon
                       className="m-nav-link-icon"
                       size={17}
@@ -245,7 +303,10 @@ export function MarketingNav() {
           <div id={panelId} className="m-mobile-panel">
             <nav aria-label="Mobile">
               {MARKETING_NAV.map((item) => {
-                const Icon = NAV_ICONS[item.href];
+                const Icon =
+                  item.href in NAV_ICONS
+                    ? NAV_ICONS[item.href as keyof typeof NAV_ICONS]
+                    : null;
                 return (
                   <Link
                     key={item.href}
@@ -254,7 +315,9 @@ export function MarketingNav() {
                     aria-current={pathname === item.href ? 'page' : undefined}
                     onClick={() => setOpen(false)}
                   >
-                    {Icon ? (
+                    {item.href === '/recruitment' ? (
+                      <RecruitmentNavIcon size={18} />
+                    ) : Icon ? (
                       <Icon size={18} strokeWidth={1.85} aria-hidden="true" />
                     ) : null}
                     {item.label}

@@ -32,6 +32,7 @@ npx supabase test db
 | `shift_role_claim.test.sql` | Required role storage, publish lock, cross-role claim, org-active claim gate |
 | `marketplace_visibility.test.sql` | Marketplace RLS visibility by role, deadline, and non-membership |
 | `physiotherapist_role.test.sql` | Physiotherapist checklist, licence expiry, 3×3 list/detail/claim, bulk role, fail-closed gates, anon EXECUTE denies (028) |
+| `recruitment_isolation.test.sql` | Recruitment anon deny, org pipeline/notes isolation, scheduler gate, available-only org reads, verifier access (029) |
 
 Shared helper reference (not executed by pg_prove): [`../test_support/helpers.sql`](../test_support/helpers.sql)
 

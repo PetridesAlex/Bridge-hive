@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // Hide the Next.js "N" badge; it sits over login/marketing chrome in local review.
   // Compile/runtime errors still surface. Production is unaffected.
   devIndicators: false,
+  // Recruitment apply allows up to 32 MiB total across files; reject larger bodies early.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '32mb',
+    },
+  },
   images: {
     unoptimized: true,
     qualities: [75, 90, 92, 95],

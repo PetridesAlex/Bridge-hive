@@ -36,6 +36,11 @@ export type OrgCapabilities = {
   canReviewTimesheets: boolean;
   canAccessBilling: boolean;
   canEditOrgSettings: boolean;
+  /** Recruitment portal — org_admin only when org active + recruitment_enabled. */
+  canAccessRecruitment: boolean;
+  canViewRecruitmentContacts: boolean;
+  canViewRecruitmentDocuments: boolean;
+  canManageRecruitmentPipeline: boolean;
 };
 
 export type OrgContext = {
@@ -49,11 +54,14 @@ export type OrgContext = {
 function capabilitiesForRole(
   role: OrgRole,
   orgStatus: OrgStatus,
+  recruitmentEnabled = false,
 ): OrgCapabilities {
   const isAdmin = role === 'org_admin';
   const isScheduler = role === 'org_scheduler';
   const isBilling = role === 'org_billing';
   const operational = isOrgOperational(orgStatus);
+  const recruitment =
+    operational && recruitmentEnabled && isAdmin;
 
   return {
     role,
@@ -67,6 +75,10 @@ function capabilitiesForRole(
     canReviewTimesheets: operational && (isAdmin || isScheduler),
     canAccessBilling: operational && (isAdmin || isBilling),
     canEditOrgSettings: isAdmin,
+    canAccessRecruitment: recruitment,
+    canViewRecruitmentContacts: recruitment,
+    canViewRecruitmentDocuments: recruitment,
+    canManageRecruitmentPipeline: recruitment,
   };
 }
 
@@ -128,12 +140,18 @@ export async function requireOrgMembership(slug: string): Promise<OrgContext> {
     redirect('/dashboard');
   }
 
+  const recruitmentEnabled = Boolean(
+    (match.organization as Organization & { recruitment_enabled?: boolean })
+      .recruitment_enabled,
+  );
+
   return {
     org: match.organization,
     membership: match,
     capabilities: capabilitiesForRole(
       match.role as OrgRole,
       match.organization.status as OrgStatus,
+      recruitmentEnabled,
     ),
     user: bundle.user,
     profile: bundle.profile,

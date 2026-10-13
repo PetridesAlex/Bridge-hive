@@ -17,6 +17,6 @@
     "packages/design-tokens/src/**/*.ts"
   ],
   "exclude": [
-    "**/__tests__/**"
+    "packages/domain/src/__tests__/**"
   ]
 }

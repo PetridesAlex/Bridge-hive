@@ -3,21 +3,26 @@
 import {
   RECRUITMENT_PRIVACY_NOTICE_VERSION,
   RECRUITMENT_SUCCESS_MESSAGE,
+  buildRecruitmentStoragePath,
   isRecruitmentWorkerRole,
-  recruitmentDocumentRequirementsForRole,
+  sanitizeRecruitmentOriginalFilename,
   validateRecruitmentConsentStep,
+  validateRecruitmentDocumentBatch,
   validateRecruitmentPersonalStep,
   validateRecruitmentPreferencesStep,
   validateRecruitmentProfessionalStep,
-  validateRecruitmentUpload,
-  type CredentialType,
   type RecruitmentEmploymentType,
   type WorkerRole,
 } from '@bridge-hive/domain';
-import { createClient } from '@supabase/supabase-js';
+import { createHash } from 'node:crypto';
 import { headers } from 'next/headers';
 
-const MAX_RECRUITMENT_UPLOADS = 12;
+import { sendRecruitmentSubmissionNotify } from '@/lib/email/recruitment-notify';
+import { asUntypedDb, type UntypedDb } from '@/lib/recruitment-db';
+import { createServiceRoleClient } from '@/lib/supabase/admin';
+
+const GENERIC_SUBMIT_ERROR =
+  'Unable to submit your application. Please try again.';
 
 export type RecruitmentSubmitState = {
   error?: string;
@@ -26,20 +31,35 @@ export type RecruitmentSubmitState = {
   candidateId?: string;
 };
 
-function adminClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error('Missing Supabase service configuration.');
-  }
-  return createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
 function readString(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function hashClientIpHint(raw: string | null): string | null {
+  if (!raw) return null;
+  const first = raw.split(',')[0]?.trim() ?? '';
+  if (!first || first.length > 128) return null;
+  return createHash('sha256').update(first).digest('hex');
+}
+
+async function cleanupFailedSubmission(
+  admin: UntypedDb,
+  candidateId: string,
+  uploadedPaths: string[],
+): Promise<void> {
+  try {
+    if (uploadedPaths.length > 0) {
+      await admin.storage.from('recruitment-documents').remove(uploadedPaths);
+    }
+  } catch {
+    // Best-effort storage cleanup after a partial failure.
+  }
+  try {
+    await admin.from('recruitment_candidates').delete().eq('id', candidateId);
+  } catch {
+    // Best-effort DB cleanup; cascade removes child rows when delete succeeds.
+  }
 }
 
 export async function submitRecruitmentApplicationAction(
@@ -88,37 +108,26 @@ export async function submitRecruitmentApplicationAction(
     if (files.length !== docTypes.length) {
       return { error: 'Document metadata does not match uploads.' };
     }
-    if (files.length > MAX_RECRUITMENT_UPLOADS) {
-      return { error: 'Too many documents uploaded.' };
-    }
 
-    const allowedDocTypes = new Set(
-      recruitmentDocumentRequirementsForRole(draft.role).map(
-        (d) => d.credentialType,
-      ),
-    );
-    for (const docType of docTypes) {
-      if (
-        !docType ||
-        docType.includes('/') ||
-        docType.includes('\\') ||
-        docType.includes('..') ||
-        !allowedDocTypes.has(docType as CredentialType)
-      ) {
-        return { error: 'Invalid document type for the selected role.' };
-      }
-    }
-
-    for (const file of files) {
-      const check = validateRecruitmentUpload({
-        type: file.type,
-        size: file.size,
-      });
-      if (!check.ok) return { error: check.error };
-    }
+    const batch = validateRecruitmentDocumentBatch({
+      role: draft.role,
+      documents: files.map((file, index) => ({
+        documentType: docTypes[index] ?? '',
+        mimeType: file.type,
+        sizeBytes: file.size,
+        expiresAtYmd: (() => {
+          const raw = formData.get(`expiresAt:${docTypes[index] ?? ''}`);
+          return typeof raw === 'string' ? raw : null;
+        })(),
+      })),
+    });
+    if (!batch.ok) return { error: batch.error };
 
     const hdrs = await headers();
-    const admin = adminClient();
+    const clientIpHash = hashClientIpHint(
+      hdrs.get('x-real-ip') ?? hdrs.get('x-forwarded-for'),
+    );
+    const admin = asUntypedDb(createServiceRoleClient());
     const { data, error } = await admin.rpc('submit_recruitment_application', {
       p_payload: {
         path: draft.path,
@@ -137,6 +146,7 @@ export async function submitRecruitmentApplicationAction(
         availability: draft.availability,
         privacy_notice_version: RECRUITMENT_PRIVACY_NOTICE_VERSION,
         user_agent: hdrs.get('user-agent')?.slice(0, 500) ?? null,
+        client_ip_hash: clientIpHash,
       },
     });
 
@@ -151,7 +161,7 @@ export async function submitRecruitmentApplicationAction(
             'Recruitment submissions are not enabled on this environment yet. Please try again after the Preview database is migrated.',
         };
       }
-      return { error: 'Unable to submit your application. Please try again.' };
+      return { error: GENERIC_SUBMIT_ERROR };
     }
 
     const candidateId =
@@ -162,46 +172,66 @@ export async function submitRecruitmentApplicationAction(
           : null;
 
     if (!candidateId) {
-      return { error: 'Submission did not return a candidate reference.' };
+      return { error: GENERIC_SUBMIT_ERROR };
     }
+
+    const uploadedPaths: string[] = [];
 
     for (let i = 0; i < files.length; i += 1) {
       const file = files[i]!;
-      const docType = docTypes[i]!;
-      const ext =
-        file.type === 'application/pdf'
-          ? 'pdf'
-          : file.type === 'image/png'
-            ? 'png'
-            : 'jpg';
-      const objectPath = `${candidateId}/${docType}/${crypto.randomUUID()}.${ext}`;
+      const meta = batch.documents[i]!;
+      const objectPath = buildRecruitmentStoragePath({
+        candidateId,
+        documentType: meta.documentType,
+        extension: meta.extension,
+      });
+      if (!objectPath) {
+        await cleanupFailedSubmission(admin, candidateId, uploadedPaths);
+        return { error: GENERIC_SUBMIT_ERROR };
+      }
+
       const buffer = Buffer.from(await file.arrayBuffer());
       const { error: uploadError } = await admin.storage
         .from('recruitment-documents')
         .upload(objectPath, buffer, {
-          contentType: file.type,
+          contentType: meta.mimeType,
           upsert: false,
         });
       if (uploadError) {
-        return {
-          error:
-            'Your profile was created but a document upload failed. Our team can help you finish.',
-          candidateId,
-        };
+        await cleanupFailedSubmission(admin, candidateId, uploadedPaths);
+        return { error: GENERIC_SUBMIT_ERROR };
       }
-      const expiresAt = formData.get(`expiresAt:${docType}`);
-      await admin.from('recruitment_documents').insert({
-        candidate_id: candidateId,
-        document_type: docType,
-        storage_path: objectPath,
-        mime_type: file.type,
-        byte_size: file.size,
-        original_filename: file.name.slice(0, 200),
-        expires_at:
-          typeof expiresAt === 'string' && expiresAt.trim()
-            ? expiresAt.trim()
-            : null,
+      uploadedPaths.push(objectPath);
+
+      const { error: insertError } = await admin
+        .from('recruitment_documents')
+        .insert({
+          candidate_id: candidateId,
+          document_type: meta.documentType,
+          storage_path: objectPath,
+          mime_type: meta.mimeType,
+          byte_size: meta.sizeBytes,
+          original_filename: sanitizeRecruitmentOriginalFilename(file.name),
+          expires_at: meta.expiresAt,
+        });
+      if (insertError) {
+        await cleanupFailedSubmission(admin, candidateId, uploadedPaths);
+        return { error: GENERIC_SUBMIT_ERROR };
+      }
+    }
+
+    // Best-effort ops notify after a successful commit. Never roll back or
+    // change the candidate success response if email delivery fails.
+    try {
+      await sendRecruitmentSubmissionNotify({
+        candidateId,
+        role: draft.role,
+        submittedAt: new Date(),
       });
+    } catch {
+      console.warn(
+        '[recruitment-notify] best-effort email threw; submission kept successful',
+      );
     }
 
     return {
@@ -210,6 +240,6 @@ export async function submitRecruitmentApplicationAction(
       candidateId,
     };
   } catch {
-    return { error: 'Unable to submit your application. Please try again.' };
+    return { error: GENERIC_SUBMIT_ERROR };
   }
 }

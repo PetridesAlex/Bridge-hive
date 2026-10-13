@@ -1,9 +1,10 @@
 -- recruitment_isolation.test.sql
--- Anon deny, org pipeline isolation, doc gate, admin access, enablement.
+-- Anon deny, org pipeline isolation, doc gate, admin access, enablement,
+-- note availability rule, service_role-only submit execute.
 
 begin;
 
-select plan(17);
+select plan(23);
 
 -- ---------------------------------------------------------------------------
 -- Seed users
@@ -130,6 +131,30 @@ insert into public.recruitment_candidates (
     '2 years',
     'N/A',
     'received'
+  ),
+  (
+    'c1000001-dddd-4000-8000-0000000000d3',
+    'Under Review Candidate',
+    'under.review.candidate@test.local',
+    '+35799000003',
+    'Larnaca',
+    'Cyprus',
+    'registered_nurse',
+    '3 years',
+    'Registered',
+    'under_review'
+  ),
+  (
+    'c1000001-dddd-4000-8000-0000000000d4',
+    'Sticky Pipeline Candidate',
+    'sticky.pipeline.candidate@test.local',
+    '+35799000004',
+    'Paphos',
+    'Cyprus',
+    'registered_nurse',
+    '4 years',
+    'Registered',
+    'archived'
   )
 on conflict (id) do nothing;
 
@@ -137,7 +162,9 @@ insert into public.recruitment_candidate_preferences (
   candidate_id, employment_type, availability
 ) values
   ('c1000001-dddd-4000-8000-0000000000d1', 'full_time', 'Immediate'),
-  ('c1000001-dddd-4000-8000-0000000000d2', 'part_time', 'Evenings')
+  ('c1000001-dddd-4000-8000-0000000000d2', 'part_time', 'Evenings'),
+  ('c1000001-dddd-4000-8000-0000000000d3', 'full_time', 'Weekdays'),
+  ('c1000001-dddd-4000-8000-0000000000d4', 'flexible', 'Flexible')
 on conflict (candidate_id) do nothing;
 
 insert into public.recruitment_documents (
@@ -154,13 +181,21 @@ on conflict (id) do nothing;
 
 insert into public.recruitment_org_pipeline (
   id, organization_id, candidate_id, status, updated_by
-) values (
-  'c1000001-ffff-4000-8000-0000000000f1',
-  'c1000001-aaaa-4000-8000-0000000000a1',
-  'c1000001-dddd-4000-8000-0000000000d1',
-  'shortlisted',
-  'c1000001-0000-4000-8000-000000000001'
-)
+) values
+  (
+    'c1000001-ffff-4000-8000-0000000000f1',
+    'c1000001-aaaa-4000-8000-0000000000a1',
+    'c1000001-dddd-4000-8000-0000000000d1',
+    'shortlisted',
+    'c1000001-0000-4000-8000-000000000001'
+  ),
+  (
+    'c1000001-ffff-4000-8000-0000000000f3',
+    'c1000001-aaaa-4000-8000-0000000000a1',
+    'c1000001-dddd-4000-8000-0000000000d4',
+    'contacted',
+    'c1000001-0000-4000-8000-000000000001'
+  )
 on conflict (organization_id, candidate_id) do nothing;
 
 insert into public.recruitment_org_notes (
@@ -175,7 +210,7 @@ insert into public.recruitment_org_notes (
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
--- 1. Anon cannot SELECT candidates
+-- 1. Anon cannot SELECT candidates / documents / pipeline / notes
 -- ---------------------------------------------------------------------------
 
 select set_config('request.jwt.claims', '{"role":"anon","aud":"authenticated"}', true);
@@ -200,6 +235,19 @@ select is_empty(
 select is_empty(
   $$ select 1 from public.recruitment_org_notes $$,
   'Anon cannot select recruitment_org_notes'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from information_schema.routine_privileges
+    where routine_schema = 'public'
+      and routine_name = 'submit_recruitment_application'
+      and grantee = 'anon'
+      and privilege_type = 'EXECUTE'
+  ),
+  0,
+  'Anon cannot execute submit_recruitment_application'
 );
 
 -- ---------------------------------------------------------------------------
@@ -261,6 +309,32 @@ select is(
   'Org A admin lacks recruitment access on disabled org'
 );
 
+select is(
+  (
+    select count(*)::integer
+    from information_schema.routine_privileges
+    where routine_schema = 'public'
+      and routine_name = 'submit_recruitment_application'
+      and grantee = 'authenticated'
+      and privilege_type = 'EXECUTE'
+  ),
+  0,
+  'Authenticated cannot execute submit_recruitment_application'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from information_schema.routine_privileges
+    where routine_schema = 'public'
+      and routine_name = 'submit_recruitment_application'
+      and grantee = 'service_role'
+      and privilege_type = 'EXECUTE'
+  ),
+  1,
+  'service_role can execute submit_recruitment_application'
+);
+
 -- ---------------------------------------------------------------------------
 -- 3. Scheduler cannot use recruitment access helper
 -- ---------------------------------------------------------------------------
@@ -282,7 +356,7 @@ select is(
 );
 
 -- ---------------------------------------------------------------------------
--- 4. Org B cannot see Org A notes/pipeline; platform status unchanged by B
+-- 4. Org B cannot see Org A notes
 -- ---------------------------------------------------------------------------
 
 reset role;
@@ -299,6 +373,16 @@ select is_empty(
   $$ select 1 from public.recruitment_org_notes
      where organization_id = 'c1000001-aaaa-4000-8000-0000000000a1' $$,
   'Org B cannot see Org A recruitment notes'
+);
+
+select throws_ok(
+  $$ select public.add_recruitment_org_note(
+       'c1000001-bbbb-4000-8000-0000000000b1',
+       'c1000001-dddd-4000-8000-0000000000d4',
+       'Org B must not use Org A pipeline relationship'
+     ) $$,
+  'RECRUITMENT_CANDIDATE_UNAVAILABLE',
+  'Org B cannot note candidate via Org A relationship'
 );
 
 -- ---------------------------------------------------------------------------
@@ -321,7 +405,7 @@ select isnt_empty(
 );
 
 -- ---------------------------------------------------------------------------
--- 6. Org A cannot add notes for unreleased candidates
+-- 6. Org A note write gates (available / relationship / unreleased)
 -- ---------------------------------------------------------------------------
 
 reset role;
@@ -341,7 +425,35 @@ select throws_ok(
        'Should not attach to received candidate'
      ) $$,
   'RECRUITMENT_CANDIDATE_UNAVAILABLE',
-  'Org admin cannot note unreleased candidates'
+  'Org admin cannot note unreleased received candidates'
+);
+
+select throws_ok(
+  $$ select public.add_recruitment_org_note(
+       'c1000001-aaaa-4000-8000-0000000000a1',
+       'c1000001-dddd-4000-8000-0000000000d3',
+       'Should not attach to under_review candidate'
+     ) $$,
+  'RECRUITMENT_CANDIDATE_UNAVAILABLE',
+  'Org admin cannot note under_review candidates without pipeline'
+);
+
+select lives_ok(
+  $$ select public.add_recruitment_org_note(
+       'c1000001-aaaa-4000-8000-0000000000a1',
+       'c1000001-dddd-4000-8000-0000000000d1',
+       'Allowed note on available candidate'
+     ) $$,
+  'Org admin can note available candidate'
+);
+
+select lives_ok(
+  $$ select public.add_recruitment_org_note(
+       'c1000001-aaaa-4000-8000-0000000000a1',
+       'c1000001-dddd-4000-8000-0000000000d4',
+       'Allowed note via existing pipeline relationship'
+     ) $$,
+  'Org admin can note candidate with existing pipeline even if not available'
 );
 
 select * from finish();

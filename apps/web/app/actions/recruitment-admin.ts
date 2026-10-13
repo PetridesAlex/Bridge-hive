@@ -2,9 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { requirePlatformAdmin } from '@/lib/admin/auth';
+import { requirePlatformAdmin, rpcErrorMessage } from '@/lib/admin/auth';
 import { asUntypedDb } from '@/lib/recruitment-db';
 import { createClient } from '@/lib/supabase/server';
+
+export type RecruitmentAdminActionResult = {
+  error?: string;
+  success?: boolean;
+};
 
 export async function setRecruitmentPlatformStatusAction(formData: FormData) {
   const ctx = await requirePlatformAdmin();
@@ -26,20 +31,34 @@ export async function setRecruitmentPlatformStatusAction(formData: FormData) {
   revalidatePath(`/admin/recruitment/${candidateId}`);
 }
 
-export async function setOrganizationRecruitmentEnabledAction(formData: FormData) {
-  const ctx = await requirePlatformAdmin('platform_super_admin');
-  if (!ctx.capabilities.canManageRecruitmentAccess) {
-    throw new Error('Not authorized');
-  }
-  const organizationId = String(formData.get('organizationId') ?? '');
-  const enabled = formData.get('enabled') === 'true';
+export async function setOrganizationRecruitmentEnabledAction(
+  _prev: RecruitmentAdminActionResult,
+  formData: FormData,
+): Promise<RecruitmentAdminActionResult> {
+  try {
+    const ctx = await requirePlatformAdmin('platform_super_admin');
+    if (!ctx.capabilities.canManageRecruitmentAccess) {
+      return { error: 'Not authorized' };
+    }
+    const organizationId = String(formData.get('organizationId') ?? '');
+    const enabled = formData.get('enabled') === 'true';
+    if (!organizationId) {
+      return { error: 'Organization is required.' };
+    }
 
-  const supabase = asUntypedDb(await createClient());
-  const { error } = await supabase.rpc('set_organization_recruitment_enabled', {
-    p_organization_id: organizationId,
-    p_enabled: enabled,
-  });
-  if (error) throw new Error(error.message);
-  revalidatePath(`/admin/organizations/${organizationId}`);
-  revalidatePath('/admin/recruitment');
+    const supabase = asUntypedDb(await createClient());
+    const { error } = await supabase.rpc('set_organization_recruitment_enabled', {
+      p_organization_id: organizationId,
+      p_enabled: enabled,
+    });
+    if (error) {
+      return { error: rpcErrorMessage(error) };
+    }
+    revalidatePath(`/admin/organizations/${organizationId}`);
+    revalidatePath('/admin/recruitment');
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Request failed';
+    return { error: message };
+  }
 }

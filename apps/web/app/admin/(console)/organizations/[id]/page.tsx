@@ -8,13 +8,11 @@ import {
 } from '@/components/admin/activation-controls';
 import { OrganizationActionsForm } from '@/components/admin/organization-actions-form';
 import { OrganizationInvitationForm } from '@/components/admin/organization-invitation-form';
-import { setOrganizationRecruitmentEnabledAction } from '@/app/actions/recruitment-admin';
+import { RecruitmentAccessForm } from '@/components/admin/recruitment-access-form';
 import { EmptyState } from '@/components/empty-state';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { formatDateTime, roleLabel } from '@/lib/format';
-import { asUntypedDb } from '@/lib/recruitment-db';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
 import {
@@ -81,6 +79,7 @@ export default async function OrganizationDetailPage({
       created_at: string;
       updated_at: string;
       short_reference: string;
+      recruitment_enabled?: boolean;
     };
     members: Array<{
       user_id: string;
@@ -114,18 +113,7 @@ export default async function OrganizationDetailPage({
   };
 
   const org = detail.organization;
-  const db = asUntypedDb(supabase);
-  const recruitmentLookup = await db
-    .from('organizations')
-    .select('recruitment_enabled')
-    .eq('id', org.id)
-    .maybeSingle();
-  const recruitmentEnabled = recruitmentLookup.error
-    ? false
-    : Boolean(
-        (recruitmentLookup.data as { recruitment_enabled?: boolean } | null)
-          ?.recruitment_enabled,
-      );
+  const recruitmentEnabled = Boolean(org.recruitment_enabled);
   const latestInvite = detail.invitations[0];
   const accessStatus =
     latestInvite?.access_status ??
@@ -514,17 +502,10 @@ export default async function OrganizationDetailPage({
               ? ' · Organization must be active for portal use.'
               : null}
           </p>
-          <form action={setOrganizationRecruitmentEnabledAction}>
-            <input type="hidden" name="organizationId" value={org.id} />
-            <input
-              type="hidden"
-              name="enabled"
-              value={recruitmentEnabled ? 'false' : 'true'}
-            />
-            <Button type="submit" className="rounded-full" variant="outline">
-              {recruitmentEnabled ? 'Disable recruitment' : 'Enable recruitment'}
-            </Button>
-          </form>
+          <RecruitmentAccessForm
+            organizationId={org.id}
+            recruitmentEnabled={recruitmentEnabled}
+          />
         </div>
       </Panel>
     </div>

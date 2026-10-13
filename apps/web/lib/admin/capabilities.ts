@@ -106,6 +106,10 @@ export function rpcErrorMessage(error: { message?: string } | null): string {
     INVALID_SORT: 'Invalid sort option.',
     ORGANIZATION_NOT_FOUND: 'Organization not found.',
     ORG_STATUS_LOCKED: 'Organization status cannot be changed right now.',
+    ORG_UPDATE_LOCKED:
+      'Organization update was blocked by a database write guard. Apply the recruitment enable fix (migration 030), then try again.',
+    RECRUITMENT_SUPER_ADMIN_REQUIRED:
+      'Only a platform super admin can change recruitment access.',
     INVITATION_NOT_FOUND: 'Invitation not found.',
     INVITATION_EXPIRED: 'This invitation has expired.',
     INVITATION_ALREADY_ACCEPTED: 'This invitation has already been accepted.',

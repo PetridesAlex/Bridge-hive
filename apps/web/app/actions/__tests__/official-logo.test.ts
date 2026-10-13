@@ -43,8 +43,8 @@ describe('official Bridge Hive logo v2', () => {
     expect(admin).toMatch(/BridgeHiveMark/);
     expect(admin).not.toMatch(/>\s*BH\s*</);
     expect(org).toMatch(/BridgeHiveMark/);
-    expect(layout).toMatch(/bridge-hive-logo-v2-64\.png/);
     expect(layout).toMatch(/og-default\.png/);
+    expect(layout).not.toMatch(/bridge-hive-logo-v2-64\.png/);
   });
 
   it('does not leave superseded public brand filenames referenced', async () => {
@@ -116,5 +116,92 @@ describe('official Bridge Hive logo v2', () => {
 
     expect(whiteB).toBeGreaterThan(1000);
     expect(outerLight).toBe(0);
+  });
+
+  it('serves a padded transparent official mark as the website favicon', async () => {
+    const sharp = (await import('sharp')).default;
+    const ico = await fs.readFile(path.join(webRoot, 'app/favicon.ico'));
+    expect(ico.readUInt16LE(0)).toBe(0);
+    expect(ico.readUInt16LE(2)).toBe(1);
+    const count = ico.readUInt16LE(4);
+    expect(count).toBe(4);
+    const frames: Buffer[] = [];
+    const sizes: number[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const entry = 6 + i * 16;
+      sizes.push(ico.readUInt8(entry));
+      const pngSize = ico.readUInt32LE(entry + 8);
+      const offset = ico.readUInt32LE(entry + 12);
+      expect(ico.subarray(offset, offset + 8).toString('hex')).toBe(
+        '89504e470d0a1a0a',
+      );
+      expect(pngSize).toBeGreaterThan(0);
+      frames.push(ico.subarray(offset, offset + pngSize));
+    }
+    expect(sizes).toEqual([16, 32, 48, 64]);
+
+    const images: Array<{ data: Buffer; info: { width: number; height: number } }> = [];
+    for (const frame of frames) {
+      const { data, info } = await sharp(frame)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      images.push({ data, info });
+    }
+    for (const file of ['app/icon.png', 'app/apple-icon.png'] as const) {
+      const { data, info } = await sharp(path.join(webRoot, file))
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      images.push({ data, info });
+    }
+    expect(images.map((image) => image.info.width)).toEqual([
+      16, 32, 48, 64, 512, 180,
+    ]);
+
+    for (const { data, info } of images) {
+      const { width: w, height: h } = info;
+      let minX = w;
+      let minY = h;
+      let maxX = -1;
+      let maxY = -1;
+      let whiteEdge = 0;
+      let navy = 0;
+      let honey = 0;
+      for (let y = 0; y < h; y += 1) {
+        for (let x = 0; x < w; x += 1) {
+          const i = (w * y + x) * 4;
+          const r = data[i] ?? 0;
+          const g = data[i + 1] ?? 0;
+          const b = data[i + 2] ?? 0;
+          const a = data[i + 3] ?? 0;
+          if (a > 16) {
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+          }
+          const onEdge = x < 2 || y < 2 || x >= w - 2 || y >= h - 2;
+          if (onEdge && a > 20 && r > 200 && g > 200 && b > 200) whiteEdge += 1;
+          if (a > 220 && b > r + 30 && b > 80 && r < 80) navy += 1;
+          if (a > 220 && r > 200 && g > 120 && b < 80) honey += 1;
+        }
+      }
+      expect(whiteEdge).toBe(0);
+      expect(navy).toBeGreaterThan(Math.floor(w * h * 0.05));
+      expect(honey).toBeGreaterThan(0);
+      expect(minX).toBeGreaterThanOrEqual(Math.floor(w * 0.12));
+      expect(minY).toBeGreaterThanOrEqual(Math.floor(h * 0.12));
+      expect(w - 1 - maxX).toBeGreaterThanOrEqual(Math.floor(w * 0.12));
+      expect(h - 1 - maxY).toBeGreaterThanOrEqual(Math.floor(h * 0.12));
+      for (const [x, y] of [
+        [0, 0],
+        [w - 1, 0],
+        [0, h - 1],
+        [w - 1, h - 1],
+      ]) {
+        expect(data[(w * y + x) * 4 + 3]).toBe(0);
+      }
+    }
   });
 });

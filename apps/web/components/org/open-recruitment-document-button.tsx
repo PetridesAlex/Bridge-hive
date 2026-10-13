@@ -20,7 +20,7 @@ export function OpenRecruitmentDocumentButton({
         type="button"
         variant="outline"
         size="sm"
-        className="rounded-full"
+        className="rounded-full border-bh-border bg-bh-surface px-3.5 font-medium shadow-sm hover:border-bh-teal/40 hover:bg-bh-teal-soft/60"
         disabled={pending}
         onClick={() => {
           setError(null);
@@ -45,7 +45,7 @@ export function OpenRecruitmentDocumentButton({
           });
         }}
       >
-        {pending ? 'Opening…' : 'Open'}
+        {pending ? 'Opening…' : 'View'}
       </Button>
       {error ? <p className="text-xs text-bh-danger">{error}</p> : null}
     </div>

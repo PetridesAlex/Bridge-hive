@@ -83,8 +83,13 @@ describe('marketing site contracts', () => {
       (match) => match[1],
     );
     expect(publicPaths).toEqual(
-      expect.arrayContaining(['/robots.txt', '/sitemap.xml']),
+      expect.arrayContaining([
+        '/robots.txt',
+        '/sitemap.xml',
+        '/manifest.webmanifest',
+      ]),
     );
+    expect(src).toContain('favicon.ico|manifest\\\\.webmanifest');
     expect(publicPaths).not.toContain('/admin');
     expect(publicPaths).not.toContain('/dashboard');
     expect(publicPaths).not.toContain('/organisation');
@@ -317,9 +322,10 @@ describe('marketing site contracts', () => {
     expect(brand).toMatch(/next\/image/);
     expect(brand).toMatch(/Bridge Hive|m-brand-wordmark/);
     expect(brand).not.toMatch(/viewBox="0 0 32 32"/);
-    expect(layout).toMatch(/\/brand\/bridge-hive-logo-v2-64\.png/);
-    expect(layout).toMatch(/\/brand\/bridge-hive-logo-v2-180\.png/);
-    expect(layout).toMatch(/\/brand\/bridge-hive-logo-v2-192\.png/);
+    expect(layout).not.toMatch(/bridge-hive-logo-v2-(?:64|180|192)\.png/);
+    const manifest = await readWeb('app/manifest.ts');
+    expect(manifest).toMatch(/\/icon\.png/);
+    expect(manifest).toMatch(/\/apple-icon\.png/);
     expect(nav).toMatch(/MarketingBrand/);
     expect(footer).toMatch(/MarketingBrand/);
 
@@ -332,6 +338,8 @@ describe('marketing site contracts', () => {
       'public/brand/bridge-hive-logo-v2-1024.png',
       'app/favicon.ico',
       'app/icon.png',
+      'app/apple-icon.png',
+      'app/manifest.ts',
     ]) {
       await expect(fs.access(path.join(webRoot, file))).resolves.toBeUndefined();
     }

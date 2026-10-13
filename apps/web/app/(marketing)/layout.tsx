@@ -37,19 +37,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-  icons: {
-    icon: [
-      { url: '/brand/bridge-hive-logo-v2-64.png', sizes: '64x64', type: 'image/png' },
-      { url: '/brand/bridge-hive-logo-v2-192.png', sizes: '192x192', type: 'image/png' },
-    ],
-    apple: [
-      {
-        url: '/brand/bridge-hive-logo-v2-180.png',
-        sizes: '180x180',
-        type: 'image/png',
-      },
-    ],
-  },
   robots: {
     index: true,
     follow: true,

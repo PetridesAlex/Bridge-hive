@@ -14,6 +14,7 @@ export function AuthShell({
   eyebrow,
   children,
   footer,
+  formWidth = 'default',
 }: {
   variant: AuthPortalVariant;
   title: string;
@@ -21,9 +22,11 @@ export function AuthShell({
   eyebrow: string;
   children: React.ReactNode;
   footer: React.ReactNode;
+  /** Wider form column for recovery and multi-field flows. */
+  formWidth?: 'default' | 'wide';
 }) {
   return (
-    <div className="auth-portal" data-variant={variant}>
+    <div className="auth-portal" data-variant={variant} data-form-width={formWidth}>
       <div className="auth-portal-card">
         <AuthHeroPanel variant={variant} />
 

@@ -231,34 +231,44 @@ describe('worker password recovery — resend cooldown', () => {
 });
 
 describe('worker password recovery — password policy', () => {
-  it(`requires ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH}+ chars, letter, number, and match`, () => {
+  it('requires minimum 6 characters and matching confirmation only', () => {
+    expect(WORKER_RECOVERY_PASSWORD_MIN_LENGTH).toBe(6);
+
     expect(
-      validateWorkerRecoveryPassword({ password: 'short1', confirm: 'short1' }).ok,
+      validateWorkerRecoveryPassword({ password: 'short', confirm: 'short' }).ok,
     ).toBe(false);
     expect(
-      validateWorkerRecoveryPassword({
-        password: 'abcdefghijkl',
-        confirm: 'abcdefghijkl',
-      }).ok,
+      validateWorkerRecoveryPassword({ password: 'Bridg', confirm: 'Bridg' }).ok,
     ).toBe(false);
+
+    // Letters-only six-character passwords are allowed (e.g. Bridge).
+    expect(
+      validateWorkerRecoveryPassword({ password: 'Bridge', confirm: 'Bridge' }),
+    ).toEqual({ ok: true });
+
+    // Digits are optional — matching 6+ without a number must pass.
     expect(
       validateWorkerRecoveryPassword({
-        password: '123456789012',
-        confirm: '123456789012',
-      }).ok,
-    ).toBe(false);
-    expect(
-      validateWorkerRecoveryPassword({
-        password: 'SecurePass12',
-        confirm: 'SecurePass99',
-      }).ok,
-    ).toBe(false);
-    expect(
-      validateWorkerRecoveryPassword({
-        password: 'SecurePass12',
-        confirm: 'SecurePass12',
+        password: 'abcdef',
+        confirm: 'abcdef',
       }),
     ).toEqual({ ok: true });
+
+    expect(
+      validateWorkerRecoveryPassword({
+        password: 'Bridge',
+        confirm: 'Bridges',
+      }).ok,
+    ).toBe(false);
+  });
+
+  it('domain helper does not require letters or numbers', async () => {
+    const src = await read(domainRoot, 'worker-password-recovery.ts');
+    expect(src).toMatch(/WORKER_RECOVERY_PASSWORD_MIN_LENGTH = 6/);
+    expect(src).not.toMatch(/at least one letter/);
+    expect(src).not.toMatch(/at least one number/);
+    expect(src).not.toMatch(/\[A-Za-z\]/);
+    expect(src).not.toMatch(/\[0-9\]/);
   });
 });
 
@@ -357,12 +367,27 @@ describe('worker password recovery — source contracts', () => {
 
   it('web reset GET page does not call verifyOtp or updateUser inline', async () => {
     const page = await read(webRoot, 'app/auth/worker/reset-password/page.tsx');
+    const client = await read(
+      webRoot,
+      'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+    );
     expect(page).toMatch(/GET never verifies OTP/);
     expect(page).not.toMatch(/verifyOtp/);
     expect(page).not.toMatch(/\.updateUser\(/);
-    expect(page).toMatch(/WorkerAppContinuePanel/);
-    expect(page).toMatch(/variant="password-updated"/);
-    expect(page).toMatch(/updateWorkerRecoveryPasswordAction/);
+    expect(page).toMatch(/WorkerResetPasswordClient/);
+    expect(client).toMatch(/updateWorkerRecoveryPasswordAction/);
+    expect(client).toMatch(/Password updated/);
+    expect(client).toMatch(/Continue to sign in/);
+    expect(client).toMatch(/Back to sign in/);
+    expect(client).not.toMatch(/Back to home/);
+    expect(client).toMatch(/AuthPasswordField/);
+    expect(client).toMatch(/At least \$\{WORKER_RECOVERY_PASSWORD_MIN_LENGTH\} characters/);
+    expect(client).toMatch(/Passwords match/);
+    expect(client).toMatch(/AuthShell/);
+    expect(client).toMatch(/SECURE ACCOUNT RECOVERY/);
+    const passwordField = await read(webRoot, 'components/auth/AuthPasswordField.tsx');
+    expect(passwordField).toMatch(/Show password/);
+    expect(passwordField).toMatch(/Hide password/);
   });
 
   it('web reset action requires recovery cookie and signs out after success', async () => {
@@ -396,6 +421,11 @@ describe('worker password recovery — source contracts', () => {
     const auth = await read(mobileRoot, 'providers/AuthProvider.tsx');
     expect(screen).toMatch(/Continue password reset/);
     expect(screen).toMatch(/confirmRecoveryOtp/);
+    expect(screen).toMatch(/Use at least \$\{WORKER_RECOVERY_PASSWORD_MIN_LENGTH\} characters/);
+    expect(screen).toMatch(/Passwords match/);
+    expect(screen).toMatch(/Back to sign in/);
+    expect(screen).toMatch(/Request a new reset link/);
+    expect(screen).toMatch(/Continue to sign in/);
     expect(auth).toMatch(/verifyOtp/);
     expect(auth).toMatch(/type:\s*['"]recovery['"]/);
     expect(auth).toMatch(/parseWorkerRecoveryUrl/);
@@ -409,6 +439,24 @@ describe('worker password recovery — source contracts', () => {
     expect(ingestBlock).toMatch(/setPendingRecoveryTokenHash/);
   });
 
+  it('web and mobile recovery UIs share the 6-character policy without letter/number rules', async () => {
+    const client = await read(
+      webRoot,
+      'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+    );
+    const mobile = await read(mobileRoot, 'app/auth/worker/reset-password.tsx');
+    const passwordField = await read(webRoot, 'components/auth/AuthPasswordField.tsx');
+    for (const src of [client, mobile]) {
+      expect(src).toMatch(/WORKER_RECOVERY_PASSWORD_MIN_LENGTH/);
+      expect(src).toMatch(/validateWorkerRecoveryPassword|At least \$\{WORKER_RECOVERY_PASSWORD_MIN_LENGTH\}/);
+      expect(src).not.toMatch(/letter and a number|at least one letter|at least one number/i);
+    }
+    expect(passwordField).toMatch(/Show password/);
+    expect(passwordField).toMatch(/Hide password/);
+    expect(client).toMatch(/AuthPasswordField/);
+    expect(mobile).toMatch(/secureTextEntry/);
+  });
+
   it('does not log passwords, tokens, emails, or sessions in recovery modules', async () => {
     const files = [
       await read(domainRoot, 'worker-password-recovery.ts'),
@@ -417,6 +465,10 @@ describe('worker password recovery — source contracts', () => {
       await read(mobileRoot, 'app/auth/worker/reset-password.tsx'),
       await read(webRoot, 'app/auth/worker/reset-password/actions.ts'),
       await read(webRoot, 'app/auth/worker/reset-password/page.tsx'),
+      await read(
+        webRoot,
+        'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+      ),
     ];
     for (const src of files) {
       expect(src).not.toMatch(/console\.(log|debug|info|warn|error)\([^)]*(password|token|session|email)/i);

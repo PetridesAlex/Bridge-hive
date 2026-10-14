@@ -58,12 +58,18 @@ describe('worker web email continuation', () => {
     expect(src).not.toMatch(/token_hash|access_token|refresh_token/i);
   });
 
-  it('worker reset-password success routes to worker app not org sign-in', async () => {
-    const src = await readWeb('app/auth/worker/reset-password/page.tsx');
-    expect(src).toMatch(/WorkerAppContinuePanel/);
-    expect(src).toMatch(/variant="password-updated"/);
-    expect(src).not.toMatch(/href="\/sign-in"/);
-    expect(src).not.toMatch(/push\('\/sign-in'\)/);
+  it('worker reset-password success routes to worker sign-in not org portal', async () => {
+    const page = await readWeb('app/auth/worker/reset-password/page.tsx');
+    const client = await readWeb(
+      'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+    );
+    expect(page).toMatch(/WorkerResetPasswordClient/);
+    expect(client).toMatch(/Password updated/);
+    expect(client).toMatch(/Continue to sign in/);
+    expect(client).toMatch(/\/auth\/worker\/login/);
+    expect(client).not.toMatch(/href="\/sign-in"/);
+    expect(client).not.toMatch(/push\('\/sign-in'\)/);
+    expect(client).not.toMatch(/Back to home/);
   });
 
   it('auth confirm POST still redirects signup to allowlisted worker login', async () => {

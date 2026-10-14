@@ -74,7 +74,7 @@ Worker recovery and org activation share `/auth/confirm`; `next` selects the des
 1. From the worker app, open **Forgot password?** → polished recovery screen.
 2. Submit an email — expect the generic success message (no account enumeration).
 3. Open the email link → land on `/auth/confirm` → tap **Continue password reset**.
-4. Set a new password (min 12, letter + number) on `/auth/worker/reset-password` or the native reset screen.
+4. Set a new password (min 6 characters; confirmation must match) on `/auth/worker/reset-password` or the native reset screen.
 5. Sign in to the worker app with the new password.
 
 ## Related app code

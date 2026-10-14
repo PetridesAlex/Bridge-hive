@@ -231,34 +231,44 @@ describe('worker password recovery — resend cooldown', () => {
 });
 
 describe('worker password recovery — password policy', () => {
-  it(`requires ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH}+ chars, letter, number, and match`, () => {
+  it('requires minimum 6 characters and matching confirmation only', () => {
+    expect(WORKER_RECOVERY_PASSWORD_MIN_LENGTH).toBe(6);
+
     expect(
-      validateWorkerRecoveryPassword({ password: 'short1', confirm: 'short1' }).ok,
+      validateWorkerRecoveryPassword({ password: 'short', confirm: 'short' }).ok,
     ).toBe(false);
     expect(
-      validateWorkerRecoveryPassword({
-        password: 'abcdefghijkl',
-        confirm: 'abcdefghijkl',
-      }).ok,
+      validateWorkerRecoveryPassword({ password: 'Bridg', confirm: 'Bridg' }).ok,
     ).toBe(false);
+
+    // Letters-only six-character passwords are allowed (e.g. Bridge).
+    expect(
+      validateWorkerRecoveryPassword({ password: 'Bridge', confirm: 'Bridge' }),
+    ).toEqual({ ok: true });
+
+    // Digits are optional — matching 6+ without a number must pass.
     expect(
       validateWorkerRecoveryPassword({
-        password: '123456789012',
-        confirm: '123456789012',
-      }).ok,
-    ).toBe(false);
-    expect(
-      validateWorkerRecoveryPassword({
-        password: 'SecurePass12',
-        confirm: 'SecurePass99',
-      }).ok,
-    ).toBe(false);
-    expect(
-      validateWorkerRecoveryPassword({
-        password: 'SecurePass12',
-        confirm: 'SecurePass12',
+        password: 'abcdef',
+        confirm: 'abcdef',
       }),
     ).toEqual({ ok: true });
+
+    expect(
+      validateWorkerRecoveryPassword({
+        password: 'Bridge',
+        confirm: 'Bridges',
+      }).ok,
+    ).toBe(false);
+  });
+
+  it('domain helper does not require letters or numbers', async () => {
+    const src = await read(domainRoot, 'worker-password-recovery.ts');
+    expect(src).toMatch(/WORKER_RECOVERY_PASSWORD_MIN_LENGTH = 6/);
+    expect(src).not.toMatch(/at least one letter/);
+    expect(src).not.toMatch(/at least one number/);
+    expect(src).not.toMatch(/\[A-Za-z\]/);
+    expect(src).not.toMatch(/\[0-9\]/);
   });
 });
 

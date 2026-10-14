@@ -47,8 +47,8 @@ export default function WorkerResetPasswordPage() {
         </h1>
         <p className="mt-2 text-sm text-bh-text-secondary">
           Choose a new password for your worker account (at least{' '}
-          {WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters, with a letter and a
-          number), then continue in the Bridge Hive worker app.
+          {WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters), then continue in the
+          Bridge Hive worker app.
         </p>
 
         {state.done ? (

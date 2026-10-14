@@ -54,7 +54,7 @@ export const WORKER_RECOVERY_REQUEST_GENERIC_ERROR =
   'We could not send password reset instructions right now. Please try again in a moment.';
 
 /** Minimum length for a new worker password after recovery. */
-export const WORKER_RECOVERY_PASSWORD_MIN_LENGTH = 12;
+export const WORKER_RECOVERY_PASSWORD_MIN_LENGTH = 6;
 
 export type WorkerRecoveryRedirectMode = 'production' | 'development';
 
@@ -271,7 +271,7 @@ export function mapWorkerRecoveryRequestResult(params: {
 
 /**
  * New-password policy for recovery (mobile + web).
- * Min 12, at least one letter, at least one number, matching confirmation.
+ * Min 6 characters and matching confirmation only — no letter/number rules.
  */
 export function validateWorkerRecoveryPassword(params: {
   password: string;
@@ -283,12 +283,6 @@ export function validateWorkerRecoveryPassword(params: {
       ok: false,
       error: `Password must be at least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters.`,
     };
-  }
-  if (!/[A-Za-z]/.test(password)) {
-    return { ok: false, error: 'Password must include at least one letter.' };
-  }
-  if (!/[0-9]/.test(password)) {
-    return { ok: false, error: 'Password must include at least one number.' };
   }
   if (password !== confirm) {
     return { ok: false, error: 'Passwords do not match.' };
@@ -312,7 +306,7 @@ export function friendlyWorkerPasswordUpdateError(
     return 'Choose a password you have not used recently.';
   }
   if (lower.includes('weak') || lower.includes('password')) {
-    return 'Choose a stronger password (at least 12 characters with a letter and a number).';
+    return `Choose a stronger password (at least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters).`;
   }
   return 'We could not update your password. Please try again or request a new reset link.';
 }

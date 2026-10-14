@@ -1,4 +1,5 @@
 import {
+  WORKER_RECOVERY_PASSWORD_MIN_LENGTH,
   validateWorkerRecoveryPassword,
   workerRecoveryUrlErrorMessage,
   type WorkerRecoveryUrlParseResult,
@@ -239,7 +240,7 @@ export default function WorkerResetPasswordScreen() {
   return (
     <AuthShell
       title="Set a new password"
-      subtitle="Choose a new password for your Bridge Hive worker account (at least 12 characters, with a letter and a number)."
+      subtitle={`Choose a new password for your Bridge Hive worker account (at least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters).`}
       showBack={false}
       centered={false}
     >

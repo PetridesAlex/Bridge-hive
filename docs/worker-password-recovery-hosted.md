@@ -2,27 +2,52 @@
 
 Apply these manually in the Supabase Dashboard for project `hfnymqjrbppculcofaag`. The agent does **not** change hosted Auth settings.
 
+## Expo production environment
+
+Set in EAS / production env for `@bridge-hive/worker-mobile`:
+
+```
+EXPO_PUBLIC_WEB_APP_URL=https://bridgehive.app
+```
+
+When this is a public Bridge Hive origin, mobile `resetPasswordForEmail` uses:
+
+```
+https://bridgehive.app/auth/confirm?next=%2Fauth%2Fworker%2Freset-password
+```
+
+Production builds never send localhost or loopback as `redirectTo`. If the web URL is missing or rejected, the app falls back to the native deep link:
+
+```
+bridgehive://auth/worker/reset-password?source=recovery
+```
+
+The harmless `?source=recovery` query is required so the shared Reset Password template can append `&token_hash=…&type=recovery` and still produce a valid URL.
+
 ## Redirect URL allow-list
 
 Authentication → URL Configuration → Redirect URLs — add (keep existing org activation URLs):
 
-- `bridgehive://auth/worker/reset-password`
-- `http://localhost:8081/auth/worker/reset-password` (Expo web local)
-- `https://<your-worker-web-host>/auth/worker/reset-password` when Expo web is hosted
-- Web portal confirm + next (already used for org; worker next is allowlisted in app code):
-  - `https://<web-app-host>/auth/confirm`
-  - `https://<web-app-host>/auth/worker/reset-password`
-  - `http://localhost:3000/auth/confirm`
-  - `http://localhost:3000/auth/worker/reset-password`
+- **Required production confirm redirect (exact):**
+  - `https://bridgehive.app/auth/confirm?next=%2Fauth%2Fworker%2Freset-password`
+- **Required native fallback (exact):**
+  - `bridgehive://auth/worker/reset-password?source=recovery`
+- Also allow (prefix / related):
+  - `https://bridgehive.app/auth/confirm`
+  - `https://bridgehive.app/auth/worker/reset-password`
+  - `http://localhost:8081/auth/worker/reset-password` (Expo web local only)
+  - `http://localhost:3000/auth/confirm` (local web only)
+  - `http://localhost:3000/auth/worker/reset-password` (local web only)
 
-Site URL may remain the web app origin. Do not force Site URL to `/activate-organization-account`.
+**Do not put `token_hash` or other secrets into Redirect URL settings.** Tokens belong only in the email template query string.
+
+Site URL may remain the web app origin (`https://bridgehive.app`). Do not force Site URL to `/activate-organization-account`.
 
 ## Reset Password email template
 
 Authentication → Email Templates → **Reset Password**.
 
-Preferred Confirm URL pattern after Preview redirect fix (RedirectTo already includes
-`/auth/confirm?next=…` from the app — see [`org-activation-email-preview.md`](./org-activation-email-preview.md)):
+Preserve this safe template contract (`RedirectTo` already includes a query string — web `?next=…` or native `?source=recovery`):
 
 ```html
 <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">Reset password</a>
@@ -34,9 +59,7 @@ Legacy SiteURL-only pattern (breaks when Site URL is localhost but the web app i
 <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/auth/worker/reset-password">Reset password</a>
 ```
 
-Set `EXPO_PUBLIC_WEB_APP_URL` to the web Preview/production origin so mobile
-`resetPasswordForEmail` passes a web `/auth/confirm?next=/auth/worker/reset-password`
-RedirectTo. Do **not** hard-code `next=/activate-organization-account` for worker resets.
+Do **not** hard-code `next=/activate-organization-account` for worker resets.
 
 ## Invite / org activation templates
 
@@ -44,16 +67,21 @@ Leave organization invite / activation templates pointed at:
 
 `…/auth/confirm?…&next=/activate-organization-account`
 
-Worker recovery and org activation share `/auth/confirm`; `next` selects the destination.
+Worker recovery and org activation share `/auth/confirm`; `next` selects the destination. OTP is consumed only after the user taps Confirm on `/auth/confirm` (GET never verifies).
 
 ## After template change
 
-1. From the worker app, use Forgot password.
-2. Open the email link — you should land on set-password (web `/auth/worker/reset-password` or mobile deep link), **not** organization activation.
-3. Set a new password and sign in to Account Setup / marketplace as appropriate.
+1. From the worker app, open **Forgot password?** → polished recovery screen.
+2. Submit an email — expect the generic success message (no account enumeration).
+3. Open the email link → land on `/auth/confirm` → tap **Continue password reset**.
+4. Set a new password (min 12, letter + number) on `/auth/worker/reset-password` or the native reset screen.
+5. Sign in to the worker app with the new password.
 
 ## Related app code
 
-- Mobile `resetPasswordForEmail` uses `redirectTo` → worker reset path (`AuthProvider`).
-- Domain allowlist: `WORKER_RECOVERY_NEXT_PATHS` in `packages/domain/src/organization-activation.ts`.
-- Migration `024` is unrelated to recovery; apply hosted separately when ready for package submit RPC.
+- Domain helpers: `packages/domain/src/worker-password-recovery.ts`
+- Mobile request: `apps/worker-mobile/app/auth/worker/forgot-password.tsx`
+- Mobile `resetPasswordForEmail` redirect: `AuthProvider` + domain resolver
+- Web confirm (GET safe / POST verify): `apps/web/app/auth/confirm`
+- Web new password: `apps/web/app/auth/worker/reset-password`
+- Domain allowlist: `WORKER_RECOVERY_NEXT_PATHS` in `packages/domain/src/organization-activation.ts`

@@ -3,10 +3,13 @@
 import {
   DEFAULT_ACTIVATION_NEXT,
   ORG_INVITATION_COOKIE,
+  WORKER_RECOVERY_SESSION_COOKIE,
+  WORKER_RECOVERY_SESSION_COOKIE_MAX_AGE_SEC,
   allowlistedActivationNext,
   isAuthConfirmEmailOtpType,
   isWorkerSignupConfirmNext,
   readInvitationIdFromAuthMeta,
+  shouldMarkWorkerRecoverySession,
 } from '@bridge-hive/domain';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -85,6 +88,17 @@ export async function confirmActivationAction(
       secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: 60 * 30,
+    });
+  }
+
+  // Non-secret marker only — never store token_hash in cookies.
+  if (shouldMarkWorkerRecoverySession(typeRaw, next)) {
+    store.set(WORKER_RECOVERY_SESSION_COOKIE, '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/auth/worker/reset-password',
+      maxAge: WORKER_RECOVERY_SESSION_COOKIE_MAX_AGE_SEC,
     });
   }
 

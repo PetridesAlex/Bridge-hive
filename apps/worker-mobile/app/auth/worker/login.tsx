@@ -33,7 +33,8 @@ export default function WorkerLoginScreen() {
       setError(result.error);
       return;
     }
-    router.replace('/');
+    // signIn awaits profile hydration; Redirect above sends verified workers
+    // straight to the dashboard (homeRoute) on the next render.
   };
 
   return (
@@ -99,7 +100,7 @@ export default function WorkerLoginScreen() {
         >
           <Text style={styles.forgot}>Forgot password?</Text>
         </Pressable>
-        <GoogleSignInButton onSuccess={() => router.replace('/')} />
+        <GoogleSignInButton />
       </View>
     </AuthShell>
   );

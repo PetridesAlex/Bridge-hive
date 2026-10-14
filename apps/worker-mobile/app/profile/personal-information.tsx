@@ -4,6 +4,7 @@ import {
 } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,6 +16,13 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Avatar } from '@/components/ui/Avatar';
@@ -22,7 +30,8 @@ import { Button } from '@/components/ui/Button';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { TextInput } from '@/components/ui/TextInput';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import {
   getAvatarSignedUrl,
@@ -44,6 +53,124 @@ function verificationLabel(status?: string | null) {
     rejected: 'Action required',
   };
   return map[status] ?? status.replace(/_/g, ' ');
+}
+
+function statusTone(status?: string | null): 'success' | 'info' | 'danger' | 'neutral' {
+  if (status === 'verified' || status === 'good_standing') return 'success';
+  if (status === 'submitted' || status === 'under_review') return 'info';
+  if (status === 'rejected' || status === 'restricted') return 'danger';
+  return 'neutral';
+}
+
+function DetailField({
+  icon,
+  label,
+  value,
+  hint,
+  locked,
+  tone = 'neutral',
+  index,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  hint?: string;
+  locked?: boolean;
+  tone?: 'success' | 'info' | 'danger' | 'neutral';
+  index: number;
+}) {
+  const reduced = useReducedMotion();
+  const rise = useSharedValue(reduced ? 0 : 10);
+  const opacity = useSharedValue(reduced ? 1 : 0);
+
+  useEffect(() => {
+    const delay = reduced ? 0 : index * 50;
+    rise.value = withDelay(delay, withSpring(0, { damping: 16, stiffness: 220 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: reduced ? 0 : 240 }));
+  }, [index, opacity, reduced, rise]);
+
+  const motion = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: rise.value }],
+  }));
+
+  const toneColor =
+    tone === 'success' ? colors.success : tone === 'info' ? colors.info : tone === 'danger' ? colors.error : colors.navy;
+
+  return (
+    <Animated.View style={[styles.field, motion]}>
+      <LinearGradient
+        colors={locked ? [colors.navy, colors.navyLift] : [colors.tealStrong, '#0A6C78']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.fieldMark}
+      >
+        <Ionicons name={icon} size={15} color={colors.white} />
+      </LinearGradient>
+      <View style={styles.fieldCopy}>
+        <View style={styles.fieldLabelRow}>
+          <Text style={styles.fieldLabel}>{label}</Text>
+          {locked ? (
+            <View style={styles.lockChip}>
+              <Ionicons name="lock-closed" size={11} color={colors.navy} />
+              <Text style={styles.lockText}>Locked</Text>
+            </View>
+          ) : null}
+        </View>
+        <Text style={[styles.fieldValue, tone !== 'neutral' && { color: toneColor }]}>{value}</Text>
+        {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+      </View>
+    </Animated.View>
+  );
+}
+
+function SupportLink() {
+  const reduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const nudge = useSharedValue(0);
+  const scale = useSharedValue(1);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: nudge.value }],
+  }));
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={pressStyle}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Contact Support"
+        onPress={() => router.push('/support')}
+        onHoverIn={() => setHovered(true)}
+        onHoverOut={() => setHovered(false)}
+        onPressIn={() => {
+          if (reduced) return;
+          scale.value = withSpring(0.98, { damping: 18, stiffness: 420 });
+          nudge.value = withSpring(5, { damping: 14, stiffness: 320 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+          nudge.value = withSpring(0, { damping: 14, stiffness: 260 });
+        }}
+        style={styles.supportLink}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={hovered ? ['#F4F9FD', '#E7F3FB'] : ['#FFFFFF', '#F3F7FB']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.tealStrong} />
+        <Text style={styles.supportLinkLabel}>Contact Support</Text>
+        <Animated.View style={iconStyle}>
+          <Ionicons name="arrow-forward" size={16} color={colors.navy} />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  );
 }
 
 export default function PersonalInformationScreen() {
@@ -203,7 +330,7 @@ export default function PersonalInformationScreen() {
       />
 
       <View style={styles.photoCard}>
-        <Text style={styles.sectionTitle}>Profile photo</Text>
+        <Text style={styles.photoTitle}>Profile photo</Text>
         <Text style={styles.photoHint}>
           Optional personalization only. This photo is not used for identity verification or
           credential review.
@@ -249,46 +376,72 @@ export default function PersonalInformationScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Details</Text>
+        <View style={styles.cardHead}>
+          <LinearGradient
+            colors={[colors.navy, colors.tealStrong]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.cardMark}
+          >
+            <Ionicons name="id-card" size={16} color={colors.yellow} />
+          </LinearGradient>
+          <View style={styles.cardHeadCopy}>
+            <Text style={styles.sectionKicker}>Account</Text>
+            <Text style={styles.sectionTitle}>Details</Text>
+          </View>
+        </View>
+
         {isVerified ? (
-          <>
-            <Text style={styles.lockedLabel}>Full name</Text>
-            <Text style={styles.lockedValue}>{profile?.full_name ?? '—'}</Text>
-            <Text style={styles.lockedHint}>
-              Your verified name is locked. Contact Support if a correction is required.
-            </Text>
-            <Button
-              label="Contact Support"
-              variant="ghost"
-              size="sm"
-              onPress={() => router.push('/support')}
-            />
-          </>
+          <DetailField
+            index={0}
+            icon="person"
+            label="Full name"
+            value={profile?.full_name?.trim() || '—'}
+            hint="Your verified name is locked. Contact Support if a correction is required."
+            locked
+          />
         ) : (
           <TextInput label="Full name" value={fullName} onChangeText={setFullName} />
         )}
+        {isVerified ? <SupportLink /> : null}
 
-        <Text style={styles.lockedLabel}>Email</Text>
-        <Text style={styles.lockedValue}>{user?.email ?? '—'}</Text>
-        <Text style={styles.lockedHint}>Email is managed by authentication and cannot be edited here.</Text>
-
-        <TextInput
-          label="Phone"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
+        <DetailField
+          index={1}
+          icon="mail"
+          label="Email"
+          value={(user?.email ?? '—').replace('@', '\u200b@')}
+          hint="Email is managed by authentication and cannot be edited here."
+          locked
         />
 
-        <Text style={styles.lockedLabel}>Role</Text>
-        <Text style={styles.lockedValue}>{roleLabel}</Text>
+        <View style={styles.phoneBlock}>
+          <View style={styles.phoneHead}>
+            <Ionicons name="call-outline" size={14} color={colors.tealStrong} />
+            <Text style={styles.phoneKicker}>Editable</Text>
+          </View>
+          <TextInput
+            label="Phone"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+          />
+        </View>
 
-        <Text style={styles.lockedLabel}>Verification</Text>
-        <Text style={styles.lockedValue}>
-          {verificationLabel(workerProfile?.verification_status)}
-        </Text>
-
-        <Text style={styles.lockedLabel}>Billing standing</Text>
-        <Text style={styles.lockedValue}>{billingStandingLabel(billing?.standing)}</Text>
+        <DetailField index={2} icon="briefcase-outline" label="Role" value={roleLabel} />
+        <DetailField
+          index={3}
+          icon="shield-checkmark"
+          label="Verification"
+          value={verificationLabel(workerProfile?.verification_status)}
+          tone={statusTone(workerProfile?.verification_status)}
+        />
+        <DetailField
+          index={4}
+          icon="card-outline"
+          label="Billing standing"
+          value={billingStandingLabel(billing?.standing)}
+          tone={statusTone(billing?.standing)}
+        />
 
         <Button
           label={savedFlash && !dirty ? 'Saved' : 'Save changes'}
@@ -342,6 +495,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: spacing.md,
   },
+  photoTitle: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    color: colors.navy,
+  },
   photoHint: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
@@ -372,33 +530,139 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: colors.card,
-    borderRadius: radii.md,
+    borderRadius: radii.xl,
     padding: spacing.lg,
     gap: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: '#D5E2EE',
+    ...shadows.md,
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  cardMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeadCopy: {
+    flex: 1,
+    gap: 1,
+  },
+  sectionKicker: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
   },
   sectionTitle: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 15,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 18,
     color: colors.navy,
   },
-  lockedLabel: {
+  field: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radii.lg,
+    backgroundColor: '#F7FBFE',
+    borderWidth: 1,
+    borderColor: '#E3EEF6',
+  },
+  fieldMark: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  fieldCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  fieldLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  fieldLabel: {
     fontFamily: typography.fonts.medium,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
   },
-  lockedValue: {
-    fontFamily: typography.fonts.regular,
+  fieldValue: {
+    fontFamily: typography.fonts.displaySemibold,
     fontSize: 16,
-    color: colors.text,
-    marginTop: -spacing.sm,
+    color: colors.navy,
   },
-  lockedHint: {
+  fieldHint: {
     fontFamily: typography.fonts.regular,
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 17,
     color: colors.textSecondary,
-    marginTop: -spacing.sm,
+  },
+  lockChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#D5E2EE',
+  },
+  lockText: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    color: colors.navy,
+  },
+  supportLink: {
+    minHeight: 46,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#D5E2EE',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.white,
+  },
+  supportLinkLabel: {
+    flex: 1,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 14,
+    color: colors.navy,
+  },
+  phoneBlock: {
+    gap: spacing.xs,
+    padding: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    borderColor: '#D7EBE8',
+    backgroundColor: '#F4FBFA',
+  },
+  phoneHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  phoneKicker: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
   },
   error: {
     fontFamily: typography.fonts.regular,

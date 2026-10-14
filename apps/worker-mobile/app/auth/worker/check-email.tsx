@@ -7,6 +7,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AuthShell } from '@/components/auth/AuthShell';
+import { Banner } from '@/components/ui/Banner';
 import { Button } from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/TextInput';
 import { APP_CONFIG } from '@/constants/config';
@@ -94,12 +95,22 @@ export default function WorkerCheckEmailScreen() {
 
   return (
     <AuthShell
-      title="Check your email"
-      subtitle="Confirm your address, then sign in to continue Account Setup."
+      title="Confirm your email"
+      subtitle="Your worker account is created. Confirm the invitation Bridge Hive sent before you sign in."
       showBack={false}
       centered
     >
       <View style={styles.body}>
+        <Banner
+          variant="info"
+          icon="mail"
+          title="Invitation sent"
+          body={
+            email
+              ? `Bridge Hive sent an invitation to ${email} to confirm your email address. Open that message and confirm the address.`
+              : 'Bridge Hive sent an invitation to confirm your email address. Open that message and confirm the address.'
+          }
+        />
         <Text style={styles.copy}>{workerConfirmRequestAcceptedCopy(false)}</Text>
         {email ? (
           <Text style={styles.hint}>Request associated with: {email}</Text>
@@ -183,10 +194,10 @@ export default function WorkerCheckEmailScreen() {
 const styles = StyleSheet.create({
   body: { gap: spacing.sm, width: '100%' },
   copy: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 15,
-    color: colors.text,
-    lineHeight: 22,
+    fontFamily: typography.fonts.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
     textAlign: 'center',
   },
   hint: {

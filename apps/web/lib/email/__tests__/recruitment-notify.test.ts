@@ -43,6 +43,11 @@ describe('recruitment notify payload', () => {
     expect(payload.html).toContain(
       `https://bridgehive.app/admin/recruitment/${candidateId}`,
     );
+    expect(payload.html).toContain('Open admin review');
+    expect(payload.html).toContain('A candidate is ready for review');
+    expect(payload.html).toContain('/brand/bridge-hive-logo-v2-180.png');
+    expect(payload.html).toMatch(/background-color:#071d30/);
+    expect(payload.html).toMatch(/background-color:#16a6b6/);
 
     const combined = `${payload.subject}\n${payload.text}\n${payload.html}`;
     expect(combined).not.toMatch(/alex\.example|@test\.local|\+357|cv\.pdf|storage|password|token|service.?role|recruitment-documents/i);

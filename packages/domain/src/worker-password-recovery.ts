@@ -458,6 +458,59 @@ export function parseWorkerRecoveryUrl(
   };
 }
 
+/**
+ * True when a URL looks like an intentional worker password-recovery open
+ * (email deep link, confirm/reset path, or auth error on those paths).
+ * Metro `exp://` launches and unrelated app opens must return false so the
+ * native app does not dump users onto “Reset link unavailable”.
+ */
+export function isWorkerRecoveryDeepLinkCandidate(
+  rawUrl: string | null | undefined,
+): boolean {
+  if (!rawUrl || typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return false;
+
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return false;
+  }
+
+  const scheme = url.protocol.replace(':', '').toLowerCase();
+  if (scheme === 'javascript' || scheme === 'data' || scheme === 'exp') {
+    return false;
+  }
+
+  const path = `${url.host}${url.pathname}`.replace(/\/+$/, '').toLowerCase();
+  const params = url.searchParams;
+  const type = (params.get('type') ?? '').trim().toLowerCase();
+  const source = (params.get('source') ?? '').trim().toLowerCase();
+  const hasToken = Boolean((params.get('token_hash') ?? '').trim());
+  const hasAuthError = Boolean(
+    (params.get('error') ?? params.get('error_code') ?? '').trim(),
+  );
+
+  const isResetPath =
+    path === 'auth/worker/reset-password' ||
+    path.endsWith('/auth/worker/reset-password') ||
+    (url.host === 'auth' &&
+      url.pathname.replace(/\/+$/, '') === '/worker/reset-password');
+  const isConfirmPath =
+    path === 'auth/confirm' ||
+    path.endsWith('/auth/confirm') ||
+    (url.host === 'auth' && url.pathname.replace(/\/+$/, '') === '/confirm');
+
+  if (type === 'recovery') return true;
+  if (source === 'recovery') return true;
+  if (isResetPath) return true;
+  if (isConfirmPath && (hasToken || hasAuthError || type === 'recovery')) {
+    return true;
+  }
+  return false;
+}
+
 /** User-facing copy for native recovery URL parse failures (no secrets). */
 export function workerRecoveryUrlErrorMessage(
   reason: Exclude<WorkerRecoveryUrlParseResult, { ok: true }>['reason'],

@@ -157,7 +157,7 @@ export default function PayoutSetupScreen() {
       <View style={styles.card}>
         <Text style={styles.label}>Current status</Text>
         <Text style={styles.value}>
-          {payoutSummaryLabel(account?.status ?? null)}
+          {account?.status === 'pending' ? 'Submitted' : payoutSummaryLabel(account?.status ?? null)}
           {account?.masked_iban ? ` · ${account.masked_iban}` : ''}
         </Text>
         {account?.account_holder_name ? (

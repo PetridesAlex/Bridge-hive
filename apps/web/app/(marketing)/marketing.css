@@ -11221,3 +11221,81 @@ html[data-m-intro="done"] .marketing .m-intro {
     opacity: 1 !important;
   }
 }
+
+/* Recruitment apply: back to the recruitment landing */
+.m-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.62rem;
+  margin: 0 0 1.35rem;
+  padding: 0.28rem 0.9rem 0.28rem 0.28rem;
+  border: 1px solid rgba(11, 32, 50, 0.08);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #ffffff 0%, rgba(246, 248, 247, 0.96) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 10px 24px rgba(11, 32, 50, 0.05);
+  color: var(--m-navy);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.m-back-mark {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(228, 179, 52, 0.45), transparent 46%),
+    linear-gradient(160deg, #143044 0%, var(--m-navy) 58%, var(--m-deep-teal) 100%);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.m-back-mark svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.m-back-label {
+  padding-right: 0.15rem;
+}
+
+.m-back:hover {
+  transform: translateY(-1px);
+  border-color: rgba(228, 179, 52, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 14px 30px rgba(11, 32, 50, 0.08);
+}
+
+.m-back:hover .m-back-mark {
+  transform: translateX(-2px);
+}
+
+.m-back:focus-visible {
+  outline: 2px solid var(--m-teal);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-back,
+  .m-back-mark {
+    transition: none;
+  }
+
+  .m-back:hover,
+  .m-back:hover .m-back-mark {
+    transform: none;
+  }
+}

@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 
 import { GreetingHeader } from '@/components/home/GreetingHeader';
 import { NextShiftCard } from '@/components/home/NextShiftCard';
+import { ShiftCalendar } from '@/components/home/ShiftCalendar';
 import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
@@ -21,7 +22,6 @@ import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
 import { ListRow } from '@/components/ui/ListRow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { WeekStrip } from '@/components/ui/WeekStrip';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAssignments } from '@/hooks/useAssignments';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
@@ -29,7 +29,18 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { useShifts } from '@/hooks/useShifts';
 import { getCheckInWindow, getWorkerShiftDetails, type WorkerShiftDetails } from '@/lib/rpcs';
 import { useAuth } from '@/providers/AuthProvider';
-import { isoDateFromTimestamp } from '@/utils/format';
+import { formatDayLabel, formatTimeRange, isoDateFromTimestamp } from '@/utils/format';
+
+function assignmentStatusLabel(status: string): string {
+  const map: Record<string, string> = {
+    accepted: 'Booked',
+    checked_in: 'On shift',
+    checked_out: 'Checked out',
+    submitted: 'Timesheet sent',
+    approved: 'Approved',
+  };
+  return map[status] ?? status.replace(/_/g, ' ');
+}
 
 export default function HomeScreen() {
   const { user, firstName, roleLabel, profile, isVerified } = useAuth();
@@ -72,15 +83,27 @@ export default function HomeScreen() {
     return dates;
   }, [activeAssignments]);
 
-  const dayFiltered = useMemo(() => {
-    if (!selectedDay) return activeAssignments.filter((a) =>
-      ['accepted', 'checked_in', 'checked_out'].includes(a.status),
-    );
-    return activeAssignments.filter((a) => {
-      const start = a.shifts?.starts_at;
-      return start && isoDateFromTimestamp(start) === selectedDay;
-    });
+  const openDates = useMemo(
+    () => openShifts.map((shift) => isoDateFromTimestamp(shift.starts_at)),
+    [openShifts],
+  );
+
+  const dayAssignments = useMemo(() => {
+    if (!selectedDay) return [];
+    return activeAssignments
+      .filter((assignment) => {
+        const start = assignment.shifts?.starts_at;
+        return start && isoDateFromTimestamp(start) === selectedDay;
+      })
+      .sort((a, b) => (a.shifts?.starts_at ?? '').localeCompare(b.shifts?.starts_at ?? ''));
   }, [activeAssignments, selectedDay]);
+
+  const dayOpens = useMemo(() => {
+    if (!selectedDay) return [];
+    return openShifts
+      .filter((shift) => isoDateFromTimestamp(shift.starts_at) === selectedDay)
+      .sort((a, b) => a.starts_at.localeCompare(b.starts_at));
+  }, [openShifts, selectedDay]);
 
   const openInvoices = allInvoices.filter(
     (i) => i.status === 'open' || i.status === 'past_due' || i.status === 'payment_processing',
@@ -239,9 +262,11 @@ export default function HomeScreen() {
       body: 'New role-matched shifts will appear here when hospitals publish them.',
       actionLabel: 'Browse shifts',
       onAction: () => router.push('/(tabs)/shifts'),
-      icon: 'search-outline' as const,
+      onPressCard: () => router.push('/(tabs)/shifts'),
+      icon: 'calendar-outline' as const,
       variant: 'light' as const,
-      live: false,
+      live: true,
+      liveLabel: 'Waiting',
       stats: [
         { value: '0', label: 'Open' },
         { value: roleLabel || 'Role', label: 'Matched' },
@@ -298,10 +323,10 @@ export default function HomeScreen() {
           <ContextualActionCard {...nextAction} />
         )}
 
-        <SectionHeader title="This week" />
-        <WeekStrip
+        <ShiftCalendar
           selectedIso={selectedDay}
           workDates={workDates}
+          openDates={openDates}
           onSelect={setSelectedDay}
         />
 
@@ -312,27 +337,56 @@ export default function HomeScreen() {
         ) : null}
 
         {selectedDay ? (
-          dayFiltered.length === 0 ? (
+          dayAssignments.length === 0 && dayOpens.length === 0 ? (
             <EmptyState
-              title="No work on this day"
-              description="Select another day or clear the filter to see all upcoming assignments."
-              actionLabel="Show all"
-              onAction={() => setSelectedDay(null)}
+              icon="calendar-outline"
+              title="Nothing on this day"
+              description="Booked shifts and open shifts for your role appear here."
+              actionLabel="Browse open shifts"
+              onAction={() => router.push('/(tabs)/shifts')}
             />
           ) : (
-            <ListGroup>
-              {dayFiltered.map((a, index) => (
-                <React.Fragment key={a.id}>
-                  {index > 0 ? <ListGroupSeparator /> : null}
-                  <ListRow
-                    icon="briefcase-outline"
-                    title={a.shifts?.title?.trim() || 'Assignment'}
-                    subtitle={a.status.replace(/_/g, ' ')}
-                    onPress={() => router.push(`/shifts/${a.shift_id}`)}
-                  />
-                </React.Fragment>
-              ))}
-            </ListGroup>
+            <View style={styles.dayPlan}>
+              <Text style={styles.dayPlanTitle}>{formatDayLabel(selectedDay)}</Text>
+              {dayAssignments.length > 0 ? (
+                <ListGroup>
+                  {dayAssignments.map((assignment, index) => (
+                    <React.Fragment key={assignment.id}>
+                      {index > 0 ? <ListGroupSeparator /> : null}
+                      <ListRow
+                        icon="briefcase"
+                        iconColor={colors.white}
+                        iconBackground={colors.tealStrong}
+                        title={assignment.shifts?.title?.trim() || 'Booked shift'}
+                        subtitle={
+                          assignment.shifts
+                            ? `${formatTimeRange(assignment.shifts.starts_at, assignment.shifts.ends_at)} · ${assignmentStatusLabel(assignment.status)}`
+                            : assignmentStatusLabel(assignment.status)
+                        }
+                        onPress={() => router.push(`/shifts/${assignment.shift_id}`)}
+                      />
+                    </React.Fragment>
+                  ))}
+                </ListGroup>
+              ) : null}
+              {dayOpens.length > 0 ? (
+                <ListGroup>
+                  {dayOpens.map((shift, index) => (
+                    <React.Fragment key={shift.id}>
+                      {index > 0 ? <ListGroupSeparator /> : null}
+                      <ListRow
+                        icon="flash"
+                        iconColor={colors.navy}
+                        iconBackground={colors.yellowLight}
+                        title={shift.title?.trim() || 'Open shift'}
+                        subtitle={`${formatTimeRange(shift.starts_at, shift.ends_at)} · Open to claim`}
+                        onPress={() => router.push(`/shifts/${shift.id}`)}
+                      />
+                    </React.Fragment>
+                  ))}
+                </ListGroup>
+              ) : null}
+            </View>
           )
         ) : null}
 
@@ -386,6 +440,14 @@ const styles = StyleSheet.create({
   },
   scheduleBlock: {
     gap: spacing.lg,
+  },
+  dayPlan: {
+    gap: spacing.sm,
+  },
+  dayPlanTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    color: colors.navy,
   },
   moneySummary: {
     marginTop: spacing.sm,

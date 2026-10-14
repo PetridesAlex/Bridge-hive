@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, spacing, typography } from '@/constants/theme';
 import { layout, useLayout } from '@/hooks/useLayout';
@@ -59,6 +60,7 @@ export function AuthShell({
 
   return (
     <View style={styles.root}>
+      <HiveFlowBackground />
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -94,7 +96,7 @@ export function AuthShell({
             showsVerticalScrollIndicator={false}
           >
             <Animated.View style={[styles.hero, motion]}>
-              <BridgeHiveMark size={52} style={styles.mark} />
+              <BridgeHiveMark size={84} style={styles.mark} />
               <Text style={styles.brand}>Bridge Hive</Text>
               <Text style={styles.title}>{title}</Text>
               <Text style={styles.subtitle}>{subtitle}</Text>
@@ -127,7 +129,7 @@ export function AuthStepBar({ current, total }: { current: number; total: number
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1 },
   safe: { flex: 1 },
   flex: { flex: 1 },
   scroll: {
@@ -159,12 +161,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   mark: {
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   brand: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    color: colors.navy,
+    fontSize: 13,
+    color: '#0B2032',
     letterSpacing: 0.8,
   },
   title: {

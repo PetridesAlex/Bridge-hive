@@ -12,7 +12,9 @@ describe('worker mobile auth recovery and package submit contracts', () => {
     const src = await readMobile('providers/AuthProvider.tsx');
     expect(src).toMatch(/resetPasswordForEmail/);
     expect(src).toMatch(/redirectTo/);
-    expect(src).toMatch(/DEFAULT_WORKER_RECOVERY_NEXT|auth\/worker\/reset-password/);
+    expect(src).toMatch(
+      /workerRecoveryNativeFallbackRedirectTo|DEFAULT_WORKER_RECOVERY_NEXT|auth\/worker\/reset-password/,
+    );
     expect(src).not.toMatch(/activate-organization-account/);
   });
 

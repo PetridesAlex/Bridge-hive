@@ -1,14 +1,18 @@
 import {
   WORKER_CONFIRM_RESEND_COOLDOWN_MS,
+  WORKER_RECOVERY_NATIVE_FALLBACK_REDIRECT_TO,
   WORKER_RECOVERY_PASSWORD_MIN_LENGTH,
   WORKER_RECOVERY_PRODUCTION_REDIRECT_TO,
   WORKER_RECOVERY_REQUEST_SUCCESS_MESSAGE,
+  applyWorkerRecoveryEmailTemplateAppend,
   isValidWorkerRecoveryEmail,
   mapWorkerRecoveryRequestResult,
   parseWorkerRecoveryUrl,
   resolveWorkerRecoveryRedirectTo,
   shouldMarkWorkerRecoverySession,
   validateWorkerRecoveryPassword,
+  workerRecoveryNativeFallbackRedirectTo,
+  workerRecoveryRedirectToHasQuerySeparator,
   workerRecoveryRedirectToOrFallback,
   workerRecoveryResendCooldownMs,
   workerRecoveryResendCooldownSeconds,
@@ -26,7 +30,7 @@ async function read(...parts: string[]) {
 }
 
 describe('worker password recovery — redirect construction', () => {
-  const nativeFallback = 'bridgehive://auth/worker/reset-password';
+  const nativeFallback = WORKER_RECOVERY_NATIVE_FALLBACK_REDIRECT_TO;
 
   it('builds the exact production confirm redirect for public Bridge Hive origins', () => {
     for (const web of [
@@ -111,6 +115,63 @@ describe('worker password recovery — redirect construction', () => {
       expect(result.redirectTo).toBe(nativeFallback);
       expect(result.source).toBe('native_fallback');
     }
+  });
+});
+
+describe('worker password recovery — native fallback email-template safety', () => {
+  it('resolves native fallback to bridgehive URL with ?source=recovery', () => {
+    expect(workerRecoveryNativeFallbackRedirectTo()).toBe(
+      'bridgehive://auth/worker/reset-password?source=recovery',
+    );
+    expect(WORKER_RECOVERY_NATIVE_FALLBACK_REDIRECT_TO).toBe(
+      'bridgehive://auth/worker/reset-password?source=recovery',
+    );
+    expect(
+      workerRecoveryRedirectToHasQuerySeparator(
+        WORKER_RECOVERY_NATIVE_FALLBACK_REDIRECT_TO,
+      ),
+    ).toBe(true);
+  });
+
+  it('parses successfully after template appends &token_hash=&type=recovery', () => {
+    const redirectTo = workerRecoveryNativeFallbackRedirectTo();
+    const finalUrl = applyWorkerRecoveryEmailTemplateAppend(
+      redirectTo,
+      'native-token-hash-value',
+    );
+    expect(finalUrl).toBe(
+      'bridgehive://auth/worker/reset-password?source=recovery&token_hash=native-token-hash-value&type=recovery',
+    );
+    const parsed = parseWorkerRecoveryUrl(finalUrl);
+    expect(parsed.ok).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.tokenHash).toBe('native-token-hash-value');
+      expect(parsed.type).toBe('recovery');
+    }
+  });
+
+  it('does not use a query-less native fallback for the email flow', () => {
+    const unsafe = 'bridgehive://auth/worker/reset-password';
+    expect(workerRecoveryRedirectToHasQuerySeparator(unsafe)).toBe(false);
+    expect(workerRecoveryNativeFallbackRedirectTo()).not.toBe(unsafe);
+    expect(workerRecoveryNativeFallbackRedirectTo()).toContain('?source=recovery');
+    // Template append on a query-less RedirectTo would produce an invalid URL
+    // (…reset-password&token_hash=…) that must not be the app's fallback.
+    const broken = applyWorkerRecoveryEmailTemplateAppend(unsafe, 'x');
+    expect(broken).toBe(
+      'bridgehive://auth/worker/reset-password&token_hash=x&type=recovery',
+    );
+    expect(parseWorkerRecoveryUrl(broken).ok).toBe(false);
+  });
+
+  it('mobile AuthProvider uses the query-bearing native fallback constant', async () => {
+    const auth = await read(mobileRoot, 'providers/AuthProvider.tsx');
+    expect(auth).toMatch(/workerRecoveryNativeFallbackRedirectTo/);
+    expect(auth).toMatch(/workerRecoveryRedirectToOrFallback/);
+    // Must not rebuild a bare path-only bridgehive recovery RedirectTo.
+    expect(auth).not.toMatch(
+      /workerAppRedirectTo\(\s*DEFAULT_WORKER_RECOVERY_NEXT\s*\)/,
+    );
   });
 });
 
@@ -213,13 +274,14 @@ describe('worker password recovery — URL parsing and explicit confirm', () => 
     }
   });
 
-  it('accepts native bridgehive recovery deep links', () => {
+  it('accepts native bridgehive recovery deep links and ignores source=recovery', () => {
     const parsed = parseWorkerRecoveryUrl(
-      'bridgehive://auth/worker/reset-password?token_hash=nativehash&type=recovery',
+      'bridgehive://auth/worker/reset-password?source=recovery&token_hash=nativehash&type=recovery',
     );
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
       expect(parsed.tokenHash).toBe('nativehash');
+      expect(parsed.type).toBe('recovery');
     }
   });
 
@@ -367,6 +429,9 @@ describe('worker password recovery — source contracts', () => {
     expect(doc).toMatch(/EXPO_PUBLIC_WEB_APP_URL=https:\/\/bridgehive\.app/);
     expect(doc).toMatch(
       /https:\/\/bridgehive\.app\/auth\/confirm\?next=%2Fauth%2Fworker%2Freset-password/,
+    );
+    expect(doc).toMatch(
+      /bridgehive:\/\/auth\/worker\/reset-password\?source=recovery/,
     );
     expect(doc).toMatch(
       /\{\{ \.RedirectTo \}\}&token_hash=\{\{ \.TokenHash \}\}&type=recovery/,

@@ -16,7 +16,13 @@ When this is a public Bridge Hive origin, mobile `resetPasswordForEmail` uses:
 https://bridgehive.app/auth/confirm?next=%2Fauth%2Fworker%2Freset-password
 ```
 
-Production builds never send localhost or loopback as `redirectTo`. If the web URL is missing or rejected, the app falls back to the native deep link `bridgehive://auth/worker/reset-password`.
+Production builds never send localhost or loopback as `redirectTo`. If the web URL is missing or rejected, the app falls back to the native deep link:
+
+```
+bridgehive://auth/worker/reset-password?source=recovery
+```
+
+The harmless `?source=recovery` query is required so the shared Reset Password template can append `&token_hash=…&type=recovery` and still produce a valid URL.
 
 ## Redirect URL allow-list
 
@@ -24,10 +30,11 @@ Authentication → URL Configuration → Redirect URLs — add (keep existing or
 
 - **Required production confirm redirect (exact):**
   - `https://bridgehive.app/auth/confirm?next=%2Fauth%2Fworker%2Freset-password`
+- **Required native fallback (exact):**
+  - `bridgehive://auth/worker/reset-password?source=recovery`
 - Also allow (prefix / related):
   - `https://bridgehive.app/auth/confirm`
   - `https://bridgehive.app/auth/worker/reset-password`
-  - `bridgehive://auth/worker/reset-password`
   - `http://localhost:8081/auth/worker/reset-password` (Expo web local only)
   - `http://localhost:3000/auth/confirm` (local web only)
   - `http://localhost:3000/auth/worker/reset-password` (local web only)
@@ -40,7 +47,7 @@ Site URL may remain the web app origin (`https://bridgehive.app`). Do not force 
 
 Authentication → Email Templates → **Reset Password**.
 
-Preserve this safe template contract (`RedirectTo` already includes `/auth/confirm?next=…` from the app):
+Preserve this safe template contract (`RedirectTo` already includes a query string — web `?next=…` or native `?source=recovery`):
 
 ```html
 <a href="{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery">Reset password</a>

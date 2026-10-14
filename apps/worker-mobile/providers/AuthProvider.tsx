@@ -2,7 +2,6 @@ import type { Session, User } from '@supabase/supabase-js';
 import type { Tables } from '@bridge-hive/supabase-types';
 import {
   classifyWorkerSignUpResponse,
-  DEFAULT_WORKER_RECOVERY_NEXT,
   DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT,
   buildAuthConfirmRedirectTo,
   friendlyWorkerPasswordUpdateError,
@@ -12,6 +11,7 @@ import {
   parseWorkerRecoveryUrl,
   validateWorkerRecoveryPassword,
   workerExistingAccountMessage,
+  workerRecoveryNativeFallbackRedirectTo,
   workerRecoveryRedirectToOrFallback,
   workerRecoveryUrlErrorMessage,
   WORKER_ROLE_LABELS,
@@ -190,7 +190,9 @@ function workerSignupConfirmRedirectTo(): string {
 }
 
 function workerRecoveryRedirectTo(): string {
-  const nativeFallback = workerAppRedirectTo(DEFAULT_WORKER_RECOVERY_NEXT);
+  // Native fallback must already include `?source=recovery` so the shared
+  // Reset Password template can append `&token_hash=…&type=recovery` safely.
+  const nativeFallback = workerRecoveryNativeFallbackRedirectTo();
   return workerRecoveryRedirectToOrFallback({
     webAppUrl: process.env.EXPO_PUBLIC_WEB_APP_URL,
     nativeFallback,

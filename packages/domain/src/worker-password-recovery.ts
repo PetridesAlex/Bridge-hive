@@ -26,6 +26,19 @@ export const WORKER_RECOVERY_PRODUCTION_REDIRECT_TO = buildAuthConfirmRedirectTo
   DEFAULT_WORKER_RECOVERY_NEXT,
 );
 
+/**
+ * Native deep-link fallback when EXPO_PUBLIC_WEB_APP_URL is unset/rejected.
+ * Includes a harmless `?source=recovery` so the shared Reset Password template
+ * can safely append `&token_hash=…&type=recovery` (requires an existing `?`).
+ * Do not put token_hash in Supabase Redirect URL settings.
+ */
+export const WORKER_RECOVERY_NATIVE_FALLBACK_REDIRECT_TO =
+  'bridgehive://auth/worker/reset-password?source=recovery';
+
+/** Harmless query flag already present on the native fallback RedirectTo. */
+export const WORKER_RECOVERY_NATIVE_SOURCE_PARAM = 'source';
+export const WORKER_RECOVERY_NATIVE_SOURCE_VALUE = 'recovery';
+
 /** Cookie name marking an explicit worker recovery session (no token value). */
 export const WORKER_RECOVERY_SESSION_COOKIE = 'bh_worker_recovery';
 
@@ -164,6 +177,37 @@ export function workerRecoveryRedirectToOrFallback(params: {
   const result = resolveWorkerRecoveryRedirectTo(params);
   if (result.ok) return result.redirectTo;
   return params.nativeFallback;
+}
+
+/**
+ * Canonical native fallback RedirectTo for worker recovery emails.
+ * Always includes `?source=recovery` so template `&token_hash=…` is valid.
+ */
+export function workerRecoveryNativeFallbackRedirectTo(): string {
+  return WORKER_RECOVERY_NATIVE_FALLBACK_REDIRECT_TO;
+}
+
+/**
+ * Simulate the hosted Reset Password template append:
+ * `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=recovery`
+ * Never logs the resulting URL.
+ */
+export function applyWorkerRecoveryEmailTemplateAppend(
+  redirectTo: string,
+  tokenHash: string,
+): string {
+  return `${redirectTo}&token_hash=${encodeURIComponent(tokenHash)}&type=recovery`;
+}
+
+/** True when RedirectTo already has a query separator (safe for `&token_hash=`). */
+export function workerRecoveryRedirectToHasQuerySeparator(
+  redirectTo: string,
+): boolean {
+  try {
+    return new URL(redirectTo).search.length > 0 || redirectTo.includes('?');
+  } catch {
+    return redirectTo.includes('?');
+  }
 }
 
 /** Basic email shape check for the forgot-password form. */
@@ -343,14 +387,17 @@ export function parseWorkerRecoveryUrl(
   const tokenHash = firstQueryParam(params, 'token_hash');
 
   if (scheme === 'bridgehive') {
-    const combined = `${url.host}${url.pathname}`.toLowerCase();
+    // Accept only bridgehive://auth/worker/reset-password (optional harmless
+    // source=recovery and required token_hash / type=recovery from the email).
+    const combined = `${url.host}${url.pathname}`.replace(/\/+$/, '').toLowerCase();
     const isResetPath =
-      combined.includes('auth/worker/reset-password') ||
-      (url.host === 'auth' && url.pathname.includes('worker/reset-password'));
+      combined === 'auth/worker/reset-password' ||
+      (url.host === 'auth' &&
+        url.pathname.replace(/\/+$/, '') === '/worker/reset-password');
     if (!isResetPath) {
       return { ok: false, reason: 'wrong_origin' };
     }
-    // Native deep links may omit type when the path is already recovery-only.
+    // Ignore harmless source=recovery; require type=recovery when supplied.
     if (type && type !== 'recovery') {
       return { ok: false, reason: 'wrong_type' };
     }

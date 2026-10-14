@@ -5,9 +5,10 @@ import {
   workerRecoveryResendCooldownMs,
   workerRecoveryResendCooldownSeconds,
 } from '@bridge-hive/domain';
+import { Ionicons } from '@expo/vector-icons';
 import { Redirect, router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -83,7 +84,15 @@ export default function WorkerForgotPasswordScreen() {
           >
             <Text style={styles.backLinkText}>Back to sign in</Text>
           </Pressable>
-          <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+          <Pressable
+            onPress={() => void Linking.openURL(`mailto:${APP_CONFIG.supportEmail}`)}
+            accessibilityRole="link"
+            accessibilityLabel={`Email support at ${APP_CONFIG.supportEmail}`}
+            hitSlop={8}
+            style={styles.supportHit}
+          >
+            <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+          </Pressable>
         </View>
       }
     >
@@ -108,9 +117,17 @@ export default function WorkerForgotPasswordScreen() {
       ) : null}
 
       {success ? (
-        <Text style={styles.success} accessibilityLiveRegion="polite">
-          {success}
-        </Text>
+        <View
+          style={styles.successCard}
+          accessibilityLiveRegion="polite"
+          accessibilityRole="text"
+        >
+          <View style={styles.successIconWrap}>
+            <Ionicons name="checkmark-circle" size={28} color={colors.tealStrong} />
+          </View>
+          <Text style={styles.successTitle}>Check your email</Text>
+          <Text style={styles.success}>{success}</Text>
+        </View>
       ) : null}
 
       <View style={styles.actions}>
@@ -142,16 +159,38 @@ const styles = StyleSheet.create({
   },
   cta: {
     borderRadius: radii.full,
+    minHeight: 48,
   },
   error: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
     color: colors.error,
   },
+  successCard: {
+    gap: spacing.sm,
+    padding: spacing.lg,
+    borderRadius: radii.lg,
+    backgroundColor: colors.surfaceSubdued,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  successIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20, 169, 181, 0.14)',
+  },
+  successTitle: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 16,
+    color: colors.navy,
+  },
   success: {
     fontFamily: typography.fonts.medium,
     fontSize: 14,
-    color: colors.success,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   footer: {
@@ -169,10 +208,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.tealStrong,
   },
+  supportHit: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
   support: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,
-    color: 'rgba(255,255,255,0.55)',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });

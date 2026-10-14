@@ -4,15 +4,16 @@ import {
   workerRecoveryUrlErrorMessage,
   type WorkerRecoveryUrlParseResult,
 } from '@bridge-hive/domain';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { APP_CONFIG } from '@/constants/config';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import {
   clearAllWorkerRecoveryState,
   clearPendingRecovery,
@@ -22,6 +23,38 @@ import {
 import { useAuth } from '@/providers/AuthProvider';
 
 type Step = 'confirm' | 'password' | 'done' | 'invalid';
+type ReqState = 'idle' | 'ok' | 'bad';
+
+function RequirementRow({ label, state }: { label: string; state: ReqState }) {
+  const color =
+    state === 'ok' ? colors.tealStrong : state === 'bad' ? colors.error : colors.textMuted;
+  return (
+    <View style={styles.reqRow} accessibilityRole="text">
+      <View
+        style={[
+          styles.reqDot,
+          state === 'ok' && styles.reqDotOk,
+          state === 'bad' && styles.reqDotBad,
+        ]}
+      />
+      <Text style={[styles.reqLabel, { color }]}>{label}</Text>
+    </View>
+  );
+}
+
+function SupportLine() {
+  return (
+    <Pressable
+      onPress={() => void Linking.openURL(`mailto:${APP_CONFIG.supportEmail}`)}
+      accessibilityRole="link"
+      accessibilityLabel={`Email support at ${APP_CONFIG.supportEmail}`}
+      hitSlop={8}
+      style={styles.supportHit}
+    >
+      <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+    </Pressable>
+  );
+}
 
 export default function WorkerResetPasswordScreen() {
   const {
@@ -37,13 +70,11 @@ export default function WorkerResetPasswordScreen() {
   const [confirm, setConfirm] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
-  const [linkError, setLinkError] = useState<string>();
 
   const syncFromPending = useCallback(() => {
     const pendingHash = getPendingRecoveryTokenHash();
     if (pendingHash) {
       setStep('confirm');
-      setLinkError(undefined);
       return;
     }
     if (isWorkerRecoverySessionActive() && session) {
@@ -52,9 +83,6 @@ export default function WorkerResetPasswordScreen() {
     }
     if (!loading && !session) {
       setStep('invalid');
-      setLinkError(
-        'Open the reset link from your email, or request a new password reset.',
-      );
     }
   }, [loading, session]);
 
@@ -63,7 +91,6 @@ export default function WorkerResetPasswordScreen() {
     const outcome = consumePendingRecoveryLink();
     if (outcome?.kind === 'invalid') {
       setStep('invalid');
-      setLinkError(outcome.message);
       clearPendingRecovery();
       return;
     }
@@ -89,6 +116,16 @@ export default function WorkerResetPasswordScreen() {
       setStep('invalid');
     }
   }, [loading, session, step]);
+
+  const lengthState: ReqState = useMemo(() => {
+    if (!password) return 'idle';
+    return password.length >= WORKER_RECOVERY_PASSWORD_MIN_LENGTH ? 'ok' : 'bad';
+  }, [password]);
+
+  const matchState: ReqState = useMemo(() => {
+    if (!confirm) return 'idle';
+    return password === confirm ? 'ok' : 'bad';
+  }, [password, confirm]);
 
   const onConfirmLink = async () => {
     setError(undefined);
@@ -138,6 +175,16 @@ export default function WorkerResetPasswordScreen() {
     router.replace('/auth/worker/login');
   };
 
+  const goForgot = () => {
+    clearAllWorkerRecoveryState();
+    router.replace('/auth/worker/forgot-password');
+  };
+
+  const goSignIn = () => {
+    clearAllWorkerRecoveryState();
+    router.replace('/auth/worker/login');
+  };
+
   if (loading && step !== 'confirm' && step !== 'done') {
     return (
       <AuthShell
@@ -159,18 +206,28 @@ export default function WorkerResetPasswordScreen() {
         showBack={false}
         centered
       >
-        <Text style={styles.error} accessibilityLiveRegion="polite">
-          {linkError ?? error ?? 'This reset link is invalid.'}
+        <View style={styles.stateIconWrap}>
+          <Ionicons name="shield-outline" size={28} color={colors.navy} />
+        </View>
+        <Text style={styles.stateCopy} accessibilityLiveRegion="polite">
+          This reset link is no longer available. Request a fresh email, then open it on this
+          device.
         </Text>
         <Button
-          label="Back to sign in"
+          label="Request a new reset link"
           variant="primary"
-          onPress={() => {
-            clearAllWorkerRecoveryState();
-            router.replace('/auth/worker/login');
-          }}
+          size="lg"
+          onPress={goForgot}
+          style={styles.cta}
         />
-        <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+        <Button
+          label="Back to sign in"
+          variant="ghost"
+          size="lg"
+          onPress={goSignIn}
+          style={styles.secondaryCta}
+        />
+        <SupportLine />
       </AuthShell>
     );
   }
@@ -183,6 +240,9 @@ export default function WorkerResetPasswordScreen() {
         showBack={false}
         centered={false}
       >
+        <View style={styles.stateIconWrap}>
+          <Ionicons name="lock-closed-outline" size={28} color={colors.tealStrong} />
+        </View>
         {error ? (
           <Text style={styles.error} accessibilityLiveRegion="polite">
             {error}
@@ -191,13 +251,21 @@ export default function WorkerResetPasswordScreen() {
         <Button
           label="Continue password reset"
           variant="primary"
+          size="lg"
           loading={submitting}
           disabled={submitting}
           onPress={() => void onConfirmLink()}
+          style={styles.cta}
           accessibilityHint="Verifies your reset link once before you set a new password"
         />
-        <Button label="Cancel" variant="ghost" onPress={() => void onCancel()} />
-        <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+        <Button
+          label="Cancel"
+          variant="ghost"
+          size="lg"
+          onPress={() => void onCancel()}
+          style={styles.secondaryCta}
+        />
+        <SupportLine />
       </AuthShell>
     );
   }
@@ -210,11 +278,20 @@ export default function WorkerResetPasswordScreen() {
         showBack={false}
         centered
       >
+        <View style={[styles.stateIconWrap, styles.stateIconSuccess]}>
+          <Ionicons name="checkmark-circle" size={32} color={colors.tealStrong} />
+        </View>
         <Text style={styles.success} accessibilityLiveRegion="polite">
           Your password was updated successfully.
         </Text>
-        <Button label="Continue to sign in" variant="primary" onPress={onDoneContinue} />
-        <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+        <Button
+          label="Continue to sign in"
+          variant="primary"
+          size="lg"
+          onPress={onDoneContinue}
+          style={styles.cta}
+        />
+        <SupportLine />
       </AuthShell>
     );
   }
@@ -229,9 +306,18 @@ export default function WorkerResetPasswordScreen() {
         centered
       >
         <Button
-          label="Back to sign in"
+          label="Request a new reset link"
           variant="primary"
-          onPress={() => router.replace('/auth/worker/login')}
+          size="lg"
+          onPress={goForgot}
+          style={styles.cta}
+        />
+        <Button
+          label="Back to sign in"
+          variant="ghost"
+          size="lg"
+          onPress={goSignIn}
+          style={styles.secondaryCta}
         />
       </AuthShell>
     );
@@ -240,7 +326,7 @@ export default function WorkerResetPasswordScreen() {
   return (
     <AuthShell
       title="Set a new password"
-      subtitle={`Choose a new password for your Bridge Hive worker account (at least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters).`}
+      subtitle={`Choose a new password for your Bridge Hive worker account. Use at least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters.`}
       showBack={false}
       centered={false}
     >
@@ -265,6 +351,18 @@ export default function WorkerResetPasswordScreen() {
           textContentType="newPassword"
           accessibilityLabel="Confirm new password"
         />
+
+        <Text style={styles.guidance}>
+          Use at least {WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters
+        </Text>
+        <View style={styles.reqList} accessibilityLiveRegion="polite">
+          <RequirementRow
+            label={`At least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters`}
+            state={lengthState}
+          />
+          <RequirementRow label="Passwords match" state={matchState} />
+        </View>
+
         {error ? (
           <Text style={styles.error} accessibilityLiveRegion="polite">
             {error}
@@ -273,13 +371,21 @@ export default function WorkerResetPasswordScreen() {
         <Button
           label="Update password"
           variant="primary"
+          size="lg"
           loading={submitting}
           disabled={submitting}
           onPress={() => void onSubmitPassword()}
+          style={styles.cta}
         />
-        <Button label="Cancel" variant="ghost" onPress={() => void onCancel()} />
+        <Button
+          label="Back to sign in"
+          variant="ghost"
+          size="lg"
+          onPress={() => void onCancel()}
+          style={styles.secondaryCta}
+        />
       </View>
-      <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+      <SupportLine />
     </AuthShell>
   );
 }
@@ -293,10 +399,60 @@ export function mapRecoveryParseFailure(
 
 const styles = StyleSheet.create({
   fields: { gap: spacing.md },
+  reqList: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  reqRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 22,
+  },
+  reqDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.borderStrong,
+  },
+  reqDotOk: {
+    backgroundColor: colors.tealStrong,
+  },
+  reqDotBad: {
+    backgroundColor: colors.error,
+  },
+  reqLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+  },
+  guidance: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  stateIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceSubdued,
+    marginBottom: spacing.sm,
+  },
+  stateIconSuccess: {
+    backgroundColor: 'rgba(20, 169, 181, 0.14)',
+  },
+  stateCopy: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
   success: {
     fontFamily: typography.fonts.medium,
     fontSize: 15,
-    color: colors.success,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   error: {
@@ -310,11 +466,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
   },
+  cta: {
+    borderRadius: radii.full,
+    minHeight: 48,
+  },
+  secondaryCta: {
+    minHeight: 48,
+  },
+  supportHit: {
+    minHeight: 44,
+    justifyContent: 'center',
+    marginTop: spacing.md,
+  },
   support: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,
     color: colors.textMuted,
     textAlign: 'center',
-    marginTop: spacing.md,
   },
 });

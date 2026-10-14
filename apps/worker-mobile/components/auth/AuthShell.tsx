@@ -20,6 +20,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, spacing, typography } from '@/constants/theme';
 import { layout, useLayout } from '@/hooks/useLayout';
@@ -59,6 +60,7 @@ export function AuthShell({
 
   return (
     <View style={styles.root}>
+      <HiveFlowBackground />
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView
           style={styles.flex}
@@ -127,7 +129,7 @@ export function AuthStepBar({ current, total }: { current: number; total: number
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.background },
+  root: { flex: 1 },
   safe: { flex: 1 },
   flex: { flex: 1 },
   scroll: {

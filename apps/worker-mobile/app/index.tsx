@@ -1,19 +1,14 @@
 import { Redirect } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
 
-import { colors } from '@/constants/theme';
+import { AppBootCover } from '@/components/brand/AppBootCover';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function IndexScreen() {
   const { loading, session, homeRoute } = useAuth();
 
   if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.navy} />
-      </View>
-    );
+    return <AppBootCover />;
   }
 
   if (!session) {

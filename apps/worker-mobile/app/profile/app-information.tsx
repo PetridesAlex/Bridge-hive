@@ -26,7 +26,7 @@ export default function AppInformationScreen() {
 
       <View style={styles.card}>
         <Text style={styles.label}>Application</Text>
-        <Text style={styles.value}>Bridge Hive Worker</Text>
+        <Text style={styles.value}>BridgeHive App</Text>
 
         <Text style={styles.label}>Version</Text>
         <Text style={styles.value}>{version}</Text>

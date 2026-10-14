@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Bridge Hive Worker",
+    "name": "BridgeHive App",
     "slug": "bridge-hive-worker",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -33,7 +33,7 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 280,
           "resizeMode": "contain",
           "backgroundColor": "#071A2F"
         }

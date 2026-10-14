@@ -5,12 +5,20 @@ import {
   DEFAULT_WORKER_RECOVERY_NEXT,
   DEFAULT_WORKER_SIGNUP_CONFIRM_NEXT,
   buildAuthConfirmRedirectTo,
+  friendlyWorkerPasswordUpdateError,
   isWorkerRole,
+  mapWorkerRecoveryRequestResult,
+  normalizeWorkerRecoveryEmail,
+  parseWorkerRecoveryUrl,
+  validateWorkerRecoveryPassword,
   workerExistingAccountMessage,
+  workerRecoveryRedirectToOrFallback,
+  workerRecoveryUrlErrorMessage,
   WORKER_ROLE_LABELS,
   type WorkerRole,
 } from '@bridge-hive/domain';
 import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
 import React, {
   createContext,
   useCallback,
@@ -23,6 +31,16 @@ import { Platform } from 'react-native';
 
 import { clearAvatarUrlCache } from '@/lib/avatar';
 import { createSessionFromUrl, signInWithGoogleOAuth } from '@/lib/oauth';
+import {
+  clearAllWorkerRecoveryState,
+  clearPendingRecovery,
+  getPendingRecoveryError,
+  getPendingRecoveryTokenHash,
+  isWorkerRecoverySessionActive,
+  markWorkerRecoverySessionActive,
+  setPendingRecoveryError,
+  setPendingRecoveryTokenHash,
+} from '@/lib/pending-recovery';
 import { supabase } from '@/lib/supabase';
 
 export type Profile = Tables<'profiles'>;
@@ -59,8 +77,15 @@ type AuthContextValue = {
   signInWithGoogle: () => Promise<{ error?: string; cancelled?: boolean }>;
   signUpWorker: (input: WorkerSignUpInput) => Promise<WorkerSignUpResult>;
   resendSignupConfirmation: (email: string) => Promise<{ error?: string }>;
-  resetPassword: (email: string) => Promise<{ error?: string }>;
+  resetPassword: (
+    email: string,
+  ) => Promise<{ error?: string; message?: string }>;
   updatePassword: (password: string) => Promise<{ error?: string }>;
+  confirmRecoveryOtp: () => Promise<{ error?: string }>;
+  consumePendingRecoveryLink: () =>
+    | { kind: 'pending' }
+    | { kind: 'invalid'; message: string }
+    | null;
   completeWorkerRoleSetup: (input: {
     workerRole: WorkerRole;
     fullName: string;
@@ -165,11 +190,37 @@ function workerSignupConfirmRedirectTo(): string {
 }
 
 function workerRecoveryRedirectTo(): string {
-  const webOrigin = workerWebAppOrigin();
-  if (webOrigin) {
-    return buildAuthConfirmRedirectTo(webOrigin, DEFAULT_WORKER_RECOVERY_NEXT);
+  const nativeFallback = workerAppRedirectTo(DEFAULT_WORKER_RECOVERY_NEXT);
+  return workerRecoveryRedirectToOrFallback({
+    webAppUrl: process.env.EXPO_PUBLIC_WEB_APP_URL,
+    nativeFallback,
+    mode: __DEV__ ? 'development' : 'production',
+  });
+}
+
+/**
+ * Accept only expected Bridge Hive recovery URLs. Store token_hash in memory.
+ * Never logs the URL or token. Ignores OAuth callback URLs.
+ */
+function ingestRecoveryDeepLink(url: string | null): void {
+  if (!url || url.includes('auth/callback')) return;
+  const parsed = parseWorkerRecoveryUrl(url, { allowDevLoopback: __DEV__ });
+  if (!parsed.ok) {
+    if (parsed.reason === 'oauth_callback') return;
+    setPendingRecoveryError(workerRecoveryUrlErrorMessage(parsed.reason));
+    try {
+      router.replace('/auth/worker/reset-password');
+    } catch {
+      // Router may not be mounted yet on cold start; reset screen still syncs.
+    }
+    return;
   }
-  return workerAppRedirectTo(DEFAULT_WORKER_RECOVERY_NEXT);
+  setPendingRecoveryTokenHash(parsed.tokenHash);
+  try {
+    router.replace('/auth/worker/reset-password');
+  } catch {
+    // Router may not be mounted yet on cold start.
+  }
 }
 
 async function bootstrapWorkerProfile(user: User): Promise<WorkerProfile | null> {
@@ -305,13 +356,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     });
 
-    // Cold/warm OAuth deep links on native only. Expo web uses /auth/callback +
-    // openAuthSessionAsync return URL — Linking here would double-spend the PKCE code.
+    // Cold/warm deep links on native only.
+    // OAuth: auth/callback → createSessionFromUrl (never verify recovery OTP here).
+    // Recovery: token_hash + type=recovery → in-memory pending for explicit confirm.
     let linkSub: { remove: () => void } | undefined;
     if (Platform.OS !== 'web') {
       const handleUrl = (url: string | null) => {
-        if (!url || !url.includes('auth/callback')) return;
-        void createSessionFromUrl(url);
+        if (!url) return;
+        if (url.includes('auth/callback')) {
+          void createSessionFromUrl(url);
+          return;
+        }
+        ingestRecoveryDeepLink(url);
       };
       void Linking.getInitialURL().then(handleUrl);
       linkSub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
@@ -417,19 +473,82 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    const normalized = normalizeWorkerRecoveryEmail(email);
+    const { error } = await supabase.auth.resetPasswordForEmail(normalized, {
       redirectTo: workerRecoveryRedirectTo(),
     });
-    if (error) return { error: friendlyAuthError(error.message) };
+    const mapped = mapWorkerRecoveryRequestResult({
+      providerErrorMessage: error?.message ?? null,
+    });
+    if (!mapped.success) {
+      return { error: mapped.error };
+    }
+    return { message: mapped.message };
+  }, []);
+
+  const consumePendingRecoveryLink = useCallback(() => {
+    const err = getPendingRecoveryError();
+    if (err) {
+      return { kind: 'invalid' as const, message: err };
+    }
+    if (getPendingRecoveryTokenHash()) {
+      return { kind: 'pending' as const };
+    }
+    return null;
+  }, []);
+
+  const confirmRecoveryOtp = useCallback(async () => {
+    const tokenHash = getPendingRecoveryTokenHash();
+    if (!tokenHash) {
+      return {
+        error: 'This reset link is invalid. Request a new password reset email.',
+      };
+    }
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: 'recovery',
+    });
+    if (error || !data.session) {
+      const msg = (error?.message ?? '').toLowerCase();
+      if (msg.includes('expired') || msg.includes('otp')) {
+        clearAllWorkerRecoveryState();
+        return {
+          error: 'This reset link has expired. Request a new password reset email.',
+        };
+      }
+      clearAllWorkerRecoveryState();
+      return {
+        error: 'This reset link is no longer valid. Request a new password reset email.',
+      };
+    }
+    markWorkerRecoverySessionActive();
+    // Drop token from memory after successful explicit verification.
+    clearPendingRecovery();
+    try {
+      router.replace('/auth/worker/reset-password');
+    } catch {
+      // Navigation already on reset-password.
+    }
     return {};
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {
-    if (password.length < 6) {
-      return { error: 'Password must be at least 6 characters.' };
+    if (!isWorkerRecoverySessionActive()) {
+      return {
+        error: 'This reset link is no longer valid. Request a new password reset email.',
+      };
+    }
+    const policy = validateWorkerRecoveryPassword({
+      password,
+      confirm: password,
+    });
+    if (!policy.ok) {
+      return { error: policy.error };
     }
     const { error } = await supabase.auth.updateUser({ password });
-    if (error) return { error: friendlyAuthError(error.message) };
+    if (error) {
+      return { error: friendlyWorkerPasswordUpdateError(error.message) };
+    }
     return {};
   }, []);
 
@@ -502,6 +621,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     clearAvatarUrlCache();
+    clearAllWorkerRecoveryState();
     await supabase.auth.signOut();
     setSession(null);
     setProfile(null);
@@ -546,6 +666,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resendSignupConfirmation,
       resetPassword,
       updatePassword,
+      confirmRecoveryOtp,
+      consumePendingRecoveryLink,
       completeWorkerRoleSetup,
       submitForReview,
       signOut,
@@ -568,6 +690,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       resendSignupConfirmation,
       resetPassword,
       updatePassword,
+      confirmRecoveryOtp,
+      consumePendingRecoveryLink,
       completeWorkerRoleSetup,
       submitForReview,
       signOut,

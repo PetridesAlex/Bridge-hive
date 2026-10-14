@@ -8,6 +8,7 @@ export const WORKER_ACCOUNT_SETUP_ROUTE_PREFIXES = [
   '/auth/worker/login',
   '/auth/worker/register',
   '/auth/worker/reset-password',
+  '/auth/worker/forgot-password',
   '/auth/worker/check-email',
   '/auth/worker/choose-role',
   '/auth/callback',

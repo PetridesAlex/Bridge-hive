@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -10,7 +10,7 @@ import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function WorkerLoginScreen() {
-  const { signIn, resetPassword, session, loading, homeRoute } = useAuth();
+  const { signIn, session, loading, homeRoute } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
@@ -34,19 +34,6 @@ export default function WorkerLoginScreen() {
       return;
     }
     router.replace('/');
-  };
-
-  const onForgot = async () => {
-    if (!email.trim()) {
-      Alert.alert('Email required', 'Enter your email above, then tap Forgot password.');
-      return;
-    }
-    const result = await resetPassword(email);
-    if (result.error) {
-      Alert.alert('Could not send reset', result.error);
-      return;
-    }
-    Alert.alert('Check your email', 'We sent a password reset link if that account exists.');
   };
 
   return (
@@ -104,7 +91,7 @@ export default function WorkerLoginScreen() {
           style={styles.cta}
         />
         <Pressable
-          onPress={onForgot}
+          onPress={() => router.push('/auth/worker/forgot-password')}
           hitSlop={10}
           style={styles.forgotBtn}
           accessibilityRole="button"

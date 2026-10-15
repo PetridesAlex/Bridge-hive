@@ -252,7 +252,7 @@ select pg_temp.auth_as('d3100001-0000-4000-8000-000000000005');
 select throws_ok(
   $$ select public.claim_shift('d3100001-cccc-4000-8000-0000000000d1') $$,
   'P0001',
-  'SHIFT_ALREADY_FILLED',
+  'SHIFT_FULL',
   'fourth claim is rejected when capacity is full'
 );
 

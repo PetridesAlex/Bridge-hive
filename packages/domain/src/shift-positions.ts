@@ -38,6 +38,7 @@ export function sumRequiredPositions(
 
 export function openPositionsLabel(openCount: number): string {
   const n = Math.max(0, Math.trunc(openCount));
+  if (n === 0) return 'All positions filled';
   return n === 1 ? '1 position open' : `${n} positions open`;
 }
 

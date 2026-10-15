@@ -23,7 +23,10 @@ export type WorkerShiftDetails = {
   break_minutes: number;
   acceptance_deadline: string | null;
   required_positions: number;
+  filled_positions: number;
   open_positions: number;
+  is_claimable: boolean;
+  my_assignment_status: string | null;
 };
 
 /** Pilot check-in opens 30 minutes before shift start (server enforces the same rule). */
@@ -111,8 +114,8 @@ export async function submitPayoutAccount(params: {
 }
 
 /**
- * Prefer the dedicated RPC when available (migration 014).
- * Falls back to raw shift row if the RPC is not yet applied.
+ * Prefer the dedicated RPC when available (migration 014 / 031 / 035).
+ * Falls back to raw shift row + availability RPC if details omit capacity.
  */
 export async function getWorkerShiftDetails(shiftId: string): Promise<{
   data: WorkerShiftDetails | null;
@@ -123,11 +126,70 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
   } as never);
 
   if (!error && data) {
-    const row = (Array.isArray(data) ? data[0] : data) as WorkerShiftDetails | undefined;
-    return { data: row ?? null };
+    const row = (Array.isArray(data) ? data[0] : data) as Partial<WorkerShiftDetails> | undefined;
+    if (!row) {
+      return { data: null };
+    }
+
+    const required =
+      typeof row.required_positions === 'number' ? row.required_positions : 1;
+    let open =
+      typeof row.open_positions === 'number' ? row.open_positions : undefined;
+    let filled =
+      typeof row.filled_positions === 'number' ? row.filled_positions : undefined;
+    let isClaimable =
+      typeof row.is_claimable === 'boolean' ? row.is_claimable : undefined;
+    let myStatus =
+      row.my_assignment_status === undefined
+        ? undefined
+        : (row.my_assignment_status as string | null);
+
+    if (open === undefined || filled === undefined || isClaimable === undefined) {
+      const { data: avail } = await supabase.rpc(
+        'worker_shift_claim_availability' as never,
+        { p_shift_id: shiftId } as never,
+      );
+      const availRow = (
+        Array.isArray(avail) ? avail[0] : avail
+      ) as Partial<WorkerShiftDetails> | null;
+      if (availRow) {
+        open = typeof availRow.open_positions === 'number' ? availRow.open_positions : open;
+        filled =
+          typeof availRow.filled_positions === 'number' ? availRow.filled_positions : filled;
+        isClaimable =
+          typeof availRow.is_claimable === 'boolean' ? availRow.is_claimable : isClaimable;
+        if (myStatus === undefined) {
+          myStatus = (availRow.my_assignment_status as string | null) ?? null;
+        }
+      }
+    }
+
+    return {
+      data: {
+        shift_id: String(row.shift_id),
+        organization_name: String(row.organization_name ?? 'Organization'),
+        location_name: String(row.location_name ?? 'Location'),
+        ward_name: (row.ward_name as string | null) ?? null,
+        title: (row.title as string | null) ?? null,
+        starts_at: String(row.starts_at),
+        ends_at: String(row.ends_at),
+        rate_minor: Number(row.rate_minor ?? 0),
+        currency: String(row.currency ?? 'EUR'),
+        required_role: String(row.required_role),
+        status: String(row.status),
+        notes: (row.notes as string | null) ?? null,
+        break_minutes: Number(row.break_minutes ?? 0),
+        acceptance_deadline: (row.acceptance_deadline as string | null) ?? null,
+        required_positions: required,
+        filled_positions: filled ?? Math.max(0, required - (open ?? required)),
+        open_positions: open ?? required,
+        is_claimable: isClaimable ?? (open ?? required) > 0,
+        my_assignment_status: myStatus ?? null,
+      },
+    };
   }
 
-  // Fallback before migration 014 / 031 RPCs are applied
+  // Fallback before migration 014 / 031 / 035 RPCs are applied
   const { data: shift, error: shiftError } = await supabase
     .from('shifts')
     .select('*')
@@ -139,19 +201,6 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
   }
 
   const requiredPositions = shift.required_positions ?? 1;
-  const { count: activeCount } = await supabase
-    .from('shift_assignments')
-    .select('id', { count: 'exact', head: true })
-    .eq('shift_id', shiftId)
-    .in('status', [
-      'accepted',
-      'checked_in',
-      'checked_out',
-      'submitted',
-      'approved',
-    ]);
-  const openPositions = Math.max(0, requiredPositions - (activeCount ?? 0));
-
   return {
     data: {
       shift_id: shift.id,
@@ -169,7 +218,10 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
       break_minutes: shift.break_minutes,
       acceptance_deadline: shift.acceptance_deadline,
       required_positions: requiredPositions,
-      open_positions: openPositions,
+      filled_positions: 0,
+      open_positions: requiredPositions,
+      is_claimable: shift.status === 'published',
+      my_assignment_status: null,
     },
   };
 }

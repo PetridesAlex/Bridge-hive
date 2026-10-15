@@ -35,6 +35,7 @@ describe('shift-positions helpers', () => {
   });
 
   it('formats remaining and filled copy for RN / WA / physio-style capacity', () => {
+    expect(openPositionsLabel(0)).toBe('All positions filled');
     expect(openPositionsLabel(1)).toBe('1 position open');
     expect(openPositionsLabel(2)).toBe('2 positions open');
     expect(filledPositionsLabel(1, 3)).toBe('1 / 3 positions filled');

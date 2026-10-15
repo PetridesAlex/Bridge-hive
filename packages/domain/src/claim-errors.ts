@@ -35,8 +35,12 @@ export function claimErrorMessage(
     return 'This organization is not active.';
   }
 
+  if (upper.includes('SHIFT_FULL')) {
+    return 'This shift was just filled by another professional.';
+  }
+
   if (upper.includes('SHIFT_ALREADY_FILLED') || upper.includes('SHIFT_IS_FULL')) {
-    return 'This shift is full.';
+    return 'This shift was just filled by another professional.';
   }
 
   if (upper.includes('SHIFT_DEADLINE_PASSED') || upper.includes('SHIFT_STARTED')) {

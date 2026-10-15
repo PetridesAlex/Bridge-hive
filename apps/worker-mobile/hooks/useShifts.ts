@@ -37,10 +37,12 @@ export function useShifts() {
         setOffline(/network|fetch|failed|offline/i.test(result.error));
       } else {
         // Marketplace RLS already enforces role/org/deadline. Keep enum-safe client filter.
+        // Capacity figures come from worker_shifts_claim_availability (server-side).
         const role = workerProfile?.worker_role;
-        const filtered = role
+        const filtered = (role
           ? result.data.filter((shift) => shift.required_role === role)
-          : result.data;
+          : result.data
+        ).filter((shift) => shift.open_positions > 0 || shift.my_assignment_status);
         setShifts(filtered);
         setOffline(false);
       }

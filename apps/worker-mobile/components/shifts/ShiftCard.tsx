@@ -2,7 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { openPositionsLabel, remainingOpenPositions } from '@bridge-hive/domain';
+import { openPositionsLabel } from '@bridge-hive/domain';
 
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
@@ -33,21 +33,31 @@ export function ShiftCard({
   const roleLabel =
     WORKER_ROLE_LABELS[shift.required_role as keyof typeof WORKER_ROLE_LABELS] ??
     shift.required_role;
-  const statusStyle = shiftStatusStyles[shift.status] ?? {
-    label: shift.status.replace(/_/g, ' '),
-    fg: colors.info,
-    bg: colors.infoLight,
-    icon: 'ellipse',
-  };
-  const day = formatDayLabel(isoDateFromTimestamp(shift.starts_at));
-  const dateObj = new Date(shift.starts_at);
-  const dayNum = dateObj.getDate();
   const openCount =
     'open_positions' in shift && typeof shift.open_positions === 'number'
       ? shift.open_positions
-      : remainingOpenPositions(shift.required_positions ?? 1, 0);
+      : (shift.required_positions ?? 1);
+  const isOpen = openCount > 0 && shift.status === 'published';
+  const statusStyle = isOpen
+    ? (shiftStatusStyles.published ?? {
+        label: 'Open',
+        fg: colors.info,
+        bg: colors.infoLight,
+        icon: 'ellipse',
+      })
+    : {
+        label: 'Full',
+        fg: colors.textMuted,
+        bg: colors.surfaceSubdued,
+        icon: 'ellipse',
+      };
+  const day = formatDayLabel(isoDateFromTimestamp(shift.starts_at));
+  const dateObj = new Date(shift.starts_at);
+  const dayNum = dateObj.getDate();
   const positionsCopy =
-    shift.status === 'published' ? openPositionsLabel(openCount) : null;
+    shift.status === 'published' || shift.status === 'filled'
+      ? openPositionsLabel(openCount)
+      : null;
 
   const handlePress = () => {
     if (onPress) onPress();
@@ -88,9 +98,9 @@ export function ShiftCard({
         <View style={styles.footer}>
           <StatusBadge
             label={statusStyle.label}
-            tone={shift.status === 'published' ? 'info' : 'neutral'}
+            tone={isOpen ? 'info' : 'neutral'}
             icon={statusStyle.icon as never}
-            pulse={shift.status === 'published'}
+            pulse={isOpen}
           />
           <Text style={styles.rate}>{formatMoney(shift.rate_minor, shift.currency)}/hr</Text>
         </View>

@@ -506,6 +506,9 @@ function CustomRowTableRow({
             });
           }}
         />
+        <p className="mt-1 text-[10px] leading-tight text-bh-text-muted">
+          Number of professionals needed for this shift.
+        </p>
         <FieldError message={errors.positions} />
       </td>
       <td className="px-1.5 py-3 align-top last:pr-3">
@@ -708,6 +711,9 @@ function CustomRowMobileCard({
               });
             }}
           />
+          <p className="mt-1 text-xs text-bh-text-muted">
+            Number of professionals needed for this shift.
+          </p>
         </MobileField>
       </div>
 

@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { createSessionFromUrl } from '@/lib/oauth';
 import { supabase } from '@/lib/supabase';
@@ -107,6 +108,7 @@ export default function AuthCallbackScreen() {
   if (phase === 'ready') {
     return (
       <View style={styles.root}>
+        <HiveFlowBackground />
         <Animated.View entering={FadeIn.duration(280)} style={styles.card}>
           <Text style={styles.brand}>Bridge Hive</Text>
           <Text style={styles.title}>You are signed in</Text>
@@ -120,6 +122,7 @@ export default function AuthCallbackScreen() {
   if (phase === 'failed') {
     return (
       <View style={styles.root}>
+        <HiveFlowBackground />
         <Animated.View entering={FadeInDown.duration(320)} style={styles.card}>
           <Text style={styles.brand}>Bridge Hive</Text>
           <Text style={styles.title}>Sign-in interrupted</Text>
@@ -141,6 +144,7 @@ export default function AuthCallbackScreen() {
 
   return (
     <View style={styles.root}>
+      <HiveFlowBackground />
       <Animated.View entering={FadeIn.duration(280)} style={styles.card}>
         <Animated.View style={[styles.markWrap, markStyle]}>
           <View style={styles.mark} />
@@ -159,7 +163,6 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
     padding: spacing.lg,
   },
   card: {

@@ -8,6 +8,7 @@ import {
   isWorkerRole,
   mapWorkerRecoveryRequestResult,
   normalizeWorkerRecoveryEmail,
+  isWorkerRecoveryDeepLinkCandidate,
   parseWorkerRecoveryUrl,
   validateWorkerRecoveryPassword,
   workerExistingAccountMessage,
@@ -202,10 +203,12 @@ function workerRecoveryRedirectTo(): string {
 
 /**
  * Accept only expected Bridge Hive recovery URLs. Store token_hash in memory.
- * Never logs the URL or token. Ignores OAuth callback URLs.
+ * Never logs the URL or token. Ignores OAuth callback URLs and unrelated
+ * launches (e.g. Expo Metro `exp://`), which must not open reset-password.
  */
 function ingestRecoveryDeepLink(url: string | null): void {
   if (!url || url.includes('auth/callback')) return;
+  if (!isWorkerRecoveryDeepLinkCandidate(url)) return;
   const parsed = parseWorkerRecoveryUrl(url, { allowDevLoopback: __DEV__ });
   if (!parsed.ok) {
     if (parsed.reason === 'oauth_callback') return;
@@ -328,19 +331,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [workerProfile, setWorkerProfile] = useState<WorkerProfile | null>(null);
   const [accountRejectionReason, setAccountRejectionReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  /** User id whose profile bundle is fully loaded — prevents choose-role flash after login. */
+  const [bundleUserId, setBundleUserId] = useState<string | null>(null);
 
   const hydrate = useCallback(async (next: Session | null) => {
-    setSession(next);
     if (!next?.user) {
+      setSession(null);
       setProfile(null);
       setWorkerProfile(null);
       setAccountRejectionReason(null);
+      setBundleUserId(null);
       return;
     }
+    // Publish session immediately, but keep routing in a loading state until the
+    // worker profile bundle matches this user (see `authLoading` below).
+    setSession(next);
     const bundle = await loadAuthBundle(next.user);
     setProfile(bundle.profile);
     setWorkerProfile(bundle.workerProfile);
     setAccountRejectionReason(bundle.accountRejectionReason);
+    setBundleUserId(next.user.id);
   }, []);
 
   useEffect(() => {
@@ -349,7 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) return;
       await hydrate(data.session);
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -382,14 +392,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [hydrate]);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
-      password,
-    });
-    if (error) return { error: friendlyAuthError(error.message) };
-    return {};
-  }, []);
+  const signIn = useCallback(
+    async (email: string, password: string) => {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) return { error: friendlyAuthError(error.message) };
+      // Finish profile hydration before callers navigate, so verified workers
+      // land on the dashboard instead of a brief choose-role / pending flash.
+      if (data.session) {
+        await hydrate(data.session);
+      }
+      return {};
+    },
+    [hydrate],
+  );
 
   const signInWithGoogle = useCallback(async () => {
     return signInWithGoogleOAuth();
@@ -629,6 +647,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     setWorkerProfile(null);
     setAccountRejectionReason(null);
+    setBundleUserId(null);
   }, []);
 
   const refreshProfile = useCallback(async () => {
@@ -648,6 +667,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     workerProfile?.worker_role && isWorkerRole(workerProfile.worker_role)
       ? WORKER_ROLE_LABELS[workerProfile.worker_role]
       : 'Worker';
+  // Session can arrive before worker_profiles finishes loading. Treat that gap as
+  // loading so routing never briefly resolves to choose-role for existing workers.
+  const bundleReady = !session?.user || bundleUserId === session.user.id;
+  const authLoading = loading || !bundleReady;
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -655,7 +678,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user: session?.user ?? null,
       profile,
       workerProfile,
-      loading,
+      loading: authLoading,
       isVerified,
       isWorker,
       accountRejectionReason,
@@ -679,7 +702,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       session,
       profile,
       workerProfile,
-      loading,
+      authLoading,
       isVerified,
       isWorker,
       accountRejectionReason,

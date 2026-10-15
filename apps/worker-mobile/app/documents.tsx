@@ -3,6 +3,8 @@ import {
   credentialRequiresKnownExpiry,
   credentialTypeLabel,
 } from '@bridge-hive/domain';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,7 +22,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { TextInput } from '@/components/ui/TextInput';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useCredentials } from '@/hooks/useCredentials';
 import {
   buildCredentialChecklist,
@@ -63,6 +65,47 @@ function statusLabel(status: ChecklistRow['itemStatus']): string {
   }
 }
 
+function statusTone(status: ChecklistRow['itemStatus']): {
+  fg: string;
+  bg: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  gradient: readonly [string, string, ...string[]];
+} {
+  switch (status) {
+    case 'verified':
+      return {
+        fg: colors.tealStrong,
+        bg: colors.tealSoft,
+        icon: 'shield-checkmark',
+        gradient: [colors.tealStrong, '#0A6C78'],
+      };
+    case 'submitted':
+    case 'under_review':
+      return {
+        fg: '#8A6410',
+        bg: colors.yellowLight,
+        icon: 'time',
+        gradient: [colors.navy, '#0C3E56', colors.tealStrong],
+      };
+    case 'rejected':
+    case 'expired':
+    case 'suspended':
+      return {
+        fg: colors.error,
+        bg: colors.errorLight,
+        icon: 'alert-circle',
+        gradient: ['#8E1B14', '#B42318', '#D1432F'],
+      };
+    default:
+      return {
+        fg: colors.textSecondary,
+        bg: 'rgba(11, 42, 67, 0.06)',
+        icon: 'cloud-upload-outline',
+        gradient: [colors.navy, '#0C3E56', colors.tealStrong],
+      };
+  }
+}
+
 export default function DocumentsScreen() {
   const { user, workerProfile } = useAuth();
   const { credentials, loading, error, refresh } = useCredentials(user?.id);
@@ -90,6 +133,10 @@ export default function DocumentsScreen() {
       row.credential?.status === 'pending' &&
       row.itemStatus === 'draft',
   );
+  const requiredRows = checklist.filter((row) => row.isRequired);
+  const verifiedRequired = requiredRows.filter((row) => row.itemStatus === 'verified').length;
+  const progress =
+    requiredRows.length === 0 ? 0 : verifiedRequired / requiredRows.length;
 
   const handlePick = useCallback(
     async (row: ChecklistRow, mode: 'document' | 'image') => {
@@ -235,12 +282,42 @@ export default function DocumentsScreen() {
           }
         >
           <View style={styles.intro}>
-            <Text style={styles.introTitle}>Document checklist</Text>
-            <Text style={styles.hint}>
-              Upload PDF, JPEG, or PNG files up to 10 MB. Identity card front and
-              back are separate. Tax and social-insurance requirements are proof
-              documents only — do not type raw numbers here.
-            </Text>
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(255,255,255,0.96)', 'rgba(243,250,252,0.92)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.introTop}>
+              <LinearGradient
+                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.introIcon}
+              >
+                <Ionicons name="documents" size={18} color={colors.white} />
+              </LinearGradient>
+              <View style={styles.introCopy}>
+                <Text style={styles.introTitle}>Document checklist</Text>
+                <Text style={styles.hint}>
+                  Upload PDF, JPEG, or PNG files up to 10 MB. Identity card front and back are
+                  separate. Tax and social-insurance requirements are proof documents only — do not
+                  type raw numbers here.
+                </Text>
+              </View>
+            </View>
+            <View style={styles.progressBlock}>
+              <View style={styles.progressMeta}>
+                <Text style={styles.progressLabel}>
+                  {verifiedRequired} of {requiredRows.length} required verified
+                </Text>
+                <Text style={styles.progressValue}>{Math.round(progress * 100)}%</Text>
+              </View>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+              </View>
+            </View>
             {readyToSubmit.length > 0 ? (
               <Button
                 label={`Submit ${readyToSubmit.length} ready document${readyToSubmit.length === 1 ? '' : 's'}`}
@@ -269,35 +346,59 @@ export default function DocumentsScreen() {
             // handlePick so an empty date shows an error instead of a dead control.
             const uploadDisabled = uploadState.uploading || rowBusy;
 
+            const tone = statusTone(row.itemStatus);
+
             return (
               <View key={row.credentialType} style={styles.card}>
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={['rgba(255,255,255,0.96)', 'rgba(248,251,253,0.92)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFill}
+                />
                 <View style={styles.cardHeader}>
-                  <View style={{ flex: 1, gap: 4 }}>
+                  <LinearGradient
+                    colors={tone.gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.docIcon}
+                  >
+                    <Ionicons name={tone.icon} size={18} color={colors.white} />
+                  </LinearGradient>
+                  <View style={styles.cardCopy}>
                     <Text style={styles.title}>{row.displayName}</Text>
-                    <Text style={styles.meta}>
-                      {row.isRequired ? 'Required' : 'Optional'} ·{' '}
-                      {statusLabel(row.itemStatus)}
-                    </Text>
-                    {row.fileName ? (
-                      <Text style={styles.fileName} numberOfLines={1}>
-                        {row.fileName}
-                      </Text>
-                    ) : null}
-                    {row.credential?.rejection_reason ? (
-                      <Text style={styles.reject}>
-                        {row.credential.rejection_reason}
-                      </Text>
-                    ) : null}
-                    {uploadState.type === row.credentialType && uploadState.error ? (
-                      <Text style={styles.reject} accessibilityLiveRegion="polite">
-                        {uploadState.error}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{statusLabel(row.itemStatus)}</Text>
+                    <View style={styles.pillRow}>
+                      <View style={styles.requirementPill}>
+                        <Text style={styles.requirementText}>
+                          {row.isRequired ? 'Required' : 'Optional'}
+                        </Text>
+                      </View>
+                      <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
+                        <Text style={[styles.statusText, { color: tone.fg }]}>
+                          {statusLabel(row.itemStatus)}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
+
+                {row.fileName ? (
+                  <View style={styles.fileChip}>
+                    <Ionicons name="document-attach-outline" size={14} color={colors.navy} />
+                    <Text style={styles.fileName} numberOfLines={1}>
+                      {row.fileName}
+                    </Text>
+                  </View>
+                ) : null}
+                {row.credential?.rejection_reason ? (
+                  <Text style={styles.reject}>{row.credential.rejection_reason}</Text>
+                ) : null}
+                {uploadState.type === row.credentialType && uploadState.error ? (
+                  <Text style={styles.reject} accessibilityLiveRegion="polite">
+                    {uploadState.error}
+                  </Text>
+                ) : null}
 
                 {isUploading ? (
                   <View style={styles.rowActions}>
@@ -390,9 +491,12 @@ export default function DocumentsScreen() {
                     ) : null}
                   </View>
                 ) : (
-                  <Text style={styles.meta}>
-                    This document is locked while under review or after verification.
-                  </Text>
+                  <View style={styles.lockRow}>
+                    <Ionicons name="lock-closed" size={14} color={colors.tealStrong} />
+                    <Text style={styles.lockText}>
+                      This document is locked while under review or after verification.
+                    </Text>
+                  </View>
                 )}
               </View>
             );
@@ -409,17 +513,34 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   intro: {
-    gap: spacing.sm,
-    backgroundColor: colors.card,
-    borderRadius: radii.md,
+    gap: spacing.md,
+    borderRadius: radii.xl,
     padding: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  introTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  introIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  introCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
   },
   introTitle: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 16,
-    color: colors.text,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 17,
+    letterSpacing: -0.3,
+    color: colors.navy,
   },
   hint: {
     fontFamily: typography.fonts.regular,
@@ -427,49 +548,134 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 18,
   },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  progressBlock: {
+    gap: 8,
+  },
+  progressMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  progressLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12,
+    color: colors.navy,
+  },
+  progressValue: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 12,
+    color: colors.tealStrong,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(11, 42, 67, 0.08)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: colors.tealStrong,
+  },
+  card: {
+    borderRadius: radii.xl,
+    padding: spacing.md,
+    gap: spacing.sm,
+    overflow: 'hidden',
+    ...shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
     gap: spacing.md,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  docIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
   },
   title: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    letterSpacing: -0.3,
+    color: colors.navy,
+  },
+  pillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  requirementPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
+  },
+  requirementText: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 15,
-    color: colors.text,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  statusPill: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12,
+  },
+  fileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(11, 42, 67, 0.05)',
+  },
+  fileName: {
+    flexShrink: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    color: colors.navy,
+  },
+  lockRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.tealSoft,
+  },
+  lockText: {
+    flex: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.tealStrong,
   },
   meta: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,
     color: colors.textMuted,
   },
-  fileName: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
   reject: {
-    fontFamily: typography.fonts.regular,
+    fontFamily: typography.fonts.medium,
     fontSize: 12,
+    lineHeight: 17,
     color: colors.error,
-  },
-  badge: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    backgroundColor: colors.blueLight,
-  },
-  badgeText: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    color: colors.navy,
   },
   rowActions: {
     flexDirection: 'row',
@@ -484,12 +690,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   secondaryBtn: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: colors.background,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
   },
   btnDisabled: {
     opacity: 0.45,
@@ -503,14 +707,14 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   secondaryBtnText: {
-    fontFamily: typography.fonts.medium,
+    fontFamily: typography.fonts.semibold,
     fontSize: 13,
-    color: colors.text,
+    color: colors.navy,
   },
   primaryBtn: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: colors.navy,
   },
   primaryBtnText: {
@@ -519,10 +723,10 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   dangerBtn: {
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: '#fee2e2',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: colors.errorLight,
   },
   dangerBtnText: {
     fontFamily: typography.fonts.semibold,

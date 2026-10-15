@@ -17,6 +17,7 @@ import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { APP_BOOT_BG, AppBootCover } from '@/components/brand/AppBootCover';
 import { colors } from '@/constants/theme';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { UnverifiedRouteGuard } from '@/components/auth/UnverifiedRouteGuard';
@@ -41,15 +42,19 @@ export default function RootLayout() {
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) {
-    return <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.navy }} />;
+    return (
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
+        <AppBootCover />
+      </GestureHandlerRootView>
+    );
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
       <SafeAreaProvider>
         <AuthProvider>
           <UnverifiedRouteGuard>
-            <StatusBar style="light" />
+            <StatusBar style="dark" />
             <Stack
               screenOptions={{
                 headerShown: false,

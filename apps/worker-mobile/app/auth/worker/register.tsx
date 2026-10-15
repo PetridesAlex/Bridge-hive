@@ -1,7 +1,7 @@
 import type { WorkerRole } from '@bridge-hive/domain';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AuthShell, AuthStepBar } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
@@ -91,8 +91,13 @@ export default function WorkerRegisterScreen() {
         return;
       }
       if (result.needsEmailConfirm) {
-        setPendingConfirmEmail(email.trim().toLowerCase());
+        const address = email.trim().toLowerCase();
+        setPendingConfirmEmail(address);
         router.replace('/auth/worker/check-email');
+        Alert.alert(
+          'Confirm your email',
+          `Your Bridge Hive account is created. An invitation was sent to ${address} so you can confirm your email address. Open that message, then sign in.`,
+        );
         return;
       }
       router.replace('/auth/worker/pending');
@@ -206,7 +211,7 @@ export default function WorkerRegisterScreen() {
           />
         )}
         {step === 1 ? (
-          <GoogleSignInButton onSuccess={() => router.replace('/')} />
+          <GoogleSignInButton />
         ) : null}
       </View>
     </AuthShell>

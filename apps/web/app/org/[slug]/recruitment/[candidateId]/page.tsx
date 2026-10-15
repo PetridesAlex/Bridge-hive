@@ -87,7 +87,9 @@ export default async function OrgRecruitmentCandidatePage({
     });
   }
 
-  const role = candidate.role as WorkerRole;
+  const roleLabel = candidate.role
+    ? WORKER_ROLE_LABELS[candidate.role as WorkerRole]
+    : '—';
   const showContact = ctx.capabilities.canViewRecruitmentContacts;
   const fullName = candidate.full_name as string;
   const pipelineStatus = ((pipeline?.status as string) ??
@@ -135,7 +137,7 @@ export default async function OrgRecruitmentCandidatePage({
                 </h1>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-bh-text-secondary">
                   <span className="font-medium text-bh-text">
-                    {WORKER_ROLE_LABELS[role]}
+                    {roleLabel}
                   </span>
                   <span aria-hidden className="text-bh-border-strong">
                     ·
@@ -167,7 +169,7 @@ export default async function OrgRecruitmentCandidatePage({
             description="Role, qualification, and experience supplied in the application."
           >
             <dl className="grid gap-3 sm:grid-cols-2">
-              <Fact label="Role" value={WORKER_ROLE_LABELS[role]} />
+              <Fact label="Role" value={roleLabel} />
               <Fact
                 label="Registration / qualification"
                 value={String(candidate.registration_state)}

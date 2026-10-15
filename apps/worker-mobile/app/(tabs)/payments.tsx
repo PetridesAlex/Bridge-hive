@@ -1,4 +1,6 @@
 import { payoutSummaryLabel } from '@bridge-hive/domain';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -11,14 +13,13 @@ import {
 } from 'react-native';
 
 import { InvoiceCard } from '@/components/invoices/InvoiceCard';
+import { MoneySummaryTile } from '@/components/payments/MoneySummaryTile';
 import { PayoutCard } from '@/components/payments/PayoutCard';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { MoneyAmount } from '@/components/ui/MoneyAmount';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -55,6 +56,14 @@ export default function MoneyScreen() {
     [payouts],
   );
 
+  const invoiceDue = invoiceTotals.open + invoiceTotals.pastDue;
+  const invoiceHint =
+    invoiceTotals.pastDue > 0
+      ? 'Past due — pay now'
+      : invoiceDue > 0
+        ? 'Open commission due'
+        : 'Platform commission';
+
   const onRefresh = () => {
     void refreshPayouts();
     void refreshInvoices();
@@ -67,69 +76,81 @@ export default function MoneyScreen() {
       <ScreenHeader
         eyebrow="Finances"
         title="Money"
-        subtitle="Earnings and Bridge Hive invoices"
+        subtitle="Track earnings and commission in one place"
       />
 
-      <Text style={styles.explainer}>
-        Organizations pay your approved shift earnings directly. Bridge Hive commission invoices are
-        separate and paid through the app.
-      </Text>
-
-      <View style={styles.summaries}>
-        <Pressable
-          style={styles.summaryCard}
-          onPress={() => setSegment('earnings')}
-          accessibilityRole="button"
-          accessibilityLabel="View earnings"
-        >
-          <Text style={styles.summaryLabel}>Earnings</Text>
-          <MoneyAmount amountMinor={earningsTotal} emphasize />
-          <Text style={styles.summaryHint}>Gross shift amounts from organizations</Text>
-        </Pressable>
-        <Pressable
-          style={styles.summaryCard}
-          onPress={() => setSegment('invoices')}
-          accessibilityRole="button"
-          accessibilityLabel="View invoices"
-        >
-          <Text style={styles.summaryLabel}>Invoices</Text>
-          <MoneyAmount
-            amountMinor={invoiceTotals.open + invoiceTotals.pastDue}
-            emphasize
-          />
-          <Text style={styles.summaryHint}>
-            {invoiceTotals.pastDue > 0 ? 'Past due — action needed' : 'Bridge Hive commission'}
-          </Text>
-        </Pressable>
+      <View style={styles.intro}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(22,166,182,0.12)', 'rgba(11,42,67,0.04)', 'rgba(255,255,255,0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.introAccent} />
+        <Text style={styles.introTitle}>How pay works</Text>
+        <Text style={styles.introBody}>
+          Organizations pay approved shift earnings directly to you. Bridge Hive commission invoices
+          stay separate and are paid in the app.
+        </Text>
       </View>
 
-      <SegmentedTabs
-        tabs={[
-          { key: 'earnings', label: 'Earnings' },
-          { key: 'invoices', label: 'Invoices' },
-        ]}
-        activeKey={segment}
-        onChange={(key) => setSegment(key as MoneySegment)}
-      />
+      <View style={styles.summaries}>
+        <MoneySummaryTile
+          label="Earnings"
+          amountMinor={earningsTotal}
+          hint="Paid by organizations"
+          icon="wallet-outline"
+          selected={segment === 'earnings'}
+          delayMs={40}
+          onPress={() => setSegment('earnings')}
+          accessibilityLabel={`Earnings ${earningsTotal === 0 ? 'zero euros' : ''}. View earnings`}
+        />
+        <MoneySummaryTile
+          label="Invoices"
+          amountMinor={invoiceDue}
+          hint={invoiceHint}
+          icon={invoiceTotals.pastDue > 0 ? 'alert-circle-outline' : 'receipt-outline'}
+          selected={segment === 'invoices'}
+          emphasis={invoiceTotals.pastDue > 0 ? 'alert' : 'default'}
+          delayMs={90}
+          onPress={() => setSegment('invoices')}
+          accessibilityLabel={`Invoices. ${invoiceHint}. View invoices`}
+        />
+      </View>
 
       {segment === 'earnings' ? (
         <>
-          <View style={styles.accountCard}>
-            <Text style={styles.accountTitle}>Payout account</Text>
-            {account ? (
-              <Text style={styles.accountValue}>
-                {account.masked_iban} · {payoutSummaryLabel(account.status)}
-              </Text>
-            ) : (
-              <Text style={styles.accountValue}>No payout account on file</Text>
-            )}
-            <Button
-              label={account ? 'Manage payout account' : 'Set up payout account'}
-              variant="secondary"
-              size="sm"
-              onPress={() => router.push('/payout-setup')}
+          <Pressable
+            style={styles.accountCard}
+            onPress={() => router.push('/payout-setup')}
+            accessibilityRole="button"
+            accessibilityLabel={
+              account ? 'Manage payout account' : 'Set up payout account'
+            }
+          >
+            <LinearGradient
+              pointerEvents="none"
+              colors={['rgba(11,42,67,0.04)', 'rgba(22,166,182,0.08)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
             />
-          </View>
+            <View style={styles.accountIcon}>
+              <Ionicons name="card-outline" size={18} color={colors.white} />
+            </View>
+            <View style={styles.accountCopy}>
+              <Text style={styles.accountTitle}>Payout account</Text>
+              {account ? (
+                <Text style={styles.accountValue}>
+                  {account.masked_iban} · {payoutSummaryLabel(account.status)}
+                </Text>
+              ) : (
+                <Text style={styles.accountValue}>Add your IBAN to receive earnings</Text>
+              )}
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.navyLift} />
+          </Pressable>
 
           {payoutLoading && payouts.length === 0 ? (
             <SkeletonCard />
@@ -189,52 +210,73 @@ export default function MoneyScreen() {
 }
 
 const styles = StyleSheet.create({
-  explainer: {
+  intro: {
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingLeft: spacing.lg + 8,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+    gap: 4,
+  },
+  introAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 14,
+    bottom: 14,
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: colors.tealStrong,
+  },
+  introTitle: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.navy,
+  },
+  introBody: {
     fontFamily: typography.fonts.regular,
     fontSize: typography.size.sm,
     lineHeight: typography.lineHeight.sm,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
   },
   summaries: {
     flexDirection: 'row',
+    alignItems: 'stretch',
     gap: spacing.sm,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  summaryCard: {
-    flex: 1,
+  accountCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     backgroundColor: colors.card,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     padding: spacing.md,
-    gap: 4,
-    minHeight: 96,
-  },
-  summaryLabel: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-  },
-  summaryHint: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  accountCard: {
-    backgroundColor: colors.card,
-    borderRadius: radii.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.sm,
     marginBottom: spacing.md,
+    overflow: 'hidden',
+    minHeight: 72,
+  },
+  accountIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.navy,
+  },
+  accountCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   accountTitle: {
     fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.lg,
+    fontSize: typography.size.md,
     color: colors.text,
   },
   accountValue: {

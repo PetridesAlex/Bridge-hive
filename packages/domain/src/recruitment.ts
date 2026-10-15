@@ -75,8 +75,8 @@ export const RECRUITMENT_SUCCESS_MESSAGE =
 export const RECRUITMENT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 /** Hard ceiling across all files in one submission (before body parse + storage). */
 export const RECRUITMENT_MAX_TOTAL_UPLOAD_BYTES = 32 * 1024 * 1024;
-/** Absolute max files per submission (role checklist is typically 5–7). */
-export const RECRUITMENT_MAX_UPLOAD_FILES = 8;
+/** Absolute max files per submission (public checklist is 9; a role checklist is smaller). */
+export const RECRUITMENT_MAX_UPLOAD_FILES = 9;
 export const RECRUITMENT_ALLOWED_MIME = [
   'application/pdf',
   'image/jpeg',
@@ -95,20 +95,71 @@ export function recruitmentRoleLabel(role: WorkerRole): string {
   return WORKER_ROLE_LABELS[role];
 }
 
-export function recruitmentDocumentRequirementsForRole(role: WorkerRole): Array<{
+const RECRUITMENT_OMITTED_DOCUMENT_TYPES = new Set<CredentialType>([
+  'tax_identification_proof',
+  'social_insurance_proof',
+]);
+
+function toRecruitmentDocumentRequirement(req: {
+  credentialType: CredentialType;
+  isRequired: boolean;
+}): {
   credentialType: CredentialType;
   isRequired: boolean;
   label: string;
   requiresExpiry: boolean;
-}> {
-  return credentialRequirementsForRole(role).map((req) => ({
+} {
+  return {
     credentialType: req.credentialType,
     isRequired: req.isRequired,
     label: credentialTypeLabel(req.credentialType, 'en'),
     requiresExpiry: (
       CREDENTIAL_TYPES_REQUIRING_EXPIRY as readonly string[]
     ).includes(req.credentialType),
-  }));
+  };
+}
+
+export function recruitmentDocumentRequirementsForRole(role: WorkerRole): Array<{
+  credentialType: CredentialType;
+  isRequired: boolean;
+  label: string;
+  requiresExpiry: boolean;
+}> {
+  return credentialRequirementsForRole(role)
+    .filter((req) => !RECRUITMENT_OMITTED_DOCUMENT_TYPES.has(req.credentialType))
+    .map(toRecruitmentDocumentRequirement);
+}
+
+/**
+ * Public application checklist. Role-specific papers stay available so an
+ * applicant can attach the ones they have. Identity is required for every
+ * applicant. Tax and social-insurance proofs stay off this form.
+ */
+const RECRUITMENT_APPLICATION_DOCUMENTS: Array<{
+  credentialType: CredentialType;
+  isRequired: boolean;
+}> = [
+  { credentialType: 'identity_document_front', isRequired: true },
+  { credentialType: 'identity_document_back', isRequired: true },
+  { credentialType: 'cv', isRequired: false },
+  { credentialType: 'nursing_degree', isRequired: false },
+  { credentialType: 'nursing_licence', isRequired: false },
+  { credentialType: 'employment_certificate', isRequired: false },
+  { credentialType: 'physiotherapy_degree', isRequired: false },
+  {
+    credentialType: 'physiotherapist_registration_certificate',
+    isRequired: false,
+  },
+  { credentialType: 'physiotherapy_practising_licence', isRequired: false },
+];
+
+export function recruitmentApplicationDocumentRequirements(): Array<{
+  credentialType: CredentialType;
+  isRequired: boolean;
+  label: string;
+  requiresExpiry: boolean;
+}> {
+  return RECRUITMENT_APPLICATION_DOCUMENTS.map(toRecruitmentDocumentRequirement);
 }
 
 export function isSafeRecruitmentDocumentType(value: string): boolean {
@@ -232,7 +283,7 @@ export type RecruitmentDocumentUploadInput = {
  * Call before any service-role RPC or storage write.
  */
 export function validateRecruitmentDocumentBatch(params: {
-  role: WorkerRole;
+  role: WorkerRole | null;
   documents: RecruitmentDocumentUploadInput[];
   now?: Date;
 }):
@@ -247,9 +298,22 @@ export function validateRecruitmentDocumentBatch(params: {
       }>;
     }
   | { ok: false; error: string } {
-  const checklist = recruitmentDocumentRequirementsForRole(params.role);
+  const checklist = params.role
+    ? recruitmentDocumentRequirementsForRole(params.role)
+    : recruitmentApplicationDocumentRequirements();
   const allowed = new Set(checklist.map((d) => d.credentialType));
   const maxForRole = Math.min(checklist.length, RECRUITMENT_MAX_UPLOAD_FILES);
+
+  if (!params.role) {
+    const missing = checklist.find(
+      (req) =>
+        req.isRequired &&
+        !params.documents.some((doc) => doc.documentType === req.credentialType),
+    );
+    if (missing) {
+      return { ok: false, error: `Add required document: ${missing.label}.` };
+    }
+  }
 
   if (params.documents.length === 0) {
     return { ok: false, error: 'Upload at least one supporting document.' };
@@ -351,7 +415,7 @@ export function emptyRecruitmentApplicationDraft(): RecruitmentApplicationDraft 
     role: '',
     yearsExperience: '',
     registrationState: '',
-    employmentType: '',
+    employmentType: 'full_time',
     preferredEnvironments: '',
     areasOfInterest: '',
     availability: '',
@@ -361,7 +425,6 @@ export function emptyRecruitmentApplicationDraft(): RecruitmentApplicationDraft 
 
 export type RecruitmentStepId =
   | 'personal'
-  | 'professional'
   | 'preferences'
   | 'documents'
   | 'consent';
@@ -375,11 +438,6 @@ export const RECRUITMENT_APPLY_STEPS: Array<{
     id: 'personal',
     title: 'Personal details',
     description: 'How we can reach you.',
-  },
-  {
-    id: 'professional',
-    title: 'Professional profile',
-    description: 'Your role and experience.',
   },
   {
     id: 'preferences',
@@ -406,7 +464,6 @@ export function validateRecruitmentPersonalStep(
     return 'Enter a valid email address.';
   }
   if (!draft.phone.trim()) return 'Enter a phone number.';
-  if (!draft.currentLocation.trim()) return 'Enter your current location.';
   if (!draft.countryOfResidence.trim()) return 'Enter your country of residence.';
   return null;
 }
@@ -430,7 +487,6 @@ export function validateRecruitmentPreferencesStep(
   draft: RecruitmentApplicationDraft,
 ): string | null {
   if (!draft.employmentType) return 'Select an employment type.';
-  if (!draft.availability.trim()) return 'Describe your availability.';
   return null;
 }
 

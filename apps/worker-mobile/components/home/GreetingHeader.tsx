@@ -32,7 +32,7 @@ export function GreetingHeader({ firstName, roleLabel, initials, unreadCount = 0
           />
           <View style={styles.textCol}>
             <View style={styles.kickerRow}>
-              <BridgeHiveMark size={16} />
+              <BridgeHiveMark size={28} style={styles.mark} />
               <Text style={styles.kicker}>Bridge Hive</Text>
             </View>
             <Text style={styles.greeting} numberOfLines={1}>
@@ -60,18 +60,18 @@ export function GreetingHeader({ firstName, roleLabel, initials, unreadCount = 0
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingTop: spacing.lg,
+    paddingTop: spacing.xl,
     paddingBottom: spacing.lg,
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: spacing.md,
   },
   left: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.md,
     flex: 1,
     minWidth: 0,
@@ -80,19 +80,24 @@ const styles = StyleSheet.create({
   kickerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     minWidth: 0,
+    marginBottom: 2,
   },
+  mark: {},
   kicker: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.sm,
-    lineHeight: typography.lineHeight.sm,
-    color: colors.tealStrong,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.2,
+    color: '#0B2032',
+    flexShrink: 1,
   },
   greeting: {
-    fontFamily: typography.fonts.display,
-    fontSize: 20,
-    lineHeight: 26,
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.6,
     color: colors.navy,
   },
   role: {

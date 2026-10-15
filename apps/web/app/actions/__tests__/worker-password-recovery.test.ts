@@ -7,6 +7,7 @@ import {
   applyWorkerRecoveryEmailTemplateAppend,
   isValidWorkerRecoveryEmail,
   mapWorkerRecoveryRequestResult,
+  isWorkerRecoveryDeepLinkCandidate,
   parseWorkerRecoveryUrl,
   resolveWorkerRecoveryRedirectTo,
   shouldMarkWorkerRecoverySession,
@@ -334,6 +335,29 @@ describe('worker password recovery — URL parsing and explicit confirm', () => 
     expect(workerRecoveryUrlErrorMessage('expired')).not.toMatch(/token|eyJ/);
   });
 
+  it('ignores Metro / unrelated opens as recovery deep-link candidates', () => {
+    expect(isWorkerRecoveryDeepLinkCandidate('exp://192.168.1.1:8081')).toBe(false);
+    expect(isWorkerRecoveryDeepLinkCandidate('exp://127.0.0.1:8081/--/')).toBe(false);
+    expect(isWorkerRecoveryDeepLinkCandidate('bridgehive://welcome')).toBe(false);
+    expect(isWorkerRecoveryDeepLinkCandidate('https://bridgehive.app/')).toBe(false);
+    expect(isWorkerRecoveryDeepLinkCandidate(null)).toBe(false);
+    expect(
+      isWorkerRecoveryDeepLinkCandidate(
+        'bridgehive://auth/worker/reset-password?source=recovery&token_hash=abc&type=recovery',
+      ),
+    ).toBe(true);
+    expect(
+      isWorkerRecoveryDeepLinkCandidate(
+        'https://bridgehive.app/auth/confirm?token_hash=abc&type=recovery&next=%2Fauth%2Fworker%2Freset-password',
+      ),
+    ).toBe(true);
+    expect(
+      isWorkerRecoveryDeepLinkCandidate(
+        'https://bridgehive.app/auth/confirm?error_code=otp_expired&type=recovery',
+      ),
+    ).toBe(true);
+  });
+
   it('marks recovery sessions only for recovery + worker reset next', () => {
     expect(
       shouldMarkWorkerRecoverySession('recovery', '/auth/worker/reset-password'),
@@ -429,6 +453,7 @@ describe('worker password recovery — source contracts', () => {
     expect(auth).toMatch(/verifyOtp/);
     expect(auth).toMatch(/type:\s*['"]recovery['"]/);
     expect(auth).toMatch(/parseWorkerRecoveryUrl/);
+    expect(auth).toMatch(/isWorkerRecoveryDeepLinkCandidate/);
     expect(auth).toMatch(/workerRecoveryRedirectToOrFallback/);
     // Auto-verify on link open is forbidden — ingest only stores the token.
     const ingestBlock = auth.match(
@@ -437,6 +462,7 @@ describe('worker password recovery — source contracts', () => {
     expect(ingestBlock).toBeTruthy();
     expect(ingestBlock).not.toMatch(/verifyOtp/);
     expect(ingestBlock).toMatch(/setPendingRecoveryTokenHash/);
+    expect(ingestBlock).toMatch(/isWorkerRecoveryDeepLinkCandidate/);
   });
 
   it('web and mobile recovery UIs share the 6-character policy without letter/number rules', async () => {

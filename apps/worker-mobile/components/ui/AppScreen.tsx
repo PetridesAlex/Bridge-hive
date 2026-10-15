@@ -9,8 +9,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import { ScreenEnter } from '@/components/ui/ScreenEnter';
-import { colors, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 import { type ContentKind, useLayout } from '@/hooks/useLayout';
 
 type Props = {
@@ -69,16 +70,22 @@ export function AppScreen({
   );
 
   return (
-    <SafeAreaView style={[styles.safe, style]} edges={edges}>
-      {disableEnter ? body : <ScreenEnter>{body}</ScreenEnter>}
-    </SafeAreaView>
+    <View style={styles.root}>
+      <HiveFlowBackground />
+      <SafeAreaView style={[styles.safe, style]} edges={edges}>
+        {disableEnter ? body : <ScreenEnter>{body}</ScreenEnter>}
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   safe: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   fill: {
     flex: 1,

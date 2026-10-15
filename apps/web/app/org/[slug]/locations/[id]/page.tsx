@@ -130,7 +130,6 @@ export default async function LocationDetailPage({
               <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(7,29,48,0.88)_0%,rgba(7,29,48,0.55)_55%,rgba(12,58,66,0.45)_100%)]" />
             </>
           ) : null}
-
           <div className="relative">
             <BackLink
               href={`/org/${slug}/locations`}

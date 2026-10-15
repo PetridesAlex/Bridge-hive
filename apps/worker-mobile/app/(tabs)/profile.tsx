@@ -25,11 +25,10 @@ import {
   View,
 } from 'react-native';
 
-import { ProfileMenuRow } from '@/components/profile/ProfileMenuRow';
+import { ProfileMenuRow, type MenuTone } from '@/components/profile/ProfileMenuRow';
 import { SignOutButton } from '@/components/profile/SignOutButton';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Avatar } from '@/components/ui/Avatar';
-import { ListGroup } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { colors, radii, spacing, typography } from '@/constants/theme';
@@ -47,6 +46,36 @@ function verificationTone(status?: string | null) {
   if (status === 'rejected') return 'danger' as const;
   if (status === 'under_review' || status === 'submitted') return 'info' as const;
   return 'warning' as const;
+}
+
+function MenuSection({ title }: { title: string }) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionMark} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+    </View>
+  );
+}
+
+function credentialsTone(label: string): MenuTone {
+  if (label === 'Action required') return 'alert';
+  if (label === 'Under review') return 'attention';
+  if (label === 'Not required') return 'neutral';
+  return 'positive';
+}
+
+function payoutTone(status?: string | null): MenuTone {
+  if (status === 'verified') return 'positive';
+  if (status === 'pending') return 'attention';
+  if (status === 'rejected' || status === 'failed' || status === 'suspended') return 'alert';
+  return 'neutral';
+}
+
+function invoiceTone(label: string): MenuTone {
+  if (label.startsWith('Past due')) return 'alert';
+  if (label.startsWith('Due') || label === 'Payment due') return 'attention';
+  if (label === 'All paid') return 'positive';
+  return 'neutral';
 }
 
 function verificationLabel(status?: string | null) {
@@ -229,86 +258,75 @@ export default function AccountHubScreen() {
         </View>
       </LinearGradient>
 
-      <Text style={styles.group}>Account</Text>
-      <ListGroup>
+      <MenuSection title="Account" />
+      <ProfileMenuRow
+        icon="person-outline"
+        label="Personal information"
+        trailing={personalTrailing}
+        tone={personalTrailing === 'Complete' ? 'positive' : 'attention'}
+        onPress={() => router.push('/profile/personal-information')}
+      />
+      {!isVerified ? (
         <ProfileMenuRow
-          icon="person-outline"
-          label="Personal information"
-          trailing={personalTrailing}
-          onPress={() => router.push('/profile/personal-information')}
-          tint="navy"
+          icon="clipboard-outline"
+          label="Account Setup"
+          trailing={setupTrailing}
+          tone="attention"
+          onPress={() => router.push('/auth/worker/pending')}
         />
-        {!isVerified ? (
-          <ProfileMenuRow
-            icon="clipboard-outline"
-            label="Account Setup"
-            trailing={setupTrailing}
-            onPress={() => router.push('/auth/worker/pending')}
-            tint="navy"
-          />
-        ) : null}
-        <ProfileMenuRow
-          icon="document-text-outline"
-          label="Credentials"
-          trailing={credentialsTrailing}
-          onPress={() => router.push('/documents')}
-          tint="indigo"
-        />
-        <ProfileMenuRow
-          icon="card-outline"
-          label="Payout account"
-          trailing={payoutTrailing}
-          onPress={() => router.push('/payout-setup')}
-          tint="navy"
-          last
-        />
-      </ListGroup>
+      ) : null}
+      <ProfileMenuRow
+        icon="document-text-outline"
+        label="Credentials"
+        trailing={credentialsTrailing}
+        tone={credentialsTone(credentialsTrailing)}
+        onPress={() => router.push('/documents')}
+      />
+      <ProfileMenuRow
+        icon="card-outline"
+        label="Payout account"
+        trailing={payoutTrailing}
+        tone={payoutTone(account?.status)}
+        onPress={() => router.push('/payout-setup')}
+      />
 
-      <Text style={styles.group}>Activity</Text>
-      <ListGroup>
-        <ProfileMenuRow
-          icon="notifications-outline"
-          label="Notifications"
-          trailing={notificationsTrailing}
-          onPress={() => router.push('/notifications')}
-          tint="orange"
-        />
-        <ProfileMenuRow
-          icon="wallet-outline"
-          label="Earnings"
-          trailing={earningsTrailing}
-          onPress={() => router.push('/(tabs)/payments')}
-          tint="green"
-        />
-        <ProfileMenuRow
-          icon="receipt-outline"
-          label="Bridge Hive invoices"
-          trailing={invoicesTrailing}
-          onPress={() => router.push('/(tabs)/invoices')}
-          tint="indigo"
-          last
-        />
-      </ListGroup>
+      <MenuSection title="Activity" />
+      <ProfileMenuRow
+        icon="notifications-outline"
+        label="Notifications"
+        trailing={notificationsTrailing}
+        tone={unreadCount > 0 ? 'attention' : 'neutral'}
+        onPress={() => router.push('/notifications')}
+      />
+      <ProfileMenuRow
+        icon="wallet-outline"
+        label="Earnings"
+        trailing={earningsTrailing}
+        tone={awaitingPayouts > 0 ? 'attention' : 'neutral'}
+        onPress={() => router.push('/(tabs)/payments')}
+      />
+      <ProfileMenuRow
+        icon="receipt-outline"
+        label="Bridge Hive invoices"
+        trailing={invoicesTrailing}
+        tone={invoiceTone(invoicesTrailing)}
+        onPress={() => router.push('/(tabs)/invoices')}
+      />
 
-      <Text style={styles.group}>Help</Text>
-      <ListGroup>
-        <ProfileMenuRow
-          icon="help-circle-outline"
-          label="Support"
-          onPress={() => router.push('/support')}
-          tint="navy"
-        />
-        <ProfileMenuRow
-          icon="information-circle-outline"
-          label="App information"
-          trailing={`v${appVersion}`}
-          onPress={() => router.push('/profile/app-information')}
-          tint="gray"
-          last
-        />
-      </ListGroup>
+      <MenuSection title="Help" />
+      <ProfileMenuRow
+        icon="help-circle-outline"
+        label="Support"
+        onPress={() => router.push('/support')}
+      />
+      <ProfileMenuRow
+        icon="information-circle-outline"
+        label="App information"
+        trailing={`v${appVersion}`}
+        onPress={() => router.push('/profile/app-information')}
+      />
 
-      <Text style={styles.group}>Session</Text>
+      <MenuSection title="Session" />
       <SignOutButton onPress={confirmSignOut} loading={signingOut} />
     </AppScreen>
   );
@@ -371,13 +389,23 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     marginTop: spacing.xs,
   },
-  group: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
+  section: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  sectionMark: {
+    width: 18,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.tealStrong,
+  },
+  sectionTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    color: colors.navy,
   },
 });

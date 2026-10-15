@@ -8,19 +8,30 @@ import {
   payoutSummaryLabel,
   WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE,
   type CredentialSummary,
+  type DocumentProgressCounts,
   type WorkerRole,
 } from '@bridge-hive/domain';
-import { Redirect, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Redirect, router, useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import * as Linking from 'expo-linking';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { AuthShell } from '@/components/auth/AuthShell';
-import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
 import { ProgressBar } from '@/components/ui/ProgressRing';
 import { ProgressStep, type ProgressStepState } from '@/components/ui/ProgressStep';
 import { APP_CONFIG } from '@/constants/config';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -47,11 +58,382 @@ function docsState(label: string): ProgressStepState {
 
 function payoutState(status: PayoutStatus): ProgressStepState {
   if (status === 'verified') return 'approved';
-  if (status === 'pending') return 'under_review';
+  if (status === 'pending') return 'submitted';
   if (status === 'rejected' || status === 'failed' || status === 'suspended' || status === 'expired') {
     return 'action_required';
   }
   return 'not_started';
+}
+
+function payoutStepLabel(status: PayoutStatus): string {
+  if (status === 'pending') return 'Submitted';
+  return payoutSummaryLabel(status);
+}
+
+function SetupAction({
+  label,
+  icon,
+  tone,
+  busy = false,
+  onPress,
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  tone: 'navy' | 'teal';
+  busy?: boolean;
+  onPress: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
+  const nudge = useSharedValue(0);
+  const spin = useSharedValue(0);
+
+  useEffect(() => {
+    if (busy && !reduced) {
+      spin.value = withRepeat(
+        withTiming(360, { duration: 700, easing: Easing.linear }),
+        -1,
+        false,
+      );
+      return;
+    }
+    spin.value = withTiming(0, { duration: reduced ? 0 : 180 });
+  }, [busy, reduced, spin]);
+
+  const motionStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.value }, { scale: scale.value }],
+  }));
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: nudge.value }],
+  }));
+  const spinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spin.value}deg` }],
+  }));
+
+  return (
+    <Animated.View style={motionStyle}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ busy, disabled: busy }}
+        disabled={busy}
+        onPress={onPress}
+        onHoverIn={() => {
+          setHovered(true);
+          if (!reduced) lift.value = withSpring(-2, { damping: 16, stiffness: 260 });
+        }}
+        onHoverOut={() => {
+          setHovered(false);
+          lift.value = withSpring(0, { damping: 16, stiffness: 240 });
+        }}
+        onPressIn={() => {
+          if (reduced) return;
+          scale.value = withSpring(0.98, { damping: 18, stiffness: 420 });
+          nudge.value = withSpring(4, { damping: 14, stiffness: 320 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+          nudge.value = withSpring(0, { damping: 14, stiffness: 260 });
+        }}
+        style={styles.setupAction}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#FFFFFF', '#F3F7FB']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {hovered ? <View pointerEvents="none" style={styles.setupActionWash} /> : null}
+        <LinearGradient
+          pointerEvents="none"
+          colors={
+            tone === 'navy'
+              ? [colors.navy, colors.navyLift]
+              : [colors.tealStrong, '#0A6C78']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.setupMark}
+        >
+          <Animated.View style={icon === 'refresh' ? spinStyle : undefined}>
+            <Ionicons name={icon} size={16} color={colors.white} />
+          </Animated.View>
+        </LinearGradient>
+        <Text style={styles.setupLabel}>{busy ? 'Refreshing…' : label}</Text>
+        <Animated.View style={chevronStyle}>
+          <Ionicons name="chevron-forward" size={16} color={colors.navyLift} />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function NextStepCard({ body }: { body: string }) {
+  const reduced = useReducedMotion();
+  const pulse = useSharedValue(1);
+
+  useEffect(() => {
+    if (reduced) return;
+    pulse.value = withRepeat(
+      withTiming(1.08, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true,
+    );
+  }, [pulse, reduced]);
+
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+  }));
+
+  return (
+    <View accessibilityRole="alert" style={styles.nextCard}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#F7FBFE', '#E7F3FB']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.nextRail} />
+      <Animated.View style={iconStyle}>
+        <LinearGradient
+          colors={[colors.navy, colors.tealStrong]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.nextMark}
+        >
+          <Ionicons name="compass" size={16} color={colors.yellow} />
+        </LinearGradient>
+      </Animated.View>
+      <View style={styles.nextCopy}>
+        <Text style={styles.nextEyebrow}>Next step</Text>
+        <Text style={styles.nextBody}>{body}</Text>
+      </View>
+    </View>
+  );
+}
+
+function ReviewAction({
+  busy,
+  onPress,
+}: {
+  busy: boolean;
+  onPress: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
+  const nudge = useSharedValue(0);
+
+  const motionStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.value }, { scale: scale.value }],
+  }));
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: nudge.value }],
+  }));
+
+  return (
+    <Animated.View style={motionStyle}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Submit for review"
+        accessibilityState={{ busy, disabled: busy }}
+        disabled={busy}
+        onPress={onPress}
+        onHoverIn={() => {
+          setHovered(true);
+          if (!reduced && !busy) lift.value = withSpring(-3, { damping: 16, stiffness: 260 });
+        }}
+        onHoverOut={() => {
+          setHovered(false);
+          lift.value = withSpring(0, { damping: 16, stiffness: 240 });
+        }}
+        onPressIn={() => {
+          if (reduced || busy) return;
+          scale.value = withSpring(0.98, { damping: 18, stiffness: 420 });
+          nudge.value = withSpring(6, { damping: 14, stiffness: 320 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+          nudge.value = withSpring(0, { damping: 14, stiffness: 260 });
+        }}
+        style={styles.reviewAction}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {hovered ? <View pointerEvents="none" style={styles.reviewWash} /> : null}
+        {busy ? (
+          <ActivityIndicator color={colors.white} />
+        ) : (
+          <>
+            <Text style={styles.reviewLabel}>Submit for review</Text>
+            <Animated.View style={iconStyle}>
+              <Ionicons name="arrow-forward" size={18} color={colors.yellow} />
+            </Animated.View>
+          </>
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function SignOutAction({ onPress }: { onPress: () => void }) {
+  const reduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
+  const nudge = useSharedValue(0);
+
+  const motionStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: lift.value }, { scale: scale.value }],
+  }));
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: nudge.value }],
+  }));
+
+  return (
+    <Animated.View style={motionStyle}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Sign out"
+        onPress={onPress}
+        onHoverIn={() => {
+          setHovered(true);
+          if (!reduced) lift.value = withSpring(-3, { damping: 16, stiffness: 260 });
+        }}
+        onHoverOut={() => {
+          setHovered(false);
+          lift.value = withSpring(0, { damping: 16, stiffness: 240 });
+        }}
+        onPressIn={() => {
+          if (reduced) return;
+          scale.value = withSpring(0.97, { damping: 18, stiffness: 420 });
+          nudge.value = withSpring(6, { damping: 14, stiffness: 320 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+          nudge.value = withSpring(0, { damping: 14, stiffness: 260 });
+        }}
+        style={styles.signOut}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#8E1B14', '#B42318', '#D1432F']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {hovered ? <View pointerEvents="none" style={styles.signOutWash} /> : null}
+        <Text style={styles.signOutLabel}>Sign out</Text>
+        <Animated.View style={iconStyle}>
+          <Ionicons name="log-out-outline" size={18} color={colors.white} />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function SubmissionReadyNotice({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+  const rise = useSharedValue(0);
+
+  useEffect(() => {
+    if (!visible) return;
+    scale.value = reduced ? 1 : 0.94;
+    rise.value = reduced ? 0 : 12;
+    scale.value = withSpring(1, { damping: 14, stiffness: 220 });
+    rise.value = withSpring(0, { damping: 16, stiffness: 220 });
+  }, [visible, reduced, rise, scale]);
+
+  const cardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: rise.value }, { scale: scale.value }],
+  }));
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.noticeOverlay}>
+        <Animated.View accessibilityRole="alert" style={[styles.noticeCard, cardStyle]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['#F7FBFE', '#FFFFFF']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={[colors.navy, colors.tealStrong]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.noticeMark}
+          >
+            <Ionicons name="checkmark" size={26} color={colors.yellow} />
+          </LinearGradient>
+          <Text style={styles.noticeTitle}>Submissions are all set</Text>
+          <Text style={styles.noticeBody}>
+            Your package is with Bridge Hive for platform review. Final approval is an
+            administrator action. You can still update payout details while you wait.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Continue"
+            onPress={onClose}
+            style={styles.noticeButton}
+          >
+            <LinearGradient
+              pointerEvents="none"
+              colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <Text style={styles.noticeButtonLabel}>Continue</Text>
+          </Pressable>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+function payoutStepDescription(status: PayoutStatus): string {
+  if (status === 'pending') {
+    return 'Payout account submitted. Waiting for administrative approval. Only a masked IBAN is stored.';
+  }
+  if (status === 'verified') {
+    return 'Payout account approved for platform use. Only a masked IBAN is stored.';
+  }
+  return 'Needed so organizations can pay approved gross shift amounts. Only a masked IBAN is stored.';
+}
+
+function credentialsProgressDescription(progress: DocumentProgressCounts): string {
+  const uploaded = Math.max(0, progress.requiredTotal - progress.missing);
+  const total = progress.requiredTotal;
+  if (total === 0) return 'No documents required.';
+  if (uploaded === total && progress.approved === total) {
+    return `${uploaded} of ${total} documents uploaded and approved.`;
+  }
+  if (uploaded === total && progress.rejected > 0) {
+    return `${uploaded} of ${total} documents uploaded. Some need correction.`;
+  }
+  if (uploaded === total) {
+    return `${uploaded} of ${total} documents uploaded.`;
+  }
+  return `${uploaded} of ${total} documents uploaded. Missing ${progress.missing}.`;
 }
 
 function finalState(label: string): ProgressStepState {
@@ -77,8 +459,10 @@ export default function WorkerAccountSetupScreen() {
     refreshProfile,
   } = useAuth();
   const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string>();
+  const [refreshing, setRefreshing] = useState(false);
+  const [readyNotice, setReadyNotice] = useState(false);
   const [error, setError] = useState<string>();
+  const readyNoticeSeen = useRef(false);
   const [credentials, setCredentials] = useState<CredentialSummary[]>([]);
   const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>(null);
   const submitLock = useRef(false);
@@ -112,6 +496,20 @@ export default function WorkerAccountSetupScreen() {
     void loadSetupState();
   }, [loadSetupState, workerProfile?.verification_status]);
 
+  useEffect(() => {
+    const status = workerProfile?.verification_status;
+    const submitted = status === 'submitted' || status === 'under_review';
+    if (!submitted || readyNoticeSeen.current) return;
+    readyNoticeSeen.current = true;
+    setReadyNotice(true);
+  }, [workerProfile?.verification_status]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void loadSetupState();
+    }, [loadSetupState]),
+  );
+
   if (!loading && !session) {
     return <Redirect href="/welcome" />;
   }
@@ -135,7 +533,7 @@ export default function WorkerAccountSetupScreen() {
   });
   const docsLabel = documentsSummaryLabel({ role, credentials });
   const progress = documentProgressCounts({ role, credentials });
-  const payoutLabel = payoutSummaryLabel(payoutStatus);
+  const payoutLabel = payoutStepLabel(payoutStatus);
   const finalLabel = finalApprovalSummaryLabel({
     verificationStatus,
     accountStatus: undefined,
@@ -157,14 +555,14 @@ export default function WorkerAccountSetupScreen() {
     submitLock.current = true;
     setSubmitting(true);
     setError(undefined);
-    setMessage(undefined);
     try {
       const result = await submitForReview();
       if (result.error) {
         setError(result.error);
         return;
       }
-      setMessage('Package submitted for platform review. Final approval is an administrator action.');
+      readyNoticeSeen.current = true;
+      setReadyNotice(true);
       await loadSetupState();
     } finally {
       setSubmitting(false);
@@ -173,8 +571,14 @@ export default function WorkerAccountSetupScreen() {
   };
 
   const onRefresh = async () => {
-    await refreshProfile();
-    await loadSetupState();
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await refreshProfile();
+      await loadSetupState();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return (
@@ -184,7 +588,7 @@ export default function WorkerAccountSetupScreen() {
       showBack={false}
       centered={false}
     >
-      <Banner variant="info" title="Next step" body={nextStep} />
+      <NextStepCard body={nextStep} />
 
       {(() => {
         const doneCount = [
@@ -213,7 +617,7 @@ export default function WorkerAccountSetupScreen() {
         <ProgressStep
           step={2}
           title="Required credentials"
-          description={`${progress.approved} of ${progress.requiredTotal} approved. Missing ${progress.missing}.`}
+          description={credentialsProgressDescription(progress)}
           statusLabel={docsLabel}
           state={docsState(docsLabel)}
           isCurrent={profileDone && docsState(docsLabel) !== 'approved' && !packageSubmitted}
@@ -223,7 +627,7 @@ export default function WorkerAccountSetupScreen() {
         <ProgressStep
           step={3}
           title="Payout account"
-          description="Needed so organizations can pay approved gross shift amounts. Only a masked IBAN is stored."
+          description={payoutStepDescription(payoutStatus)}
           statusLabel={payoutLabel}
           state={payoutState(payoutStatus)}
           isCurrent={
@@ -245,11 +649,6 @@ export default function WorkerAccountSetupScreen() {
         />
       </View>
 
-      {message ? (
-        <Text style={styles.message} accessibilityLiveRegion="polite">
-          {message}
-        </Text>
-      ) : null}
       {error ? (
         <Text style={styles.error} accessibilityLiveRegion="polite">
           {error}
@@ -258,27 +657,37 @@ export default function WorkerAccountSetupScreen() {
 
       <View style={styles.actions}>
         {canSubmitPackage ? (
-          <Button
-            label="Submit for review"
-            variant="primary"
-            loading={submitting}
-            onPress={() => void onSubmitPackage()}
-          />
+          <ReviewAction busy={submitting} onPress={() => void onSubmitPackage()} />
         ) : null}
-        {packageSubmitted ? (
-          <Text style={styles.hint}>
-            Package is in the admin review queue. You can still update payout details while waiting.
-          </Text>
-        ) : null}
-        <Button
+        <SetupAction
           label="View notifications"
-          variant="ghost"
+          icon="notifications-outline"
+          tone="navy"
           onPress={() => router.push('/notifications')}
         />
-        <Button label="Refresh status" variant="ghost" onPress={() => void onRefresh()} />
-        <Button label="Sign out" variant="ghost" onPress={() => void signOut()} />
+        <SetupAction
+          label="Refresh status"
+          icon="refresh"
+          tone="teal"
+          busy={refreshing}
+          onPress={() => void onRefresh()}
+        />
+        <SignOutAction onPress={() => void signOut()} />
       </View>
-      <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`Email support at ${APP_CONFIG.supportEmail}`}
+        onPress={() => {
+          void Linking.openURL(
+            `mailto:${APP_CONFIG.supportEmail}?subject=${encodeURIComponent('Account Setup')}`,
+          );
+        }}
+        style={styles.support}
+      >
+        <Ionicons name="mail-outline" size={14} color={colors.tealStrong} />
+        <Text style={styles.supportText}>{APP_CONFIG.supportEmail}</Text>
+      </Pressable>
+      <SubmissionReadyNotice visible={readyNotice} onClose={() => setReadyNotice(false)} />
     </AuthShell>
   );
 }
@@ -288,30 +697,206 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  message: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 14,
-    color: colors.success,
-    marginTop: spacing.sm,
-  },
   error: {
     fontFamily: typography.fonts.medium,
     fontSize: 14,
     color: colors.error,
     marginTop: spacing.sm,
   },
-  hint: {
+  noticeOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(11, 42, 67, 0.46)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  noticeCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    alignItems: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xxl,
+    paddingBottom: spacing.xl,
+    backgroundColor: colors.white,
+    ...shadows.lg,
+  },
+  noticeMark: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  noticeTitle: {
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 24,
+    lineHeight: 30,
+    letterSpacing: -0.4,
+    color: colors.navy,
+    textAlign: 'center',
+  },
+  noticeBody: {
+    marginTop: spacing.sm,
     fontFamily: typography.fonts.regular,
-    fontSize: 13,
+    fontSize: 15,
+    lineHeight: 22,
     color: colors.textSecondary,
-    lineHeight: 18,
+    textAlign: 'center',
+  },
+  noticeButton: {
+    marginTop: spacing.lg,
+    alignSelf: 'stretch',
+    minHeight: 48,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noticeButtonLabel: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    color: colors.white,
   },
   actions: { gap: spacing.sm, marginTop: spacing.md },
+  setupAction: {
+    minHeight: 52,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: '#D5E2EE',
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.white,
+    ...shadows.md,
+  },
+  setupActionWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 42, 67, 0.04)',
+  },
+  setupMark: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setupLabel: {
+    flex: 1,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 15,
+    color: colors.navy,
+  },
+  nextCard: {
+    minHeight: 72,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: '#D3E4F2',
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingRight: spacing.md,
+    paddingLeft: spacing.md,
+    backgroundColor: '#F7FBFE',
+    ...shadows.sm,
+  },
+  nextRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    backgroundColor: colors.tealStrong,
+  },
+  nextMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  nextEyebrow: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
+  },
+  nextBody: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.navy,
+  },
+  reviewAction: {
+    minHeight: 52,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.navy,
+    ...shadows.lg,
+  },
+  reviewWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  reviewLabel: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    color: colors.white,
+  },
+  signOut: {
+    minHeight: 52,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    backgroundColor: '#B42318',
+    ...shadows.lg,
+  },
+  signOutWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  signOutLabel: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    color: colors.white,
+  },
   support: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.textMuted,
-    textAlign: 'center',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     marginTop: spacing.md,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    borderRadius: 999,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#D5E2EE',
+  },
+  supportText: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    color: colors.navy,
   },
 });

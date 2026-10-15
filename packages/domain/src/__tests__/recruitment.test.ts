@@ -46,7 +46,13 @@ describe('recruitment domain', () => {
 
   it('reuses credential checklist for physiotherapist including practising licence', () => {
     const docs = recruitmentDocumentRequirementsForRole('physiotherapist');
-    expect(docs.filter((d) => d.isRequired)).toHaveLength(7);
+    expect(docs.filter((d) => d.isRequired)).toHaveLength(5);
+    expect(
+      docs.some((d) => d.credentialType === 'tax_identification_proof'),
+    ).toBe(false);
+    expect(
+      docs.some((d) => d.credentialType === 'social_insurance_proof'),
+    ).toBe(false);
     expect(
       docs.some((d) => d.credentialType === 'physiotherapy_practising_licence'),
     ).toBe(true);
@@ -114,7 +120,7 @@ describe('recruitment domain', () => {
   });
 
   it('enforces file count and total byte budget', () => {
-    expect(RECRUITMENT_MAX_UPLOAD_FILES).toBe(8);
+    expect(RECRUITMENT_MAX_UPLOAD_FILES).toBe(9);
     expect(RECRUITMENT_MAX_TOTAL_UPLOAD_BYTES).toBe(32 * 1024 * 1024);
     expect(
       validateRecruitmentDocumentBatch({

@@ -96,7 +96,7 @@ export function AuthShell({
             showsVerticalScrollIndicator={false}
           >
             <Animated.View style={[styles.hero, motion]}>
-              <BridgeHiveMark size={52} style={styles.mark} />
+              <BridgeHiveMark size={84} style={styles.mark} />
               <Text style={styles.brand}>Bridge Hive</Text>
               <Text style={styles.title}>{title}</Text>
               <Text style={styles.subtitle}>{subtitle}</Text>
@@ -161,12 +161,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   mark: {
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   brand: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    color: colors.navy,
+    fontSize: 13,
+    color: '#0B2032',
     letterSpacing: 0.8,
   },
   title: {

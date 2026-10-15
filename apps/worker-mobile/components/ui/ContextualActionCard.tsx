@@ -1,17 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 
-import { Button } from '@/components/ui/Button';
-import { actionGradient, colors, motion, radii, spacing, typography } from '@/constants/theme';
+import { actionGradient, colors, motion, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Stat = {
@@ -35,6 +35,73 @@ type Props = {
   stats?: Stat[];
 };
 
+function CardAction({
+  label,
+  onPress,
+  tone,
+}: {
+  label: string;
+  onPress: () => void;
+  tone: 'solid' | 'light';
+}) {
+  const reduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
+  const scale = useSharedValue(1);
+  const nudge = useSharedValue(0);
+
+  const motionStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: nudge.value }],
+  }));
+
+  return (
+    <Animated.View style={motionStyle}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        onHoverIn={() => setHovered(true)}
+        onHoverOut={() => setHovered(false)}
+        onPressIn={() => {
+          if (reduced) return;
+          scale.value = withSpring(0.97, { damping: 18, stiffness: 420 });
+          nudge.value = withSpring(6, { damping: 14, stiffness: 320 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+          nudge.value = withSpring(0, { damping: 14, stiffness: 260 });
+        }}
+        style={[styles.action, tone === 'light' && styles.actionLight]}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={
+            tone === 'solid'
+              ? [colors.navy, '#0C3E56', colors.tealStrong]
+              : hovered
+                ? ['#FFFFFF', '#F4F8FB']
+                : ['#FFFFFF', '#EEF5F8']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {hovered && tone === 'solid' ? <View pointerEvents="none" style={styles.actionWash} /> : null}
+        <Text style={[styles.actionLabel, tone === 'light' && styles.actionLabelLight]}>{label}</Text>
+        <Animated.View style={iconStyle}>
+          <Ionicons
+            name="arrow-forward"
+            size={16}
+            color={tone === 'solid' ? colors.yellow : colors.navy}
+          />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 /**
  * Single most-important next action on Home.
  * Prefer one of these over duplicated Browse CTAs.
@@ -54,8 +121,10 @@ export function ContextualActionCard({
 }: Props) {
   const emphasis = variant === 'emphasis';
   const reduced = useReducedMotion();
+  const [hovered, setHovered] = useState(false);
   const enter = useSharedValue(reduced ? 1 : 0);
   const iconPulse = useSharedValue(1);
+  const lift = useSharedValue(0);
 
   useEffect(() => {
     if (reduced) {
@@ -85,7 +154,7 @@ export function ContextualActionCard({
 
   const cardAnim = useAnimatedStyle(() => ({
     opacity: enter.value,
-    transform: [{ translateY: (1 - enter.value) * 10 }],
+    transform: [{ translateY: (1 - enter.value) * 10 + lift.value }],
   }));
 
   const iconAnim = useAnimatedStyle(() => ({
@@ -114,14 +183,19 @@ export function ContextualActionCard({
       )}
 
       <View style={styles.topRow}>
-        <Animated.View
-          style={[
-            styles.iconWrap,
-            emphasis && styles.iconWrapOnDark,
-            iconAnim,
-          ]}
-        >
-          <Ionicons name={icon} size={22} color={emphasis ? colors.white : colors.tealStrong} />
+        <Animated.View style={[styles.iconWrap, iconAnim]}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={
+              emphasis
+                ? ['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.08)']
+                : [colors.navy, colors.tealStrong]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Ionicons name={icon} size={20} color={emphasis ? colors.yellow : colors.white} />
         </Animated.View>
         <View style={styles.topCopy}>
           <Text style={[styles.eyebrow, emphasis && styles.eyebrowOnDark]}>{eyebrow}</Text>
@@ -161,12 +235,7 @@ export function ContextualActionCard({
         </View>
       ) : null}
 
-      <Button
-        label={actionLabel}
-        variant={emphasis ? 'secondary' : 'primary'}
-        size="sm"
-        onPress={onAction}
-      />
+      <CardAction label={actionLabel} onPress={onAction} tone={emphasis ? 'light' : 'solid'} />
     </>
   );
 
@@ -180,7 +249,16 @@ export function ContextualActionCard({
           onPress={onPressCard}
           accessibilityRole="button"
           accessibilityLabel={title}
+          onHoverIn={() => {
+            setHovered(true);
+            if (!reduced) lift.value = withSpring(-3, { damping: 16, stiffness: 260 });
+          }}
+          onHoverOut={() => {
+            setHovered(false);
+            lift.value = withSpring(0, { damping: 16, stiffness: 240 });
+          }}
         >
+          {hovered && !emphasis ? <View pointerEvents="none" style={styles.cardWash} /> : null}
           {content}
         </Pressable>
       </Animated.View>
@@ -193,12 +271,17 @@ export function ContextualActionCard({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    borderColor: '#D5E2EE',
     padding: spacing.lg,
     gap: spacing.md,
     overflow: 'hidden',
+    ...shadows.md,
+  },
+  cardWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(11, 42, 67, 0.03)',
   },
   cardEmphasis: {
     backgroundColor: colors.navy,
@@ -232,13 +315,11 @@ const styles = StyleSheet.create({
   iconWrap: {
     width: 44,
     height: 44,
-    borderRadius: radii.md,
-    backgroundColor: colors.tealSoft,
+    borderRadius: 22,
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconWrapOnDark: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: colors.navy,
   },
   copy: { gap: 6 },
   eyebrow: {
@@ -305,12 +386,41 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   statChip: {
+    flex: 1,
     minWidth: 88,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-    backgroundColor: colors.surfaceSubdued,
+    borderRadius: radii.lg,
+    backgroundColor: '#F4F8FB',
+    borderWidth: 1,
+    borderColor: '#E3EEF6',
     gap: 2,
+  },
+  action: {
+    minHeight: 48,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.navy,
+    ...shadows.sm,
+  },
+  actionLight: {
+    backgroundColor: colors.white,
+  },
+  actionWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  actionLabel: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 15,
+    color: colors.white,
+  },
+  actionLabelLight: {
+    color: colors.navy,
   },
   statChipOnDark: {
     backgroundColor: 'rgba(255,255,255,0.1)',

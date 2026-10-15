@@ -1,7 +1,8 @@
 import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
+import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import {
   AnimatedTabButton,
   AnimatedTabIcon,
@@ -18,6 +19,7 @@ export default function TabsLayout() {
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <HiveFlowBackground />
         <ActivityIndicator color={colors.teal} />
       </View>
     );
@@ -39,12 +41,16 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
         tabBarShowLabel: true,
         tabBarStyle: {
-          backgroundColor: colors.white,
-          borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.border,
-          elevation: 0,
+          backgroundColor: 'transparent',
+          borderTopWidth: 0,
+          elevation: 12,
+          shadowColor: '#0B2A43',
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.08,
+          shadowRadius: 12,
           height: 68,
           paddingBottom: 8,
           paddingTop: 4,

@@ -11221,3 +11221,223 @@ html[data-m-intro="done"] .marketing .m-intro {
     opacity: 1 !important;
   }
 }
+
+/* Recruitment apply: back to the recruitment landing */
+.m-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.62rem;
+  margin: 0 0 1.35rem;
+  padding: 0.28rem 0.9rem 0.28rem 0.28rem;
+  border: 1px solid rgba(11, 32, 50, 0.08);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #ffffff 0%, rgba(246, 248, 247, 0.96) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 10px 24px rgba(11, 32, 50, 0.05);
+  color: var(--m-navy);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.28s ease,
+    box-shadow 0.28s ease;
+}
+
+.m-back-mark {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(228, 179, 52, 0.45), transparent 46%),
+    linear-gradient(160deg, #143044 0%, var(--m-navy) 58%, var(--m-deep-teal) 100%);
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.m-back-mark svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.m-back-label {
+  padding-right: 0.15rem;
+}
+
+.m-back:hover {
+  transform: translateY(-1px);
+  border-color: rgba(228, 179, 52, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.95) inset,
+    0 14px 30px rgba(11, 32, 50, 0.08);
+}
+
+.m-back:hover .m-back-mark {
+  transform: translateX(-2px);
+}
+
+.m-back:focus-visible {
+  outline: 2px solid var(--m-teal);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-back,
+  .m-back-mark {
+    transition: none;
+  }
+
+  .m-back:hover,
+  .m-back:hover .m-back-mark {
+    transform: none;
+  }
+}
+
+.m-apply-steps {
+  --m-apply-count: 4;
+  --m-apply-progress: 0;
+  position: relative;
+  margin-bottom: 1.65rem;
+}
+
+.m-apply-steps ol {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--m-apply-count), minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.m-apply-track {
+  position: absolute;
+  top: 0.92rem;
+  left: calc(100% / (var(--m-apply-count) * 2));
+  right: calc(100% / (var(--m-apply-count) * 2));
+  z-index: 0;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(11, 32, 50, 0.08);
+}
+
+.m-apply-track-fill {
+  display: block;
+  height: 100%;
+  width: calc(var(--m-apply-progress) * 100%);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--m-teal) 0%, var(--m-honey) 100%);
+  box-shadow: 0 0 12px rgba(228, 179, 52, 0.45);
+  transition: width 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.m-apply-step {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.m-apply-step-mark {
+  display: inline-flex;
+  width: 1.85rem;
+  height: 1.85rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 32, 50, 0.08);
+  background: #fff;
+  color: var(--m-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  transition:
+    background 0.35s ease,
+    color 0.35s ease,
+    border-color 0.35s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease;
+}
+
+.m-apply-step-check {
+  width: 0.85rem;
+  height: 0.85rem;
+}
+
+.m-apply-step-label {
+  max-width: 8.5rem;
+  color: var(--m-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.25;
+  transition: color 0.35s ease;
+}
+
+.m-apply-step.is-done .m-apply-step-mark {
+  border-color: transparent;
+  background: linear-gradient(160deg, var(--m-teal) 0%, #0e8f99 100%);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(20, 169, 181, 0.28);
+}
+
+.m-apply-step.is-done .m-apply-step-label {
+  color: var(--m-navy);
+}
+
+.m-apply-step.is-current .m-apply-step-mark {
+  border-color: transparent;
+  background: var(--m-navy);
+  color: #fff;
+  transform: translateY(-1px) scale(1.06);
+  box-shadow:
+    0 8px 18px rgba(11, 32, 50, 0.22),
+    0 0 0 4px rgba(228, 179, 52, 0.28);
+  animation: m-apply-pulse 2.4s ease-out infinite;
+}
+
+.m-apply-step.is-current .m-apply-step-label {
+  color: var(--m-navy);
+  font-weight: 800;
+}
+
+@keyframes m-apply-pulse {
+  0% {
+    box-shadow:
+      0 8px 18px rgba(11, 32, 50, 0.22),
+      0 0 0 0 rgba(228, 179, 52, 0.42);
+  }
+  70% {
+    box-shadow:
+      0 8px 18px rgba(11, 32, 50, 0.22),
+      0 0 0 7px rgba(228, 179, 52, 0);
+  }
+  100% {
+    box-shadow:
+      0 8px 18px rgba(11, 32, 50, 0.22),
+      0 0 0 0 rgba(228, 179, 52, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-apply-track-fill,
+  .m-apply-step-mark,
+  .m-apply-step-label {
+    transition: none;
+  }
+
+  .m-apply-step.is-current .m-apply-step-mark {
+    animation: none;
+  }
+}

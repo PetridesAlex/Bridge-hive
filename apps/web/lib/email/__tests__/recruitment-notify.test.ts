@@ -43,10 +43,31 @@ describe('recruitment notify payload', () => {
     expect(payload.html).toContain(
       `https://bridgehive.app/admin/recruitment/${candidateId}`,
     );
+    expect(payload.html).toContain('Open admin review');
+    expect(payload.html).toContain('A candidate is ready for review');
+    expect(payload.html).toContain('/brand/bridge-hive-logo-v2-180.png');
+    expect(payload.html).toMatch(/background-color:#071d30/);
+    expect(payload.html).toMatch(/background-color:#16a6b6/);
 
     const combined = `${payload.subject}\n${payload.text}\n${payload.html}`;
     expect(combined).not.toMatch(/alex\.example|@test\.local|\+357|cv\.pdf|storage|password|token|service.?role|recruitment-documents/i);
     expect(combined).not.toMatch(/full.?name|phone|document/i);
+  });
+
+  it('still alerts the admin inbox when the applicant has no role', () => {
+    const payload = buildRecruitmentNotifyPayload({
+      candidateId,
+      role: null,
+      submittedAt: new Date('2026-10-15T00:00:00.000Z'),
+    });
+
+    expect(payload.to).toBe('info@bridgehive.app');
+    expect(payload.reviewPath).toBe(`/admin/recruitment/${candidateId}`);
+    expect(payload.text).toMatch(/Role: Not provided/);
+    expect(payload.text).toContain(
+      `https://bridgehive.app/admin/recruitment/${candidateId}`,
+    );
+    expect(payload.html).toContain('Open admin review');
   });
 
   it('sends once through Resend on success and zero when Resend fails', async () => {

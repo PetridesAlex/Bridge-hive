@@ -21,19 +21,21 @@ import {
   type WorkerRole,
 } from '@bridge-hive/domain';
 import {
+  CalendarDays,
+  CalendarRange,
   Check,
-  Copy,
+  CheckCircle2,
   Loader2,
   Plus,
+  Rows3,
   Trash2,
+  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
   useMemo,
   useState,
   useTransition,
-  type Dispatch,
-  type SetStateAction,
 } from 'react';
 import { toast } from 'sonner';
 
@@ -48,6 +50,14 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { eurosToMinor, localInputToIsoWithTimezone, minorToEurosInput } from '@/lib/format';
 import { cn } from '@/lib/utils';
+
+import {
+  createStarterCustomRows,
+  todayYmdLocal,
+  type BulkCustomRow,
+  type BulkCustomRowSeed,
+} from './custom-row-model';
+import { CustomRowsWorkspace } from './custom-rows-workspace';
 
 export type BulkTemplateDefaults = {
   locationId: string;
@@ -66,19 +76,6 @@ export type BulkTemplateDefaults = {
 type LocationOption = { id: string; name: string; timezone: string };
 type WardOption = { id: string; name: string; locationId: string };
 
-type CustomRow = {
-  key: string;
-  dateYmd: string;
-  startHm: string;
-  endHm: string;
-  locationId: string;
-  wardId: string;
-  requiredRole: WorkerRole;
-  breakMinutes: number;
-  rateEuros: string;
-  title: string;
-};
-
 type Step = 'build' | 'review' | 'confirm' | 'success';
 
 const WEEKDAY_OPTIONS: Array<{ value: IsoWeekday; label: string }> = [
@@ -90,14 +87,6 @@ const WEEKDAY_OPTIONS: Array<{ value: IsoWeekday; label: string }> = [
   { value: 6, label: 'Sat' },
   { value: 7, label: 'Sun' },
 ];
-
-function todayYmd(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 function addDaysYmd(ymd: string, days: number): string {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -122,12 +111,20 @@ export function BulkShiftBuilder({
   defaults: BulkTemplateDefaults | null;
 }) {
   const [step, setStep] = useState<Step>('build');
-  const [mode, setMode] = useState<BulkCreationMode>(
-    defaults ? 'individual' : 'repeat',
-  );
+  const [mode, setMode] = useState<BulkCreationMode>('custom');
   const [pending, startTransition] = useTransition();
 
   const defaultLocationId = defaults?.locationId ?? locations[0]?.id ?? '';
+  const customRowSeed: BulkCustomRowSeed = {
+    startHm: defaults?.startHm ?? '08:00',
+    endHm: defaults?.endHm ?? '16:00',
+    locationId: defaultLocationId,
+    wardId: defaults?.wardId ?? '',
+    requiredRole: (defaults?.requiredRole ?? 'registered_nurse') as WorkerRole,
+    breakMinutes: defaults?.breakMinutes ?? 30,
+    rateEuros: defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
+    title: defaults?.title ?? '',
+  };
   const [locationId, setLocationId] = useState(defaultLocationId);
   const [wardId, setWardId] = useState(defaults?.wardId ?? '');
   const [requiredRole, setRequiredRole] = useState<WorkerRole>(
@@ -147,37 +144,25 @@ export function BulkShiftBuilder({
   );
 
   // Repeat mode
-  const [rangeStart, setRangeStart] = useState(todayYmd());
-  const [rangeEnd, setRangeEnd] = useState(addDaysYmd(todayYmd(), 13));
+  const [rangeStart, setRangeStart] = useState(todayYmdLocal());
+  const [rangeEnd, setRangeEnd] = useState(addDaysYmd(todayYmdLocal(), 13));
   const [weekdays, setWeekdays] = useState<IsoWeekday[]>([1, 2, 3, 4, 5]);
 
   // Individual dates
   const [dateDraft, setDateDraft] = useState('');
   const [individualDates, setIndividualDates] = useState<string[]>([]);
 
-  // Custom rows
-  const [customRows, setCustomRows] = useState<CustomRow[]>(() => {
-    const base = {
-      startHm: defaults?.startHm ?? '08:00',
-      endHm: defaults?.endHm ?? '16:00',
-      locationId: defaultLocationId,
-      wardId: defaults?.wardId ?? '',
-      requiredRole: (defaults?.requiredRole ?? 'registered_nurse') as WorkerRole,
-      breakMinutes: defaults?.breakMinutes ?? 30,
-      rateEuros: defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
-      title: defaults?.title ?? '',
-    };
-    return [
-      { key: 'r1', dateYmd: todayYmd(), ...base },
-      { key: 'r2', dateYmd: addDaysYmd(todayYmd(), 1), ...base },
-    ];
-  });
+  // Custom rows — default experience, including when a template is applied
+  const [customRows, setCustomRows] = useState<BulkCustomRow[]>(() =>
+    createStarterCustomRows(customRowSeed),
+  );
 
   const [requestedStatus, setRequestedStatus] =
     useState<BulkRequestedStatus>('draft');
   const [allowExactDuplicates, setAllowExactDuplicates] = useState(false);
   const [requestKey] = useState(() => newBulkRequestKey());
   const [buildError, setBuildError] = useState<string | null>(null);
+  const [showCustomFieldErrors, setShowCustomFieldErrors] = useState(false);
   const [result, setResult] = useState<{
     batchId: string;
     shiftIds: string[];
@@ -194,6 +179,18 @@ export function BulkShiftBuilder({
     for (const loc of locations) map.set(loc.id, loc.timezone);
     return map;
   }, [locations]);
+
+  const locationNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const loc of locations) map.set(loc.id, loc.name);
+    return map;
+  }, [locations]);
+
+  const wardNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ward of wards) map.set(ward.id, ward.name);
+    return map;
+  }, [wards]);
 
   const built = useMemo(() => {
     try {
@@ -281,6 +278,9 @@ export function BulkShiftBuilder({
   const countCheck = assertBulkShiftCount(preview.length);
 
   function goReview() {
+    if (mode === 'custom') {
+      setShowCustomFieldErrors(true);
+    }
     if (built.error) {
       setBuildError(built.error);
       return;
@@ -290,6 +290,7 @@ export function BulkShiftBuilder({
       return;
     }
     setBuildError(null);
+    setShowCustomFieldErrors(false);
     setStep('review');
   }
 
@@ -392,7 +393,14 @@ export function BulkShiftBuilder({
 
       {step === 'build' ? (
         <div className="space-y-5">
-          <ModeTabs mode={mode} onChange={setMode} />
+          <ModeCards
+            mode={mode}
+            onChange={(next) => {
+              setMode(next);
+              setBuildError(null);
+              if (next !== 'custom') setShowCustomFieldErrors(false);
+            }}
+          />
 
           {mode !== 'custom' ? (
             <SharedTemplateFields
@@ -531,13 +539,15 @@ export function BulkShiftBuilder({
           ) : null}
 
           {mode === 'custom' ? (
-            <CustomRowsEditor
+            <CustomRowsWorkspace
               rows={customRows}
               setRows={setCustomRows}
               locations={locations}
               wards={wards}
               deadlineHours={deadlineHours}
               setDeadlineHours={setDeadlineHours}
+              seed={customRowSeed}
+              showFieldErrors={showCustomFieldErrors}
             />
           ) : null}
 
@@ -612,13 +622,15 @@ export function BulkShiftBuilder({
 
           <div className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface">
             <div className="max-h-[28rem] overflow-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[48rem] text-left text-sm">
                 <thead className="sticky top-0 bg-bh-subtle/90 text-[11px] font-semibold uppercase tracking-wide text-bh-text-muted backdrop-blur">
                   <tr>
                     <th className="px-3 py-2.5">#</th>
                     <th className="px-3 py-2.5">Date</th>
                     <th className="px-3 py-2.5">Time</th>
                     <th className="px-3 py-2.5">Role</th>
+                    <th className="px-3 py-2.5">Location</th>
+                    <th className="px-3 py-2.5">Ward / unit</th>
                     <th className="px-3 py-2.5">Rate</th>
                   </tr>
                 </thead>
@@ -640,6 +652,14 @@ export function BulkShiftBuilder({
                       </td>
                       <td className="px-3 py-2">
                         {WORKER_ROLE_LABELS[row.requiredRole]}
+                      </td>
+                      <td className="px-3 py-2 text-bh-text-secondary">
+                        {locationNameById.get(row.locationId) ?? '—'}
+                      </td>
+                      <td className="px-3 py-2 text-bh-text-secondary">
+                        {row.wardId
+                          ? (wardNameById.get(row.wardId) ?? '—')
+                          : '—'}
                       </td>
                       <td className="px-3 py-2">
                         {formatMoneyMinor(row.rateMinor, row.currency)}/hr
@@ -831,7 +851,7 @@ function buildFromSharedTemplate(params: {
 }
 
 function buildFromCustomRows(
-  customRows: CustomRow[],
+  customRows: BulkCustomRow[],
   locationTzById: Map<string, string>,
   fallbackTz: string,
   deadlineHours: number,
@@ -935,36 +955,95 @@ function StepRail({ step }: { step: Step }) {
   );
 }
 
-function ModeTabs({
+function ModeCards({
   mode,
   onChange,
 }: {
   mode: BulkCreationMode;
   onChange: (m: BulkCreationMode) => void;
 }) {
-  const modes: Array<{ id: BulkCreationMode; label: string; hint: string }> = [
-    { id: 'repeat', label: 'Repeat', hint: 'Weekdays in a range' },
-    { id: 'individual', label: 'Individual dates', hint: 'Pick specific days' },
-    { id: 'custom', label: 'Custom rows', hint: 'Edit each shift' },
+  const modes: Array<{
+    id: BulkCreationMode;
+    label: string;
+    hint: string;
+    icon: LucideIcon;
+  }> = [
+    {
+      id: 'repeat',
+      label: 'Repeat Schedule',
+      hint: 'Create a repeating pattern across selected weekdays.',
+      icon: CalendarRange,
+    },
+    {
+      id: 'individual',
+      label: 'Individual Dates',
+      hint: 'Choose specific dates using one shared shift setup.',
+      icon: CalendarDays,
+    },
+    {
+      id: 'custom',
+      label: 'Custom Rows',
+      hint: 'Create and edit every shift independently.',
+      icon: Rows3,
+    },
   ];
+
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
-      {modes.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          onClick={() => onChange(m.id)}
-          className={cn(
-            'rounded-2xl border px-4 py-3 text-left transition-colors',
-            mode === m.id
-              ? 'border-bh-honey bg-bh-honey-soft/70'
-              : 'border-bh-border bg-bh-surface hover:bg-bh-subtle/60',
-          )}
-        >
-          <span className="block text-sm font-semibold text-bh-text">{m.label}</span>
-          <span className="mt-0.5 block text-xs text-bh-text-muted">{m.hint}</span>
-        </button>
-      ))}
+    <div
+      className="grid gap-3 sm:grid-cols-3"
+      role="radiogroup"
+      aria-label="Creation mode"
+    >
+      {modes.map((item) => {
+        const selected = mode === item.id;
+        const Icon = item.icon;
+        const isCustom = item.id === 'custom';
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(item.id)}
+            className={cn(
+              'relative rounded-2xl border px-4 py-4 text-left transition-[transform,box-shadow,border-color,background-color] duration-200 motion-reduce:transition-none',
+              'hover:-translate-y-0.5 active:translate-y-0 motion-reduce:hover:translate-y-0',
+              selected && isCustom
+                ? 'border-bh-honey bg-bh-honey-soft shadow-[0_0_0_1px_rgba(224,170,24,0.35),0_10px_28px_rgba(201,146,15,0.18)]'
+                : selected
+                  ? 'border-bh-sidebar bg-bh-subtle shadow-[0_8px_22px_rgba(7,29,48,0.08)]'
+                  : 'border-bh-border bg-bh-surface hover:border-bh-border-strong hover:bg-bh-subtle/50',
+            )}
+          >
+            <span className="flex items-start justify-between gap-3">
+              <span
+                className={cn(
+                  'grid h-10 w-10 place-items-center rounded-xl',
+                  selected && isCustom
+                    ? 'bg-bh-honey text-[#071d30]'
+                    : selected
+                      ? 'bg-bh-sidebar text-white'
+                      : 'bg-bh-teal-soft text-bh-teal-strong',
+                )}
+              >
+                <Icon className="h-5 w-5" aria-hidden />
+              </span>
+              {selected ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-bh-border bg-bh-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-bh-text">
+                  <CheckCircle2 className="h-3 w-3 text-bh-success" aria-hidden />
+                  Selected
+                </span>
+              ) : null}
+            </span>
+            <span className="mt-3 block text-sm font-semibold tracking-tight text-bh-text">
+              {item.label}
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-bh-text-muted">
+              {item.hint}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -1124,257 +1203,6 @@ function SharedTemplateFields({
           onChange={(e) => setDeadlineHours(e.target.value)}
         />
       </div>
-    </div>
-  );
-}
-
-function CustomRowsEditor({
-  rows,
-  setRows,
-  locations,
-  wards,
-  deadlineHours,
-  setDeadlineHours,
-}: {
-  rows: CustomRow[];
-  setRows: Dispatch<SetStateAction<CustomRow[]>>;
-  locations: LocationOption[];
-  wards: WardOption[];
-  deadlineHours: string;
-  setDeadlineHours: (v: string) => void;
-}) {
-  function applyToAll(patch: Partial<CustomRow>) {
-    setRows((prev) => prev.map((r) => ({ ...r, ...patch })));
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-bh-border bg-bh-subtle/40 px-4 py-3">
-        <div className="space-y-1">
-          <Label htmlFor="custom-deadline">Deadline hours before start</Label>
-          <Input
-            id="custom-deadline"
-            type="number"
-            min={0}
-            className="w-28"
-            value={deadlineHours}
-            onChange={(e) => setDeadlineHours(e.target.value)}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            const first = rows[0];
-            if (!first) return;
-            applyToAll({
-              startHm: first.startHm,
-              endHm: first.endHm,
-              locationId: first.locationId,
-              wardId: first.wardId,
-              requiredRole: first.requiredRole,
-              breakMinutes: first.breakMinutes,
-              rateEuros: first.rateEuros,
-              title: first.title,
-            });
-          }}
-        >
-          Apply first row to all
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (rows.length >= BULK_SHIFT_MAX) return;
-            const last = rows[rows.length - 1];
-            setRows((prev) => [
-              ...prev,
-              {
-                key: `r-${Date.now()}`,
-                dateYmd: last ? addDaysYmd(last.dateYmd, 1) : todayYmd(),
-                startHm: last?.startHm ?? '08:00',
-                endHm: last?.endHm ?? '16:00',
-                locationId: last?.locationId ?? locations[0]?.id ?? '',
-                wardId: last?.wardId ?? '',
-                requiredRole: last?.requiredRole ?? 'registered_nurse',
-                breakMinutes: last?.breakMinutes ?? 30,
-                rateEuros: last?.rateEuros ?? '25.00',
-                title: last?.title ?? '',
-              },
-            ]);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Add row
-        </Button>
-      </div>
-
-      <ul className="space-y-3">
-        {rows.map((row, idx) => {
-          const rowWards = wards.filter((w) => w.locationId === row.locationId);
-          return (
-            <li
-              key={row.key}
-              className="grid gap-2 rounded-2xl border border-bh-border bg-bh-surface p-3 sm:grid-cols-6 sm:p-4"
-            >
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={row.dateYmd}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, dateYmd: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Start</Label>
-                <Input
-                  type="time"
-                  value={row.startHm}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, startHm: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>End</Label>
-                <Input
-                  type="time"
-                  value={row.endHm}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, endHm: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Location</Label>
-                <Select
-                  value={row.locationId}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx
-                          ? { ...r, locationId: e.target.value, wardId: '' }
-                          : r,
-                      ),
-                    )
-                  }
-                >
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Ward</Label>
-                <Select
-                  value={row.wardId}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, wardId: e.target.value } : r,
-                      ),
-                    )
-                  }
-                >
-                  <option value="">No ward</option>
-                  {rowWards.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Role</Label>
-                <Select
-                  value={row.requiredRole}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx
-                          ? { ...r, requiredRole: e.target.value as WorkerRole }
-                          : r,
-                      ),
-                    )
-                  }
-                >
-                  {WORKER_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {WORKER_ROLE_LABELS[r]}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Rate €</Label>
-                <Input
-                  value={row.rateEuros}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, rateEuros: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="flex items-end gap-2 sm:col-span-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Duplicate row"
-                  onClick={() => {
-                    if (rows.length >= BULK_SHIFT_MAX) return;
-                    setRows((prev) => {
-                      const copy = {
-                        ...row,
-                        key: `r-${Date.now()}-${idx}`,
-                        dateYmd: addDaysYmd(row.dateYmd, 1),
-                      };
-                      const next = [...prev];
-                      next.splice(idx + 1, 0, copy);
-                      return next;
-                    });
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Delete row"
-                  disabled={rows.length <= 2}
-                  onClick={() =>
-                    setRows((prev) => prev.filter((_, i) => i !== idx))
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }

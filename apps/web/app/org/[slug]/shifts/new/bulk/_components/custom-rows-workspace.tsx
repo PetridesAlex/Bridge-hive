@@ -11,17 +11,14 @@ import {
   Clock3,
   Copy,
   Eraser,
+  Moon,
   Plus,
   Rows3,
   Trash2,
 } from 'lucide-react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 
-import {
-  OrgTableShell,
-  orgTableHeadClassName,
-  orgTableRowClassName,
-} from '@/components/org/data-table';
+import { OrgTableShell } from '@/components/org/data-table';
 import { WardLibraryDialog } from '@/components/org/ward-library-dialog';
 import { WardUnitSelector } from '@/components/org/ward-unit-selector';
 import { Button } from '@/components/ui/button';
@@ -48,7 +45,24 @@ type LocationOption = { id: string; name: string; timezone: string };
 type WardOption = { id: string; name: string; locationId: string };
 
 const fieldInputClass =
-  'h-9 min-w-0 rounded-lg border-bh-border bg-bh-surface px-2.5 text-sm focus-visible:border-bh-teal focus-visible:ring-bh-teal/30';
+  'h-9 min-w-0 rounded-xl border-bh-border/80 bg-white px-2.5 text-sm font-medium text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow,background] duration-150 focus-visible:border-bh-teal focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-bh-teal/25';
+
+const premiumTableHeadClassName =
+  'sticky top-0 z-10 border-b border-[#16384f]/12 bg-[linear-gradient(180deg,#16384f_0%,#0d2a3d_100%)] text-[10px] font-semibold uppercase tracking-[0.14em] text-white/72';
+
+function TableHeadCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <th className={cn('px-2.5 py-3.5 first:pl-4 last:pr-4', className)}>
+      {children}
+    </th>
+  );
+}
 
 function FieldError({ message }: { message?: string }) {
   if (!message) return null;
@@ -201,23 +215,40 @@ export function CustomRowsWorkspace({
       </div>
 
       <div className="hidden lg:block">
-        <OrgTableShell className="overflow-hidden">
+        <OrgTableShell className="overflow-hidden border-bh-border/80 shadow-[0_10px_32px_rgba(7,29,48,0.08)] ring-1 ring-[rgba(22,56,79,0.05)]">
+          <div className="flex items-center justify-between gap-3 border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-3">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
+                <span
+                  aria-hidden
+                  className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
+                />
+                Shift rows
+              </p>
+              <p className="mt-1 text-xs text-bh-text-muted">
+                Edit each opening independently — changes stay in this batch until you review.
+              </p>
+            </div>
+            <p className="shrink-0 rounded-full border border-bh-border bg-white px-3 py-1 text-[11px] font-semibold text-bh-text-secondary shadow-sm">
+              {rows.length} editable
+            </p>
+          </div>
           <div className="max-h-[36rem] overflow-auto">
-            <table className="w-full min-w-[78rem] text-left text-sm">
-              <thead className={cn(orgTableHeadClassName, 'sticky top-0 z-10')}>
+            <table className="w-full min-w-[78rem] border-separate border-spacing-0 text-left text-sm">
+              <thead className={premiumTableHeadClassName}>
                 <tr>
-                  <th className="px-3 py-3">#</th>
-                  <th className="px-3 py-3">Date</th>
-                  <th className="px-3 py-3">Day</th>
-                  <th className="px-3 py-3">Professional role</th>
-                  <th className="px-3 py-3">Location</th>
-                  <th className="px-3 py-3">Ward / unit</th>
-                  <th className="px-3 py-3">Start</th>
-                  <th className="px-3 py-3">End</th>
-                  <th className="px-3 py-3">Break</th>
-                  <th className="px-3 py-3">Rate (€ / hour)</th>
-                  <th className="px-3 py-3">Shift label</th>
-                  <th className="px-3 py-3">Actions</th>
+                  <TableHeadCell className="w-12">#</TableHeadCell>
+                  <TableHeadCell>Date</TableHeadCell>
+                  <TableHeadCell>Day</TableHeadCell>
+                  <TableHeadCell>Role</TableHeadCell>
+                  <TableHeadCell>Location</TableHeadCell>
+                  <TableHeadCell>Ward / unit</TableHeadCell>
+                  <TableHeadCell>Start</TableHeadCell>
+                  <TableHeadCell>End</TableHeadCell>
+                  <TableHeadCell>Break</TableHeadCell>
+                  <TableHeadCell>Rate €</TableHeadCell>
+                  <TableHeadCell>Label</TableHeadCell>
+                  <TableHeadCell className="text-right">Actions</TableHeadCell>
                 </tr>
               </thead>
               <tbody>
@@ -315,13 +346,23 @@ function CustomRowTableRow({
 }) {
   const errors = showFieldErrors ? validateCustomRowFields(row) : {};
   const overnight = isOvernightShift(row.startHm, row.endHm);
+  const dayLabel = weekdayLabelForYmd(row.dateYmd);
+  const zebra = index % 2 === 1;
 
   return (
-    <tr className={orgTableRowClassName}>
-      <td className="px-3 py-2.5 align-top text-xs font-semibold text-bh-text-muted">
-        {index + 1}
+    <tr
+      className={cn(
+        'group relative border-b border-bh-border/50 transition-[background-color,box-shadow] duration-150 last:border-0',
+        zebra ? 'bg-[#f5f8fa]/70' : 'bg-white',
+        'hover:bg-bh-teal-soft/35 hover:shadow-[inset_3px_0_0_0_#16a6b6]',
+      )}
+    >
+      <td className="px-2.5 py-3 align-top first:pl-4">
+        <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] px-2 text-xs font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+          {index + 1}
+        </span>
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Input
           type="date"
           aria-label={`Row ${index + 1} date`}
@@ -331,12 +372,19 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.dateYmd} />
       </td>
-      <td className="px-3 py-2.5 align-top">
-        <span className="inline-flex h-9 items-center rounded-lg bg-bh-subtle px-2.5 text-xs font-semibold text-bh-text-secondary">
-          {weekdayLabelForYmd(row.dateYmd)}
+      <td className="px-2 py-3 align-top">
+        <span
+          className={cn(
+            'inline-flex h-9 min-w-[3.25rem] items-center justify-center rounded-xl border px-2.5 text-xs font-bold tracking-wide',
+            dayLabel === 'Sat' || dayLabel === 'Sun'
+              ? 'border-[#e4b334]/35 bg-[#fff8e8] text-[#8a6a10]'
+              : 'border-bh-teal/25 bg-bh-teal-soft/60 text-bh-teal-strong',
+          )}
+        >
+          {dayLabel}
         </span>
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Select
           aria-label={`Row ${index + 1} professional role`}
           className={cn(fieldInputClass, 'w-[11rem]', invalidClass(Boolean(errors.requiredRole)))}
@@ -352,7 +400,7 @@ function CustomRowTableRow({
           ))}
         </Select>
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Select
           aria-label={`Row ${index + 1} location`}
           className={cn(fieldInputClass, 'w-[10.5rem]', invalidClass(Boolean(errors.locationId)))}
@@ -367,7 +415,7 @@ function CustomRowTableRow({
         </Select>
         <FieldError message={errors.locationId} />
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <div className="w-[11.5rem] space-y-1">
           <WardUnitSelector
             locationId={row.locationId}
@@ -385,7 +433,7 @@ function CustomRowTableRow({
           />
         </div>
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Input
           type="time"
           aria-label={`Row ${index + 1} start time`}
@@ -395,7 +443,7 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.startHm} />
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Input
           type="time"
           aria-label={`Row ${index + 1} end time`}
@@ -405,12 +453,13 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.endHm} />
         {overnight ? (
-          <p className="mt-1 text-[11px] font-medium text-bh-teal-strong">
+          <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#16384f] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
+            <Moon className="h-3 w-3 text-[#e4b334]" aria-hidden />
             Overnight
           </p>
         ) : null}
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Input
           type="number"
           min={0}
@@ -423,7 +472,7 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.breakMinutes} />
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Input
           inputMode="decimal"
           aria-label={`Row ${index + 1} hourly rate`}
@@ -433,7 +482,7 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.rateEuros} />
       </td>
-      <td className="px-2 py-2 align-top">
+      <td className="px-2 py-3 align-top">
         <Input
           aria-label={`Row ${index + 1} shift label`}
           className={cn(fieldInputClass, 'w-[9rem]', invalidClass(Boolean(errors.title)))}
@@ -443,13 +492,13 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.title} />
       </td>
-      <td className="px-2 py-2 align-top">
-        <div className="flex items-center gap-1">
+      <td className="px-2.5 py-3 align-top last:pr-4">
+        <div className="flex items-center justify-end gap-1 opacity-80 transition-opacity duration-150 group-hover:opacity-100">
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-9 w-9"
+            className="h-9 w-9 rounded-xl border-bh-border bg-white shadow-sm hover:border-bh-teal/40 hover:bg-bh-teal-soft/40 hover:text-bh-teal-strong"
             aria-label={`Duplicate row ${index + 1}`}
             title="Duplicate row"
             disabled={!canDuplicate}
@@ -459,9 +508,9 @@ function CustomRowTableRow({
           </Button>
           <Button
             type="button"
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="h-9 w-9 text-bh-danger hover:text-bh-danger"
+            className="h-9 w-9 rounded-xl border-bh-border bg-white text-bh-danger shadow-sm hover:border-bh-danger/40 hover:bg-bh-danger-soft hover:text-bh-danger"
             aria-label={`Delete row ${index + 1}`}
             title="Delete row"
             disabled={!canDelete}

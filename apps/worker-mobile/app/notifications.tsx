@@ -7,6 +7,8 @@ import {
   Text,
   View,
 } from 'react-native';
+import { router } from 'expo-router';
+import { shiftRouteFromPushData } from '@bridge-hive/domain';
 
 import { AppScreen } from '@/components/ui/AppScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -21,6 +23,7 @@ import {
 } from '@/lib/queries';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatRelativeDate } from '@/utils/format';
+import { supabase } from '@/lib/supabase';
 
 function startOfToday(): Date {
   const d = new Date();
@@ -28,9 +31,28 @@ function startOfToday(): Date {
   return d;
 }
 
+async function loadShiftAvailability(shiftIds: string[]): Promise<Map<string, boolean>> {
+  if (shiftIds.length === 0) return new Map();
+  const { data, error } = await supabase.rpc(
+    'get_my_shift_alert_availability' as never,
+    { p_shift_ids: shiftIds } as never,
+  );
+  const rows: unknown = data;
+  if (error || !Array.isArray(rows)) return new Map();
+  const available = new Map<string, boolean>();
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const shiftId = (row as { shift_id?: unknown }).shift_id;
+    const isAvailable = (row as { available?: unknown }).available;
+    if (typeof shiftId === 'string') available.set(shiftId, Boolean(isAvailable));
+  }
+  return available;
+}
+
 export default function NotificationsScreen() {
   const { user } = useAuth();
   const [items, setItems] = useState<Notification[]>([]);
+  const [availability, setAvailability] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
@@ -40,7 +62,13 @@ export default function NotificationsScreen() {
     setError(undefined);
     const result = await getMyNotifications(user.id);
     if (result.error) setError(result.error);
-    else setItems(result.data);
+    else {
+      setItems(result.data);
+      const shiftIds = result.data
+        .map((item) => shiftRouteFromPushData(item.data)?.replace('/shifts/', '') ?? null)
+        .filter((id): id is string => Boolean(id));
+      setAvailability(await loadShiftAvailability(shiftIds));
+    }
     setLoading(false);
   }, [user?.id]);
 
@@ -49,10 +77,12 @@ export default function NotificationsScreen() {
   }, [refresh]);
 
   const onOpen = async (item: Notification) => {
+    const route = shiftRouteFromPushData(item.data);
     if (!item.read_at) {
       await markNotificationRead(item.id);
       void refresh();
     }
+    if (route) router.push(route as never);
   };
 
   const sections = useMemo(() => {
@@ -109,12 +139,14 @@ export default function NotificationsScreen() {
             }
             const item = row.item;
             const unread = !item.read_at;
+            const shiftId = shiftRouteFromPushData(item.data)?.replace('/shifts/', '');
+            const unavailable = shiftId ? availability.get(shiftId) === false : false;
             return (
               <Pressable
                 onPress={() => void onOpen(item)}
                 style={[styles.row, unread && styles.unread]}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.title}${unread ? ', unread' : ''}`}
+                accessibilityLabel={`${item.title}${unread ? ', unread' : ''}${unavailable ? ', no longer available' : ''}`}
               >
                 <View style={styles.indicatorCol}>
                   <View style={[styles.dot, unread ? styles.dotUnread : styles.dotRead]} />
@@ -124,6 +156,9 @@ export default function NotificationsScreen() {
                   <Text style={styles.text} numberOfLines={3}>
                     {item.body}
                   </Text>
+                  {unavailable ? (
+                    <Text style={styles.unavailable}>No longer available</Text>
+                  ) : null}
                 </View>
                 <Text style={styles.time}>{formatRelativeDate(item.created_at)}</Text>
               </Pressable>
@@ -195,6 +230,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 18,
+  },
+  unavailable: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   time: {
     fontFamily: typography.fonts.regular,

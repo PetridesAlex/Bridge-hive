@@ -9,6 +9,7 @@ import { redirect } from 'next/navigation';
 
 import { requireOrgMembership } from '@/lib/auth';
 import { eurosToMinor, localInputToIsoWithTimezone } from '@/lib/format';
+import { notifyPublishedShiftsSafely } from '@/lib/push/notify';
 import { createClient } from '@/lib/supabase/server';
 
 export type ActionResult = {
@@ -339,6 +340,8 @@ export async function publishShiftAction(
     }
     return { error: 'Unable to publish this shift. Please try again.' };
   }
+
+  await notifyPublishedShiftsSafely();
 
   revalidatePath(`/org/${slug}/shifts`);
   revalidatePath(`/org/${slug}/shifts/${shiftId}`);

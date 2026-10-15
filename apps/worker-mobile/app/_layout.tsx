@@ -21,6 +21,7 @@ import { APP_BOOT_BG, AppBootCover } from '@/components/brand/AppBootCover';
 import { colors } from '@/constants/theme';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { UnverifiedRouteGuard } from '@/components/auth/UnverifiedRouteGuard';
+import { PushNotificationController } from '@/components/push/PushNotificationController';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -53,6 +54,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
       <SafeAreaProvider>
         <AuthProvider>
+          <PushNotificationController />
           <UnverifiedRouteGuard>
             <StatusBar style="dark" />
             <Stack
@@ -83,6 +85,7 @@ export default function RootLayout() {
               <Stack.Screen name="profile/account" />
               <Stack.Screen name="profile/personal-information" />
               <Stack.Screen name="profile/app-information" />
+              <Stack.Screen name="profile/notification-preferences" />
               <Stack.Screen name="support" />
             </Stack>
           </UnverifiedRouteGuard>

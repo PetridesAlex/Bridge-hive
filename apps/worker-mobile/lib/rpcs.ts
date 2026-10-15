@@ -122,9 +122,15 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
     p_shift_id: shiftId,
   } as never);
 
-  if (!error && data) {
+  if (!error) {
     const row = (Array.isArray(data) ? data[0] : data) as WorkerShiftDetails | undefined;
-    return { data: row ?? null };
+    if (row?.shift_id) return { data: row };
+    return { data: null };
+  }
+
+  const missingFunction = /PGRST202|Could not find the function|schema cache/i.test(error.message ?? '');
+  if (!missingFunction) {
+    return { data: null, error: error.message };
   }
 
   // Fallback before migration 014 / 031 RPCs are applied

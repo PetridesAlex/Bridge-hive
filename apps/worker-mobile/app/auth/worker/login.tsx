@@ -7,16 +7,21 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { peekPendingShiftRoute } from '@/lib/push/pending-shift';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function WorkerLoginScreen() {
-  const { signIn, session, loading, homeRoute } = useAuth();
+  const { signIn, session, loading, homeRoute, isVerified } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
 
   if (!loading && session) {
+    const pending = peekPendingShiftRoute();
+    if (pending && isVerified) {
+      return <Redirect href={pending as never} />;
+    }
     return <Redirect href={homeRoute as never} />;
   }
 

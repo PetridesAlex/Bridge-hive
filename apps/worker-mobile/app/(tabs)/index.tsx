@@ -10,6 +10,7 @@ import {
 import { router } from 'expo-router';
 
 import { GreetingHeader } from '@/components/home/GreetingHeader';
+import { ShiftNotificationPrompt } from '@/components/push/ShiftNotificationPrompt';
 import { NextShiftCard } from '@/components/home/NextShiftCard';
 import { ShiftCalendar } from '@/components/home/ShiftCalendar';
 import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
@@ -309,7 +310,9 @@ export default function HomeScreen() {
             actionLabel="Continue setup"
             onAction={() => router.push('/auth/worker/pending')}
           />
-        ) : null}
+        ) : (
+          <ShiftNotificationPrompt verified={isVerified} />
+        )}
 
         {loading || detailLoading ? (
           <SkeletonCard />

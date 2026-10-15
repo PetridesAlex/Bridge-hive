@@ -41,6 +41,10 @@ export async function middleware(request: NextRequest) {
     supabaseResponse.headers.set('X-Robots-Tag', 'noindex, nofollow');
   }
 
+  if (pathname.startsWith('/api/internal/worker-push')) {
+    return supabaseResponse;
+  }
+
   if (!user && !isPublicPath(pathname)) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = pathname.startsWith('/admin')

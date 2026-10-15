@@ -1,3 +1,8 @@
+import {
+  estimatedWorkerShiftPayMinor,
+  openPositionsLabel,
+  SHIFT_UNAVAILABLE_TITLE,
+} from '@bridge-hive/domain';
 import { useLocalSearchParams, router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -17,10 +22,6 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { Surface } from '@/components/ui/Surface';
-import {
-  estimatedWorkerShiftPayMinor,
-  openPositionsLabel,
-} from '@bridge-hive/domain';
 
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
@@ -36,6 +37,7 @@ import {
   submitTimesheetRpc,
   type WorkerShiftDetails,
 } from '@/lib/rpcs';
+import { clearPendingShiftRoute, peekPendingShiftRoute } from '@/lib/push/pending-shift';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatDurationMinutes, formatMoney } from '@/utils/format';
 
@@ -103,6 +105,13 @@ export default function ShiftDetailScreen() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    const pending = peekPendingShiftRoute();
+    if (pending && id && pending.endsWith(String(id).toLowerCase())) {
+      clearPendingShiftRoute();
+    }
+  }, [id]);
 
   useEffect(() => {
     if (!shift || assignment?.status !== 'accepted') return;
@@ -191,14 +200,25 @@ export default function ShiftDetailScreen() {
   }
 
   if (!shift) {
+    if (error) {
+      return (
+        <AppScreen edges={['top']} contentKind="detail">
+          <ScreenHeader title="Shift details" showBack />
+          <EmptyState
+            title="Shift unavailable"
+            description={error}
+            actionLabel="Retry"
+            onAction={refresh}
+          />
+        </AppScreen>
+      );
+    }
     return (
       <AppScreen edges={['top']} contentKind="detail">
         <ScreenHeader title="Shift details" showBack />
         <EmptyState
-          title="Shift unavailable"
-          description={error}
-          actionLabel="Retry"
-          onAction={refresh}
+          title={SHIFT_UNAVAILABLE_TITLE}
+          description="It may be filled, withdrawn, or no longer open for your role."
         />
       </AppScreen>
     );

@@ -31,6 +31,7 @@ import React, {
 import { Platform } from 'react-native';
 
 import { clearAvatarUrlCache } from '@/lib/avatar';
+import { deactivateCurrentPushDevice } from '@/lib/push/client';
 import { createSessionFromUrl, signInWithGoogleOAuth } from '@/lib/oauth';
 import {
   clearAllWorkerRecoveryState,
@@ -640,6 +641,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session, hydrate]);
 
   const signOut = useCallback(async () => {
+    try {
+      await deactivateCurrentPushDevice();
+    } catch {
+      // Ending the session still proceeds when the device token cannot be cleared.
+    }
     clearAvatarUrlCache();
     clearAllWorkerRecoveryState();
     await supabase.auth.signOut();

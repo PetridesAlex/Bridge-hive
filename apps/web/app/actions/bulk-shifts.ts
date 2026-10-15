@@ -18,6 +18,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { requireOrgMembership } from '@/lib/auth';
+import { notifyPublishedShiftsSafely } from '@/lib/push/notify';
 import { createClient } from '@/lib/supabase/server';
 
 export type BulkRowError = {
@@ -327,6 +328,10 @@ export async function createShiftsBatchAction(
 
   revalidatePath(`/org/${slug}/shifts`);
   revalidatePath(`/org/${slug}/dashboard`);
+
+  if (payload.requested_status === 'published' || parsed.data.requestedStatus === 'published') {
+    await notifyPublishedShiftsSafely();
+  }
 
   return {
     success: true,

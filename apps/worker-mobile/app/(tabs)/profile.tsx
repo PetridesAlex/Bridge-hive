@@ -299,6 +299,11 @@ export default function AccountHubScreen() {
         onPress={() => router.push('/notifications')}
       />
       <ProfileMenuRow
+        icon="options-outline"
+        label="Notification preferences"
+        onPress={() => router.push('/profile/notification-preferences')}
+      />
+      <ProfileMenuRow
         icon="wallet-outline"
         label="Earnings"
         trailing={earningsTrailing}

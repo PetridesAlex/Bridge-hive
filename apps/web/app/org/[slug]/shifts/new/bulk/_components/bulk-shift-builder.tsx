@@ -13,6 +13,7 @@ import {
   formatMoneyMinor,
   newBulkRequestKey,
   resolveShiftLocalWindow,
+  sumRequiredPositions,
   summarizeBulkBatch,
   type BulkCreationMode,
   type BulkPreviewShift,
@@ -126,7 +127,7 @@ export function BulkShiftBuilder({
     requiredRole: (defaults?.requiredRole ?? 'registered_nurse') as WorkerRole,
     breakMinutes: defaults?.breakMinutes ?? 30,
     rateEuros: defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
-    title: defaults?.title ?? '',
+    positions: 1,
   };
   const [locationId, setLocationId] = useState(defaultLocationId);
   const [wardId, setWardId] = useState(defaults?.wardId ?? '');
@@ -142,6 +143,7 @@ export function BulkShiftBuilder({
     defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
   );
   const [title, setTitle] = useState(defaults?.title ?? '');
+  const [positions, setPositions] = useState('1');
   const [deadlineHours, setDeadlineHours] = useState(
     String(defaults?.deadlineHoursBefore ?? 24),
   );
@@ -250,6 +252,19 @@ export function BulkShiftBuilder({
         };
       }
 
+      const positionsValue = Number.parseInt(positions, 10);
+      if (
+        !Number.isInteger(positionsValue) ||
+        positionsValue < 1 ||
+        positionsValue > 100
+      ) {
+        return {
+          error: 'Positions must be a whole number from 1 to 100.',
+          rows: [] as BuiltRow[],
+          preview: [] as BulkPreviewShift[],
+        };
+      }
+
       return buildFromSharedTemplate({
         dates,
         locationId,
@@ -260,6 +275,7 @@ export function BulkShiftBuilder({
         breakMinutes: Number(breakMinutes) || 0,
         rateMinor: eurosToMinor(rateEuros),
         title: title.trim() || null,
+        requiredPositions: positionsValue,
         locationTz,
         deadlineHours: Number(deadlineHours),
       });
@@ -287,12 +303,14 @@ export function BulkShiftBuilder({
     breakMinutes,
     rateEuros,
     title,
+    positions,
     locationTz,
     deadlineHours,
   ]);
 
   const preview = built.preview;
   const summary = summarizeBulkBatch(preview);
+  const totalPositions = sumRequiredPositions(preview);
   const exactDupes = findExactDuplicateShifts(preview);
   const overlaps = findOverlappingShifts(preview);
   const countCheck = assertBulkShiftCount(preview.length);
@@ -335,6 +353,7 @@ export function BulkShiftBuilder({
           acceptanceDeadline: r.acceptanceDeadline,
           title: r.title,
           notes: defaults?.notes ?? null,
+          requiredPositions: r.requiredPositions,
         })),
       };
 
@@ -453,6 +472,8 @@ export function BulkShiftBuilder({
               setRateEuros={setRateEuros}
               title={title}
               setTitle={setTitle}
+              positions={positions}
+              setPositions={setPositions}
               deadlineHours={deadlineHours}
               setDeadlineHours={setDeadlineHours}
             />
@@ -615,10 +636,14 @@ export function BulkShiftBuilder({
 
       {step === 'review' || step === 'confirm' ? (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SummaryTile
               label="Shifts"
               value={String(summary.shiftCount)}
+            />
+            <SummaryTile
+              label="Total positions"
+              value={String(totalPositions)}
             />
             <SummaryTile
               label="Est. gross"
@@ -672,6 +697,7 @@ export function BulkShiftBuilder({
                     <th className="px-3 py-2.5">Role</th>
                     <th className="px-3 py-2.5">Location</th>
                     <th className="px-3 py-2.5">Ward / unit</th>
+                    <th className="px-3 py-2.5">Positions</th>
                     <th className="px-3 py-2.5">Rate</th>
                   </tr>
                 </thead>
@@ -701,6 +727,9 @@ export function BulkShiftBuilder({
                         {row.wardId
                           ? (wardNameById.get(row.wardId) ?? '—')
                           : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-bh-text-secondary">
+                        {row.requiredPositions ?? 1}
                       </td>
                       <td className="px-3 py-2">
                         {formatMoneyMinor(row.rateMinor, row.currency)}/hr
@@ -814,6 +843,7 @@ type BuiltRow = {
   rateMinor: number;
   acceptanceDeadline: string | null;
   title: string | null;
+  requiredPositions: number;
 };
 
 function buildFromSharedTemplate(params: {
@@ -826,6 +856,7 @@ function buildFromSharedTemplate(params: {
   breakMinutes: number;
   rateMinor: number;
   title: string | null;
+  requiredPositions: number;
   locationTz: string;
   deadlineHours: number;
 }): { error: string | null; rows: BuiltRow[]; preview: BulkPreviewShift[] } {
@@ -872,6 +903,7 @@ function buildFromSharedTemplate(params: {
       rateMinor: params.rateMinor,
       acceptanceDeadline,
       title: params.title,
+      requiredPositions: params.requiredPositions,
     });
     preview.push({
       rowIndex: i,
@@ -885,6 +917,7 @@ function buildFromSharedTemplate(params: {
       currency: 'EUR',
       breakMinutes: params.breakMinutes,
       title: params.title,
+      requiredPositions: params.requiredPositions,
     });
   }
 
@@ -904,6 +937,17 @@ function buildFromCustomRows(
     const row = customRows[i]!;
     if (!row.locationId || !row.dateYmd) {
       return { error: `Row ${i + 1}: location and date are required.`, rows: [], preview: [] };
+    }
+    if (
+      !Number.isInteger(row.positions) ||
+      row.positions < 1 ||
+      row.positions > 100
+    ) {
+      return {
+        error: `Row ${i + 1}: Positions must be a whole number from 1 to 100.`,
+        rows: [],
+        preview: [],
+      };
     }
     const window = resolveShiftLocalWindow({
       dateYmd: row.dateYmd,
@@ -944,7 +988,8 @@ function buildFromCustomRows(
       breakMinutes: row.breakMinutes,
       rateMinor,
       acceptanceDeadline,
-      title: row.title.trim() || null,
+      title: null,
+      requiredPositions: row.positions,
     });
     preview.push({
       rowIndex: i,
@@ -957,7 +1002,8 @@ function buildFromCustomRows(
       rateMinor,
       currency: 'EUR',
       breakMinutes: row.breakMinutes,
-      title: row.title.trim() || null,
+      title: null,
+      requiredPositions: row.positions,
     });
   }
 
@@ -1181,6 +1227,8 @@ function SharedTemplateFields({
   setRateEuros,
   title,
   setTitle,
+  positions,
+  setPositions,
   deadlineHours,
   setDeadlineHours,
 }: {
@@ -1207,6 +1255,8 @@ function SharedTemplateFields({
   setRateEuros: (v: string) => void;
   title: string;
   setTitle: (v: string) => void;
+  positions: string;
+  setPositions: (v: string) => void;
   deadlineHours: string;
   setDeadlineHours: (v: string) => void;
 }) {
@@ -1267,6 +1317,21 @@ function SharedTemplateFields({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={200}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="bulk-positions">Positions</Label>
+        <Input
+          id="bulk-positions"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={100}
+          step={1}
+          title="Number of professionals needed for this shift"
+          aria-label="Number of professionals needed for this shift"
+          value={positions}
+          onChange={(e) => setPositions(e.target.value)}
         />
       </div>
       <div className="space-y-2">

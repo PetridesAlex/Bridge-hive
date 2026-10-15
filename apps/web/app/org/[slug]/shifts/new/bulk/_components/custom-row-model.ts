@@ -1,10 +1,13 @@
 import {
   BULK_SHIFT_MAX,
   BULK_SHIFT_MIN,
+  SHIFT_POSITIONS_MAX,
+  SHIFT_POSITIONS_MIN,
   addCalendarDaysYmd,
   isValidHm,
   isValidYmd,
   isoWeekdayOfYmd,
+  parseShiftPositions,
   type IsoWeekday,
   type WorkerRole,
 } from '@bridge-hive/domain';
@@ -19,7 +22,7 @@ export type BulkCustomRow = {
   requiredRole: WorkerRole;
   breakMinutes: number;
   rateEuros: string;
-  title: string;
+  positions: number;
 };
 
 export type BulkCustomRowSeed = {
@@ -30,7 +33,7 @@ export type BulkCustomRowSeed = {
   endHm: string;
   breakMinutes: number;
   rateEuros: string;
-  title: string;
+  positions: number;
 };
 
 export type BulkCustomRowField =
@@ -42,7 +45,7 @@ export type BulkCustomRowField =
   | 'requiredRole'
   | 'breakMinutes'
   | 'rateEuros'
-  | 'title';
+  | 'positions';
 
 export type BulkCustomRowFieldErrors = Partial<
   Record<BulkCustomRowField, string>
@@ -176,8 +179,12 @@ export function copyFirstRowFieldsToAll(rows: BulkCustomRow[]): BulkCustomRow[] 
     requiredRole: first.requiredRole,
     breakMinutes: first.breakMinutes,
     rateEuros: first.rateEuros,
-    title: first.title,
+    positions: first.positions,
   }));
+}
+
+export function sumCustomRowPositions(rows: ReadonlyArray<BulkCustomRow>): number {
+  return rows.reduce((sum, row) => sum + (Number.isFinite(row.positions) ? row.positions : 0), 0);
 }
 
 export function validateCustomRowFields(
@@ -204,9 +211,13 @@ export function validateCustomRowFields(
   if (!Number.isFinite(rate) || rate <= 0) {
     errors.rateEuros = 'Enter a rate greater than zero.';
   }
-  if (row.title.length > 200) {
-    errors.title = 'Label must be 200 characters or fewer.';
+  if (parseShiftPositions(row.positions) == null) {
+    errors.positions = `Positions must be a whole number from ${SHIFT_POSITIONS_MIN} to ${SHIFT_POSITIONS_MAX}.`;
   }
 
   return errors;
+}
+
+export function parsePositionsInput(raw: string): number | null {
+  return parseShiftPositions(raw);
 }

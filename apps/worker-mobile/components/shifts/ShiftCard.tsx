@@ -2,10 +2,12 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
+import { openPositionsLabel, remainingOpenPositions } from '@bridge-hive/domain';
+
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { colors, spacing, shiftStatusStyles, typography } from '@/constants/theme';
-import type { Shift } from '@/lib/queries';
+import type { MarketplaceShift, Shift } from '@/lib/queries';
 import {
   formatDayLabel,
   formatMoney,
@@ -14,7 +16,7 @@ import {
 } from '@/utils/format';
 
 type Props = {
-  shift: Shift;
+  shift: Shift | MarketplaceShift;
   organizationName?: string;
   locationName?: string;
   onPress?: () => void;
@@ -40,6 +42,12 @@ export function ShiftCard({
   const day = formatDayLabel(isoDateFromTimestamp(shift.starts_at));
   const dateObj = new Date(shift.starts_at);
   const dayNum = dateObj.getDate();
+  const openCount =
+    'open_positions' in shift && typeof shift.open_positions === 'number'
+      ? shift.open_positions
+      : remainingOpenPositions(shift.required_positions ?? 1, 0);
+  const positionsCopy =
+    shift.status === 'published' ? openPositionsLabel(openCount) : null;
 
   const handlePress = () => {
     if (onPress) onPress();
@@ -51,7 +59,7 @@ export function ShiftCard({
       onPress={handlePress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
       accessibilityRole="button"
-      accessibilityLabel={`${shift.title?.trim() || roleLabel}, ${day}`}
+      accessibilityLabel={`${shift.title?.trim() || roleLabel}, ${day}${positionsCopy ? `, ${positionsCopy}` : ''}`}
     >
       <View style={styles.dateTile}>
         <Text style={styles.dayNum}>{dayNum}</Text>
@@ -75,6 +83,7 @@ export function ShiftCard({
         ) : null}
         <Text style={styles.time} numberOfLines={1}>
           {formatTimeRange(shift.starts_at, shift.ends_at)} · {roleLabel}
+          {positionsCopy ? ` · ${positionsCopy}` : ''}
         </Text>
         <View style={styles.footer}>
           <StatusBadge

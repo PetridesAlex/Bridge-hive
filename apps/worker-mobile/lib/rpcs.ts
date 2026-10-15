@@ -22,6 +22,8 @@ export type WorkerShiftDetails = {
   notes: string | null;
   break_minutes: number;
   acceptance_deadline: string | null;
+  required_positions: number;
+  open_positions: number;
 };
 
 /** Pilot check-in opens 30 minutes before shift start (server enforces the same rule). */
@@ -152,6 +154,8 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
       notes: shift.notes,
       break_minutes: shift.break_minutes,
       acceptance_deadline: shift.acceptance_deadline,
+      required_positions: shift.required_positions ?? 1,
+      open_positions: shift.required_positions ?? 1,
     },
   };
 }

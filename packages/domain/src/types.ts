@@ -265,6 +265,7 @@ export type Shift = {
   acceptanceDeadline: string | null;
   title: string | null;
   notes: string | null;
+  requiredPositions: number;
 };
 
 export type ShiftAssignment = {

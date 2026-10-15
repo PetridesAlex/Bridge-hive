@@ -1657,6 +1657,7 @@ export type Database = {
           notes: string | null
           organization_id: string
           rate_minor: number
+          required_positions: number
           required_role: Database["public"]["Enums"]["worker_role"]
           starts_at: string
           status: Database["public"]["Enums"]["shift_status"]
@@ -1677,6 +1678,7 @@ export type Database = {
           notes?: string | null
           organization_id: string
           rate_minor: number
+          required_positions?: number
           required_role: Database["public"]["Enums"]["worker_role"]
           starts_at: string
           status?: Database["public"]["Enums"]["shift_status"]
@@ -1697,6 +1699,7 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           rate_minor?: number
+          required_positions?: number
           required_role?: Database["public"]["Enums"]["worker_role"]
           starts_at?: string
           status?: Database["public"]["Enums"]["shift_status"]
@@ -2579,8 +2582,10 @@ export type Database = {
           ends_at: string
           location_name: string
           notes: string
+          open_positions: number
           organization_name: string
           rate_minor: number
+          required_positions: number
           required_role: Database["public"]["Enums"]["worker_role"]
           shift_id: string
           starts_at: string
@@ -2588,6 +2593,14 @@ export type Database = {
           title: string
           ward_name: string
         }[]
+      }
+      shift_active_assignment_count: {
+        Args: { p_shift_id: string }
+        Returns: number
+      }
+      shift_open_positions: {
+        Args: { p_shift_id: string }
+        Returns: number
       }
       has_org_role: {
         Args: {

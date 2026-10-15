@@ -27,7 +27,7 @@ const seed: BulkCustomRowSeed = {
   endHm: '16:00',
   breakMinutes: 30,
   rateEuros: '25.00',
-  title: 'Day coverage',
+  positions: 1,
 };
 
 const wards = [
@@ -104,14 +104,14 @@ describe('custom-row-model', () => {
         ...seed,
         requiredRole: 'physiotherapist',
         rateEuros: '45.00',
-        title: 'Other',
+        positions: 3,
       },
     ];
     const next = copyFirstRowFieldsToAll(rows);
     expect(next[1]!.dateYmd).toBe('2026-10-20');
     expect(next[1]!.requiredRole).toBe('ward_assistant');
     expect(next[1]!.rateEuros).toBe('18.00');
-    expect(next[1]!.title).toBe('Day coverage');
+    expect(next[1]!.positions).toBe(1);
   });
 
   it('resets an incompatible ward when the location changes', () => {
@@ -151,7 +151,7 @@ describe('custom-row-model', () => {
 
   it('retains entered row values when the shared wards list grows', () => {
     const rows = createStarterCustomRows(seed);
-    rows[0]!.title = 'Keep me';
+    rows[0]!.positions = 4;
     rows[0]!.rateEuros = '33.00';
     rows[0]!.wardId = '';
 
@@ -164,11 +164,11 @@ describe('custom-row-model', () => {
       index === 0 ? { ...row, wardId: 'ward-new' } : row,
     );
 
-    expect(next[0]!.title).toBe('Keep me');
+    expect(next[0]!.positions).toBe(4);
     expect(next[0]!.rateEuros).toBe('33.00');
     expect(next[0]!.wardId).toBe('ward-new');
     expect(wardBelongsToLocation('ward-new', 'loc-a', grownWards)).toBe(true);
-    expect(next[1]!.title).toBe(rows[1]!.title);
+    expect(next[1]!.positions).toBe(rows[1]!.positions);
   });
 
   it('validates required fields and overnight windows', () => {
@@ -186,7 +186,7 @@ describe('custom-row-model', () => {
       requiredRole: 'registered_nurse',
       breakMinutes: -1,
       rateEuros: '0',
-      title: 'x'.repeat(201),
+      positions: 0,
     });
     expect(bad.dateYmd).toMatch(/valid date/i);
     expect(bad.startHm).toMatch(/start/i);
@@ -194,7 +194,7 @@ describe('custom-row-model', () => {
     expect(bad.locationId).toMatch(/location/i);
     expect(bad.breakMinutes).toMatch(/break/i);
     expect(bad.rateEuros).toMatch(/rate/i);
-    expect(bad.title).toMatch(/200/i);
+    expect(bad.positions).toMatch(/1 to 100/i);
 
     expect(
       Object.keys(
@@ -205,5 +205,34 @@ describe('custom-row-model', () => {
         }),
       ),
     ).toHaveLength(0);
+  });
+
+  it('defaults positions to 1 and rejects invalid capacity values', () => {
+    const rows = createStarterCustomRows(seed);
+    expect(rows[0]!.positions).toBe(1);
+
+    const base = {
+      key: 'a',
+      dateYmd: '2026-10-15',
+      ...seed,
+    };
+    expect(validateCustomRowFields({ ...base, positions: 100 })).not.toHaveProperty(
+      'positions',
+    );
+    expect(validateCustomRowFields({ ...base, positions: -1 }).positions).toMatch(
+      /1 to 100/i,
+    );
+    expect(validateCustomRowFields({ ...base, positions: 1.5 }).positions).toMatch(
+      /1 to 100/i,
+    );
+    expect(validateCustomRowFields({ ...base, positions: 101 }).positions).toMatch(
+      /1 to 100/i,
+    );
+
+    const duplicated = duplicateCustomRow(
+      [{ ...rows[0]!, positions: 7 }, rows[1]!],
+      0,
+    );
+    expect(duplicated[1]!.positions).toBe(7);
   });
 });

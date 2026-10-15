@@ -143,6 +143,14 @@ export const createShiftDraftSchema = z
     acceptanceDeadline: z.string().datetime({ offset: true }).nullable().optional(),
     title: z.string().max(200).optional(),
     notes: z.string().max(4000).optional(),
+    requiredPositions: z
+      .number({
+        invalid_type_error: 'Positions must be a whole number from 1 to 100.',
+      })
+      .int('Positions must be a whole number from 1 to 100.')
+      .min(1, 'Positions must be at least 1.')
+      .max(100, 'Positions cannot exceed 100.')
+      .default(1),
     requirements: z
       .array(
         z.object({

@@ -17,6 +17,8 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { Surface } from '@/components/ui/Surface';
+import { openPositionsLabel } from '@bridge-hive/domain';
+
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
 import { getMyAssignments, type ShiftAssignment } from '@/lib/queries';
@@ -202,7 +204,12 @@ export default function ShiftDetailScreen() {
   const roleLabel =
     WORKER_ROLE_LABELS[shift.required_role as keyof typeof WORKER_ROLE_LABELS] ??
     shift.required_role;
-  const canClaim = isVerified && shift.status === 'published' && !assignment;
+  const openPositions = shift.open_positions ?? 0;
+  const canClaim =
+    isVerified &&
+    shift.status === 'published' &&
+    !assignment &&
+    openPositions > 0;
   const canCheckIn = assignment?.status === 'accepted' && Boolean(checkInWindow?.isOpen);
   const showCheckInWaiting =
     assignment?.status === 'accepted' && Boolean(checkInWindow?.isTooEarly);
@@ -288,6 +295,14 @@ export default function ShiftDetailScreen() {
               emphasize
             />
             <KeyValueRow label="Required role" value={roleLabel} />
+            <KeyValueRow
+              label="Positions"
+              value={
+                shift.status === 'published'
+                  ? openPositionsLabel(openPositions)
+                  : `${shift.required_positions ?? 1}`
+              }
+            />
           </View>
         </Surface>
 

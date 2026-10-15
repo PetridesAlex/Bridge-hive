@@ -245,6 +245,7 @@ export type BulkPreviewShift = {
   currency: string;
   breakMinutes: number;
   title?: string | null;
+  requiredPositions?: number;
 };
 
 export type ExactDuplicatePair = {

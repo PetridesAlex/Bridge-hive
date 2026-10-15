@@ -185,6 +185,9 @@ export function ShiftForm({
 
   const [state, formAction, pending] = useActionState(action, initial);
   const [title, setTitle] = useState(shift?.title ?? '');
+  const [requiredPositions, setRequiredPositions] = useState(
+    String(shift?.required_positions ?? 1),
+  );
   const [locationId, setLocationId] = useState(
     shift?.location_id ?? locations[0]?.id ?? '',
   );
@@ -247,6 +250,28 @@ export function ShiftForm({
             />
             <p className="text-xs text-bh-text-muted">
               Optional. Workers see this on the shift card.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="requiredPositions">Positions</Label>
+            <Input
+              id="requiredPositions"
+              name="requiredPositions"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={100}
+              step={1}
+              title="Number of professionals needed for this shift"
+              aria-label="Number of professionals needed for this shift"
+              value={requiredPositions}
+              onChange={(e) => setRequiredPositions(e.target.value)}
+              required
+              className={fieldClass}
+            />
+            <p className="text-xs text-bh-text-muted">
+              How many eligible professionals can accept this shift (1–100).
             </p>
           </div>
 

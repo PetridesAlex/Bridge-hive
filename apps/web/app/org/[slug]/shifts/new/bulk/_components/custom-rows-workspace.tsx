@@ -34,6 +34,8 @@ import {
   deleteCustomRow,
   duplicateCustomRow,
   isOvernightShift,
+  parsePositionsInput,
+  sumCustomRowPositions,
   validateCustomRowFields,
   weekdayLabelForYmd,
   withLocationChange,
@@ -157,19 +159,29 @@ export function CustomRowsWorkspace({
             </div>
           </div>
 
-          <div className="flex items-center gap-3 rounded-2xl border border-[#16384f]/12 bg-[linear-gradient(155deg,#16384f_0%,#071d30_62%,#0c3a42_100%)] px-3.5 py-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_22px_rgba(7,29,48,0.22)]">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-              <Rows3 className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-            </span>
-            <div className="leading-none">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/65">
-                In this batch
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-[#16384f]/12 bg-[linear-gradient(155deg,#16384f_0%,#071d30_62%,#0c3a42_100%)] px-3.5 py-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_22px_rgba(7,29,48,0.22)]">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+                <Rows3 className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+              </span>
+              <div className="leading-none">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/65">
+                  In this batch
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  <span className="bh-tabular text-lg tracking-tight">
+                    {rows.length}
+                  </span>
+                  <span className="text-white/70"> / {BULK_SHIFT_MAX} shifts</span>
+                </p>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-bh-border bg-white px-3.5 py-2.5 shadow-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                Total positions
               </p>
-              <p className="mt-1 text-sm font-semibold">
-                <span className="bh-tabular text-lg tracking-tight">
-                  {rows.length}
-                </span>
-                <span className="text-white/70"> / {BULK_SHIFT_MAX}</span>
+              <p className="mt-1 bh-tabular text-lg font-semibold tracking-tight text-[#071d30]">
+                {sumCustomRowPositions(rows)}
               </p>
             </div>
           </div>
@@ -234,7 +246,7 @@ export function CustomRowsWorkspace({
             </p>
           </div>
           <div className="max-h-[36rem] overflow-auto">
-            <table className="w-full min-w-[78rem] border-separate border-spacing-0 text-left text-sm">
+            <table className="w-full border-separate border-spacing-0 text-left text-sm">
               <thead className={premiumTableHeadClassName}>
                 <tr>
                   <TableHeadCell className="w-12">#</TableHeadCell>
@@ -247,7 +259,7 @@ export function CustomRowsWorkspace({
                   <TableHeadCell>End</TableHeadCell>
                   <TableHeadCell>Break</TableHeadCell>
                   <TableHeadCell>Rate €</TableHeadCell>
-                  <TableHeadCell>Label</TableHeadCell>
+                  <TableHeadCell>Positions</TableHeadCell>
                   <TableHeadCell className="text-right">Actions</TableHeadCell>
                 </tr>
               </thead>
@@ -484,13 +496,23 @@ function CustomRowTableRow({
       </td>
       <td className="px-2 py-3 align-top">
         <Input
-          aria-label={`Row ${index + 1} shift label`}
-          className={cn(fieldInputClass, 'w-[9rem]', invalidClass(Boolean(errors.title)))}
-          value={row.title}
-          maxLength={200}
-          onChange={(e) => onUpdate({ title: e.target.value })}
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={100}
+          step={1}
+          title="Number of professionals needed for this shift"
+          aria-label={`Row ${index + 1}: Number of professionals needed for this shift`}
+          className={cn(fieldInputClass, 'w-[9rem]', invalidClass(Boolean(errors.positions)))}
+          value={row.positions}
+          onChange={(e) => {
+            const parsed = parsePositionsInput(e.target.value);
+            onUpdate({
+              positions: parsed ?? (e.target.value === '' ? 0 : row.positions),
+            });
+          }}
         />
-        <FieldError message={errors.title} />
+        <FieldError message={errors.positions} />
       </td>
       <td className="px-2.5 py-3 align-top last:pr-4">
         <div className="flex items-center justify-end gap-1 opacity-80 transition-opacity duration-150 group-hover:opacity-100">
@@ -672,12 +694,23 @@ function CustomRowMobileCard({
             onChange={(e) => onUpdate({ rateEuros: e.target.value })}
           />
         </MobileField>
-        <MobileField label="Shift label" error={errors.title}>
+        <MobileField label="Positions" error={errors.positions}>
           <Input
-            className={cn(fieldInputClass, invalidClass(Boolean(errors.title)))}
-            value={row.title}
-            maxLength={200}
-            onChange={(e) => onUpdate({ title: e.target.value })}
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={100}
+            step={1}
+            title="Number of professionals needed for this shift"
+            aria-label={`Row ${index + 1}: Number of professionals needed for this shift`}
+            className={cn(fieldInputClass, invalidClass(Boolean(errors.positions)))}
+            value={row.positions}
+            onChange={(e) => {
+              const parsed = parsePositionsInput(e.target.value);
+              onUpdate({
+                positions: parsed ?? (e.target.value === '' ? 0 : row.positions),
+              });
+            }}
           />
         </MobileField>
       </div>

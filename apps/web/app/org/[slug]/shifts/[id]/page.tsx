@@ -1,4 +1,8 @@
-import { credentialTypeLabel, formatMoneyMinor } from '@bridge-hive/domain';
+import {
+  credentialTypeLabel,
+  filledPositionsLabel,
+  formatMoneyMinor,
+} from '@bridge-hive/domain';
 import {
   CalendarClock,
   ClipboardList,
@@ -127,25 +131,31 @@ export default async function ShiftDetailPage({
           .order('name')
       : { data: [] as Array<{ id: string; name: string; location_id: string }> };
 
-  const { data: assignment } = await supabase
+  const { data: assignmentRows } = await supabase
     .from('shift_assignments')
     .select(
       '*, worker:worker_profiles!shift_assignments_worker_id_fkey(user_id, worker_role), timesheet:timesheets(*)',
     )
     .eq('shift_id', shift.id)
     .not('status', 'in', '(withdrawn,cancelled)')
-    .maybeSingle();
+    .order('accepted_at', { ascending: true });
+
+  const assignments = assignmentRows ?? [];
+  const filledCount = assignments.length;
+  const requiredPositions = shift.required_positions ?? 1;
+  const openPositions = Math.max(0, requiredPositions - filledCount);
+  const assignment = assignments[0] ?? null;
 
   const timesheet = Array.isArray(assignment?.timesheet)
     ? assignment?.timesheet[0]
     : assignment?.timesheet;
 
   const { data: payout } =
-    timesheet?.status === 'approved'
+    timesheet?.status === 'approved' && assignment
       ? await supabase
           .from('payouts')
           .select('*')
-          .eq('assignment_id', assignment!.id)
+          .eq('assignment_id', assignment.id)
           .maybeSingle()
       : { data: null };
 
@@ -168,7 +178,7 @@ export default async function ShiftDetailPage({
   const canExtendAcceptance =
     ctx.capabilities.canManageShifts &&
     shift.status === 'published' &&
-    !assignment &&
+    openPositions > 0 &&
     new Date(shift.starts_at) > new Date();
 
   const locationName =
@@ -227,6 +237,10 @@ export default async function ShiftDetailPage({
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <MetaTile label="Role" value={roleLabel(shift.required_role)} />
+          <MetaTile
+            label="Positions"
+            value={filledPositionsLabel(filledCount, requiredPositions)}
+          />
           <MetaTile
             label="Hourly rate"
             value={formatRate(shift.rate_minor, shift.currency)}
@@ -323,60 +337,74 @@ export default async function ShiftDetailPage({
       </PermissionGuard>
 
       <DetailPanel
-        title="Assignment"
+        title="Assignments"
         description={
-          assignment
-            ? 'Active worker assignment and attendance timestamps.'
+          filledCount > 0
+            ? `${filledPositionsLabel(filledCount, requiredPositions)}.`
             : 'No worker has claimed this shift yet.'
         }
         icon={UserRound}
       >
-        {!assignment ? (
+        {filledCount === 0 ? (
           <div className="rounded-xl border border-dashed border-bh-border bg-bh-subtle/30 px-4 py-8 text-center">
             <p className="text-sm font-medium text-bh-text">Waiting for a claim</p>
             <p className="mt-1 text-sm text-bh-text-secondary">
               {shift.status === 'published'
-                ? 'Published and open for verified workers.'
+                ? `Published with ${requiredPositions} position${requiredPositions === 1 ? '' : 's'} open for verified workers.`
                 : 'Publish the draft to make it claimable.'}
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <MetaTile
-              label="Worker"
-              value={
-                assignment.worker &&
-                typeof assignment.worker === 'object' &&
-                'worker_role' in assignment.worker
-                  ? roleLabel(String(assignment.worker.worker_role ?? 'worker'))
-                  : 'Assigned worker'
-              }
-              hint={`${assignment.worker_id.slice(0, 8)}…`}
-            />
-            <MetaTile
-              label="Assignment status"
-              value={
-                <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
-                  {assignment.status.replaceAll('_', ' ')}
-                </span>
-              }
-            />
-            <MetaTile
-              label="Check-in"
-              value={
-                assignment.check_in_at
-                  ? formatDateTime(assignment.check_in_at, ctx.org.timezone)
-                  : '—'
-              }
-            />
-            <MetaTile
-              label="Check-out"
-              value={
-                assignment.check_out_at
-                  ? formatDateTime(assignment.check_out_at, ctx.org.timezone)
-                  : '—'
-              }
-            />
+          <div className="space-y-3">
+            {assignments.map((row) => (
+              <div
+                key={row.id}
+                className="grid gap-3 rounded-xl border border-bh-border/80 bg-bh-subtle/30 p-4 sm:grid-cols-2"
+              >
+                <MetaTile
+                  label="Worker"
+                  value={
+                    row.worker &&
+                    typeof row.worker === 'object' &&
+                    'worker_role' in row.worker
+                      ? roleLabel(String(row.worker.worker_role ?? 'worker'))
+                      : 'Assigned worker'
+                  }
+                  hint={`${row.worker_id.slice(0, 8)}…`}
+                />
+                <MetaTile
+                  label="Assignment status"
+                  value={
+                    <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
+                      {row.status.replaceAll('_', ' ')}
+                    </span>
+                  }
+                />
+                <MetaTile
+                  label="Check-in"
+                  value={
+                    row.check_in_at
+                      ? formatDateTime(row.check_in_at, ctx.org.timezone)
+                      : '—'
+                  }
+                />
+                <MetaTile
+                  label="Check-out"
+                  value={
+                    row.check_out_at
+                      ? formatDateTime(row.check_out_at, ctx.org.timezone)
+                      : '—'
+                  }
+                />
+              </div>
+            ))}
+            {openPositions > 0 && shift.status === 'published' ? (
+              <p className="text-sm text-bh-text-secondary">
+                {openPositions === 1
+                  ? '1 position still open.'
+                  : `${openPositions} positions still open.`}
+              </p>
+            ) : null}
           </div>
         )}
       </DetailPanel>

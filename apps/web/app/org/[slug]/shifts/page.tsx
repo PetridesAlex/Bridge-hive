@@ -6,6 +6,7 @@ import {
   countDraftShifts,
   countFilledUpcoming,
   countOpenShifts,
+  filledPositionsLabel,
   filterCalendarShifts,
   isWorkerRole,
   mapShiftToCalendarEvent,
@@ -158,7 +159,7 @@ export default async function ShiftsPage({
       let query = supabase
         .from('shifts')
         .select(
-          'id, title, status, starts_at, ends_at, required_role, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
+          'id, title, status, starts_at, ends_at, required_role, required_positions, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
         )
         .eq('organization_id', ctx.org.id)
         .order('starts_at', { ascending: range !== 'past' });
@@ -239,7 +240,12 @@ export default async function ShiftsPage({
       : { data: [] as Array<{ shift_id: string; worker: unknown }> };
 
   const assigneeByShift = new Map<string, string>();
+  const filledCountByShift = new Map<string, number>();
   for (const row of assignmentRows ?? []) {
+    filledCountByShift.set(
+      row.shift_id,
+      (filledCountByShift.get(row.shift_id) ?? 0) + 1,
+    );
     if (assigneeByShift.has(row.shift_id)) continue;
     const worker = Array.isArray(row.worker) ? row.worker[0] : row.worker;
     const profile =
@@ -717,6 +723,15 @@ export default async function ShiftsPage({
                     'HH:mm',
                   )} – ${formatInTimeZone(new Date(shift.ends_at), timeZone, 'HH:mm')}`;
                   const assignee = assigneeByShift.get(shift.id);
+                  const filledForShift = filledCountByShift.get(shift.id) ?? 0;
+                  const requiredForShift =
+                    typeof shift.required_positions === 'number'
+                      ? shift.required_positions
+                      : 1;
+                  const capacityLabel = filledPositionsLabel(
+                    filledForShift,
+                    requiredForShift,
+                  );
                   const initials = (assignee ?? 'U')
                     .split(/\s+/)
                     .map((p) => p[0])
@@ -802,23 +817,32 @@ export default async function ShiftsPage({
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        {assignee ? (
-                          <span className="inline-flex min-w-0 items-center gap-2">
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-[10px] font-bold text-bh-teal-strong">
-                              {initials}
+                        <div className="space-y-1">
+                          {assignee ? (
+                            <span className="inline-flex min-w-0 items-center gap-2">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-[10px] font-bold text-bh-teal-strong">
+                                {initials}
+                              </span>
+                              <span className="truncate text-sm font-medium text-bh-text">
+                                {requiredForShift > 1
+                                  ? `${filledForShift} assigned`
+                                  : assignee}
+                              </span>
                             </span>
-                            <span className="truncate text-sm font-medium text-bh-text">
-                              {assignee}
+                          ) : (
+                            <span className="inline-flex items-center gap-2 text-sm text-bh-text-muted">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-subtle text-bh-text-muted">
+                                <UserPlus className="h-3.5 w-3.5" aria-hidden />
+                              </span>
+                              Unassigned
                             </span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-2 text-sm text-bh-text-muted">
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-subtle text-bh-text-muted">
-                              <UserPlus className="h-3.5 w-3.5" aria-hidden />
-                            </span>
-                            Unassigned
-                          </span>
-                        )}
+                          )}
+                          {requiredForShift > 1 ? (
+                            <p className="text-xs text-bh-text-muted">
+                              {capacityLabel}
+                            </p>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3.5">
                         <ShiftStatusBadge status={shift.status} />
@@ -855,6 +879,11 @@ export default async function ShiftsPage({
                   ? (location as { name: string }).name
                   : null;
               const assignee = assigneeByShift.get(shift.id);
+              const filledForShift = filledCountByShift.get(shift.id) ?? 0;
+              const requiredForShift =
+                typeof shift.required_positions === 'number'
+                  ? shift.required_positions
+                  : 1;
               return (
                 <li key={shift.id}>
                   <Link
@@ -875,7 +904,9 @@ export default async function ShiftsPage({
                           {locationName ? ` · ${locationName}` : ''}
                         </p>
                         <p className="mt-1 text-xs text-bh-text-muted">
-                          {assignee ?? 'Unassigned'}
+                          {requiredForShift > 1
+                            ? filledPositionsLabel(filledForShift, requiredForShift)
+                            : (assignee ?? 'Unassigned')}
                         </p>
                       </div>
                       <ShiftStatusBadge status={shift.status} />

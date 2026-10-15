@@ -12,7 +12,6 @@ export function OrganizationShell({
   capabilities,
   userLabel,
   userEmail,
-  canCreateShift,
   children,
 }: {
   slug: string;
@@ -23,7 +22,6 @@ export function OrganizationShell({
   capabilities: OrgNavCapabilities;
   userLabel: string;
   userEmail?: string | null;
-  canCreateShift: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -57,7 +55,6 @@ export function OrganizationShell({
           slug={slug}
           orgName={orgName}
           orgLogoUrl={orgLogoUrl}
-          canCreateShift={canCreateShift}
           current={current}
           memberships={memberships}
           capabilities={capabilities}

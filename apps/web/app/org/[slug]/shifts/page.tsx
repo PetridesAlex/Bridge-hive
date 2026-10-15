@@ -19,10 +19,12 @@ import {
   ChevronLeft,
   ChevronRight,
   FileEdit,
+  Layers,
   LayoutList,
   MapPin,
   Moon,
   MoreHorizontal,
+  Plus,
   RefreshCw,
   Search,
   Sun,
@@ -365,22 +367,45 @@ export default async function ShiftsPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <h1 className="text-[28px] font-bold leading-9 tracking-tight text-bh-text">
+        <div className="min-w-0">
+          <p className="mb-2.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
+            <span
+              aria-hidden
+              className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
+            />
+            Schedule
+          </p>
+          <h1 className="text-[2rem] font-extrabold leading-none tracking-[-0.04em] text-[#071d30]">
             Shifts
           </h1>
-          <p className="max-w-xl text-sm leading-6 text-bh-text-secondary">
+          <p className="mt-3 max-w-md border-l-2 border-[#e4b334] pl-3 text-[15px] leading-6 tracking-[-0.011em] text-bh-text-secondary">
             Create, publish and manage staffing across your locations.
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
           {ctx.capabilities.canManageShifts && ctx.capabilities.canOperate ? (
-            <div className="flex flex-wrap items-center justify-end gap-2">
-              <Button asChild variant="honey">
-                <Link href={`/org/${slug}/shifts/new`}>Create shift</Link>
+            <div className="flex flex-wrap items-center justify-end gap-2.5">
+              <Button
+                asChild
+                className="h-11 rounded-xl border border-[#e4b334]/40 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-3.5 pr-4 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_12px_26px_rgba(7,29,48,0.32)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_58%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_16px_32px_rgba(7,29,48,0.38)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              >
+                <Link href={`/org/${slug}/shifts/new`}>
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+                    <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                  </span>
+                  Create shift
+                </Link>
               </Button>
-              <Button asChild variant="outline">
-                <Link href={`/org/${slug}/shifts/new/bulk`}>Create multiple shifts</Link>
+              <Button
+                asChild
+                className="h-11 rounded-xl border border-white/20 bg-[linear-gradient(155deg,#1ab4c4_0%,#087f8c_52%,#065860_100%)] px-3.5 pr-4 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_12px_26px_rgba(8,127,140,0.34)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#2ec6d4_0%,#0a96a6_52%,#087f8c_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.34),0_16px_32px_rgba(8,127,140,0.42)] focus-visible:ring-white motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              >
+                <Link href={`/org/${slug}/shifts/new/bulk`}>
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/15 text-white ring-1 ring-white/30">
+                    <Layers className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+                  </span>
+                  Create multiple shifts
+                </Link>
               </Button>
             </div>
           ) : null}

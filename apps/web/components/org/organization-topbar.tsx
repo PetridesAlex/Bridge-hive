@@ -1,7 +1,6 @@
 'use client';
 
-import { Menu, Plus } from 'lucide-react';
-import Link from 'next/link';
+import { Menu } from 'lucide-react';
 import { useState } from 'react';
 
 import { OrgBreadcrumbBar } from '@/components/org/org-breadcrumb-bar';
@@ -19,7 +18,6 @@ export function OrganizationTopbar({
   slug,
   orgName,
   orgLogoUrl,
-  canCreateShift,
   current,
   memberships,
   capabilities,
@@ -29,7 +27,6 @@ export function OrganizationTopbar({
   slug: string;
   orgName: string;
   orgLogoUrl?: string | null;
-  canCreateShift: boolean;
   current: SwitcherOrg;
   memberships: SwitcherOrg[];
   capabilities: OrgNavCapabilities;
@@ -73,15 +70,6 @@ export function OrganizationTopbar({
       <div className="relative z-10 min-w-0 flex-1">
         <OrgBreadcrumbBar slug={slug} orgName={orgName} />
       </div>
-
-      {canCreateShift ? (
-        <Button asChild variant="default" className="relative z-10 rounded-xl font-semibold shadow-[0_8px_18px_rgba(7,29,48,0.22)]">
-          <Link href={`/org/${slug}/shifts/new`}>
-            <Plus className="h-4 w-4" aria-hidden />
-            Create shift
-          </Link>
-        </Button>
-      ) : null}
 
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <DialogContent

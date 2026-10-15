@@ -194,8 +194,9 @@ export function WardLibraryPanel({
                   {location.name}
                 </p>
                 <span className="text-xs text-bh-text-muted">
-                  {locationWards.length} unit
-                  {locationWards.length === 1 ? '' : 's'}
+                  {locationWards.length === 1
+                    ? '1 unit'
+                    : `${locationWards.length} units`}
                 </span>
               </div>
               {locationWards.length === 0 ? (

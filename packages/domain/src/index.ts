@@ -15,3 +15,4 @@ export * from './organization-activation';
 export * from './worker-password-recovery';
 export * from './worker-google-oauth';
 export * from './recruitment';
+export * from './ward-library';

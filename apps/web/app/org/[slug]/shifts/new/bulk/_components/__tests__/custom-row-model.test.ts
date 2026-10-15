@@ -138,6 +138,39 @@ describe('custom-row-model', () => {
     expect(withLocationChange(row, 'loc-a', wards).wardId).toBe('ward-a');
   });
 
+  it('treats no ward as a valid selection', () => {
+    const row: BulkCustomRow = {
+      key: 'a',
+      dateYmd: '2026-10-15',
+      ...seed,
+      wardId: '',
+    };
+    expect(validateCustomRowFields(row)).not.toHaveProperty('wardId');
+    expect(withLocationChange(row, 'loc-b', wards).wardId).toBe('');
+  });
+
+  it('retains entered row values when the shared wards list grows', () => {
+    const rows = createStarterCustomRows(seed);
+    rows[0]!.title = 'Keep me';
+    rows[0]!.rateEuros = '33.00';
+    rows[0]!.wardId = '';
+
+    const grownWards = [
+      ...wards,
+      { id: 'ward-new', locationId: 'loc-a' },
+    ];
+    // Selecting a newly added ward must not wipe other fields.
+    const next = rows.map((row, index) =>
+      index === 0 ? { ...row, wardId: 'ward-new' } : row,
+    );
+
+    expect(next[0]!.title).toBe('Keep me');
+    expect(next[0]!.rateEuros).toBe('33.00');
+    expect(next[0]!.wardId).toBe('ward-new');
+    expect(wardBelongsToLocation('ward-new', 'loc-a', grownWards)).toBe(true);
+    expect(next[1]!.title).toBe(rows[1]!.title);
+  });
+
   it('validates required fields and overnight windows', () => {
     expect(isOvernightShift('22:00', '06:00')).toBe(true);
     expect(isOvernightShift('08:00', '16:00')).toBe(false);

@@ -20,6 +20,8 @@ import {
   orgTableHeadClassName,
   orgTableRowClassName,
 } from '@/components/org/data-table';
+import { WardLibraryDialog } from '@/components/org/ward-library-dialog';
+import { WardUnitSelector } from '@/components/org/ward-unit-selector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -58,19 +60,27 @@ function invalidClass(hasError: boolean) {
 }
 
 export function CustomRowsWorkspace({
+  slug,
   rows,
   setRows,
   locations,
   wards,
+  onWardsCreated,
   deadlineHours,
   setDeadlineHours,
   seed,
   showFieldErrors,
 }: {
+  slug: string;
   rows: BulkCustomRow[];
   setRows: Dispatch<SetStateAction<BulkCustomRow[]>>;
   locations: LocationOption[];
   wards: WardOption[];
+  onWardsCreated: (
+    created: Array<{ id: string; name: string; locationId: string }>,
+    autoSelectWardId: string | null,
+    rowIndex: number | null,
+  ) => void;
   deadlineHours: string;
   setDeadlineHours: (value: string) => void;
   seed: BulkCustomRowSeed;
@@ -182,6 +192,7 @@ export function CustomRowsWorkspace({
                 {rows.map((row, index) => (
                   <CustomRowTableRow
                     key={row.key}
+                    slug={slug}
                     row={row}
                     index={index}
                     locations={locations}
@@ -192,6 +203,9 @@ export function CustomRowsWorkspace({
                     onUpdate={(patch) => updateRow(index, patch)}
                     onLocationChange={(locationId) =>
                       updateLocation(index, locationId)
+                    }
+                    onWardsCreated={(created, autoSelectWardId) =>
+                      onWardsCreated(created, autoSelectWardId, index)
                     }
                     onDuplicate={() =>
                       setRows((prev) => duplicateCustomRow(prev, index))
@@ -211,6 +225,7 @@ export function CustomRowsWorkspace({
         {rows.map((row, index) => (
           <CustomRowMobileCard
             key={row.key}
+            slug={slug}
             row={row}
             index={index}
             locations={locations}
@@ -220,6 +235,9 @@ export function CustomRowsWorkspace({
             canDuplicate={rows.length < BULK_SHIFT_MAX}
             onUpdate={(patch) => updateRow(index, patch)}
             onLocationChange={(locationId) => updateLocation(index, locationId)}
+            onWardsCreated={(created, autoSelectWardId) =>
+              onWardsCreated(created, autoSelectWardId, index)
+            }
             onDuplicate={() =>
               setRows((prev) => duplicateCustomRow(prev, index))
             }
@@ -232,6 +250,7 @@ export function CustomRowsWorkspace({
 }
 
 function CustomRowTableRow({
+  slug,
   row,
   index,
   locations,
@@ -241,9 +260,11 @@ function CustomRowTableRow({
   canDuplicate,
   onUpdate,
   onLocationChange,
+  onWardsCreated,
   onDuplicate,
   onDelete,
 }: {
+  slug: string;
   row: BulkCustomRow;
   index: number;
   locations: LocationOption[];
@@ -253,11 +274,14 @@ function CustomRowTableRow({
   canDuplicate: boolean;
   onUpdate: (patch: Partial<BulkCustomRow>) => void;
   onLocationChange: (locationId: string) => void;
+  onWardsCreated: (
+    created: Array<{ id: string; name: string; locationId: string }>,
+    autoSelectWardId: string | null,
+  ) => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const errors = showFieldErrors ? validateCustomRowFields(row) : {};
-  const rowWards = wards.filter((w) => w.locationId === row.locationId);
   const overnight = isOvernightShift(row.startHm, row.endHm);
 
   return (
@@ -299,7 +323,7 @@ function CustomRowTableRow({
       <td className="px-2 py-2 align-top">
         <Select
           aria-label={`Row ${index + 1} location`}
-          className={cn(fieldInputClass, 'w-[11rem]', invalidClass(Boolean(errors.locationId)))}
+          className={cn(fieldInputClass, 'w-[10.5rem]', invalidClass(Boolean(errors.locationId)))}
           value={row.locationId}
           onChange={(e) => onLocationChange(e.target.value)}
         >
@@ -312,19 +336,22 @@ function CustomRowTableRow({
         <FieldError message={errors.locationId} />
       </td>
       <td className="px-2 py-2 align-top">
-        <Select
-          aria-label={`Row ${index + 1} ward or unit`}
-          className={cn(fieldInputClass, 'w-[10rem]')}
-          value={row.wardId}
-          onChange={(e) => onUpdate({ wardId: e.target.value })}
-        >
-          <option value="">No ward</option>
-          {rowWards.map((ward) => (
-            <option key={ward.id} value={ward.id}>
-              {ward.name}
-            </option>
-          ))}
-        </Select>
+        <div className="w-[11.5rem] space-y-1">
+          <WardUnitSelector
+            locationId={row.locationId}
+            wardId={row.wardId}
+            wards={wards}
+            onWardChange={(wardId) => onUpdate({ wardId })}
+            aria-label={`Row ${index + 1} ward or unit`}
+          />
+          <WardLibraryDialog
+            slug={slug}
+            locations={locations}
+            wards={wards}
+            defaultLocationId={row.locationId}
+            onCreated={onWardsCreated}
+          />
+        </div>
       </td>
       <td className="px-2 py-2 align-top">
         <Input
@@ -417,6 +444,7 @@ function CustomRowTableRow({
 }
 
 function CustomRowMobileCard({
+  slug,
   row,
   index,
   locations,
@@ -426,9 +454,11 @@ function CustomRowMobileCard({
   canDuplicate,
   onUpdate,
   onLocationChange,
+  onWardsCreated,
   onDuplicate,
   onDelete,
 }: {
+  slug: string;
   row: BulkCustomRow;
   index: number;
   locations: LocationOption[];
@@ -438,11 +468,14 @@ function CustomRowMobileCard({
   canDuplicate: boolean;
   onUpdate: (patch: Partial<BulkCustomRow>) => void;
   onLocationChange: (locationId: string) => void;
+  onWardsCreated: (
+    created: Array<{ id: string; name: string; locationId: string }>,
+    autoSelectWardId: string | null,
+  ) => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
   const errors = showFieldErrors ? validateCustomRowFields(row) : {};
-  const rowWards = wards.filter((w) => w.locationId === row.locationId);
   const overnight = isOvernightShift(row.startHm, row.endHm);
 
   return (
@@ -506,18 +539,22 @@ function CustomRowMobileCard({
           </Select>
         </MobileField>
         <MobileField label="Ward / unit">
-          <Select
-            className={fieldInputClass}
-            value={row.wardId}
-            onChange={(e) => onUpdate({ wardId: e.target.value })}
-          >
-            <option value="">No ward</option>
-            {rowWards.map((ward) => (
-              <option key={ward.id} value={ward.id}>
-                {ward.name}
-              </option>
-            ))}
-          </Select>
+          <div className="space-y-1">
+            <WardUnitSelector
+              locationId={row.locationId}
+              wardId={row.wardId}
+              wards={wards}
+              onWardChange={(wardId) => onUpdate({ wardId })}
+              aria-label={`Row ${index + 1} ward or unit`}
+            />
+            <WardLibraryDialog
+              slug={slug}
+              locations={locations}
+              wards={wards}
+              defaultLocationId={row.locationId}
+              onCreated={onWardsCreated}
+            />
+          </div>
         </MobileField>
         <MobileField label="Break (minutes)" error={errors.breakMinutes}>
           <Input

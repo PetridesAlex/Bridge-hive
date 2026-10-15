@@ -30,6 +30,11 @@ import {
   type ActionResult,
 } from '@/app/actions/shifts';
 import { ShiftScheduleFields } from './shift-schedule-fields';
+import { WardLibraryDialog } from '@/components/org/ward-library-dialog';
+import {
+  WardUnitSelector,
+  type WardUnitOption,
+} from '@/components/org/ward-unit-selector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -159,15 +164,19 @@ function formatPreviewTime(value: string): string {
 export function ShiftForm({
   slug,
   locations,
+  wards: initialWards = [],
   shift,
   requirements,
   mode,
+  canManageWards = true,
 }: {
   slug: string;
   locations: Location[];
+  wards?: WardUnitOption[];
   shift?: Shift;
   requirements?: Requirement[];
   mode: 'create' | 'edit';
+  canManageWards?: boolean;
 }) {
   const action =
     mode === 'create'
@@ -179,6 +188,8 @@ export function ShiftForm({
   const [locationId, setLocationId] = useState(
     shift?.location_id ?? locations[0]?.id ?? '',
   );
+  const [wards, setWards] = useState<WardUnitOption[]>(initialWards);
+  const [wardId, setWardId] = useState(shift?.ward_id ?? '');
   const [requiredRole, setRequiredRole] = useState(shift?.required_role ?? '');
   const [startsAt, setStartsAt] = useState(
     shift?.starts_at ? formatDateTimeLocalInput(shift.starts_at) : '',
@@ -239,29 +250,77 @@ export function ShiftForm({
             </p>
           </div>
 
-          <div className="space-y-1.5 sm:col-span-2 sm:max-w-md">
-            <Label htmlFor="locationId">
-              Location <span className="text-bh-danger">*</span>
-            </Label>
-            <Select
-              id="locationId"
-              name="locationId"
-              required
-              value={locationId}
-              onChange={(e) => setLocationId(e.target.value)}
-              className={fieldClass}
-            >
-              <option value="" disabled>
-                Select location
-              </option>
-              {locations.map((loc) => (
-                <option key={loc.id} value={loc.id}>
-                  {loc.name}
+          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="locationId">
+                Location <span className="text-bh-danger">*</span>
+              </Label>
+              <Select
+                id="locationId"
+                name="locationId"
+                required
+                value={locationId}
+                onChange={(e) => {
+                  const nextLocationId = e.target.value;
+                  setLocationId(nextLocationId);
+                  const stillValid = wards.some(
+                    (ward) =>
+                      ward.id === wardId && ward.locationId === nextLocationId,
+                  );
+                  if (!stillValid) setWardId('');
+                }}
+                className={fieldClass}
+              >
+                <option value="" disabled>
+                  Select location
                 </option>
-              ))}
-            </Select>
-            {/* Preserve existing ward on edit without exposing a ward picker. */}
-            <input type="hidden" name="wardId" value={shift?.ward_id ?? ''} />
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Label htmlFor="wardId">Ward / Unit</Label>
+                <WardLibraryDialog
+                  slug={slug}
+                  locations={locations.map((loc) => ({
+                    id: loc.id,
+                    name: loc.name,
+                  }))}
+                  wards={wards}
+                  defaultLocationId={locationId}
+                  canManage={canManageWards}
+                  onCreated={(created, autoSelectWardId) => {
+                    setWards((prev) => {
+                      const next = [...prev];
+                      for (const row of created) {
+                        if (!next.some((ward) => ward.id === row.id)) {
+                          next.push({
+                            id: row.id,
+                            name: row.name,
+                            locationId: row.locationId,
+                          });
+                        }
+                      }
+                      return next;
+                    });
+                    if (autoSelectWardId) setWardId(autoSelectWardId);
+                  }}
+                />
+              </div>
+              <input type="hidden" name="wardId" value={wardId} />
+              <WardUnitSelector
+                id="wardId"
+                locationId={locationId}
+                wardId={wardId}
+                wards={wards}
+                onWardChange={setWardId}
+                aria-label="Ward / unit"
+              />
+            </div>
           </div>
 
           <div className="space-y-2 sm:col-span-2">

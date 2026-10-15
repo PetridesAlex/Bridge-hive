@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/server';
 
 import { LocationForm } from '../_components/location-form';
 import { WardForm } from '../_components/ward-form';
+import { WardLibraryPanel } from '../_components/ward-library-panel';
 
 export default async function LocationDetailPage({
   params,
@@ -87,6 +88,18 @@ export default async function LocationDetailPage({
           </CardContent>
         </Card>
       </PermissionGuard>
+
+      <WardLibraryPanel
+        slug={slug}
+        locations={[{ id: location.id, name: location.name }]}
+        wards={(wards ?? []).map((ward) => ({
+          id: ward.id,
+          name: ward.name,
+          locationId: location.id,
+        }))}
+        defaultLocationId={location.id}
+        canManageWards={ctx.capabilities.canManageWards}
+      />
 
       <section className="space-y-4">
         <h3 className="text-lg font-semibold text-bh-text">Wards</h3>

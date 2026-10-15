@@ -44,6 +44,8 @@ import {
   type CreateShiftsBatchInput,
 } from '@/app/actions/bulk-shifts';
 import { ShiftLocationSetupGate } from '@/components/org/shift-location-setup-gate';
+import { WardLibraryDialog } from '@/components/org/ward-library-dialog';
+import { WardUnitSelector } from '@/components/org/ward-unit-selector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -113,6 +115,7 @@ export function BulkShiftBuilder({
   const [step, setStep] = useState<Step>('build');
   const [mode, setMode] = useState<BulkCreationMode>('custom');
   const [pending, startTransition] = useTransition();
+  const [wardOptions, setWardOptions] = useState<WardOption[]>(wards);
 
   const defaultLocationId = defaults?.locationId ?? locations[0]?.id ?? '';
   const customRowSeed: BulkCustomRowSeed = {
@@ -172,7 +175,24 @@ export function BulkShiftBuilder({
 
   const selectedLocation = locations.find((l) => l.id === locationId);
   const locationTz = selectedLocation?.timezone ?? organizationTimezone;
-  const locationWards = wards.filter((w) => w.locationId === locationId);
+
+  function mergeCreatedWards(
+    created: Array<{ id: string; name: string; locationId: string }>,
+  ) {
+    setWardOptions((prev) => {
+      const next = [...prev];
+      for (const row of created) {
+        if (!next.some((ward) => ward.id === row.id)) {
+          next.push({
+            id: row.id,
+            name: row.name,
+            locationId: row.locationId,
+          });
+        }
+      }
+      return next;
+    });
+  }
 
   const locationTzById = useMemo(() => {
     const map = new Map<string, string>();
@@ -188,9 +208,9 @@ export function BulkShiftBuilder({
 
   const wardNameById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const ward of wards) map.set(ward.id, ward.name);
+    for (const ward of wardOptions) map.set(ward.id, ward.name);
     return map;
-  }, [wards]);
+  }, [wardOptions]);
 
   const built = useMemo(() => {
     try {
@@ -404,15 +424,23 @@ export function BulkShiftBuilder({
 
           {mode !== 'custom' ? (
             <SharedTemplateFields
+              slug={slug}
               locations={locations}
-              locationWards={locationWards}
+              wards={wardOptions}
               locationId={locationId}
               setLocationId={(id) => {
                 setLocationId(id);
-                setWardId('');
+                const stillValid = wardOptions.some(
+                  (ward) => ward.id === wardId && ward.locationId === id,
+                );
+                if (!stillValid) setWardId('');
               }}
               wardId={wardId}
               setWardId={setWardId}
+              onWardsCreated={(created, autoSelectWardId) => {
+                mergeCreatedWards(created);
+                if (autoSelectWardId) setWardId(autoSelectWardId);
+              }}
               requiredRole={requiredRole}
               setRequiredRole={setRequiredRole}
               startHm={startHm}
@@ -540,10 +568,23 @@ export function BulkShiftBuilder({
 
           {mode === 'custom' ? (
             <CustomRowsWorkspace
+              slug={slug}
               rows={customRows}
               setRows={setCustomRows}
               locations={locations}
-              wards={wards}
+              wards={wardOptions}
+              onWardsCreated={(created, autoSelectWardId, rowIndex) => {
+                mergeCreatedWards(created);
+                if (autoSelectWardId != null && rowIndex != null) {
+                  setCustomRows((prev) =>
+                    prev.map((row, index) =>
+                      index === rowIndex
+                        ? { ...row, wardId: autoSelectWardId }
+                        : row,
+                    ),
+                  );
+                }
+              }}
               deadlineHours={deadlineHours}
               setDeadlineHours={setDeadlineHours}
               seed={customRowSeed}
@@ -1120,12 +1161,14 @@ function SummaryTile({ label, value }: { label: string; value: string }) {
 }
 
 function SharedTemplateFields({
+  slug,
   locations,
-  locationWards,
+  wards,
   locationId,
   setLocationId,
   wardId,
   setWardId,
+  onWardsCreated,
   requiredRole,
   setRequiredRole,
   startHm,
@@ -1141,12 +1184,17 @@ function SharedTemplateFields({
   deadlineHours,
   setDeadlineHours,
 }: {
+  slug: string;
   locations: LocationOption[];
-  locationWards: WardOption[];
+  wards: WardOption[];
   locationId: string;
   setLocationId: (v: string) => void;
   wardId: string;
   setWardId: (v: string) => void;
+  onWardsCreated: (
+    created: Array<{ id: string; name: string; locationId: string }>,
+    autoSelectWardId: string | null,
+  ) => void;
   requiredRole: WorkerRole;
   setRequiredRole: (v: WorkerRole) => void;
   startHm: string;
@@ -1179,19 +1227,24 @@ function SharedTemplateFields({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="bulk-ward">Ward (optional)</Label>
-        <Select
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Label htmlFor="bulk-ward">Ward / Unit</Label>
+          <WardLibraryDialog
+            slug={slug}
+            locations={locations}
+            wards={wards}
+            defaultLocationId={locationId}
+            onCreated={onWardsCreated}
+          />
+        </div>
+        <WardUnitSelector
           id="bulk-ward"
-          value={wardId}
-          onChange={(e) => setWardId(e.target.value)}
-        >
-          <option value="">No ward</option>
-          {locationWards.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name}
-            </option>
-          ))}
-        </Select>
+          locationId={locationId}
+          wardId={wardId}
+          wards={wards}
+          onWardChange={setWardId}
+          aria-label="Ward / unit"
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="bulk-role">Required role</Label>

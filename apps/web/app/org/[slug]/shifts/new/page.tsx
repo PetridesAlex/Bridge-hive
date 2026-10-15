@@ -27,6 +27,16 @@ export default async function NewShiftPage({
     .eq('organization_id', ctx.org.id)
     .order('name');
 
+  const locationIds = (locations ?? []).map((location) => location.id);
+  const { data: wards } =
+    locationIds.length > 0
+      ? await supabase
+          .from('wards')
+          .select('id, name, location_id')
+          .in('location_id', locationIds)
+          .order('name')
+      : { data: [] as Array<{ id: string; name: string; location_id: string }> };
+
   const hasLocations = Boolean(locations?.length);
 
   return (
@@ -47,7 +57,17 @@ export default async function NewShiftPage({
       {!hasLocations ? (
         <ShiftLocationSetupGate slug={slug} context="single" />
       ) : (
-        <ShiftForm slug={slug} locations={locations!} mode="create" />
+        <ShiftForm
+          slug={slug}
+          locations={locations!}
+          wards={(wards ?? []).map((ward) => ({
+            id: ward.id,
+            name: ward.name,
+            locationId: ward.location_id,
+          }))}
+          mode="create"
+          canManageWards={ctx.capabilities.canManageWards}
+        />
       )}
     </div>
   );

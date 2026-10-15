@@ -117,6 +117,16 @@ export default async function ShiftDetailPage({
     .eq('organization_id', ctx.org.id)
     .order('name');
 
+  const locationIds = (locations ?? []).map((location) => location.id);
+  const { data: wards } =
+    locationIds.length > 0
+      ? await supabase
+          .from('wards')
+          .select('id, name, location_id')
+          .in('location_id', locationIds)
+          .order('name')
+      : { data: [] as Array<{ id: string; name: string; location_id: string }> };
+
   const { data: assignment } = await supabase
     .from('shift_assignments')
     .select(
@@ -299,9 +309,15 @@ export default async function ShiftDetailPage({
           <ShiftForm
             slug={slug}
             locations={locations ?? []}
+            wards={(wards ?? []).map((ward) => ({
+              id: ward.id,
+              name: ward.name,
+              locationId: ward.location_id,
+            }))}
             shift={shift}
             requirements={requirements}
             mode="edit"
+            canManageWards={ctx.capabilities.canManageWards}
           />
         </div>
       </PermissionGuard>

@@ -31,6 +31,7 @@ import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
 
 import { LocationForm } from './_components/location-form';
+import { WardLibraryPanel } from './_components/ward-library-panel';
 
 const WARD_ICON_TONES = [
   'bg-bh-accent-blue-soft text-bh-accent-blue',
@@ -328,6 +329,22 @@ export default async function LocationsPage({
           series={staffSeries}
         />
       </div>
+
+      <WardLibraryPanel
+        slug={slug}
+        locations={locations.map((location) => ({
+          id: location.id,
+          name: location.name,
+        }))}
+        wards={locations.flatMap((location) =>
+          location.wards.map((ward) => ({
+            id: ward.id,
+            name: ward.name,
+            locationId: location.id,
+          })),
+        )}
+        canManageWards={ctx.capabilities.canManageWards}
+      />
 
       <PermissionGuard allowed={ctx.capabilities.canManageLocations && showNew === '1'}>
         <Card className="border-bh-border shadow-[0_4px_16px_rgba(7,29,48,0.04)]">

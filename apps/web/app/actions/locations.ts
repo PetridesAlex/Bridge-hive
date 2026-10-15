@@ -3,7 +3,10 @@
 import {
   createLocationSchema,
   createWardSchema,
+  createWardsBatchSchema,
   isOwnedLocationImagePath,
+  prepareWardNames,
+  wardNameExistsAmong,
 } from '@bridge-hive/domain';
 import { revalidatePath } from 'next/cache';
 
@@ -15,7 +18,29 @@ export type ActionResult = {
   error?: string;
   success?: boolean;
   locationId?: string;
+  wardId?: string;
+  wardName?: string;
 };
+
+export type CreatedWardRow = {
+  id: string;
+  name: string;
+  locationId: string;
+};
+
+export type CreateWardsBatchResult = {
+  error?: string;
+  success?: boolean;
+  created?: CreatedWardRow[];
+  skippedNames?: string[];
+};
+
+function revalidateWardPaths(slug: string, locationId: string) {
+  revalidatePath(`/org/${slug}/locations`);
+  revalidatePath(`/org/${slug}/locations/${locationId}`);
+  revalidatePath(`/org/${slug}/shifts/new`);
+  revalidatePath(`/org/${slug}/shifts/new/bulk`);
+}
 
 function zodErrorMessage(error: {
   flatten: () => {
@@ -207,18 +232,142 @@ export async function createWardAction(
     return { error: 'Location not found.' };
   }
 
-  const { error } = await supabase.from('wards').insert({
-    location_id: parsed.data.locationId,
-    name: parsed.data.name,
-    instructions: parsed.data.instructions ?? null,
-  });
+  const { data: existingWards, error: existingError } = await supabase
+    .from('wards')
+    .select('id, name')
+    .eq('location_id', locationId);
+
+  if (existingError) {
+    return { error: existingError.message };
+  }
+
+  if (
+    wardNameExistsAmong(
+      parsed.data.name,
+      (existingWards ?? []).map((ward) => ward.name),
+    )
+  ) {
+    return {
+      error: `A ward / unit named “${parsed.data.name}” already exists for this location.`,
+    };
+  }
+
+  const { data: created, error } = await supabase
+    .from('wards')
+    .insert({
+      location_id: parsed.data.locationId,
+      name: parsed.data.name,
+      instructions: parsed.data.instructions ?? null,
+    })
+    .select('id, name')
+    .single();
 
   if (error) {
     return { error: error.message };
   }
 
-  revalidatePath(`/org/${slug}/locations/${locationId}`);
-  return { success: true };
+  revalidateWardPaths(slug, locationId);
+  return {
+    success: true,
+    wardId: created.id,
+    wardName: created.name,
+    locationId,
+  };
+}
+
+export async function createWardsBatchAction(params: {
+  slug: string;
+  locationId: string;
+  names: string[];
+}): Promise<CreateWardsBatchResult> {
+  const ctx = await requireOrgMembership(params.slug);
+  if (!ctx.capabilities.canManageWards) {
+    return { error: 'You do not have permission to create wards.' };
+  }
+
+  const preparedNames = prepareWardNames(params.names);
+  const parsed = createWardsBatchSchema.safeParse({
+    locationId: params.locationId,
+    names: preparedNames,
+  });
+
+  if (!parsed.success) {
+    return { error: zodErrorMessage(parsed.error) };
+  }
+
+  if (preparedNames.length === 0) {
+    return { error: 'Enter or select at least one ward / unit name.' };
+  }
+
+  const supabase = await createClient();
+  const { data: location } = await supabase
+    .from('locations')
+    .select('id')
+    .eq('id', params.locationId)
+    .eq('organization_id', ctx.org.id)
+    .maybeSingle();
+
+  if (!location) {
+    return { error: 'Location not found.' };
+  }
+
+  const { data: existingWards, error: existingError } = await supabase
+    .from('wards')
+    .select('id, name')
+    .eq('location_id', params.locationId);
+
+  if (existingError) {
+    return { error: existingError.message };
+  }
+
+  const existingNames = (existingWards ?? []).map((ward) => ward.name);
+  const toCreate: string[] = [];
+  const skippedNames: string[] = [];
+
+  for (const name of preparedNames) {
+    if (wardNameExistsAmong(name, existingNames)) {
+      skippedNames.push(name);
+      continue;
+    }
+    toCreate.push(name);
+    existingNames.push(name);
+  }
+
+  if (toCreate.length === 0) {
+    return {
+      success: true,
+      created: [],
+      skippedNames,
+      error:
+        skippedNames.length > 0
+          ? 'Those ward / unit names are already saved for this location.'
+          : undefined,
+    };
+  }
+
+  const { data: inserted, error } = await supabase
+    .from('wards')
+    .insert(
+      toCreate.map((name) => ({
+        location_id: params.locationId,
+        name,
+        instructions: null as string | null,
+      })),
+    )
+    .select('id, name, location_id');
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const created: CreatedWardRow[] = (inserted ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    locationId: row.location_id,
+  }));
+
+  revalidateWardPaths(params.slug, params.locationId);
+  return { success: true, created, skippedNames };
 }
 
 export async function updateWardAction(
@@ -244,6 +393,37 @@ export async function updateWardAction(
   }
 
   const supabase = await createClient();
+  const { data: location } = await supabase
+    .from('locations')
+    .select('id')
+    .eq('id', locationId)
+    .eq('organization_id', ctx.org.id)
+    .maybeSingle();
+
+  if (!location) {
+    return { error: 'Location not found.' };
+  }
+
+  const { data: siblings, error: siblingsError } = await supabase
+    .from('wards')
+    .select('id, name')
+    .eq('location_id', locationId);
+
+  if (siblingsError) {
+    return { error: siblingsError.message };
+  }
+
+  const conflict = (siblings ?? []).find(
+    (ward) =>
+      ward.id !== wardId &&
+      wardNameExistsAmong(parsed.data.name, [ward.name]),
+  );
+  if (conflict) {
+    return {
+      error: `A ward / unit named “${parsed.data.name}” already exists for this location.`,
+    };
+  }
+
   const { error } = await supabase
     .from('wards')
     .update({
@@ -257,6 +437,6 @@ export async function updateWardAction(
     return { error: error.message };
   }
 
-  revalidatePath(`/org/${slug}/locations/${locationId}`);
-  return { success: true };
+  revalidateWardPaths(slug, locationId);
+  return { success: true, wardId, locationId };
 }

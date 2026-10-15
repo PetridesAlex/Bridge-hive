@@ -102,8 +102,20 @@ export const createLocationSchema = z.object({
 
 export const createWardSchema = z.object({
   locationId: z.string().uuid(),
-  name: z.string().min(1).max(200),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Ward / unit name is required.')
+    .max(200, 'Ward / unit name must be 200 characters or fewer.'),
   instructions: z.string().max(2000).optional(),
+});
+
+export const createWardsBatchSchema = z.object({
+  locationId: z.string().uuid(),
+  names: z
+    .array(z.string())
+    .min(1, 'Select at least one ward / unit to add.')
+    .max(50, 'You can add at most 50 wards at once.'),
 });
 
 export const createShiftDraftSchema = z

@@ -126,6 +126,7 @@ async function parseShiftForm(
     acceptanceDeadline: acceptanceDeadlineIso,
     title: String(formData.get('title') ?? '') || undefined,
     notes: String(formData.get('notes') ?? '') || undefined,
+    requiredPositions: Number(formData.get('requiredPositions') ?? 1),
     requirements,
   });
 
@@ -173,6 +174,7 @@ export async function createShiftDraftAction(
       acceptance_deadline: v.acceptanceDeadline ?? null,
       title: v.title ?? null,
       notes: v.notes ?? null,
+      required_positions: v.requiredPositions,
       created_by: ctx.user.id,
     })
     .select('id')
@@ -252,6 +254,7 @@ export async function updateShiftDraftAction(
       acceptance_deadline: v.acceptanceDeadline ?? null,
       title: v.title ?? null,
       notes: v.notes ?? null,
+      required_positions: v.requiredPositions,
     })
     .eq('id', shiftId)
     .eq('organization_id', ctx.org.id);

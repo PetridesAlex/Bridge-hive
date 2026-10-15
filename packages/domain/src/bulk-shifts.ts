@@ -3,6 +3,7 @@
  * Pure functions; no Storage/RPC/browser APIs.
  */
 
+import { clampShiftPositions } from './shift-positions';
 import type { WorkerRole } from './types';
 import { WORKER_ROLE_LABELS, WORKER_ROLES } from './types';
 
@@ -245,6 +246,7 @@ export type BulkPreviewShift = {
   currency: string;
   breakMinutes: number;
   title?: string | null;
+  requiredPositions?: number;
 };
 
 export type ExactDuplicatePair = {
@@ -319,7 +321,10 @@ export type BulkBatchSummary = {
   lastEndsAtIso: string | null;
 };
 
-/** Gross estimate = sum of rate_minor × duration hours (break excluded). */
+/**
+ * Gross estimate = sum of (per-professional rate × duration × required positions).
+ * Rate is per worker; multi-position rows multiply org labor cost by capacity.
+ */
 export function summarizeBulkBatch(shifts: BulkPreviewShift[]): BulkBatchSummary {
   const roleMap = Object.fromEntries(
     WORKER_ROLES.map((role) => [role, 0]),
@@ -330,12 +335,13 @@ export function summarizeBulkBatch(shifts: BulkPreviewShift[]): BulkBatchSummary
   const currency = shifts[0]?.currency ?? 'EUR';
 
   for (const s of shifts) {
-    roleMap[s.requiredRole] = (roleMap[s.requiredRole] ?? 0) + 1;
+    const positions = clampShiftPositions(s.requiredPositions ?? 1);
+    roleMap[s.requiredRole] = (roleMap[s.requiredRole] ?? 0) + positions;
     const start = new Date(s.startsAtIso).getTime();
     const end = new Date(s.endsAtIso).getTime();
     const minutes = Math.max(0, Math.round((end - start) / 60000) - (s.breakMinutes || 0));
     const hours = minutes / 60;
-    estimatedGrossMinor += Math.round(s.rateMinor * hours);
+    estimatedGrossMinor += Math.round(s.rateMinor * hours) * positions;
 
     if (!firstStartsAtIso || s.startsAtIso < firstStartsAtIso) {
       firstStartsAtIso = s.startsAtIso;

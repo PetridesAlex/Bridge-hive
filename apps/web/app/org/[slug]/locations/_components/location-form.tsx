@@ -1,6 +1,6 @@
 'use client';
 
-import { ImagePlus, Upload } from 'lucide-react';
+import { ArrowRight, Check, ImagePlus, Loader2, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -136,17 +136,21 @@ export function LocationForm({
 
   const busy = pending || uploadingImage;
 
+  const fieldClass =
+    'h-11 rounded-xl border-bh-border/80 bg-white shadow-[0_1px_2px_rgba(7,29,48,0.03)] focus-visible:border-bh-teal focus-visible:ring-bh-teal/25';
+  const labelClass = 'text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted';
+
   return (
-    <form action={formAction} className="grid gap-4 sm:grid-cols-2">
-      <div className="sm:col-span-2 space-y-2">
-        <Label>Location photo</Label>
+    <form action={formAction} className="space-y-6">
+      <div className="space-y-3 rounded-2xl border border-bh-border/70 bg-[#f7fafc]/70 p-4 sm:p-5">
+        <Label className={labelClass}>Location photo</Label>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
             className={cn(
-              'relative flex h-28 w-full shrink-0 overflow-hidden rounded-2xl border border-dashed border-bh-border bg-bh-subtle/50 sm:w-44',
-              'transition-colors hover:border-bh-accent-blue hover:bg-bh-accent-blue-soft/40',
+              'relative flex h-32 w-full shrink-0 overflow-hidden rounded-2xl border border-dashed border-bh-border bg-white sm:w-48',
+              'shadow-[0_1px_2px_rgba(7,29,48,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:border-bh-teal/40 hover:shadow-[0_8px_20px_rgba(7,29,48,0.08)] motion-reduce:hover:translate-y-0',
             )}
           >
             {previewUrl ? (
@@ -216,96 +220,156 @@ export function LocationForm({
         />
       </div>
 
-      <div className="sm:col-span-2 space-y-1.5">
-        <Label htmlFor="name">Name</Label>
-        <Input id="name" name="name" required defaultValue={location?.name ?? ''} />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="addressLine1">Address line 1</Label>
-        <Input
-          id="addressLine1"
-          name="addressLine1"
-          defaultValue={location?.address_line1 ?? ''}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="addressLine2">Address line 2</Label>
-        <Input
-          id="addressLine2"
-          name="addressLine2"
-          defaultValue={location?.address_line2 ?? ''}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="city">City</Label>
-        <Input id="city" name="city" defaultValue={location?.city ?? ''} />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="postalCode">Postal code</Label>
-        <Input
-          id="postalCode"
-          name="postalCode"
-          defaultValue={location?.postal_code ?? ''}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="countryCode">Country code</Label>
-        <Input
-          id="countryCode"
-          name="countryCode"
-          defaultValue={location?.country_code ?? 'CY'}
-          maxLength={2}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="timezone">Timezone</Label>
-        <Input
-          id="timezone"
-          name="timezone"
-          defaultValue={location?.timezone ?? 'Europe/Nicosia'}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="contactName">Contact name</Label>
-        <Input
-          id="contactName"
-          name="contactName"
-          defaultValue={location?.contact_name ?? ''}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="contactPhone">Contact phone</Label>
-        <Input
-          id="contactPhone"
-          name="contactPhone"
-          defaultValue={location?.contact_phone ?? ''}
-        />
-      </div>
-      <div className="sm:col-span-2 space-y-1.5">
-        <Label htmlFor="contactEmail">Contact email</Label>
-        <Input
-          id="contactEmail"
-          name="contactEmail"
-          type="email"
-          defaultValue={location?.contact_email ?? ''}
-        />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2 space-y-1.5">
+          <Label htmlFor="name" className={labelClass}>
+            Name
+          </Label>
+          <Input
+            id="name"
+            name="name"
+            required
+            defaultValue={location?.name ?? ''}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="addressLine1" className={labelClass}>
+            Address line 1
+          </Label>
+          <Input
+            id="addressLine1"
+            name="addressLine1"
+            defaultValue={location?.address_line1 ?? ''}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="addressLine2" className={labelClass}>
+            Address line 2
+          </Label>
+          <Input
+            id="addressLine2"
+            name="addressLine2"
+            defaultValue={location?.address_line2 ?? ''}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="city" className={labelClass}>
+            City
+          </Label>
+          <Input
+            id="city"
+            name="city"
+            defaultValue={location?.city ?? ''}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="postalCode" className={labelClass}>
+            Postal code
+          </Label>
+          <Input
+            id="postalCode"
+            name="postalCode"
+            defaultValue={location?.postal_code ?? ''}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="countryCode" className={labelClass}>
+            Country code
+          </Label>
+          <Input
+            id="countryCode"
+            name="countryCode"
+            defaultValue={location?.country_code ?? 'CY'}
+            maxLength={2}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="timezone" className={labelClass}>
+            Timezone
+          </Label>
+          <Input
+            id="timezone"
+            name="timezone"
+            defaultValue={location?.timezone ?? 'Europe/Nicosia'}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="contactName" className={labelClass}>
+            Contact name
+          </Label>
+          <Input
+            id="contactName"
+            name="contactName"
+            defaultValue={location?.contact_name ?? ''}
+            className={fieldClass}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="contactPhone" className={labelClass}>
+            Contact phone
+          </Label>
+          <Input
+            id="contactPhone"
+            name="contactPhone"
+            defaultValue={location?.contact_phone ?? ''}
+            className={fieldClass}
+          />
+        </div>
+        <div className="sm:col-span-2 space-y-1.5">
+          <Label htmlFor="contactEmail" className={labelClass}>
+            Contact email
+          </Label>
+          <Input
+            id="contactEmail"
+            name="contactEmail"
+            type="email"
+            defaultValue={location?.contact_email ?? ''}
+            className={fieldClass}
+          />
+        </div>
       </div>
 
       {state.error ? (
-        <p className="sm:col-span-2 text-sm text-red-600" role="alert">
+        <p className="text-sm text-bh-danger" role="alert">
           {state.error}
         </p>
       ) : null}
 
-      <div className="sm:col-span-2">
-        <Button type="submit" disabled={busy} variant="honey" className="rounded-xl">
-          {busy
-            ? uploadingImage
-              ? 'Uploading photo…'
-              : 'Saving…'
-            : mode === 'create'
-              ? 'Create location'
-              : 'Save changes'}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-bh-border/60 pt-5">
+        <p className="text-xs text-bh-text-muted">
+          Changes apply to shift listings and worker-facing location cards.
+        </p>
+        <Button
+          type="submit"
+          disabled={busy}
+          variant="honey"
+          size="lg"
+          className="group min-h-11 justify-between gap-3 rounded-xl px-5 shadow-[0_10px_24px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(228,179,52,0.38)] active:translate-y-0 active:shadow-[0_6px_16px_rgba(228,179,52,0.22)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+        >
+          {busy ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              {uploadingImage ? 'Uploading photo…' : 'Saving…'}
+            </>
+          ) : (
+            <>
+              <span className="inline-flex items-center gap-2">
+                <Check className="h-4 w-4" aria-hidden />
+                {mode === 'create' ? 'Create location' : 'Save changes'}
+              </span>
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                aria-hidden
+              />
+            </>
+          )}
         </Button>
       </div>
     </form>

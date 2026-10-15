@@ -22,6 +22,8 @@ export type WorkerShiftDetails = {
   notes: string | null;
   break_minutes: number;
   acceptance_deadline: string | null;
+  required_positions: number;
+  open_positions: number;
 };
 
 /** Pilot check-in opens 30 minutes before shift start (server enforces the same rule). */
@@ -125,7 +127,7 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
     return { data: row ?? null };
   }
 
-  // Fallback before migration 014 is applied
+  // Fallback before migration 014 / 031 RPCs are applied
   const { data: shift, error: shiftError } = await supabase
     .from('shifts')
     .select('*')
@@ -135,6 +137,20 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
   if (shiftError || !shift) {
     return { data: null, error: shiftError?.message ?? error?.message ?? 'Shift not found' };
   }
+
+  const requiredPositions = shift.required_positions ?? 1;
+  const { count: activeCount } = await supabase
+    .from('shift_assignments')
+    .select('id', { count: 'exact', head: true })
+    .eq('shift_id', shiftId)
+    .in('status', [
+      'accepted',
+      'checked_in',
+      'checked_out',
+      'submitted',
+      'approved',
+    ]);
+  const openPositions = Math.max(0, requiredPositions - (activeCount ?? 0));
 
   return {
     data: {
@@ -152,6 +168,8 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
       notes: shift.notes,
       break_minutes: shift.break_minutes,
       acceptance_deadline: shift.acceptance_deadline,
+      required_positions: requiredPositions,
+      open_positions: openPositions,
     },
   };
 }

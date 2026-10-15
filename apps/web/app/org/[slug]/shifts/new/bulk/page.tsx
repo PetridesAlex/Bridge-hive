@@ -101,7 +101,7 @@ export default async function BulkNewShiftsPage({
         <PageHeader
           eyebrow="Shifts"
           title="Create multiple shifts"
-          subtitle={`Build a finite preview, review times in ${ctx.org.timezone || 'organization timezone'}, then save as drafts or publish.`}
+          subtitle={`Start with custom rows, edit every shift independently, then review times in ${ctx.org.timezone || 'organization timezone'} before saving drafts or publishing.`}
         />
       </div>
 

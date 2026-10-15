@@ -5,8 +5,8 @@ import { StyleSheet, View } from 'react-native';
 
 const flowBackground = require('../../../web/public/marketing/flow-bg.jpg');
 
-/** Soft blue hive-flow plane — kept light for auth readability, clearly blue. */
-export const hiveFlowCanvas = '#d7ebf7';
+/** Same light hive-flow plane as the marketing site. */
+export const hiveFlowCanvas = '#eef5fb';
 
 export function HiveFlowBackground() {
   return (
@@ -21,11 +21,11 @@ export function HiveFlowBackground() {
       />
       <LinearGradient
         colors={[
-          'rgba(198, 226, 244, 0.42)',
-          'rgba(220, 238, 250, 0.28)',
-          'rgba(186, 220, 242, 0.34)',
-          'rgba(210, 234, 248, 0.30)',
-          'rgba(190, 224, 244, 0.48)',
+          'rgba(248, 251, 253, 0.38)',
+          'rgba(255, 255, 255, 0.22)',
+          'rgba(248, 251, 253, 0.26)',
+          'rgba(255, 255, 255, 0.24)',
+          'rgba(247, 250, 252, 0.46)',
         ]}
         locations={[0, 0.2, 0.5, 0.78, 1]}
         style={StyleSheet.absoluteFill}

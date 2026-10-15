@@ -1,4 +1,5 @@
 import type { Tables } from '@bridge-hive/supabase-types';
+import { remainingOpenPositions } from '@bridge-hive/domain';
 
 import { supabase } from '@/lib/supabase';
 
@@ -11,6 +12,19 @@ export type PayoutAccount = Tables<'payout_accounts'>;
 export type Notification = Tables<'notifications'>;
 export type ShiftRequirement = Tables<'shift_requirements'>;
 
+const ACTIVE_ASSIGNMENT_STATUSES = [
+  'accepted',
+  'checked_in',
+  'checked_out',
+  'submitted',
+  'approved',
+] as const;
+
+export type MarketplaceShift = Shift & {
+  open_positions: number;
+  filled_positions: number;
+};
+
 export async function getPublishedShifts() {
   const { data, error } = await supabase
     .from('shifts')
@@ -18,7 +32,37 @@ export async function getPublishedShifts() {
     .eq('status', 'published')
     .order('starts_at', { ascending: true });
 
-  return { data: (data ?? []) as Shift[], error: error?.message };
+  if (error) {
+    return { data: [] as MarketplaceShift[], error: error.message };
+  }
+
+  if (!data?.length) {
+    return { data: [] as MarketplaceShift[] };
+  }
+
+  const shiftIds = data.map((shift) => shift.id);
+  const { data: assignmentRows } = await supabase
+    .from('shift_assignments')
+    .select('shift_id, status')
+    .in('shift_id', shiftIds)
+    .in('status', [...ACTIVE_ASSIGNMENT_STATUSES]);
+
+  const filledByShift = new Map<string, number>();
+  for (const row of assignmentRows ?? []) {
+    filledByShift.set(row.shift_id, (filledByShift.get(row.shift_id) ?? 0) + 1);
+  }
+
+  const enriched = data.map((shift) => {
+    const filled = filledByShift.get(shift.id) ?? 0;
+    const required = shift.required_positions ?? 1;
+    return {
+      ...shift,
+      filled_positions: filled,
+      open_positions: remainingOpenPositions(required, filled),
+    } satisfies MarketplaceShift;
+  });
+
+  return { data: enriched };
 }
 
 export async function getShiftById(shiftId: string) {
@@ -53,6 +97,7 @@ export type AssignmentWithShift = ShiftAssignment & {
     | 'required_role'
     | 'status'
     | 'break_minutes'
+    | 'required_positions'
   > | null;
 };
 
@@ -60,7 +105,7 @@ export async function getMyAssignments(workerId: string) {
   const { data, error } = await supabase
     .from('shift_assignments')
     .select(
-      '*, shifts ( id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes )',
+      '*, shifts ( id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes, required_positions )',
     )
     .eq('worker_id', workerId)
     .order('accepted_at', { ascending: false });

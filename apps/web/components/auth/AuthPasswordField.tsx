@@ -1,7 +1,7 @@
 'use client';
 
 import { Eye, EyeOff, Lock } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useId, useState, type ChangeEventHandler } from 'react';
 
 export function AuthPasswordField({
   id,
@@ -9,12 +9,20 @@ export function AuthPasswordField({
   label = 'Password',
   autoComplete = 'current-password',
   placeholder = 'Enter your password',
+  value,
+  onChange,
+  minLength,
+  required = true,
 }: {
   id?: string;
   name?: string;
   label?: string;
   autoComplete?: string;
   placeholder?: string;
+  value?: string;
+  onChange?: ChangeEventHandler<HTMLInputElement>;
+  minLength?: number;
+  required?: boolean;
 }) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
@@ -30,8 +38,11 @@ export function AuthPasswordField({
           name={name}
           type={visible ? 'text' : 'password'}
           autoComplete={autoComplete}
-          required
+          required={required}
           placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          minLength={minLength}
         />
         <button
           type="button"

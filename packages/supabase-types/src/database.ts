@@ -136,6 +136,7 @@ export type Database = {
         acceptance_deadline: string | null;
         title: string | null;
         notes: string | null;
+        required_positions: number;
         created_by: string | null;
         created_at: string;
         updated_at: string;

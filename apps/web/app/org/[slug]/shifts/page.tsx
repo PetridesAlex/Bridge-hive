@@ -6,6 +6,7 @@ import {
   countDraftShifts,
   countFilledUpcoming,
   countOpenShifts,
+  filledPositionsLabel,
   filterCalendarShifts,
   isWorkerRole,
   mapShiftToCalendarEvent,
@@ -16,6 +17,7 @@ import {
   ArrowUpRight,
   Briefcase,
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   FileEdit,
@@ -27,6 +29,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  SlidersHorizontal,
   Sun,
   UserPlus,
 } from 'lucide-react';
@@ -148,35 +151,41 @@ export default async function ShiftsPage({
     new Date(calendarMode.rangeEndIso).getTime() + 12 * 60 * 60 * 1000,
   ).toISOString();
 
+  // Prefer positions column when migrated; fall back so the list still loads
+  // against environments that have not applied shift-positions capacity yet.
+  const shiftListSelectWithPositions =
+    'id, title, status, starts_at, ends_at, required_role, required_positions, rate_minor, currency, location_id, location:locations(name), ward:wards(name)' as const;
+  const shiftListSelectLegacy =
+    'id, title, status, starts_at, ends_at, required_role, rate_minor, currency, location_id, location:locations(name), ward:wards(name)' as const;
+
+  function buildShiftListQuery(select: string) {
+    let query = supabase
+      .from('shifts')
+      .select(select)
+      .eq('organization_id', ctx.org.id)
+      .order('starts_at', { ascending: range !== 'past' });
+
+    if (roleFilter) query = query.eq('required_role', roleFilter);
+    if (
+      statusFilter &&
+      (SHIFT_STATUSES as readonly string[]).includes(statusFilter)
+    ) {
+      query = query.eq('status', statusFilter as ShiftStatus);
+    }
+    if (locationFilter) query = query.eq('location_id', locationFilter);
+    if (batchFilter) query = query.eq('creation_batch_id', batchFilter);
+    if (range === 'upcoming') query = query.gte('starts_at', nowIso);
+    else if (range === 'past') query = query.lt('starts_at', nowIso);
+    return query;
+  }
+
   const [
-    { data: shiftsRaw },
+    listPrimary,
     { data: locationsList },
     { data: metricShifts },
     { data: calendarRows, error: calendarError },
   ] = await Promise.all([
-    (() => {
-      let query = supabase
-        .from('shifts')
-        .select(
-          'id, title, status, starts_at, ends_at, required_role, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
-        )
-        .eq('organization_id', ctx.org.id)
-        .order('starts_at', { ascending: range !== 'past' });
-
-      if (roleFilter) query = query.eq('required_role', roleFilter);
-      if (
-        statusFilter &&
-        (SHIFT_STATUSES as readonly string[]).includes(statusFilter)
-      ) {
-        query = query.eq('status', statusFilter as ShiftStatus);
-      }
-      if (locationFilter) query = query.eq('location_id', locationFilter);
-      if (batchFilter) query = query.eq('creation_batch_id', batchFilter);
-      if (range === 'upcoming') query = query.gte('starts_at', nowIso);
-      else if (range === 'past') query = query.lt('starts_at', nowIso);
-
-      return query;
-    })(),
+    buildShiftListQuery(shiftListSelectWithPositions),
     supabase
       .from('locations')
       .select('id, name')
@@ -192,14 +201,38 @@ export default async function ShiftsPage({
       ? Promise.resolve({ data: null, error: null })
       : supabase
           .from('shifts')
-          .select(
-            'id, title, status, starts_at, ends_at, required_role, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
-          )
+          .select(shiftListSelectLegacy)
           .eq('organization_id', ctx.org.id)
           .lt('starts_at', fetchEnd)
           .gt('ends_at', fetchStart)
           .order('starts_at', { ascending: true }),
   ]);
+
+  const listResult =
+    listPrimary.error &&
+    /required_positions/i.test(listPrimary.error.message ?? '')
+      ? await buildShiftListQuery(shiftListSelectLegacy)
+      : listPrimary;
+  type ShiftListRow = {
+    id: string;
+    title: string | null;
+    status: string;
+    starts_at: string;
+    ends_at: string;
+    required_role: string;
+    required_positions?: number | null;
+    rate_minor: number;
+    currency: string;
+    location_id: string | null;
+    location: { name: string } | { name: string }[] | null;
+    ward: { name: string } | { name: string }[] | null;
+  };
+  const shiftsRaw = (listResult.data ?? null) as ShiftListRow[] | null;
+  const listError =
+    listResult.error &&
+    !/required_positions/i.test(listResult.error.message ?? '')
+      ? listResult.error
+      : null;
 
   const qLower = q?.trim().toLowerCase() ?? '';
   const allFiltered = (shiftsRaw ?? []).filter((shift) => {
@@ -239,7 +272,12 @@ export default async function ShiftsPage({
       : { data: [] as Array<{ shift_id: string; worker: unknown }> };
 
   const assigneeByShift = new Map<string, string>();
+  const filledCountByShift = new Map<string, number>();
   for (const row of assignmentRows ?? []) {
+    filledCountByShift.set(
+      row.shift_id,
+      (filledCountByShift.get(row.shift_id) ?? 0) + 1,
+    );
     if (assigneeByShift.has(row.shift_id)) continue;
     const worker = Array.isArray(row.worker) ? row.worker[0] : row.worker;
     const profile =
@@ -440,7 +478,16 @@ export default async function ShiftsPage({
           label="Open shifts"
           value={openCount}
           supporting="Published and claimable"
-          href={filterHref({ status: 'published', view: undefined, page: '1' })}
+          href={filterHref({
+            status: 'published',
+            range: 'upcoming',
+            role: undefined,
+            location: undefined,
+            q: undefined,
+            batch: undefined,
+            view: undefined,
+            page: '1',
+          })}
           icon={CalendarDays}
           tint="info"
           series={openSeries}
@@ -450,7 +497,16 @@ export default async function ShiftsPage({
           label="Filled shifts"
           value={filledCount}
           supporting="Assigned and confirmed"
-          href={filterHref({ status: 'filled', view: undefined, page: '1' })}
+          href={filterHref({
+            status: 'filled',
+            range: 'upcoming',
+            role: undefined,
+            location: undefined,
+            q: undefined,
+            batch: undefined,
+            view: undefined,
+            page: '1',
+          })}
           icon={Briefcase}
           tint="success"
           series={filledSeries}
@@ -460,7 +516,16 @@ export default async function ShiftsPage({
           label="Draft shifts"
           value={draftCount}
           supporting="Not yet published"
-          href={filterHref({ status: 'draft', view: undefined, page: '1' })}
+          href={filterHref({
+            status: 'draft',
+            range: undefined,
+            role: undefined,
+            location: undefined,
+            q: undefined,
+            batch: undefined,
+            view: undefined,
+            page: '1',
+          })}
           icon={FileEdit}
           tint="honey"
           series={draftSeries}
@@ -470,7 +535,16 @@ export default async function ShiftsPage({
           label="Scheduled this week"
           value={scheduledThisWeek}
           supporting="Across all locations"
-          href={filterHref({ range: 'upcoming', view: undefined, page: '1' })}
+          href={filterHref({
+            status: undefined,
+            range: 'upcoming',
+            role: undefined,
+            location: undefined,
+            q: undefined,
+            batch: undefined,
+            view: undefined,
+            page: '1',
+          })}
           icon={CalendarDays}
           tint="violet"
           series={weekSeries}
@@ -480,141 +554,193 @@ export default async function ShiftsPage({
 
       <form
         method="get"
-        className="flex flex-col gap-3 rounded-2xl border border-bh-border bg-bh-surface p-3 shadow-[0_4px_16px_rgba(7,29,48,0.04)] lg:flex-row lg:flex-wrap lg:items-center lg:gap-2.5 lg:p-3.5"
+        className="overflow-hidden rounded-2xl border border-bh-border/70 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]"
       >
-        {viewRaw === 'calendar' ? (
-          <input type="hidden" name="view" value="calendar" />
-        ) : null}
-        {dateYmd !== todayYmd ? (
-          <input type="hidden" name="date" value={dateYmd} />
-        ) : null}
-
-        <div className="relative min-w-0 flex-1 lg:min-w-[220px]">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bh-text-muted"
-            aria-hidden
-          />
-          <label htmlFor="q" className="sr-only">
-            Search shifts
-          </label>
-          <input
-            id="q"
-            name="q"
-            defaultValue={q ?? ''}
-            placeholder="Search shifts, locations or wards…"
-            className="h-10 w-full rounded-full border border-bh-border bg-bh-subtle/40 pl-9 pr-3 text-sm text-bh-text placeholder:text-bh-text-muted focus-visible:border-bh-accent-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-accent-blue/20"
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-bh-border/60 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-[#16384f] shadow-sm ring-1 ring-bh-border/80">
+              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-teal-strong">
+                Filters
+              </p>
+              <p className="truncate text-sm font-medium text-[#071d30]">
+                Narrow the schedule by status, role, or site
+              </p>
+            </div>
+          </div>
+          <div
+            role="group"
+            aria-label="Shifts view"
+            className="inline-flex rounded-xl border border-bh-border/80 bg-white p-1 shadow-[0_1px_2px_rgba(7,29,48,0.04)]"
+          >
+            <Link
+              href={filterHref({ view: undefined, page: '1' })}
+              aria-current={listView ? 'page' : undefined}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200',
+                listView
+                  ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-sm'
+                  : 'text-bh-text-secondary hover:bg-[#f7fafc] hover:text-bh-text',
+              )}
+            >
+              <LayoutList className="h-3.5 w-3.5" aria-hidden />
+              List
+            </Link>
+            <Link
+              href={filterHref({ view: 'calendar', page: undefined })}
+              aria-current={!listView ? 'page' : undefined}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200',
+                !listView
+                  ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-sm'
+                  : 'text-bh-text-secondary hover:bg-[#f7fafc] hover:text-bh-text',
+              )}
+            >
+              <CalendarDays className="h-3.5 w-3.5" aria-hidden />
+              Calendar
+            </Link>
+          </div>
         </div>
 
-        <select
-          id="status"
-          name="status"
-          defaultValue={statusFilter ?? ''}
-          aria-label="Status"
-          className="h-10 rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Status (All statuses)</option>
-          {SHIFT_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s.replace(/_/g, ' ')}
-            </option>
+        <div className="flex flex-col gap-3 p-4 sm:p-5 lg:flex-row lg:flex-wrap lg:items-center lg:gap-2.5">
+          {viewRaw === 'calendar' ? (
+            <input type="hidden" name="view" value="calendar" />
+          ) : null}
+          {dateYmd !== todayYmd ? (
+            <input type="hidden" name="date" value={dateYmd} />
+          ) : null}
+
+          <div className="relative min-w-0 flex-1 lg:min-w-[240px]">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-bh-text-muted"
+              aria-hidden
+            />
+            <label htmlFor="q" className="sr-only">
+              Search shifts
+            </label>
+            <input
+              id="q"
+              name="q"
+              defaultValue={q ?? ''}
+              placeholder="Search shifts, locations or wards…"
+              className="h-11 w-full rounded-xl border border-bh-border/80 bg-[#f7fafc] pl-10 pr-3.5 text-sm text-bh-text shadow-[inset_0_1px_2px_rgba(7,29,48,0.03)] placeholder:text-bh-text-muted transition-[border-color,box-shadow,background] focus-visible:border-bh-teal focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+            />
+          </div>
+
+          {(
+            [
+              {
+                id: 'status',
+                name: 'status',
+                label: 'Status',
+                value: statusFilter ?? '',
+                options: [
+                  { value: '', label: 'All statuses' },
+                  ...SHIFT_STATUSES.map((s) => ({
+                    value: s,
+                    label: s.replace(/_/g, ' '),
+                  })),
+                ],
+              },
+              {
+                id: 'role',
+                name: 'role',
+                label: 'Role',
+                value: roleFilter ?? '',
+                options: [
+                  { value: '', label: 'All roles' },
+                  ...WORKER_ROLES.map((role) => ({
+                    value: role,
+                    label: WORKER_ROLE_LABELS[role],
+                  })),
+                ],
+              },
+              {
+                id: 'location',
+                name: 'location',
+                label: 'Location',
+                value: locationFilter ?? '',
+                options: [
+                  { value: '', label: 'All locations' },
+                  ...locations.map((loc) => ({
+                    value: loc.id,
+                    label: loc.name,
+                  })),
+                ],
+              },
+              {
+                id: 'range',
+                name: 'range',
+                label: 'Date',
+                value: range ?? '',
+                options: [
+                  { value: '', label: 'All dates' },
+                  { value: 'upcoming', label: 'Upcoming' },
+                  { value: 'past', label: 'Past' },
+                ],
+              },
+            ] as const
+          ).map((field) => (
+            <label
+              key={field.id}
+              htmlFor={field.id}
+              className="group relative min-w-0 sm:min-w-[9.5rem]"
+            >
+              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+                {field.label}
+              </span>
+              <select
+                id={field.id}
+                name={field.name}
+                defaultValue={field.value}
+                aria-label={field.label}
+                className="h-11 w-full appearance-none truncate rounded-xl border border-bh-border/80 bg-white py-2 pl-3 pr-9 text-sm font-medium text-[#071d30] shadow-[0_1px_2px_rgba(7,29,48,0.03)] transition-[border-color,box-shadow,background] hover:border-[#16384f]/25 hover:bg-[#f7fafc] focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+              >
+                {field.options.map((option) => (
+                  <option key={`${field.id}-${option.value || 'all'}`} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <span className="pointer-events-none absolute bottom-3.5 right-3 text-bh-text-muted transition-colors group-hover:text-[#071d30]">
+                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+              </span>
+            </label>
           ))}
-        </select>
 
-        <select
-          id="role"
-          name="role"
-          defaultValue={roleFilter ?? ''}
-          aria-label="Role"
-          className="h-10 rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Role (All roles)</option>
-          {WORKER_ROLES.map((role) => (
-            <option key={role} value={role}>
-              {WORKER_ROLE_LABELS[role]}
-            </option>
-          ))}
-        </select>
-
-        <select
-          id="location"
-          name="location"
-          defaultValue={locationFilter ?? ''}
-          aria-label="Location"
-          className="h-10 max-w-[200px] truncate rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Location (All locations)</option>
-          {locations.map((loc) => (
-            <option key={loc.id} value={loc.id}>
-              {loc.name}
-            </option>
-          ))}
-        </select>
-
-        <select
-          id="range"
-          name="range"
-          defaultValue={range ?? ''}
-          aria-label="Date range"
-          className="h-10 rounded-full border border-bh-border bg-bh-surface px-3 text-sm font-medium text-bh-text"
-        >
-          <option value="">Date (All dates)</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="past">Past</option>
-        </select>
-
-        <Button type="submit" variant="secondary" className="h-10 rounded-full px-4">
-          Apply
-        </Button>
-
-        {hasFilters ? (
-          <Link
-            href={filterHref({
-              q: undefined,
-              status: undefined,
-              role: undefined,
-              location: undefined,
-              range: undefined,
-              page: undefined,
-            })}
-            className="inline-flex items-center gap-1.5 px-2 text-sm font-semibold text-bh-text-secondary hover:text-bh-accent-blue"
-          >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-            Clear filters
-          </Link>
-        ) : null}
-
-        <div
-          role="group"
-          aria-label="Shifts view"
-          className="ml-auto inline-flex rounded-xl border border-bh-border bg-bh-subtle/50 p-1"
-        >
-          <Link
-            href={filterHref({ view: undefined, page: '1' })}
-            aria-current={listView ? 'page' : undefined}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-              listView
-                ? 'bg-bh-sidebar text-white shadow-sm'
-                : 'text-bh-text-secondary hover:text-bh-text',
-            )}
-          >
-            <LayoutList className="h-3.5 w-3.5" aria-hidden />
-            List
-          </Link>
-          <Link
-            href={filterHref({ view: 'calendar', page: undefined })}
-            aria-current={!listView ? 'page' : undefined}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
-              !listView
-                ? 'bg-bh-sidebar text-white shadow-sm'
-                : 'text-bh-text-secondary hover:text-bh-text',
-            )}
-          >
-            <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-            Calendar
-          </Link>
+          <div className="flex flex-wrap items-end gap-2 lg:ml-auto lg:pl-1">
+            <Button
+              type="submit"
+              variant="honey"
+              size="lg"
+              className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.34)] motion-reduce:hover:translate-y-0"
+            >
+              Apply
+              <ArrowUpRight
+                className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                aria-hidden
+              />
+            </Button>
+            {hasFilters ? (
+              <Link
+                href={filterHref({
+                  q: undefined,
+                  status: undefined,
+                  role: undefined,
+                  location: undefined,
+                  range: undefined,
+                  batch: undefined,
+                  page: undefined,
+                })}
+                className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-bh-border/80 bg-white px-3.5 text-sm font-semibold text-bh-text-secondary shadow-[0_1px_2px_rgba(7,29,48,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] hover:text-[#071d30] motion-reduce:hover:translate-y-0"
+              >
+                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                Clear
+              </Link>
+            ) : null}
+          </div>
         </div>
       </form>
 
@@ -642,6 +768,11 @@ export default async function ShiftsPage({
             Boolean(locationFilter || roleFilter) &&
             calendarEvents.length === 0
           }
+        />
+      ) : listError ? (
+        <EmptyState
+          title="Couldn’t load shifts"
+          description="Something went wrong loading the shift list. Try again in a moment."
         />
       ) : !pageShifts.length ? (
         <EmptyState
@@ -717,6 +848,15 @@ export default async function ShiftsPage({
                     'HH:mm',
                   )} – ${formatInTimeZone(new Date(shift.ends_at), timeZone, 'HH:mm')}`;
                   const assignee = assigneeByShift.get(shift.id);
+                  const filledForShift = filledCountByShift.get(shift.id) ?? 0;
+                  const requiredForShift =
+                    typeof shift.required_positions === 'number'
+                      ? shift.required_positions
+                      : 1;
+                  const capacityLabel = filledPositionsLabel(
+                    filledForShift,
+                    requiredForShift,
+                  );
                   const initials = (assignee ?? 'U')
                     .split(/\s+/)
                     .map((p) => p[0])
@@ -802,23 +942,32 @@ export default async function ShiftsPage({
                         </span>
                       </td>
                       <td className="px-4 py-3.5">
-                        {assignee ? (
-                          <span className="inline-flex min-w-0 items-center gap-2">
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-[10px] font-bold text-bh-teal-strong">
-                              {initials}
+                        <div className="space-y-1">
+                          {assignee ? (
+                            <span className="inline-flex min-w-0 items-center gap-2">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-[10px] font-bold text-bh-teal-strong">
+                                {initials}
+                              </span>
+                              <span className="truncate text-sm font-medium text-bh-text">
+                                {requiredForShift > 1
+                                  ? `${filledForShift} assigned`
+                                  : assignee}
+                              </span>
                             </span>
-                            <span className="truncate text-sm font-medium text-bh-text">
-                              {assignee}
+                          ) : (
+                            <span className="inline-flex items-center gap-2 text-sm text-bh-text-muted">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-subtle text-bh-text-muted">
+                                <UserPlus className="h-3.5 w-3.5" aria-hidden />
+                              </span>
+                              Unassigned
                             </span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-2 text-sm text-bh-text-muted">
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-subtle text-bh-text-muted">
-                              <UserPlus className="h-3.5 w-3.5" aria-hidden />
-                            </span>
-                            Unassigned
-                          </span>
-                        )}
+                          )}
+                          {requiredForShift > 1 ? (
+                            <p className="text-xs text-bh-text-muted">
+                              {capacityLabel}
+                            </p>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3.5">
                         <ShiftStatusBadge status={shift.status} />
@@ -855,6 +1004,11 @@ export default async function ShiftsPage({
                   ? (location as { name: string }).name
                   : null;
               const assignee = assigneeByShift.get(shift.id);
+              const filledForShift = filledCountByShift.get(shift.id) ?? 0;
+              const requiredForShift =
+                typeof shift.required_positions === 'number'
+                  ? shift.required_positions
+                  : 1;
               return (
                 <li key={shift.id}>
                   <Link
@@ -875,7 +1029,9 @@ export default async function ShiftsPage({
                           {locationName ? ` · ${locationName}` : ''}
                         </p>
                         <p className="mt-1 text-xs text-bh-text-muted">
-                          {assignee ?? 'Unassigned'}
+                          {requiredForShift > 1
+                            ? filledPositionsLabel(filledForShift, requiredForShift)
+                            : (assignee ?? 'Unassigned')}
                         </p>
                       </div>
                       <ShiftStatusBadge status={shift.status} />

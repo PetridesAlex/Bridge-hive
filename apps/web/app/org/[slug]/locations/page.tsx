@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   ArrowUpRight,
   Building2,
   CalendarDays,
@@ -32,6 +33,7 @@ import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
 
 import { LocationForm } from './_components/location-form';
+import { WardLibraryPanel } from './_components/ward-library-panel';
 
 const WARD_ICON_TONES = [
   'bg-bh-accent-blue-soft text-bh-accent-blue',
@@ -278,10 +280,23 @@ export default async function LocationsPage({
         subtitle="Facilities and sites where shifts take place."
         actions={
           <PermissionGuard allowed={ctx.capabilities.canManageLocations}>
-            <Button asChild variant="honey" className="rounded-xl font-semibold">
+            <Button
+              asChild
+              variant="honey"
+              size="lg"
+              className="group min-h-11 justify-between gap-3 rounded-xl px-4 font-semibold shadow-[0_10px_24px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(228,179,52,0.38)] active:translate-y-0 active:shadow-[0_6px_16px_rgba(228,179,52,0.22)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            >
               <Link href={filterHref(slug, filterState, { new: '1' })}>
-                <Plus className="h-4 w-4" aria-hidden />
-                Add location
+                <span className="inline-flex items-center gap-2.5">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30]/10 text-[#071d30] ring-1 ring-[#071d30]/10 transition-colors group-hover:bg-[#071d30]/14">
+                    <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+                  </span>
+                  Add location
+                </span>
+                <ArrowRight
+                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                  aria-hidden
+                />
               </Link>
             </Button>
           </PermissionGuard>
@@ -326,6 +341,22 @@ export default async function LocationsPage({
           series={staffSeries}
         />
       </div>
+
+      <WardLibraryPanel
+        slug={slug}
+        locations={locations.map((location) => ({
+          id: location.id,
+          name: location.name,
+        }))}
+        wards={locations.flatMap((location) =>
+          location.wards.map((ward) => ({
+            id: ward.id,
+            name: ward.name,
+            locationId: location.id,
+          })),
+        )}
+        canManageWards={ctx.capabilities.canManageWards}
+      />
 
       <PermissionGuard allowed={ctx.capabilities.canManageLocations && showNew === '1'}>
         <Card className="border-bh-border shadow-[0_4px_16px_rgba(7,29,48,0.04)]">
@@ -438,10 +469,20 @@ export default async function LocationsPage({
           description="Create a location and wards so schedulers can publish openings."
           action={
             ctx.capabilities.canManageLocations ? (
-              <Button asChild variant="honey">
+              <Button
+                asChild
+                variant="honey"
+                size="lg"
+                className="group min-h-11 justify-between gap-3 rounded-xl px-4 font-semibold shadow-[0_10px_24px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(228,179,52,0.38)] motion-reduce:hover:translate-y-0"
+              >
                 <Link href={`/org/${slug}/locations?new=1`}>
-                  <Plus className="h-4 w-4" aria-hidden />
-                  Add location
+                  <span className="inline-flex items-center gap-2.5">
+                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30]/10 text-[#071d30] ring-1 ring-[#071d30]/10">
+                      <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+                    </span>
+                    Add location
+                  </span>
+                  <ArrowRight className="h-4 w-4" aria-hidden />
                 </Link>
               </Button>
             ) : undefined

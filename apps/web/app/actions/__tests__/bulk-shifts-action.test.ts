@@ -56,4 +56,25 @@ describe('bulk shift action gates', () => {
     expect(key.length).toBeGreaterThanOrEqual(8);
     expect(key.length).toBeLessThanOrEqual(128);
   });
+
+  it('maps required_positions into the create_shifts_batch payload shape', () => {
+    const rpcShifts = [
+      {
+        location_id: 'loc',
+        ward_id: null,
+        required_role: 'registered_nurse',
+        starts_at: '2026-10-05T06:00:00.000Z',
+        ends_at: '2026-10-05T14:00:00.000Z',
+        break_minutes: 0,
+        rate_minor: 2000,
+        currency: 'EUR',
+        acceptance_deadline: null,
+        title: null,
+        notes: null,
+        required_positions: 3,
+        requirements: [],
+      },
+    ];
+    expect(rpcShifts[0]!.required_positions).toBe(3);
+  });
 });

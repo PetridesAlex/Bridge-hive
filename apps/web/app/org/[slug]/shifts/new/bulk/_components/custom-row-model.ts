@@ -1,6 +1,5 @@
 import {
   BULK_SHIFT_MAX,
-  BULK_SHIFT_MIN,
   SHIFT_POSITIONS_MAX,
   SHIFT_POSITIONS_MIN,
   addCalendarDaysYmd,
@@ -159,12 +158,13 @@ export function deleteCustomRow(
   rows: BulkCustomRow[],
   index: number,
 ): BulkCustomRow[] {
-  if (rows.length <= BULK_SHIFT_MIN) return rows;
+  if (index < 0 || index >= rows.length) return rows;
   return rows.filter((_, i) => i !== index);
 }
 
-export function clearCustomRows(seed: BulkCustomRowSeed): BulkCustomRow[] {
-  return createStarterCustomRows(seed);
+/** Remove every custom row from the batch editor. */
+export function clearCustomRows(): BulkCustomRow[] {
+  return [];
 }
 
 export function copyFirstRowFieldsToAll(rows: BulkCustomRow[]): BulkCustomRow[] {

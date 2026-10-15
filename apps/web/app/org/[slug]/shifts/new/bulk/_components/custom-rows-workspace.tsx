@@ -2,7 +2,6 @@
 
 import {
   BULK_SHIFT_MAX,
-  BULK_SHIFT_MIN,
   WORKER_ROLE_LABELS,
   WORKER_ROLES,
   type WorkerRole,
@@ -42,6 +41,7 @@ import {
   type BulkCustomRow,
   type BulkCustomRowSeed,
 } from './custom-row-model';
+import { Hm24Field } from './hm24-field';
 
 type LocationOption = { id: string; name: string; timezone: string };
 type WardOption = { id: string; name: string; locationId: string };
@@ -215,7 +215,8 @@ export function CustomRowsWorkspace({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => setRows(clearCustomRows(seed))}
+            disabled={rows.length === 0}
+            onClick={() => setRows(() => clearCustomRows())}
             className="h-10 rounded-xl border-bh-border bg-white px-3 pr-3.5 font-semibold text-bh-text-secondary shadow-sm transition-[transform,background,color] duration-200 hover:-translate-y-0.5 hover:bg-bh-subtle hover:text-bh-text motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             <span className="grid h-6 w-6 place-items-center rounded-md bg-bh-subtle text-bh-text-secondary">
@@ -254,12 +255,12 @@ export function CustomRowsWorkspace({
                   <TableHeadCell className="w-[8.25rem]">Role</TableHeadCell>
                   <TableHeadCell className="w-[8rem]">Location</TableHeadCell>
                   <TableHeadCell className="w-[8.5rem]">Ward / unit</TableHeadCell>
-                  <TableHeadCell className="w-[6rem]">Start</TableHeadCell>
-                  <TableHeadCell className="w-[6rem]">End</TableHeadCell>
-                  <TableHeadCell className="w-[4.25rem]">Break</TableHeadCell>
-                  <TableHeadCell className="w-[4.75rem]">Rate €</TableHeadCell>
-                  <TableHeadCell className="w-[4.5rem]">Positions</TableHeadCell>
-                  <TableHeadCell className="w-[5rem] text-right">Actions</TableHeadCell>
+                  <TableHeadCell className="w-[7.25rem]">Start</TableHeadCell>
+                  <TableHeadCell className="w-[7.25rem]">End</TableHeadCell>
+                  <TableHeadCell className="w-[4rem]">Break</TableHeadCell>
+                  <TableHeadCell className="w-[4.5rem]">Rate €</TableHeadCell>
+                  <TableHeadCell className="w-[4.25rem]">Positions</TableHeadCell>
+                  <TableHeadCell className="w-[4.75rem] text-right">Actions</TableHeadCell>
                 </tr>
               </thead>
               <tbody>
@@ -272,7 +273,6 @@ export function CustomRowsWorkspace({
                     locations={locations}
                     wards={wards}
                     showFieldErrors={showFieldErrors}
-                    canDelete={rows.length > BULK_SHIFT_MIN}
                     canDuplicate={rows.length < BULK_SHIFT_MAX}
                     onUpdate={(patch) => updateRow(index, patch)}
                     onLocationChange={(locationId) =>
@@ -305,7 +305,6 @@ export function CustomRowsWorkspace({
             locations={locations}
             wards={wards}
             showFieldErrors={showFieldErrors}
-            canDelete={rows.length > BULK_SHIFT_MIN}
             canDuplicate={rows.length < BULK_SHIFT_MAX}
             onUpdate={(patch) => updateRow(index, patch)}
             onLocationChange={(locationId) => updateLocation(index, locationId)}
@@ -330,7 +329,6 @@ function CustomRowTableRow({
   locations,
   wards,
   showFieldErrors,
-  canDelete,
   canDuplicate,
   onUpdate,
   onLocationChange,
@@ -344,7 +342,6 @@ function CustomRowTableRow({
   locations: LocationOption[];
   wards: WardOption[];
   showFieldErrors: boolean;
-  canDelete: boolean;
   canDuplicate: boolean;
   onUpdate: (patch: Partial<BulkCustomRow>) => void;
   onLocationChange: (locationId: string) => void;
@@ -443,28 +440,28 @@ function CustomRowTableRow({
         </div>
       </td>
       <td className="px-1.5 py-3 align-top">
-        <Input
-          type="time"
+        <Hm24Field
           aria-label={`Row ${index + 1} start time`}
-          className={cn(fieldInputClass, 'w-full min-w-0 px-1.5', invalidClass(Boolean(errors.startHm)))}
+          selectClassName={cn(fieldInputClass, 'w-full min-w-0 px-1')}
+          invalid={Boolean(errors.startHm)}
           value={row.startHm}
-          onChange={(e) => onUpdate({ startHm: e.target.value })}
+          onChange={(startHm) => onUpdate({ startHm })}
         />
         <FieldError message={errors.startHm} />
       </td>
       <td className="px-1.5 py-3 align-top">
-        <Input
-          type="time"
+        <Hm24Field
           aria-label={`Row ${index + 1} end time`}
-          className={cn(fieldInputClass, 'w-full min-w-0 px-1.5', invalidClass(Boolean(errors.endHm)))}
+          selectClassName={cn(fieldInputClass, 'w-full min-w-0 px-1')}
+          invalid={Boolean(errors.endHm)}
           value={row.endHm}
-          onChange={(e) => onUpdate({ endHm: e.target.value })}
+          onChange={(endHm) => onUpdate({ endHm })}
         />
         <FieldError message={errors.endHm} />
         {overnight ? (
           <p className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#16384f] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-white">
             <Moon className="h-3 w-3 text-[#e4b334]" aria-hidden />
-            Overnight
+            Overnight · ends next day
           </p>
         ) : null}
       </td>
@@ -532,7 +529,6 @@ function CustomRowTableRow({
             className="h-8 w-8 rounded-lg border-bh-border bg-white text-bh-danger shadow-sm hover:border-bh-danger/40 hover:bg-bh-danger-soft hover:text-bh-danger"
             aria-label={`Delete row ${index + 1}`}
             title="Delete row"
-            disabled={!canDelete}
             onClick={onDelete}
           >
             <Trash2 className="h-3.5 w-3.5" aria-hidden />
@@ -550,7 +546,6 @@ function CustomRowMobileCard({
   locations,
   wards,
   showFieldErrors,
-  canDelete,
   canDuplicate,
   onUpdate,
   onLocationChange,
@@ -564,7 +559,6 @@ function CustomRowMobileCard({
   locations: LocationOption[];
   wards: WardOption[];
   showFieldErrors: boolean;
-  canDelete: boolean;
   canDuplicate: boolean;
   onUpdate: (patch: Partial<BulkCustomRow>) => void;
   onLocationChange: (locationId: string) => void;
@@ -667,20 +661,25 @@ function CustomRowMobileCard({
             }
           />
         </MobileField>
-        <MobileField label="Start" error={errors.startHm}>
-          <Input
-            type="time"
-            className={cn(fieldInputClass, invalidClass(Boolean(errors.startHm)))}
+        <MobileField label="Start (24h)" error={errors.startHm}>
+          <Hm24Field
+            aria-label={`Row ${index + 1} start time`}
+            selectClassName={cn(fieldInputClass, invalidClass(Boolean(errors.startHm)))}
+            invalid={Boolean(errors.startHm)}
             value={row.startHm}
-            onChange={(e) => onUpdate({ startHm: e.target.value })}
+            onChange={(startHm) => onUpdate({ startHm })}
           />
         </MobileField>
-        <MobileField label="End" error={errors.endHm}>
-          <Input
-            type="time"
-            className={cn(fieldInputClass, invalidClass(Boolean(errors.endHm)))}
+        <MobileField
+          label={overnight ? 'End (24h, next day)' : 'End (24h)'}
+          error={errors.endHm}
+        >
+          <Hm24Field
+            aria-label={`Row ${index + 1} end time`}
+            selectClassName={cn(fieldInputClass, invalidClass(Boolean(errors.endHm)))}
+            invalid={Boolean(errors.endHm)}
             value={row.endHm}
-            onChange={(e) => onUpdate({ endHm: e.target.value })}
+            onChange={(endHm) => onUpdate({ endHm })}
           />
         </MobileField>
         <MobileField label="Rate (€ / hour)" error={errors.rateEuros}>
@@ -733,7 +732,6 @@ function CustomRowMobileCard({
           className="rounded-xl"
           aria-label={`Delete row ${index + 1}`}
           title="Delete row"
-          disabled={!canDelete}
           onClick={onDelete}
         >
           <Trash2 className="h-4 w-4" aria-hidden />

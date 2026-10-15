@@ -17,7 +17,10 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { Surface } from '@/components/ui/Surface';
-import { openPositionsLabel } from '@bridge-hive/domain';
+import {
+  estimatedWorkerShiftPayMinor,
+  openPositionsLabel,
+} from '@bridge-hive/domain';
 
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
@@ -224,6 +227,12 @@ export default function ShiftDetailScreen() {
   const start = new Date(shift.starts_at);
   const end = new Date(shift.ends_at);
   const durationMin = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60_000));
+  const estimatedPayMinor = estimatedWorkerShiftPayMinor({
+    rateMinor: shift.rate_minor,
+    startsAtIso: shift.starts_at,
+    endsAtIso: shift.ends_at,
+    breakMinutes: shift.break_minutes,
+  });
   const notesLong = (shift.notes?.length ?? 0) > 160;
   const notesVisible =
     !shift.notes
@@ -294,6 +303,13 @@ export default function ShiftDetailScreen() {
               value={`${formatMoney(shift.rate_minor, shift.currency)} / hour`}
               emphasize
             />
+            {estimatedPayMinor > 0 ? (
+              <KeyValueRow
+                label="Est. shift pay"
+                value={formatMoney(estimatedPayMinor, shift.currency)}
+                emphasize
+              />
+            ) : null}
             <KeyValueRow label="Required role" value={roleLabel} />
             <KeyValueRow
               label="Positions"
@@ -324,7 +340,7 @@ export default function ShiftDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Pay</Text>
+          <Text style={styles.sectionLabel}>Your pay</Text>
           <ListGroup>
             <View style={styles.groupPad}>
               <View style={styles.payRow}>
@@ -336,9 +352,20 @@ export default function ShiftDetailScreen() {
                   accessibilityLabel={`${formatMoney(shift.rate_minor, shift.currency)} per hour`}
                 />
               </View>
+              {estimatedPayMinor > 0 ? (
+                <View style={[styles.payRow, { marginTop: spacing.sm }]}>
+                  <Text style={styles.payLabel}>Est. for this assignment</Text>
+                  <MoneyAmount
+                    amountMinor={estimatedPayMinor}
+                    currency={shift.currency}
+                    emphasize
+                    accessibilityLabel={`${formatMoney(estimatedPayMinor, shift.currency)} estimated for this assignment`}
+                  />
+                </View>
+              ) : null}
               <Text style={styles.hint}>
-                Organizations pay approved gross amounts separately from Bridge Hive commission
-                invoices.
+                Your rate is per hour for your own assignment. Organizations pay approved
+                gross amounts separately from Bridge Hive commission invoices.
               </Text>
             </View>
           </ListGroup>

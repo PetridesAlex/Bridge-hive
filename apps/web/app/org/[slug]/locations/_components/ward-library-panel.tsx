@@ -1,18 +1,10 @@
 'use client';
 
-import {
-  STANDARD_WARD_LIBRARY,
-  wardNameExistsAmong,
-} from '@bridge-hive/domain';
-import { Building2, Layers } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import { WardLibraryDialog } from '@/components/org/ward-library-dialog';
 import type { WardUnitOption } from '@/components/org/ward-unit-selector';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 type LocationOption = { id: string; name: string };
@@ -36,21 +28,17 @@ export function WardLibraryPanel({
     defaultLocationId || locations[0]?.id || '',
   );
 
-  const grouped = useMemo(() => {
-    return locations.map((location) => ({
-      location,
-      wards: wards
-        .filter((ward) => ward.locationId === location.id)
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    }));
-  }, [locations, wards]);
+  const selectedLocation = useMemo(
+    () => locations.find((location) => location.id === locationId) ?? null,
+    [locations, locationId],
+  );
 
-  const selectedSavedNames = useMemo(
+  const locationWards = useMemo(
     () =>
       wards
         .filter((ward) => ward.locationId === locationId)
-        .map((ward) => ward.name),
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name)),
     [wards, locationId],
   );
 
@@ -70,35 +58,34 @@ export function WardLibraryPanel({
       }
       return next;
     });
+    if (created[0]?.locationId) setLocationId(created[0].locationId);
     router.refresh();
   }
 
   if (!locations.length) {
     return (
-      <section className="rounded-2xl border border-dashed border-bh-border bg-bh-subtle/30 p-6 text-center">
-        <p className="text-sm font-medium text-bh-text">
-          Add a location before building your Ward / Unit Library.
+      <section className="rounded-2xl border border-bh-border/70 bg-bh-surface px-6 py-10 text-center">
+        <h2 className="text-lg font-semibold tracking-tight text-[#071d30]">
+          Ward library
+        </h2>
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-bh-text-secondary">
+          Add a location first. Units are saved per location and stay private to
+          this organization.
         </p>
       </section>
     );
   }
 
   return (
-    <section className="space-y-5 rounded-2xl border border-bh-border bg-bh-surface p-5 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-teal-soft text-bh-teal-strong">
-            <Layers className="h-5 w-5" aria-hidden />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold text-bh-text">
-              Ward / Unit Library
-            </h2>
-            <p className="mt-0.5 max-w-xl text-sm text-bh-text-secondary">
-              Standard healthcare units for your locations. Saved wards stay
-              private to this organization.
-            </p>
-          </div>
+    <section className="rounded-2xl border border-bh-border/70 bg-bh-surface">
+      <header className="flex flex-wrap items-start justify-between gap-4 px-5 pt-5 sm:px-6 sm:pt-6">
+        <div className="min-w-0 max-w-lg">
+          <h2 className="text-lg font-semibold tracking-tight text-[#071d30]">
+            Ward library
+          </h2>
+          <p className="mt-1 text-sm leading-6 text-bh-text-secondary">
+            Standard units for your locations — private to this organization.
+          </p>
         </div>
         {canManageWards ? (
           <WardLibraryDialog
@@ -107,128 +94,111 @@ export function WardLibraryPanel({
             wards={wards}
             defaultLocationId={locationId}
             compactTrigger={false}
-            triggerLabel="Add from ward library"
+            triggerLabel="Add wards"
             onCreated={(created) => handleCreated(created)}
           />
         ) : null}
-      </div>
+      </header>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)]">
-        <div className="space-y-2">
-          <Label htmlFor="ward-library-panel-location">Destination location</Label>
-          <Select
-            id="ward-library-panel-location"
-            value={locationId}
-            onChange={(e) => setLocationId(e.target.value)}
-            className="rounded-lg border-bh-border"
-          >
-            {locations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.name}
-              </option>
-            ))}
-          </Select>
-          {canManageWards ? (
-            <p className="text-xs text-bh-text-muted">
-              Choose a location, then add starter units or a custom name.
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-            Starter suggestions
-          </p>
-          <ul className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
-            {STANDARD_WARD_LIBRARY.map((label) => {
-              const saved = wardNameExistsAmong(label, selectedSavedNames);
-              return (
-                <li
-                  key={label}
+      <div className="mt-5 border-t border-bh-border/60 px-5 pb-5 pt-4 sm:px-6 sm:pb-6">
+        <div
+          role="tablist"
+          aria-label="Locations"
+          className="flex gap-6 overflow-x-auto"
+        >
+          {locations.map((location) => {
+            const count = wards.filter(
+              (ward) => ward.locationId === location.id,
+            ).length;
+            const active = location.id === locationId;
+            return (
+              <button
+                key={location.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setLocationId(location.id)}
+                className={cn(
+                  'relative shrink-0 pb-2.5 text-left transition-colors',
+                  active
+                    ? 'text-[#071d30]'
+                    : 'text-bh-text-muted hover:text-bh-text',
+                )}
+              >
+                <span className="block text-sm font-medium tracking-tight">
+                  {location.name}
+                </span>
+                <span
                   className={cn(
-                    'rounded-xl border px-3 py-2.5 text-sm',
-                    saved
-                      ? 'border-bh-border/70 bg-bh-subtle/50 text-bh-text-muted'
-                      : 'border-bh-border bg-bh-surface text-bh-text',
+                    'mt-0.5 block text-xs',
+                    active ? 'text-bh-text-secondary' : 'text-bh-text-muted',
                   )}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-medium leading-snug">{label}</span>
-                    {saved ? (
-                      <span className="shrink-0 text-[11px] font-medium">
-                        Saved
-                      </span>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {canManageWards ? (
-            <div className="pt-1">
-              <WardLibraryDialog
-                slug={slug}
-                locations={locations}
-                wards={wards}
-                defaultLocationId={locationId}
-                onCreated={(created) => handleCreated(created)}
-              />
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="space-y-3 border-t border-bh-border pt-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-          Saved wards by location
-        </p>
-        <ul className="space-y-3">
-          {grouped.map(({ location, wards: locationWards }) => (
-            <li
-              key={location.id}
-              className="rounded-xl border border-bh-border/80 bg-bh-subtle/20 p-3.5"
-            >
-              <div className="mb-2 flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-bh-teal-strong" aria-hidden />
-                <p className="text-sm font-semibold text-bh-text">
-                  {location.name}
-                </p>
-                <span className="text-xs text-bh-text-muted">
-                  {locationWards.length === 1
-                    ? '1 unit'
-                    : `${locationWards.length} units`}
+                  {count === 1 ? '1 unit' : `${count} units`}
                 </span>
-              </div>
-              {locationWards.length === 0 ? (
-                <p className="text-sm text-bh-text-muted">No wards saved yet.</p>
-              ) : (
-                <ul className="flex flex-wrap gap-1.5">
-                  {locationWards.map((ward) => (
-                    <li
-                      key={ward.id}
-                      className="rounded-lg border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-medium text-bh-text"
-                    >
-                      {ward.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                {active ? (
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-[#071d30]"
+                  />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <div
+          role="tabpanel"
+          aria-label={
+            selectedLocation
+              ? `Units at ${selectedLocation.name}`
+              : 'Location units'
+          }
+          className="mt-5"
+        >
+          {locationWards.length === 0 ? (
+            <div className="flex flex-col items-start gap-3 py-6">
+              <p className="text-sm text-bh-text-secondary">
+                No units at {selectedLocation?.name ?? 'this location'} yet.
+              </p>
               {canManageWards ? (
-                <div className="mt-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto px-0 text-xs text-bh-teal-strong"
-                    onClick={() => setLocationId(location.id)}
-                  >
-                    Add units to this location
-                  </Button>
-                </div>
+                <WardLibraryDialog
+                  slug={slug}
+                  locations={locations}
+                  wards={wards}
+                  defaultLocationId={locationId}
+                  compactTrigger
+                  triggerLabel="Add from library"
+                  onCreated={(created) => handleCreated(created)}
+                />
               ) : null}
-            </li>
-          ))}
-        </ul>
+            </div>
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {locationWards.map((ward) => (
+                <li
+                  key={ward.id}
+                  className="rounded-lg border border-bh-border/70 bg-[#f7fafc] px-3 py-1.5 text-sm text-[#071d30]"
+                >
+                  {ward.name}
+                </li>
+              ))}
+              {canManageWards ? (
+                <li className="flex items-center">
+                  <WardLibraryDialog
+                    slug={slug}
+                    locations={locations}
+                    wards={wards}
+                    defaultLocationId={locationId}
+                    compactTrigger
+                    triggerLabel="+ Add more"
+                    onCreated={(created) => handleCreated(created)}
+                  />
+                </li>
+              ) : null}
+            </ul>
+          )}
+        </div>
       </div>
     </section>
   );

@@ -69,24 +69,19 @@ describe('custom-row-model', () => {
     expect(next[2]!.key).toBe(starter[1]!.key);
   });
 
-  it('never deletes below the minimum batch size', () => {
+  it('deletes any chosen row, including below the batch minimum', () => {
     const starter = createStarterCustomRows(seed);
-    expect(deleteCustomRow(starter, 0)).toHaveLength(BULK_SHIFT_MIN);
+    expect(deleteCustomRow(starter, 0)).toHaveLength(1);
+    expect(deleteCustomRow(starter, 1)).toHaveLength(1);
     const three = addCustomRow(starter, seed);
     expect(deleteCustomRow(three, 1)).toHaveLength(2);
+    expect(deleteCustomRow(deleteCustomRow(starter, 0), 0)).toHaveLength(0);
   });
 
-  it('clears back to two valid starter rows', () => {
+  it('clears every custom row from the batch', () => {
     const three = addCustomRow(createStarterCustomRows(seed), seed);
-    const cleared = clearCustomRows({
-      ...seed,
-      requiredRole: 'physiotherapist',
-      rateEuros: '40.00',
-    });
-    expect(cleared).toHaveLength(BULK_SHIFT_MIN);
-    expect(cleared[0]!.requiredRole).toBe('physiotherapist');
-    expect(cleared[0]!.rateEuros).toBe('40.00');
     expect(three).toHaveLength(3);
+    expect(clearCustomRows()).toEqual([]);
   });
 
   it('copies first-row fields without changing dates', () => {

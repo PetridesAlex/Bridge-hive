@@ -1,3 +1,5 @@
+import { grossFromRateAndMinutes } from './money';
+
 /** Capacity of a single shift: how many eligible workers may accept it. */
 export const SHIFT_POSITIONS_MIN = 1;
 export const SHIFT_POSITIONS_MAX = 100;
@@ -61,4 +63,48 @@ export function remainingOpenPositions(
   );
   const active = Math.max(0, Math.trunc(activeAssignments));
   return Math.max(0, required - active);
+}
+
+/** Paid minutes for a shift window (break excluded). */
+export function estimatedShiftPaidMinutes(params: {
+  startsAtIso: string;
+  endsAtIso: string;
+  breakMinutes?: number | null;
+}): number {
+  const start = new Date(params.startsAtIso).getTime();
+  const end = new Date(params.endsAtIso).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return 0;
+  const breakMinutes = Math.max(0, Math.trunc(params.breakMinutes ?? 0));
+  return Math.max(0, Math.round((end - start) / 60_000) - breakMinutes);
+}
+
+/**
+ * Expected pay for one professional on a multi-position shift.
+ * Rate is always per professional; never multiply by positions here.
+ */
+export function estimatedWorkerShiftPayMinor(params: {
+  rateMinor: number;
+  startsAtIso: string;
+  endsAtIso: string;
+  breakMinutes?: number | null;
+}): number {
+  if (!Number.isFinite(params.rateMinor) || params.rateMinor <= 0) return 0;
+  const minutes = estimatedShiftPaidMinutes(params);
+  if (minutes <= 0) return 0;
+  return grossFromRateAndMinutes(params.rateMinor, minutes);
+}
+
+/**
+ * Organization labor estimate when every position is filled at the shared rate.
+ * Example: 2 positions × €25/h × 8h = €400.
+ */
+export function estimatedFullCoveragePayMinor(params: {
+  rateMinor: number;
+  startsAtIso: string;
+  endsAtIso: string;
+  breakMinutes?: number | null;
+  requiredPositions?: number | null;
+}): number {
+  const perWorker = estimatedWorkerShiftPayMinor(params);
+  return perWorker * clampShiftPositions(params.requiredPositions ?? SHIFT_POSITIONS_MIN);
 }

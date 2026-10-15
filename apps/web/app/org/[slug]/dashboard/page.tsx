@@ -66,7 +66,7 @@ export default async function OrgDashboardPage({
   const todayYmd = todayYmdInTimezone(timeZone, now);
   const period = resolveCalendarPeriod({
     timeZone,
-    viewRaw: sp.view,
+    viewRaw: 'month',
     dateRaw: sp.date,
     now,
   });
@@ -453,7 +453,7 @@ export default async function OrgDashboardPage({
               label="Open shifts"
               value={openCount}
               supporting="Published and claimable"
-              href={`/org/${slug}/shifts?status=published`}
+              href={`/org/${slug}/shifts?status=published&range=upcoming`}
               icon={CalendarDays}
               tint="info"
               series={openSeries}
@@ -495,7 +495,8 @@ export default async function OrgDashboardPage({
               <ShiftScheduleCalendar
                 slug={slug}
                 timeZone={timeZone}
-                view={period.view}
+                view="month"
+                monthOnly
                 dateYmd={period.dateYmd}
                 periodLabel={period.label}
                 dayKeys={period.dayKeys}

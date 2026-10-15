@@ -1,5 +1,6 @@
 import {
   credentialTypeLabel,
+  estimatedFullCoveragePayMinor,
   filledPositionsLabel,
   formatMoneyMinor,
 } from '@bridge-hive/domain';
@@ -144,20 +145,35 @@ export default async function ShiftDetailPage({
   const filledCount = assignments.length;
   const requiredPositions = shift.required_positions ?? 1;
   const openPositions = Math.max(0, requiredPositions - filledCount);
-  const assignment = assignments[0] ?? null;
+  const estimatedFullPayMinor = estimatedFullCoveragePayMinor({
+    rateMinor: shift.rate_minor,
+    startsAtIso: shift.starts_at,
+    endsAtIso: shift.ends_at,
+    breakMinutes: shift.break_minutes,
+    requiredPositions,
+  });
 
-  const timesheet = Array.isArray(assignment?.timesheet)
-    ? assignment?.timesheet[0]
-    : assignment?.timesheet;
+  const assignmentIds = assignments.map((row) => row.id);
+  const { data: payoutRows } =
+    assignmentIds.length > 0
+      ? await supabase.from('payouts').select('*').in('assignment_id', assignmentIds)
+      : { data: [] as Array<Record<string, unknown>> };
+  const payoutByAssignmentId = new Map(
+    (payoutRows ?? []).map((row) => [String(row.assignment_id), row]),
+  );
 
-  const { data: payout } =
-    timesheet?.status === 'approved' && assignment
-      ? await supabase
-          .from('payouts')
-          .select('*')
-          .eq('assignment_id', assignment.id)
-          .maybeSingle()
-      : { data: null };
+  type TimesheetRow = {
+    id: string;
+    status: string;
+    submitted_minutes: number | null;
+    approved_minutes: number | null;
+  };
+
+  function timesheetForAssignment(row: (typeof assignments)[number]): TimesheetRow | null {
+    const raw = row.timesheet;
+    const ts = Array.isArray(raw) ? raw[0] : raw;
+    return ts && typeof ts === 'object' && 'id' in ts ? (ts as TimesheetRow) : null;
+  }
 
   const location =
     shift.location && typeof shift.location === 'object' && 'name' in shift.location
@@ -244,6 +260,12 @@ export default async function ShiftDetailPage({
           <MetaTile
             label="Hourly rate"
             value={formatRate(shift.rate_minor, shift.currency)}
+            hint="Per professional"
+          />
+          <MetaTile
+            label="Est. worker pay when full"
+            value={formatMoneyMinor(estimatedFullPayMinor, shift.currency)}
+            hint={`${requiredPositions} × rate × paid hours`}
           />
           <MetaTile
             label="Break"
@@ -409,84 +431,134 @@ export default async function ShiftDetailPage({
         )}
       </DetailPanel>
 
-      {timesheet ? (
+      {assignments.some((row) => timesheetForAssignment(row)) ? (
         <DetailPanel
-          title="Timesheet"
-          description="Submitted hours and review status."
+          title="Timesheets"
+          description="Each filled position has its own timesheet. Review and pay are per worker."
           icon={Timer}
         >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <MetaTile
-              label="Status"
-              value={
-                <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
-                  {timesheet.status.replaceAll('_', ' ')}
-                </span>
-              }
-            />
-            <MetaTile
-              label="Submitted"
-              value={formatDurationMinutes(timesheet.submitted_minutes)}
-            />
-            <MetaTile
-              label="Approved"
-              value={formatDurationMinutes(timesheet.approved_minutes)}
-            />
+          <div className="space-y-4">
+            {assignments.map((row) => {
+              const timesheet = timesheetForAssignment(row);
+              if (!timesheet) return null;
+              const workerLabel =
+                row.worker &&
+                typeof row.worker === 'object' &&
+                'worker_role' in row.worker
+                  ? roleLabel(String(row.worker.worker_role ?? 'worker'))
+                  : 'Assigned worker';
+              return (
+                <div
+                  key={row.id}
+                  className="rounded-xl border border-bh-border/80 bg-bh-subtle/30 p-4"
+                >
+                  <p className="text-sm font-semibold text-bh-text">{workerLabel}</p>
+                  <p className="mt-0.5 text-xs text-bh-text-muted">
+                    {row.worker_id.slice(0, 8)}…
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <MetaTile
+                      label="Status"
+                      value={
+                        <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
+                          {timesheet.status.replaceAll('_', ' ')}
+                        </span>
+                      }
+                    />
+                    <MetaTile
+                      label="Submitted"
+                      value={formatDurationMinutes(timesheet.submitted_minutes)}
+                    />
+                    <MetaTile
+                      label="Approved"
+                      value={formatDurationMinutes(timesheet.approved_minutes)}
+                    />
+                  </div>
+                  <PermissionGuard
+                    allowed={
+                      ctx.capabilities.canReviewTimesheets &&
+                      timesheet.status === 'submitted'
+                    }
+                  >
+                    <div className="mt-4 rounded-xl border border-bh-warning/20 bg-bh-warning-soft/50 p-4">
+                      <div className="mb-3 flex items-center gap-2">
+                        <ClipboardList
+                          className="h-4 w-4 text-bh-warning"
+                          aria-hidden
+                        />
+                        <p className="text-sm font-semibold text-bh-text">
+                          Needs review
+                        </p>
+                      </div>
+                      <TimesheetReviewForm
+                        slug={slug}
+                        shiftId={shift.id}
+                        timesheetId={timesheet.id}
+                        submittedMinutes={timesheet.submitted_minutes ?? 0}
+                      />
+                    </div>
+                  </PermissionGuard>
+                </div>
+              );
+            })}
           </div>
-
-          <PermissionGuard
-            allowed={
-              ctx.capabilities.canReviewTimesheets &&
-              timesheet.status === 'submitted'
-            }
-          >
-            <div className="mt-4 rounded-xl border border-bh-warning/20 bg-bh-warning-soft/50 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-bh-warning" aria-hidden />
-                <p className="text-sm font-semibold text-bh-text">Needs review</p>
-              </div>
-              <TimesheetReviewForm
-                slug={slug}
-                shiftId={shift.id}
-                timesheetId={timesheet.id}
-                submittedMinutes={timesheet.submitted_minutes}
-              />
-            </div>
-          </PermissionGuard>
         </DetailPanel>
       ) : null}
 
-      {payout ? (
+      {assignments.some((row) => payoutByAssignmentId.has(row.id)) ? (
         <DetailPanel
-          title="Financial snapshot"
-          description="Approved gross amounts for this assignment. Not platform revenue."
+          title="Financial snapshots"
+          description="Approved gross amounts per assignment. Not platform revenue. Commission is billed per completed position."
           icon={Wallet}
         >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <MetaTile
-              label="Approved gross pay"
-              value={formatMoneyMinor(payout.gross_amount_minor, payout.currency)}
-            />
-            <MetaTile
-              label="Hospital payment to worker"
-              value={formatMoneyMinor(
-                payout.worker_transfer_amount_minor,
-                payout.currency,
-              )}
-            />
-            <MetaTile
-              label="Organization total due"
-              value={formatMoneyMinor(
-                payout.organization_total_due_minor,
-                payout.currency,
-              )}
-            />
+          <div className="space-y-4">
+            {assignments.map((row) => {
+              const payout = payoutByAssignmentId.get(row.id);
+              if (!payout) return null;
+              const workerLabel =
+                row.worker &&
+                typeof row.worker === 'object' &&
+                'worker_role' in row.worker
+                  ? roleLabel(String(row.worker.worker_role ?? 'worker'))
+                  : 'Assigned worker';
+              return (
+                <div
+                  key={row.id}
+                  className="rounded-xl border border-bh-border/80 bg-bh-subtle/30 p-4"
+                >
+                  <p className="text-sm font-semibold text-bh-text">{workerLabel}</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <MetaTile
+                      label="Approved gross pay"
+                      value={formatMoneyMinor(
+                        Number(payout.gross_amount_minor),
+                        String(payout.currency),
+                      )}
+                    />
+                    <MetaTile
+                      label="Hospital payment to worker"
+                      value={formatMoneyMinor(
+                        Number(payout.worker_transfer_amount_minor),
+                        String(payout.currency),
+                      )}
+                    />
+                    <MetaTile
+                      label="Organization total due"
+                      value={formatMoneyMinor(
+                        Number(payout.organization_total_due_minor),
+                        String(payout.currency),
+                      )}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <p className="mt-4 rounded-xl bg-bh-honey-soft/60 px-4 py-3 text-xs leading-5 text-bh-text-secondary">
-            The organization pays the worker the approved gross shift amount directly.
-            Bridge Hive commission is a separate worker invoice and is not an organization
-            expense. Payment instructions and bank-account details remain unavailable in this
-            workspace.
+            The organization pays each worker their approved gross amount directly.
+            Bridge Hive commission is a separate worker invoice per completed position and
+            is not an organization expense. Payment instructions and bank-account details
+            remain unavailable in this workspace.
           </p>
         </DetailPanel>
       ) : null}

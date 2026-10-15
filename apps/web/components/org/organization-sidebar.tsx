@@ -68,35 +68,29 @@ export function OrganizationSidebar({
   return (
     <aside
       className={cn(
-        'flex h-full min-h-0 w-[280px] flex-col bg-bh-sidebar text-bh-sidebar-text',
+        'flex h-full min-h-0 w-[280px] flex-col bg-[linear-gradient(180deg,#0a2538_0%,#071d30_42%,#061827_100%)] text-bh-sidebar-text',
         className,
       )}
     >
-      <div className="relative overflow-hidden border-b border-white/10 px-5 py-6">
+      {/* Matches OrganizationTopbar: h-16 / sm:h-[68px] + shared bottom edge */}
+      <div className="relative flex h-16 shrink-0 items-center overflow-hidden border-b border-white/10 px-5 sm:h-[68px]">
         <div
-          className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-bh-honey/10 blur-2xl"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,rgba(20,169,181,0.12)_0%,transparent_45%,rgba(228,179,52,0.1)_100%)]"
           aria-hidden
         />
-        <div
-          className="pointer-events-none absolute -bottom-12 left-8 h-24 w-24 rounded-full bg-bh-teal/15 blur-2xl"
-          aria-hidden
-        />
-        <div className="relative flex items-center gap-3">
+        <div className="relative flex min-w-0 items-center gap-3">
           <BridgeHiveMark
-            size={44}
-            className="h-11 w-11 shrink-0 rounded-2xl shadow-[0_8px_18px_rgba(7,29,48,0.35)] ring-1 ring-white/10"
+            size={36}
+            className="h-9 w-9 shrink-0 rounded-xl shadow-[0_6px_14px_rgba(0,0,0,0.28)] ring-1 ring-white/15"
           />
           <div className="min-w-0">
             <p className="text-[13px] font-bold leading-none tracking-tight">
               <span className="text-white">Bridge</span>{' '}
               <span className="text-bh-honey">Hive</span>
             </p>
-            <div className="mt-1.5 flex items-center gap-2">
-              <span className="h-px w-4 bg-bh-honey/70" aria-hidden />
-              <p className="truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-sidebar-muted">
-                Organization workspace
-              </p>
-            </div>
+            <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-sidebar-muted">
+              Organization workspace
+            </p>
           </div>
         </div>
       </div>
@@ -152,23 +146,35 @@ export function OrganizationSidebar({
         ))}
       </nav>
 
-      <div className="mt-auto shrink-0 border-t border-white/10 p-3.5">
-        <div className="mb-2.5 flex items-center gap-3 rounded-xl px-2 py-2">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bh-honey/20 text-sm font-bold text-bh-honey">
-            {(userLabel || 'U')
-              .split(/\s+/)
-              .map((p) => p[0])
-              .join('')
-              .slice(0, 2)
-              .toUpperCase()}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold text-bh-sidebar-text">
-              {userLabel}
-            </p>
-            {userEmail ? (
-              <p className="mt-0.5 truncate text-xs text-bh-sidebar-muted">{userEmail}</p>
-            ) : null}
+      <div className="mt-auto shrink-0 border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02)_0%,rgba(0,0,0,0.18)_100%)] p-3.5">
+        <div className="mb-2.5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+          <div className="flex items-center gap-3">
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#16384f_0%,#0c3a42_45%,#e4b334_100%)] text-[13px] font-bold tracking-wide text-white shadow-[0_8px_18px_rgba(228,179,52,0.22)] ring-1 ring-white/20">
+              {(userLabel || 'U')
+                .split(/\s+/)
+                .map((p) => p[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase()}
+              <span
+                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-bh-success ring-2 ring-[#071d30]"
+                aria-hidden
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold tracking-tight text-white">
+                {userLabel}
+              </p>
+              {userEmail ? (
+                <p className="mt-0.5 truncate text-[11px] text-white/55">
+                  {userEmail}
+                </p>
+              ) : null}
+              <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-honey ring-1 ring-white/10">
+                <span className="h-1 w-1 rounded-full bg-bh-honey" aria-hidden />
+                Signed in
+              </p>
+            </div>
           </div>
         </div>
         <form
@@ -179,11 +185,12 @@ export function OrganizationSidebar({
         >
           <Button
             type="submit"
-            variant="ghost"
             size="sm"
-            className="h-11 w-full justify-start gap-3 rounded-xl px-3 text-[15px] font-semibold text-bh-sidebar-muted hover:bg-bh-sidebar-hover hover:text-bh-sidebar-text"
+            className="group h-11 w-full justify-start gap-3 rounded-xl border border-white/15 bg-white/[0.08] px-3 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-bh-teal/50 hover:bg-bh-teal/35 hover:text-white hover:shadow-[0_12px_24px_rgba(20,184,166,0.28)] active:translate-y-0 motion-reduce:hover:translate-y-0"
           >
-            <LogOut className="h-[18px] w-[18px]" aria-hidden />
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/12 text-white ring-1 ring-white/20 transition-all duration-200 group-hover:scale-105 group-hover:bg-bh-teal/40 group-hover:text-white group-hover:ring-bh-teal/45 motion-reduce:group-hover:scale-100">
+              <LogOut className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden />
+            </span>
             Sign out
           </Button>
         </form>

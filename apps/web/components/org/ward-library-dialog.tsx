@@ -5,7 +5,7 @@ import {
   normalizeWardName,
   wardNameExistsAmong,
 } from '@bridge-hive/domain';
-import { Check, Plus } from 'lucide-react';
+import { ArrowRight, Check, Plus } from 'lucide-react';
 import { useMemo, useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
@@ -175,19 +175,28 @@ export function WardLibraryDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-          variant={compactTrigger ? 'link' : 'outline'}
-          size="sm"
+          variant={compactTrigger ? 'link' : 'honey'}
+          size={compactTrigger ? 'sm' : 'lg'}
           className={cn(
-            compactTrigger &&
-              'h-auto px-0 py-0 text-xs font-medium text-bh-teal-strong',
+            compactTrigger
+              ? 'h-auto px-0 py-0 text-xs font-medium text-bh-teal-strong transition-colors hover:text-[#071d30]'
+              : 'group min-h-11 justify-between gap-3 rounded-xl px-4 font-semibold shadow-[0_10px_24px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(228,179,52,0.38)] active:translate-y-0 active:shadow-[0_6px_16px_rgba(228,179,52,0.22)] motion-reduce:transition-none motion-reduce:hover:translate-y-0',
           )}
         >
           {compactTrigger ? (
             triggerLabel
           ) : (
             <>
-              <Plus className="h-3.5 w-3.5" />
-              {triggerLabel.replace(/^\+\s*/, '')}
+              <span className="inline-flex items-center gap-2.5">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30]/10 text-[#071d30] ring-1 ring-[#071d30]/10 transition-colors group-hover:bg-[#071d30]/14">
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+                </span>
+                {triggerLabel.replace(/^\+\s*/, '')}
+              </span>
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                aria-hidden
+              />
             </>
           )}
         </Button>

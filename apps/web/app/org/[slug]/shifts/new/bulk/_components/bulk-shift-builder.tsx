@@ -22,13 +22,17 @@ import {
   type WorkerRole,
 } from '@bridge-hive/domain';
 import {
+  ArrowLeft,
+  ArrowRight,
   CalendarDays,
   CalendarRange,
   Check,
   CheckCircle2,
+  FilePenLine,
   Loader2,
   Plus,
   Rows3,
+  Send,
   Trash2,
   type LucideIcon,
 } from 'lucide-react';
@@ -61,6 +65,7 @@ import {
   type BulkCustomRowSeed,
 } from './custom-row-model';
 import { CustomRowsWorkspace } from './custom-rows-workspace';
+import { Hm24Field } from './hm24-field';
 
 export type BulkTemplateDefaults = {
   locationId: string;
@@ -397,25 +402,44 @@ export function BulkShiftBuilder({
             : 'Draft shifts created'}
         </h2>
         <p className="mt-2 text-sm text-bh-text-secondary">
-          {result.shiftCount} shifts are ready. Filter the schedule by this batch
-          or open individual shifts.
+          {result.shiftCount} shifts are ready. Open this batch on the schedule, or
+          create another set of multiple shifts.
         </p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Button asChild variant="honey">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Button
+            asChild
+            variant="honey"
+            size="lg"
+            className="group min-h-12 justify-between gap-3 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)]"
+          >
             <Link href={`/org/${slug}/shifts?batch=${result.batchId}`}>
-              View batch on shifts
+              <span className="inline-flex items-center gap-2.5">
+                <CalendarDays className="h-4 w-4" aria-hidden />
+                View batch on shifts
+              </span>
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                aria-hidden
+              />
             </Link>
           </Button>
-          <Button asChild variant="outline">
-            <Link href={`/org/${slug}/shifts`}>All shifts</Link>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="group min-h-12 justify-between gap-3 rounded-xl border-bh-border/90 bg-white px-5 text-bh-text shadow-[0_1px_2px_rgba(7,29,48,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] hover:shadow-[0_8px_20px_rgba(7,29,48,0.08)]"
+          >
+            <Link href={`/org/${slug}/shifts/new/bulk`}>
+              <span className="inline-flex items-center gap-2.5">
+                <ArrowLeft
+                  className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+                  aria-hidden
+                />
+                Back to multiple shifts
+              </span>
+              <Rows3 className="h-4 w-4 text-bh-text-muted" aria-hidden />
+            </Link>
           </Button>
-          {result.shiftIds[0] ? (
-            <Button asChild variant="ghost">
-              <Link href={`/org/${slug}/shifts/${result.shiftIds[0]}`}>
-                Open first shift
-              </Link>
-            </Button>
-          ) : null}
         </div>
       </div>
     );
@@ -742,90 +766,226 @@ export function BulkShiftBuilder({
           </div>
 
           {step === 'confirm' ? (
-            <div className="space-y-3 rounded-2xl border border-bh-border bg-bh-surface p-4 sm:p-5">
-              <p className="text-sm font-medium text-bh-text">Create as</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]">
+              <div className="border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-4 sm:px-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
+                  Release
+                </p>
+                <h3 className="mt-1 text-base font-semibold tracking-tight text-[#071d30]">
+                  How should these shifts go live?
+                </h3>
+                <p className="mt-1 text-sm text-bh-text-secondary">
+                  Choose drafts to review later, or publish now for matching
+                  verified workers.
+                </p>
+              </div>
+              <div
+                role="radiogroup"
+                aria-label="Create as"
+                className={cn(
+                  'grid gap-3 p-4 sm:p-5',
+                  canPublish ? 'sm:grid-cols-2' : 'sm:grid-cols-1',
+                )}
+              >
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={requestedStatus === 'draft'}
                   onClick={() => setRequestedStatus('draft')}
                   className={cn(
-                    'rounded-xl border px-4 py-2.5 text-sm font-medium',
+                    'group relative flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all duration-200 motion-reduce:transition-none',
                     requestedStatus === 'draft'
-                      ? 'border-bh-sidebar bg-bh-sidebar text-white'
-                      : 'border-bh-border bg-bh-surface text-bh-text',
+                      ? 'border-transparent bg-[linear-gradient(155deg,#16384f_0%,#071d30_62%,#0c3a42_100%)] text-white shadow-[0_12px_28px_rgba(7,29,48,0.22)]'
+                      : 'border-bh-border/80 bg-white text-bh-text hover:-translate-y-0.5 hover:border-[#16384f]/20 hover:bg-[#f7fafc] hover:shadow-[0_8px_20px_rgba(7,29,48,0.06)] motion-reduce:hover:translate-y-0',
                   )}
                 >
-                  Drafts (default)
+                  <span
+                    className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+                      requestedStatus === 'draft'
+                        ? 'bg-white/12 text-white'
+                        : 'bg-[#f7fafc] text-[#16384f] ring-1 ring-bh-border/80',
+                    )}
+                  >
+                    <FilePenLine className="h-4 w-4" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-semibold tracking-tight">
+                        Save as drafts
+                      </span>
+                      {requestedStatus === 'draft' ? (
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
+                          Selected
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-bh-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-bh-text-muted">
+                          Default
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-1 block text-xs leading-5',
+                        requestedStatus === 'draft'
+                          ? 'text-white/70'
+                          : 'text-bh-text-secondary',
+                      )}
+                    >
+                      Private to your organization until you publish.
+                    </span>
+                  </span>
+                  {requestedStatus === 'draft' ? (
+                    <CheckCircle2
+                      className="mt-0.5 h-5 w-5 shrink-0 text-bh-honey"
+                      aria-hidden
+                    />
+                  ) : null}
                 </button>
+
                 {canPublish ? (
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={requestedStatus === 'published'}
                     onClick={() => setRequestedStatus('published')}
                     className={cn(
-                      'rounded-xl border px-4 py-2.5 text-sm font-medium',
+                      'group relative flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all duration-200 motion-reduce:transition-none',
                       requestedStatus === 'published'
-                        ? 'border-bh-honey bg-bh-honey text-bh-text'
-                        : 'border-bh-border bg-bh-surface text-bh-text',
+                        ? 'border-bh-honey bg-[linear-gradient(180deg,#fff8e8_0%,#f6e7b0_100%)] text-[#071d30] shadow-[0_12px_28px_rgba(228,179,52,0.28)] ring-1 ring-bh-honey/50'
+                        : 'border-bh-border/80 bg-white text-bh-text hover:-translate-y-0.5 hover:border-bh-honey/40 hover:bg-bh-honey-soft/30 hover:shadow-[0_8px_20px_rgba(228,179,52,0.12)] motion-reduce:hover:translate-y-0',
                     )}
                   >
-                    Publish now
+                    <span
+                      className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+                        requestedStatus === 'published'
+                          ? 'bg-bh-honey text-[#071d30] shadow-sm'
+                          : 'bg-[#f7fafc] text-[#16384f] ring-1 ring-bh-border/80',
+                      )}
+                    >
+                      <Send className="h-4 w-4" aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-semibold tracking-tight">
+                          Publish now
+                        </span>
+                        {requestedStatus === 'published' ? (
+                          <span className="rounded-full bg-[#071d30]/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#071d30]/80">
+                            Selected
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-bh-text-secondary">
+                        Become claimable for matching verified workers.
+                      </span>
+                    </span>
+                    {requestedStatus === 'published' ? (
+                      <CheckCircle2
+                        className="mt-0.5 h-5 w-5 shrink-0 text-[#071d30]"
+                        aria-hidden
+                      />
+                    ) : null}
                   </button>
                 ) : null}
               </div>
-              {requestedStatus === 'published' ? (
-                <p className="text-xs text-bh-text-muted">
-                  Published shifts become claimable for matching verified workers.
-                </p>
-              ) : (
-                <p className="text-xs text-bh-text-muted">
-                  Drafts stay private to your organization until published.
-                </p>
-              )}
             </div>
           ) : null}
 
-          <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-bh-border bg-bh-surface/95 px-4 py-3 shadow-lg backdrop-blur">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setStep(step === 'confirm' ? 'review' : 'build')}
-              disabled={pending}
-            >
-              Back
-            </Button>
-            {step === 'review' ? (
-              <Button
-                type="button"
-                variant="honey"
-                onClick={() => {
-                  if (exactDupes.length && !allowExactDuplicates) {
-                    toast.error('Confirm exact duplicates or remove them first.');
-                    return;
+          <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface/95 shadow-[0_16px_40px_rgba(7,29,48,0.12)] backdrop-blur-md">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  disabled={pending}
+                  onClick={() => setStep(step === 'confirm' ? 'review' : 'build')}
+                  className="group min-h-11 rounded-xl border-bh-border/90 bg-white px-4 shadow-[0_1px_2px_rgba(7,29,48,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] motion-reduce:hover:translate-y-0"
+                >
+                  <ArrowLeft
+                    className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+                    aria-hidden
+                  />
+                  Back
+                </Button>
+                <div className="hidden min-w-0 sm:block">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                    {step === 'confirm' ? 'Ready to create' : 'Review batch'}
+                  </p>
+                  <p className="truncate text-sm font-medium text-[#071d30]">
+                    {preview.length} shift{preview.length === 1 ? '' : 's'}
+                    {step === 'confirm'
+                      ? requestedStatus === 'published'
+                        ? ' · publish live'
+                        : ' · save as drafts'
+                      : ` · ${totalPositions} positions`}
+                  </p>
+                </div>
+              </div>
+
+              {step === 'review' ? (
+                <Button
+                  type="button"
+                  variant="honey"
+                  size="lg"
+                  onClick={() => {
+                    if (exactDupes.length && !allowExactDuplicates) {
+                      toast.error(
+                        'Confirm exact duplicates or remove them first.',
+                      );
+                      return;
+                    }
+                    setStep('confirm');
+                  }}
+                  className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)] motion-reduce:hover:translate-y-0"
+                >
+                  Continue to confirm
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="honey"
+                  size="lg"
+                  disabled={
+                    pending ||
+                    (exactDupes.length > 0 && !allowExactDuplicates)
                   }
-                  setStep('confirm');
-                }}
-              >
-                Continue to confirm
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="honey"
-                disabled={pending || (exactDupes.length > 0 && !allowExactDuplicates)}
-                onClick={submitBatch}
-              >
-                {pending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating…
-                  </>
-                ) : requestedStatus === 'published' ? (
-                  `Publish ${preview.length} shifts`
-                ) : (
-                  `Create ${preview.length} drafts`
-                )}
-              </Button>
-            )}
+                  onClick={submitBatch}
+                  className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)] motion-reduce:hover:translate-y-0"
+                >
+                  {pending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating…
+                    </>
+                  ) : requestedStatus === 'published' ? (
+                    <>
+                      <Send className="h-4 w-4" aria-hidden />
+                      Publish {preview.length} shifts
+                      <ArrowRight
+                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <FilePenLine className="h-4 w-4" aria-hidden />
+                      Create {preview.length} drafts
+                      <ArrowRight
+                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       ) : null}
@@ -1335,22 +1495,27 @@ function SharedTemplateFields({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="bulk-start">Start time</Label>
-        <Input
+        <Label htmlFor="bulk-start">Start time (24h)</Label>
+        <Hm24Field
           id="bulk-start"
-          type="time"
+          aria-label="Start time"
+          selectClassName="h-10 rounded-md border-slate-300 px-2"
           value={startHm}
-          onChange={(e) => setStartHm(e.target.value)}
+          onChange={setStartHm}
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="bulk-end">End time</Label>
-        <Input
+        <Label htmlFor="bulk-end">End time (24h)</Label>
+        <Hm24Field
           id="bulk-end"
-          type="time"
+          aria-label="End time"
+          selectClassName="h-10 rounded-md border-slate-300 px-2"
           value={endHm}
-          onChange={(e) => setEndHm(e.target.value)}
+          onChange={setEndHm}
         />
+        <p className="text-xs text-bh-text-muted">
+          If end is earlier than start (e.g. 18:00–02:00), the shift runs overnight into the next day.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="bulk-break">Break (minutes)</Label>

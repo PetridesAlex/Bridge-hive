@@ -176,6 +176,21 @@ describe('bulk shift domain helpers', () => {
       expect(summary.estimatedGrossMinor).toBe(18750 + 14400);
     });
 
+    it('multiplies org labor estimate by required positions', () => {
+      const summary = summarizeBulkBatch([
+        {
+          ...base,
+          requiredPositions: 2,
+          breakMinutes: 0,
+          startsAtIso: '2026-10-05T08:00:00.000Z',
+          endsAtIso: '2026-10-05T16:00:00.000Z',
+        },
+      ]);
+      // 2 positions × €25/h × 8h = €400
+      expect(summary.estimatedGrossMinor).toBe(40000);
+      expect(summary.roleCounts.find((r) => r.role === 'registered_nurse')?.count).toBe(2);
+    });
+
     it('preserves physiotherapist rows in a mixed-role bulk batch', () => {
       const summary = summarizeBulkBatch([
         base,

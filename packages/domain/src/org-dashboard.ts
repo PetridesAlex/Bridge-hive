@@ -6,6 +6,7 @@
 import type { OrgRole, OrgStatus, WorkerRole } from './types';
 import { WORKER_ROLE_LABELS, WORKER_ROLES } from './types';
 import { isOrgOperational, orgOperationalBlockedMessage } from './organization-onboarding';
+import { clampShiftPositions } from './shift-positions';
 
 export type OrgNavItemId =
   | 'dashboard'
@@ -579,7 +580,10 @@ export function timesheetReviewTurnaroundHours(
   };
 }
 
-/** Estimated upcoming gross from rate × duration when both present. */
+/**
+ * Estimated upcoming org worker-pay from rate × duration × required positions.
+ * Rate is per professional; full coverage multiplies by capacity.
+ */
 export function estimatedUpcomingGrossMinor(
   shifts: Array<{
     status: string;
@@ -587,6 +591,7 @@ export function estimatedUpcomingGrossMinor(
     ends_at: string;
     rate_minor: number | null;
     break_minutes?: number | null;
+    required_positions?: number | null;
   }>,
   now = new Date(),
   days = 30,
@@ -612,7 +617,8 @@ export function estimatedUpcomingGrossMinor(
       skipped += 1;
       continue;
     }
-    amountMinor += Math.round(shift.rate_minor * hours);
+    const positions = clampShiftPositions(shift.required_positions ?? 1);
+    amountMinor += Math.round(shift.rate_minor * hours) * positions;
     counted += 1;
   }
   return { amountMinor, counted, skipped, periodLabel };

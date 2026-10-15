@@ -8,9 +8,11 @@ import {
   type WorkerRole,
 } from '@bridge-hive/domain';
 import {
+  Clock3,
   Copy,
   Eraser,
   Plus,
+  Rows3,
   Trash2,
 } from 'lucide-react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
@@ -102,67 +104,97 @@ export function CustomRowsWorkspace({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-bh-border bg-bh-surface p-3 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:p-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="custom-deadline" className="text-bh-text">
-              Claim deadline
-            </Label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                id="custom-deadline"
-                type="number"
-                min={0}
-                className={cn(fieldInputClass, 'w-28')}
-                value={deadlineHours}
-                onChange={(e) => setDeadlineHours(e.target.value)}
+      <div className="overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-4 sm:px-5">
+          <div className="min-w-0 space-y-2.5">
+            <p className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
+              <span
+                aria-hidden
+                className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
               />
-              <span className="text-sm text-bh-text-secondary">
-                hours before start
-              </span>
-            </div>
-            <p className="max-w-xl text-xs leading-5 text-bh-text-muted">
-              Applies to every shift in this batch.
+              Batch settings
             </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="custom-deadline"
+                  className="flex items-center gap-1.5 text-sm font-semibold text-[#071d30]"
+                >
+                  <Clock3 className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                  Claim deadline
+                </Label>
+                <div className="flex items-center gap-2 rounded-xl border border-bh-border bg-white p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                  <Input
+                    id="custom-deadline"
+                    type="number"
+                    min={0}
+                    className="h-9 w-[4.75rem] border-0 bg-transparent px-2.5 text-sm font-semibold text-[#071d30] shadow-none focus-visible:border-transparent focus-visible:ring-0"
+                    value={deadlineHours}
+                    onChange={(e) => setDeadlineHours(e.target.value)}
+                  />
+                  <span className="pr-2.5 text-xs font-medium text-bh-text-secondary">
+                    hours before start
+                  </span>
+                </div>
+              </div>
+              <p className="max-w-xs border-l-2 border-[#e4b334] pl-3 text-xs leading-5 text-bh-text-muted">
+                Applies to every shift in this batch.
+              </p>
+            </div>
           </div>
-          <p className="rounded-xl border border-bh-border bg-bh-subtle/70 px-3 py-2 text-sm font-semibold text-bh-text">
-            <span className="bh-tabular text-base text-[#071d30]">
-              {rows.length}
+
+          <div className="flex items-center gap-3 rounded-2xl border border-[#16384f]/12 bg-[linear-gradient(155deg,#16384f_0%,#071d30_62%,#0c3a42_100%)] px-3.5 py-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_22px_rgba(7,29,48,0.22)]">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+              <Rows3 className="h-4 w-4" strokeWidth={2.25} aria-hidden />
             </span>
-            <span className="text-bh-text-muted"> / {BULK_SHIFT_MAX} shifts</span>
-          </p>
+            <div className="leading-none">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/65">
+                In this batch
+              </p>
+              <p className="mt-1 text-sm font-semibold">
+                <span className="bh-tabular text-lg tracking-tight">
+                  {rows.length}
+                </span>
+                <span className="text-white/70"> / {BULK_SHIFT_MAX}</span>
+              </p>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5 bg-bh-surface px-4 py-3 sm:px-5">
           <Button
             type="button"
-            variant="default"
             size="sm"
-            className="rounded-xl"
             disabled={rows.length >= BULK_SHIFT_MAX}
             onClick={() => setRows((prev) => addCustomRow(prev, seed))}
+            className="h-10 rounded-xl border border-[#e4b334]/40 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-3 pr-3.5 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(7,29,48,0.24)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_58%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_24px_rgba(7,29,48,0.3)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
-            <Plus className="h-4 w-4" aria-hidden />
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+              <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+            </span>
             Add shift row
           </Button>
           <Button
             type="button"
-            variant="secondary"
             size="sm"
-            className="rounded-xl"
             onClick={() => setRows((prev) => copyFirstRowFieldsToAll(prev))}
+            className="h-10 rounded-xl border border-white/20 bg-[linear-gradient(155deg,#1ab4c4_0%,#087f8c_52%,#065860_100%)] px-3 pr-3.5 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_18px_rgba(8,127,140,0.28)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#2ec6d4_0%,#0a96a6_52%,#087f8c_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.34),0_12px_24px_rgba(8,127,140,0.36)] focus-visible:ring-white motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
-            <Copy className="h-4 w-4" aria-hidden />
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-white/15 text-white ring-1 ring-white/30">
+              <Copy className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
+            </span>
             Copy first row to all
           </Button>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            className="rounded-xl"
             onClick={() => setRows(clearCustomRows(seed))}
+            className="h-10 rounded-xl border-bh-border bg-white px-3 pr-3.5 font-semibold text-bh-text-secondary shadow-sm transition-[transform,background,color] duration-200 hover:-translate-y-0.5 hover:bg-bh-subtle hover:text-bh-text motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
-            <Eraser className="h-4 w-4" aria-hidden />
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-bh-subtle text-bh-text-secondary">
+              <Eraser className="h-3.5 w-3.5" aria-hidden />
+            </span>
             Clear rows
           </Button>
         </div>

@@ -246,21 +246,20 @@ export function CustomRowsWorkspace({
             </p>
           </div>
           <div className="max-h-[36rem] overflow-auto">
-            <table className="w-full border-separate border-spacing-0 text-left text-sm">
+            <table className="w-full table-fixed border-separate border-spacing-0 text-left text-sm">
               <thead className={premiumTableHeadClassName}>
                 <tr>
-                  <TableHeadCell className="w-12">#</TableHeadCell>
-                  <TableHeadCell>Date</TableHeadCell>
-                  <TableHeadCell>Day</TableHeadCell>
-                  <TableHeadCell>Role</TableHeadCell>
-                  <TableHeadCell>Location</TableHeadCell>
-                  <TableHeadCell>Ward / unit</TableHeadCell>
-                  <TableHeadCell>Start</TableHeadCell>
-                  <TableHeadCell>End</TableHeadCell>
-                  <TableHeadCell>Break</TableHeadCell>
-                  <TableHeadCell>Rate €</TableHeadCell>
-                  <TableHeadCell>Positions</TableHeadCell>
-                  <TableHeadCell className="text-right">Actions</TableHeadCell>
+                  <TableHeadCell className="w-9">#</TableHeadCell>
+                  <TableHeadCell className="w-[8rem]">Date</TableHeadCell>
+                  <TableHeadCell className="w-[8.25rem]">Role</TableHeadCell>
+                  <TableHeadCell className="w-[8rem]">Location</TableHeadCell>
+                  <TableHeadCell className="w-[8.5rem]">Ward / unit</TableHeadCell>
+                  <TableHeadCell className="w-[6rem]">Start</TableHeadCell>
+                  <TableHeadCell className="w-[6rem]">End</TableHeadCell>
+                  <TableHeadCell className="w-[4.25rem]">Break</TableHeadCell>
+                  <TableHeadCell className="w-[4.75rem]">Rate €</TableHeadCell>
+                  <TableHeadCell className="w-[4.5rem]">Positions</TableHeadCell>
+                  <TableHeadCell className="w-[5rem] text-right">Actions</TableHeadCell>
                 </tr>
               </thead>
               <tbody>
@@ -369,25 +368,22 @@ function CustomRowTableRow({
         'hover:bg-bh-teal-soft/35 hover:shadow-[inset_3px_0_0_0_#16a6b6]',
       )}
     >
-      <td className="px-2.5 py-3 align-top first:pl-4">
-        <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-lg bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] px-2 text-xs font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+      <td className="px-1.5 py-3 align-top first:pl-3">
+        <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] px-1.5 text-[11px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
           {index + 1}
         </span>
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Input
           type="date"
           aria-label={`Row ${index + 1} date`}
-          className={cn(fieldInputClass, 'w-[9.5rem]', invalidClass(Boolean(errors.dateYmd)))}
+          className={cn(fieldInputClass, 'w-full min-w-0', invalidClass(Boolean(errors.dateYmd)))}
           value={row.dateYmd}
           onChange={(e) => onUpdate({ dateYmd: e.target.value })}
         />
-        <FieldError message={errors.dateYmd} />
-      </td>
-      <td className="px-2 py-3 align-top">
         <span
           className={cn(
-            'inline-flex h-9 min-w-[3.25rem] items-center justify-center rounded-xl border px-2.5 text-xs font-bold tracking-wide',
+            'mt-1 inline-flex h-6 items-center rounded-md border px-1.5 text-[10px] font-bold tracking-wide',
             dayLabel === 'Sat' || dayLabel === 'Sun'
               ? 'border-[#e4b334]/35 bg-[#fff8e8] text-[#8a6a10]'
               : 'border-bh-teal/25 bg-bh-teal-soft/60 text-bh-teal-strong',
@@ -395,11 +391,12 @@ function CustomRowTableRow({
         >
           {dayLabel}
         </span>
+        <FieldError message={errors.dateYmd} />
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Select
           aria-label={`Row ${index + 1} professional role`}
-          className={cn(fieldInputClass, 'w-[11rem]', invalidClass(Boolean(errors.requiredRole)))}
+          className={cn(fieldInputClass, 'w-full min-w-0', invalidClass(Boolean(errors.requiredRole)))}
           value={row.requiredRole}
           onChange={(e) =>
             onUpdate({ requiredRole: e.target.value as WorkerRole })
@@ -412,10 +409,10 @@ function CustomRowTableRow({
           ))}
         </Select>
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Select
           aria-label={`Row ${index + 1} location`}
-          className={cn(fieldInputClass, 'w-[10.5rem]', invalidClass(Boolean(errors.locationId)))}
+          className={cn(fieldInputClass, 'w-full min-w-0', invalidClass(Boolean(errors.locationId)))}
           value={row.locationId}
           onChange={(e) => onLocationChange(e.target.value)}
         >
@@ -427,8 +424,8 @@ function CustomRowTableRow({
         </Select>
         <FieldError message={errors.locationId} />
       </td>
-      <td className="px-2 py-3 align-top">
-        <div className="w-[11.5rem] space-y-1">
+      <td className="px-1.5 py-3 align-top">
+        <div className="min-w-0 space-y-1">
           <WardUnitSelector
             locationId={row.locationId}
             wardId={row.wardId}
@@ -445,21 +442,21 @@ function CustomRowTableRow({
           />
         </div>
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Input
           type="time"
           aria-label={`Row ${index + 1} start time`}
-          className={cn(fieldInputClass, 'w-[7.5rem]', invalidClass(Boolean(errors.startHm)))}
+          className={cn(fieldInputClass, 'w-full min-w-0 px-1.5', invalidClass(Boolean(errors.startHm)))}
           value={row.startHm}
           onChange={(e) => onUpdate({ startHm: e.target.value })}
         />
         <FieldError message={errors.startHm} />
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Input
           type="time"
           aria-label={`Row ${index + 1} end time`}
-          className={cn(fieldInputClass, 'w-[7.5rem]', invalidClass(Boolean(errors.endHm)))}
+          className={cn(fieldInputClass, 'w-full min-w-0 px-1.5', invalidClass(Boolean(errors.endHm)))}
           value={row.endHm}
           onChange={(e) => onUpdate({ endHm: e.target.value })}
         />
@@ -471,12 +468,12 @@ function CustomRowTableRow({
           </p>
         ) : null}
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Input
           type="number"
           min={0}
           aria-label={`Row ${index + 1} break minutes`}
-          className={cn(fieldInputClass, 'w-[5.5rem]', invalidClass(Boolean(errors.breakMinutes)))}
+          className={cn(fieldInputClass, 'w-full min-w-0 px-1.5', invalidClass(Boolean(errors.breakMinutes)))}
           value={row.breakMinutes}
           onChange={(e) =>
             onUpdate({ breakMinutes: Number.parseInt(e.target.value, 10) || 0 })
@@ -484,17 +481,17 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.breakMinutes} />
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Input
           inputMode="decimal"
           aria-label={`Row ${index + 1} hourly rate`}
-          className={cn(fieldInputClass, 'w-[6.5rem]', invalidClass(Boolean(errors.rateEuros)))}
+          className={cn(fieldInputClass, 'w-full min-w-0 px-1.5', invalidClass(Boolean(errors.rateEuros)))}
           value={row.rateEuros}
           onChange={(e) => onUpdate({ rateEuros: e.target.value })}
         />
         <FieldError message={errors.rateEuros} />
       </td>
-      <td className="px-2 py-3 align-top">
+      <td className="px-1.5 py-3 align-top">
         <Input
           type="number"
           inputMode="numeric"
@@ -503,7 +500,7 @@ function CustomRowTableRow({
           step={1}
           title="Number of professionals needed for this shift"
           aria-label={`Row ${index + 1}: Number of professionals needed for this shift`}
-          className={cn(fieldInputClass, 'w-[9rem]', invalidClass(Boolean(errors.positions)))}
+          className={cn(fieldInputClass, 'w-full min-w-0 px-1.5', invalidClass(Boolean(errors.positions)))}
           value={row.positions}
           onChange={(e) => {
             const parsed = parsePositionsInput(e.target.value);
@@ -514,31 +511,31 @@ function CustomRowTableRow({
         />
         <FieldError message={errors.positions} />
       </td>
-      <td className="px-2.5 py-3 align-top last:pr-4">
-        <div className="flex items-center justify-end gap-1 opacity-80 transition-opacity duration-150 group-hover:opacity-100">
+      <td className="px-1.5 py-3 align-top last:pr-3">
+        <div className="flex items-center justify-end gap-0.5 opacity-80 transition-opacity duration-150 group-hover:opacity-100">
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="h-9 w-9 rounded-xl border-bh-border bg-white shadow-sm hover:border-bh-teal/40 hover:bg-bh-teal-soft/40 hover:text-bh-teal-strong"
+            className="h-8 w-8 rounded-lg border-bh-border bg-white shadow-sm hover:border-bh-teal/40 hover:bg-bh-teal-soft/40 hover:text-bh-teal-strong"
             aria-label={`Duplicate row ${index + 1}`}
             title="Duplicate row"
             disabled={!canDuplicate}
             onClick={onDuplicate}
           >
-            <Copy className="h-4 w-4" aria-hidden />
+            <Copy className="h-3.5 w-3.5" aria-hidden />
           </Button>
           <Button
             type="button"
             variant="outline"
             size="icon"
-            className="h-9 w-9 rounded-xl border-bh-border bg-white text-bh-danger shadow-sm hover:border-bh-danger/40 hover:bg-bh-danger-soft hover:text-bh-danger"
+            className="h-8 w-8 rounded-lg border-bh-border bg-white text-bh-danger shadow-sm hover:border-bh-danger/40 hover:bg-bh-danger-soft hover:text-bh-danger"
             aria-label={`Delete row ${index + 1}`}
             title="Delete row"
             disabled={!canDelete}
             onClick={onDelete}
           >
-            <Trash2 className="h-4 w-4" aria-hidden />
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
           </Button>
         </div>
       </td>

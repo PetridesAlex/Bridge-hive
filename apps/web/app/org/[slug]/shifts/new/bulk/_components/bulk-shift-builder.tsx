@@ -924,34 +924,94 @@ function buildFromCustomRows(
 }
 
 function StepRail({ step }: { step: Step }) {
-  const items: Array<{ id: Step; label: string }> = [
-    { id: 'build', label: 'Build' },
-    { id: 'review', label: 'Review' },
-    { id: 'confirm', label: 'Confirm' },
+  const items: Array<{ id: Step; label: string; hint: string }> = [
+    { id: 'build', label: 'Build', hint: 'Compose shifts' },
+    { id: 'review', label: 'Review', hint: 'Check the batch' },
+    { id: 'confirm', label: 'Confirm', hint: 'Create or publish' },
   ];
   const order = { build: 0, review: 1, confirm: 2, success: 3 };
+  const currentIndex = order[step] ?? 0;
+
   return (
-    <ol className="flex flex-wrap gap-2">
-      {items.map((item, idx) => {
-        const active = order[step] >= idx;
-        const current = step === item.id;
-        return (
-          <li
-            key={item.id}
-            className={cn(
-              'rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide',
-              current
-                ? 'border-bh-honey bg-bh-honey-soft text-bh-text'
-                : active
-                  ? 'border-bh-border bg-bh-subtle text-bh-text'
-                  : 'border-bh-border/60 text-bh-text-muted',
-            )}
-          >
-            {idx + 1}. {item.label}
-          </li>
-        );
-      })}
-    </ol>
+    <nav aria-label="Batch creation steps">
+      <ol className="grid grid-cols-1 gap-2 rounded-2xl border border-bh-border bg-bh-surface p-2 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:grid-cols-3 sm:gap-0 sm:p-1.5">
+        {items.map((item, idx) => {
+          const done = currentIndex > idx;
+          const current = step === item.id || (step === 'success' && idx === 2);
+          const upcoming = currentIndex < idx;
+
+          return (
+            <li
+              key={item.id}
+              aria-current={current ? 'step' : undefined}
+              className={cn(
+                'relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-200 motion-reduce:transition-none',
+                current &&
+                  'bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_8px_18px_rgba(7,29,48,0.22)]',
+                done && !current && 'bg-bh-teal-soft/50 text-bh-text',
+                upcoming && 'text-bh-text-muted',
+              )}
+            >
+              {idx < items.length - 1 ? (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'pointer-events-none absolute right-0 top-1/2 hidden h-px w-3 -translate-y-1/2 translate-x-full sm:block',
+                    done || current ? 'bg-bh-teal' : 'bg-bh-border',
+                  )}
+                />
+              ) : null}
+
+              <span
+                aria-hidden
+                className={cn(
+                  'grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold tracking-tight',
+                  current &&
+                    'bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]',
+                  done &&
+                    !current &&
+                    'bg-bh-teal text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]',
+                  upcoming && 'border border-bh-border bg-bh-subtle text-bh-text-muted',
+                )}
+              >
+                {done && !current ? (
+                  <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                ) : (
+                  idx + 1
+                )}
+              </span>
+
+              <span className="min-w-0">
+                <span
+                  className={cn(
+                    'block text-[11px] font-semibold uppercase tracking-[0.14em]',
+                    current ? 'text-white/70' : done ? 'text-bh-teal-strong' : 'text-bh-text-muted',
+                  )}
+                >
+                  Step {idx + 1}
+                </span>
+                <span
+                  className={cn(
+                    'mt-0.5 block text-sm font-semibold tracking-tight',
+                    current ? 'text-white' : 'text-bh-text',
+                  )}
+                >
+                  {item.label}
+                </span>
+                <span
+                  className={cn(
+                    'mt-0.5 block text-xs',
+                    current ? 'text-white/65' : 'text-bh-text-muted',
+                  )}
+                >
+                  {item.hint}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 

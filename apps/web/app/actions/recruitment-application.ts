@@ -107,9 +107,11 @@ export async function submitRecruitmentApplicationAction(
       return { error: 'Document metadata does not match uploads.' };
     }
 
-    const hasRole = isRecruitmentWorkerRole(draft.role);
+    const role: WorkerRole | null = isRecruitmentWorkerRole(draft.role)
+      ? draft.role
+      : null;
     const batch = validateRecruitmentDocumentBatch({
-      role: hasRole ? draft.role : null,
+      role,
       documents: files.map((file, index) => ({
         documentType: docTypes[index] ?? '',
         mimeType: file.type,
@@ -136,7 +138,7 @@ export async function submitRecruitmentApplicationAction(
         current_location: draft.currentLocation,
         country_of_residence: draft.countryOfResidence,
         preferred_cyprus_location: draft.preferredCyprusLocation || null,
-        role: hasRole ? draft.role : null,
+        role,
         years_experience: draft.yearsExperience,
         registration_state: draft.registrationState,
         employment_type: draft.employmentType,
@@ -224,7 +226,7 @@ export async function submitRecruitmentApplicationAction(
     try {
       await sendRecruitmentSubmissionNotify({
         candidateId,
-        role: hasRole ? draft.role : null,
+        role,
         submittedAt: new Date(),
       });
     } catch {

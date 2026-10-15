@@ -19,6 +19,7 @@ import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { Surface } from '@/components/ui/Surface';
 import {
   estimatedWorkerShiftPayMinor,
+  filledPositionsLabel,
   openPositionsLabel,
 } from '@bridge-hive/domain';
 
@@ -207,12 +208,17 @@ export default function ShiftDetailScreen() {
   const roleLabel =
     WORKER_ROLE_LABELS[shift.required_role as keyof typeof WORKER_ROLE_LABELS] ??
     shift.required_role;
+  const requiredPositions = shift.required_positions ?? 1;
   const openPositions = shift.open_positions ?? 0;
+  const filledPositions =
+    typeof shift.filled_positions === 'number'
+      ? shift.filled_positions
+      : Math.max(0, requiredPositions - openPositions);
   const canClaim =
     isVerified &&
-    shift.status === 'published' &&
     !assignment &&
-    openPositions > 0;
+    (shift.is_claimable ||
+      (shift.status === 'published' && openPositions > 0));
   const canCheckIn = assignment?.status === 'accepted' && Boolean(checkInWindow?.isOpen);
   const showCheckInWaiting =
     assignment?.status === 'accepted' && Boolean(checkInWindow?.isTooEarly);
@@ -220,9 +226,11 @@ export default function ShiftDetailScreen() {
     ? 'Complete account verification before claiming shifts.'
     : assignment
       ? undefined
-      : shift.status !== 'published'
-        ? 'This shift is no longer open for claims.'
-        : undefined;
+      : openPositions < 1
+        ? 'All positions have been filled.'
+        : shift.status !== 'published'
+          ? 'This shift is no longer open for claims.'
+          : undefined;
 
   const start = new Date(shift.starts_at);
   const end = new Date(shift.ends_at);
@@ -287,11 +295,21 @@ export default function ShiftDetailScreen() {
                 tone="accent"
                 icon="briefcase-outline"
               />
-            ) : (
+            ) : openPositions > 0 && shift.status === 'published' ? (
               <StatusBadge label="Open" tone="accent" icon="calendar-outline" />
+            ) : (
+              <StatusBadge label="Full" tone="neutral" icon="calendar-outline" />
             )}
           </View>
         </View>
+
+        {assignment ? (
+          <Banner
+            variant="info"
+            title="You are assigned to this shift"
+            body="Your assignment, timesheet, and pay for this shift are tracked separately from other professionals."
+          />
+        ) : null}
 
         <Surface variant="emphasis">
           <Text style={styles.heroLabel}>Schedule & pay</Text>
@@ -312,12 +330,16 @@ export default function ShiftDetailScreen() {
             ) : null}
             <KeyValueRow label="Required role" value={roleLabel} />
             <KeyValueRow
-              label="Positions"
-              value={
-                shift.status === 'published'
-                  ? openPositionsLabel(openPositions)
-                  : `${shift.required_positions ?? 1}`
-              }
+              label="Positions required"
+              value={String(requiredPositions)}
+            />
+            <KeyValueRow
+              label="Positions filled"
+              value={filledPositionsLabel(filledPositions, requiredPositions)}
+            />
+            <KeyValueRow
+              label="Positions open"
+              value={openPositionsLabel(openPositions)}
             />
           </View>
         </Surface>
@@ -492,9 +514,11 @@ export default function ShiftDetailScreen() {
             variant="warning"
             title="Claim unavailable"
             body={claimBlockedReason}
-            actionLabel={!isVerified ? 'Continue account setup' : 'View invoices'}
-            onAction={() =>
-              router.push(!isVerified ? '/auth/worker/pending' : '/(tabs)/invoices')
+            actionLabel={!isVerified ? 'Continue account setup' : undefined}
+            onAction={
+              !isVerified
+                ? () => router.push('/auth/worker/pending')
+                : undefined
             }
           />
         ) : null}

@@ -1,5 +1,4 @@
 import type { Tables } from '@bridge-hive/supabase-types';
-import { remainingOpenPositions } from '@bridge-hive/domain';
 
 import { supabase } from '@/lib/supabase';
 
@@ -12,17 +11,20 @@ export type PayoutAccount = Tables<'payout_accounts'>;
 export type Notification = Tables<'notifications'>;
 export type ShiftRequirement = Tables<'shift_requirements'>;
 
-const ACTIVE_ASSIGNMENT_STATUSES = [
-  'accepted',
-  'checked_in',
-  'checked_out',
-  'submitted',
-  'approved',
-] as const;
-
 export type MarketplaceShift = Shift & {
   open_positions: number;
   filled_positions: number;
+  is_claimable: boolean;
+  my_assignment_status: string | null;
+};
+
+type ClaimAvailabilityRow = {
+  shift_id: string;
+  required_positions: number;
+  filled_positions: number;
+  open_positions: number;
+  is_claimable: boolean;
+  my_assignment_status: string | null;
 };
 
 export async function getPublishedShifts() {
@@ -41,24 +43,41 @@ export async function getPublishedShifts() {
   }
 
   const shiftIds = data.map((shift) => shift.id);
-  const { data: assignmentRows } = await supabase
-    .from('shift_assignments')
-    .select('shift_id, status')
-    .in('shift_id', shiftIds)
-    .in('status', [...ACTIVE_ASSIGNMENT_STATUSES]);
+  const { data: availabilityRows, error: availabilityError } = await supabase.rpc(
+    'worker_shifts_claim_availability' as never,
+    { p_shift_ids: shiftIds } as never,
+  );
 
-  const filledByShift = new Map<string, number>();
-  for (const row of assignmentRows ?? []) {
-    filledByShift.set(row.shift_id, (filledByShift.get(row.shift_id) ?? 0) + 1);
+  if (availabilityError) {
+    // Fallback before migration 035: treat every published shift as fully open.
+    const enriched = data.map(
+      (shift) =>
+        ({
+          ...shift,
+          filled_positions: 0,
+          open_positions: shift.required_positions ?? 1,
+          is_claimable: true,
+          my_assignment_status: null,
+        }) satisfies MarketplaceShift,
+    );
+    return { data: enriched, error: undefined };
+  }
+
+  const byId = new Map<string, ClaimAvailabilityRow>();
+  for (const row of (availabilityRows as ClaimAvailabilityRow[] | null) ?? []) {
+    byId.set(row.shift_id, row);
   }
 
   const enriched = data.map((shift) => {
-    const filled = filledByShift.get(shift.id) ?? 0;
-    const required = shift.required_positions ?? 1;
+    const avail = byId.get(shift.id);
+    const required = avail?.required_positions ?? shift.required_positions ?? 1;
     return {
       ...shift,
-      filled_positions: filled,
-      open_positions: remainingOpenPositions(required, filled),
+      required_positions: required,
+      filled_positions: avail?.filled_positions ?? 0,
+      open_positions: avail?.open_positions ?? required,
+      is_claimable: avail?.is_claimable ?? true,
+      my_assignment_status: avail?.my_assignment_status ?? null,
     } satisfies MarketplaceShift;
   });
 

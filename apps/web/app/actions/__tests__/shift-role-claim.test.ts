@@ -136,6 +136,15 @@ describe('claimErrorMessage', () => {
     expect(message).not.toContain('ORG_NOT_ACTIVE');
   });
 
+  it('maps SHIFT_FULL to the race-safe full-shift message', () => {
+    expect(claimErrorMessage('SHIFT_FULL')).toBe(
+      'This shift was just filled by another professional.',
+    );
+    expect(claimErrorMessage('SHIFT_ALREADY_FILLED')).toBe(
+      'This shift was just filled by another professional.',
+    );
+  });
+
   it('maps payout and verification failures', () => {
     expect(claimErrorMessage('NOT_ELIGIBLE:payout_account_required')).toBe(
       'Your payout account must be approved.',

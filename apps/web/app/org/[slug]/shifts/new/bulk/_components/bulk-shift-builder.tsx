@@ -1493,6 +1493,9 @@ function SharedTemplateFields({
           value={positions}
           onChange={(e) => setPositions(e.target.value)}
         />
+        <p className="text-xs text-bh-text-muted">
+          Number of professionals needed for this shift.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="bulk-start">Start time (24h)</Label>

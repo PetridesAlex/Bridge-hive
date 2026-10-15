@@ -61,6 +61,7 @@ export default async function LocationDetailPage({
             />
           ) : null}
           <PageHeader
+            eyebrow="Locations"
             title={location.name}
             subtitle={
               [location.address_line1, location.city, location.postal_code]

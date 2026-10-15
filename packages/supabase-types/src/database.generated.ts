@@ -1222,7 +1222,7 @@ export type Database = {
           platform_status: Database["public"]["Enums"]["recruitment_platform_status"]
           preferred_cyprus_location: string | null
           registration_state: string
-          role: Database["public"]["Enums"]["worker_role"]
+          role: Database["public"]["Enums"]["worker_role"] | null
           submitted_at: string
           updated_at: string
           years_experience: string
@@ -1239,7 +1239,7 @@ export type Database = {
           platform_status?: Database["public"]["Enums"]["recruitment_platform_status"]
           preferred_cyprus_location?: string | null
           registration_state: string
-          role: Database["public"]["Enums"]["worker_role"]
+          role?: Database["public"]["Enums"]["worker_role"] | null
           submitted_at?: string
           updated_at?: string
           years_experience: string
@@ -1256,7 +1256,7 @@ export type Database = {
           platform_status?: Database["public"]["Enums"]["recruitment_platform_status"]
           preferred_cyprus_location?: string | null
           registration_state?: string
-          role?: Database["public"]["Enums"]["worker_role"]
+          role?: Database["public"]["Enums"]["worker_role"] | null
           submitted_at?: string
           updated_at?: string
           years_experience?: string

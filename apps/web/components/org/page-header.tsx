@@ -22,17 +22,28 @@ export function PageHeader({
         className,
       )}
     >
-      <div className="min-w-0 space-y-1">
+      <div className="min-w-0">
         {eyebrow ? (
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-bh-text-muted">
+          <p className="mb-2.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
+            <span
+              aria-hidden
+              className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
+            />
             {eyebrow}
           </p>
-        ) : null}
-        <h1 className="text-[28px] font-bold leading-9 tracking-tight text-bh-text">
+        ) : (
+          <div
+            aria-hidden
+            className="mb-2.5 h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
+          />
+        )}
+        <h1 className="text-[2rem] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#071d30]">
           {title}
         </h1>
         {subtitle ? (
-          <p className="max-w-2xl text-sm leading-6 text-bh-text-secondary">{subtitle}</p>
+          <p className="mt-3 max-w-xl border-l-2 border-[#e4b334] pl-3 text-[15px] leading-6 tracking-[-0.011em] text-bh-text-secondary">
+            {subtitle}
+          </p>
         ) : null}
       </div>
       {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}

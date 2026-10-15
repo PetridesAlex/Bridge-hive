@@ -69,7 +69,10 @@ export default async function AdminRecruitmentCandidatePage({
           {candidate.full_name as string}
         </h1>
         <p className="text-sm text-bh-text-secondary">
-          {WORKER_ROLE_LABELS[candidate.role as WorkerRole]} ·{' '}
+          {candidate.role
+            ? WORKER_ROLE_LABELS[candidate.role as WorkerRole]
+            : '—'}{' '}
+          ·{' '}
           {candidate.email_normalized as string}
         </p>
       </div>

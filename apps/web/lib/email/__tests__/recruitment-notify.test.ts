@@ -54,6 +54,22 @@ describe('recruitment notify payload', () => {
     expect(combined).not.toMatch(/full.?name|phone|document/i);
   });
 
+  it('still alerts the admin inbox when the applicant has no role', () => {
+    const payload = buildRecruitmentNotifyPayload({
+      candidateId,
+      role: null,
+      submittedAt: new Date('2026-10-15T00:00:00.000Z'),
+    });
+
+    expect(payload.to).toBe('info@bridgehive.app');
+    expect(payload.reviewPath).toBe(`/admin/recruitment/${candidateId}`);
+    expect(payload.text).toMatch(/Role: Not provided/);
+    expect(payload.text).toContain(
+      `https://bridgehive.app/admin/recruitment/${candidateId}`,
+    );
+    expect(payload.html).toContain('Open admin review');
+  });
+
   it('sends once through Resend on success and zero when Resend fails', async () => {
     sendResendEmailMock.mockResolvedValueOnce({ ok: true, id: 're_test' });
     await expect(

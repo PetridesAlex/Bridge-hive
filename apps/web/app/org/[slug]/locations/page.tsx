@@ -23,6 +23,7 @@ import {
   orgTableHeadClassName,
   orgTableRowClassName,
 } from '@/components/org/data-table';
+import { PageHeader } from '@/components/org/page-header';
 import { PermissionGuard } from '@/components/permission-guard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -271,24 +272,21 @@ export default async function LocationsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <h1 className="text-[28px] font-bold leading-9 tracking-tight text-bh-text">
-            Locations & wards
-          </h1>
-          <p className="max-w-xl text-sm leading-6 text-bh-text-secondary">
-            Facilities and sites where shifts take place.
-          </p>
-        </div>
-        <PermissionGuard allowed={ctx.capabilities.canManageLocations}>
-          <Button asChild variant="honey" className="rounded-xl font-semibold">
-            <Link href={filterHref(slug, filterState, { new: '1' })}>
-              <Plus className="h-4 w-4" aria-hidden />
-              Add location
-            </Link>
-          </Button>
-        </PermissionGuard>
-      </div>
+      <PageHeader
+        eyebrow="Operations"
+        title="Locations & wards"
+        subtitle="Facilities and sites where shifts take place."
+        actions={
+          <PermissionGuard allowed={ctx.capabilities.canManageLocations}>
+            <Button asChild variant="honey" className="rounded-xl font-semibold">
+              <Link href={filterHref(slug, filterState, { new: '1' })}>
+                <Plus className="h-4 w-4" aria-hidden />
+                Add location
+              </Link>
+            </Button>
+          </PermissionGuard>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard

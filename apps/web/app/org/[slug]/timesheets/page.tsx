@@ -91,6 +91,7 @@ export default async function TimesheetsPage({
   return (
     <div className="space-y-6">
       <PageHeader
+        eyebrow="Operations"
         title="Timesheets"
         subtitle="Review submitted hours for organization shifts."
       />

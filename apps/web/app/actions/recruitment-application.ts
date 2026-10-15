@@ -10,7 +10,6 @@ import {
   validateRecruitmentDocumentBatch,
   validateRecruitmentPersonalStep,
   validateRecruitmentPreferencesStep,
-  validateRecruitmentProfessionalStep,
   type RecruitmentEmploymentType,
   type WorkerRole,
 } from '@bridge-hive/domain';
@@ -90,11 +89,10 @@ export async function submitRecruitmentApplicationAction(
 
     const stepError =
       validateRecruitmentPersonalStep(draft) ??
-      validateRecruitmentProfessionalStep(draft) ??
       validateRecruitmentPreferencesStep(draft) ??
       validateRecruitmentConsentStep(draft);
     if (stepError) return { error: stepError };
-    if (!isRecruitmentWorkerRole(draft.role) || !draft.employmentType) {
+    if (!draft.employmentType) {
       return { error: 'Application is incomplete.' };
     }
 
@@ -109,8 +107,9 @@ export async function submitRecruitmentApplicationAction(
       return { error: 'Document metadata does not match uploads.' };
     }
 
+    const hasRole = isRecruitmentWorkerRole(draft.role);
     const batch = validateRecruitmentDocumentBatch({
-      role: draft.role,
+      role: hasRole ? draft.role : null,
       documents: files.map((file, index) => ({
         documentType: docTypes[index] ?? '',
         mimeType: file.type,
@@ -137,7 +136,7 @@ export async function submitRecruitmentApplicationAction(
         current_location: draft.currentLocation,
         country_of_residence: draft.countryOfResidence,
         preferred_cyprus_location: draft.preferredCyprusLocation || null,
-        role: draft.role,
+        role: hasRole ? draft.role : null,
         years_experience: draft.yearsExperience,
         registration_state: draft.registrationState,
         employment_type: draft.employmentType,
@@ -225,7 +224,7 @@ export async function submitRecruitmentApplicationAction(
     try {
       await sendRecruitmentSubmissionNotify({
         candidateId,
-        role: draft.role,
+        role: hasRole ? draft.role : null,
         submittedAt: new Date(),
       });
     } catch {

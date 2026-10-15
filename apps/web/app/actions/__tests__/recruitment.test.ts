@@ -3,6 +3,7 @@ import {
   RECRUITMENT_MAX_UPLOAD_FILES,
   emptyRecruitmentApplicationDraft,
   isSafeRecruitmentDocumentType,
+  recruitmentApplicationDocumentRequirements,
   recruitmentDocumentRequirementsForRole,
   resolveRecruitmentDocumentExpiresAt,
   validateRecruitmentConsentStep,
@@ -103,9 +104,40 @@ describe('recruitment domain helpers', () => {
     expect(validateRecruitmentProfessionalStep(draft)).toBeNull();
   });
 
+  it('keeps the public document checklist and omits tax and social insurance', () => {
+    const docs = recruitmentApplicationDocumentRequirements();
+    expect(docs.map((d) => d.credentialType)).toEqual([
+      'identity_document_front',
+      'identity_document_back',
+      'cv',
+      'nursing_degree',
+      'nursing_licence',
+      'employment_certificate',
+      'physiotherapy_degree',
+      'physiotherapist_registration_certificate',
+      'physiotherapy_practising_licence',
+    ]);
+    expect(docs.filter((d) => d.isRequired).map((d) => d.credentialType)).toEqual([
+      'identity_document_front',
+      'identity_document_back',
+    ]);
+    expect(
+      docs.some((d) => d.credentialType === 'tax_identification_proof'),
+    ).toBe(false);
+    expect(
+      docs.some((d) => d.credentialType === 'social_insurance_proof'),
+    ).toBe(false);
+  });
+
   it('reuses physio document checklist with practising licence expiry', () => {
     const docs = recruitmentDocumentRequirementsForRole('physiotherapist');
-    expect(docs.filter((d) => d.isRequired)).toHaveLength(7);
+    expect(docs.filter((d) => d.isRequired)).toHaveLength(5);
+    expect(
+      docs.some((d) => d.credentialType === 'tax_identification_proof'),
+    ).toBe(false);
+    expect(
+      docs.some((d) => d.credentialType === 'social_insurance_proof'),
+    ).toBe(false);
     expect(
       docs.find((d) => d.credentialType === 'physiotherapy_practising_licence')
         ?.requiresExpiry,
@@ -233,13 +265,16 @@ describe('recruitment route contracts', () => {
     expect(middleware).toMatch(/\/recruitment/);
   });
 
-  it('keeps consent unchecked and uses shared worker roles', async () => {
+  it('keeps consent unchecked and does not collect a professional role', async () => {
     const form = await readWeb('components/marketing/recruitment-apply-form.tsx');
     expect(form).toMatch(/consentAccepted/);
-    expect(form).toMatch(/WORKER_ROLES/);
+    expect(form).not.toMatch(/Professional role/);
+    expect(form).not.toMatch(/WORKER_ROLES/);
     expect(form).toMatch(/checked=\{draft\.consentAccepted\}/);
     expect(form).not.toMatch(/defaultChecked=\{true\}/);
     expect(form).toMatch(/Submit talent profile/);
+    expect(form).toMatch(/recruitmentApplicationDocumentRequirements/);
+    expect(form).not.toMatch(/No documents are required/);
   });
 
   it('org portal uses /org/[slug]/recruitment with organisation alias', async () => {
@@ -487,5 +522,137 @@ describe('submitRecruitmentApplicationAction forged requests', () => {
     expect(src).toMatch(/validateRecruitmentDocumentBatch/);
     expect(src).toMatch(/cleanupFailedSubmission|remove\(/);
     expect(src).toMatch(/sendRecruitmentSubmissionNotify/);
+  });
+});
+
+describe('public recruitment submission reaches admin review', () => {
+  const candidateId = 'c1000001-dddd-4000-8000-0000000000d1';
+
+  beforeEach(() => {
+    rpcMock.mockReset();
+    uploadMock.mockReset();
+    insertMock.mockReset();
+    removeMock.mockReset();
+    deleteEqMock.mockReset();
+    notifyMock.mockReset();
+    notifyMock.mockResolvedValue({ sent: true });
+    rpcMock.mockResolvedValue({ data: candidateId, error: null });
+  });
+
+  function publicApplication(): FormData {
+    return validDraftFields({
+      currentLocation: '',
+      countryOfResidence: 'Cyprus',
+      preferredCyprusLocation: 'Limassol',
+      role: '',
+      yearsExperience: '',
+      registrationState: '',
+      employmentType: 'full_time',
+      preferredEnvironments: 'Hospital',
+      areasOfInterest: 'Wards',
+      availability: '',
+      consentAccepted: 'true',
+    });
+  }
+
+  it('stores a full-time application without a role and alerts the admin inbox', async () => {
+    uploadMock.mockResolvedValue({ error: null });
+    insertMock.mockResolvedValue({ error: null });
+    const { submitRecruitmentApplicationAction } = await import(
+      '../recruitment-application'
+    );
+    const fd = publicApplication();
+    fd.append('documents', pdfFile('front.pdf'));
+    fd.append('documentTypes', 'identity_document_front');
+    fd.append('documents', pdfFile('back.pdf'));
+    fd.append('documentTypes', 'identity_document_back');
+    fd.append('documents', pdfFile('cv.pdf'));
+    fd.append('documentTypes', 'cv');
+
+    const result = await submitRecruitmentApplicationAction({}, fd);
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        success: true,
+        candidateId,
+      }),
+    );
+    expect(uploadMock).toHaveBeenCalledTimes(3);
+    expect(insertMock).toHaveBeenCalledTimes(3);
+
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    const payload = rpcMock.mock.calls[0]![1] as {
+      p_payload: Record<string, unknown>;
+    };
+    expect(payload.p_payload).toEqual(
+      expect.objectContaining({
+        full_name: 'Alex Example',
+        email: 'alex.example@test.local',
+        phone: '+35799000099',
+        country_of_residence: 'Cyprus',
+        preferred_cyprus_location: 'Limassol',
+        role: null,
+        employment_type: 'full_time',
+        availability: '',
+        years_experience: '',
+        registration_state: '',
+      }),
+    );
+
+    expect(notifyMock).toHaveBeenCalledTimes(1);
+    expect(notifyMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        candidateId,
+        role: null,
+      }),
+    );
+  });
+
+  it('requires identity documents on a public application', async () => {
+    const { submitRecruitmentApplicationAction } = await import(
+      '../recruitment-application'
+    );
+    const result = await submitRecruitmentApplicationAction(
+      {},
+      publicApplication(),
+    );
+    expect(result.success).toBeUndefined();
+    expect(result.error).toMatch(/national identity card — front/i);
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(uploadMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects tax and social-insurance uploads on the public application', async () => {
+    const { submitRecruitmentApplicationAction } = await import(
+      '../recruitment-application'
+    );
+    const fd = publicApplication();
+    fd.set('role', 'registered_nurse');
+    fd.append('documents', pdfFile('tax.pdf'));
+    fd.append('documentTypes', 'tax_identification_proof');
+
+    const result = await submitRecruitmentApplicationAction({}, fd);
+    expect(result.success).toBeUndefined();
+    expect(result.error).toMatch(/invalid document type/i);
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(notifyMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the admin queue wired to stored submissions', async () => {
+    const queue = await readWeb('app/admin/(console)/recruitment/page.tsx');
+    const detail = await readWeb(
+      'app/admin/(console)/recruitment/[candidateId]/page.tsx',
+    );
+    const migration = await fs.readFile(
+      path.join(repoRoot, 'supabase/migrations/033_recruitment_optional_role.sql'),
+      'utf8',
+    );
+
+    expect(queue).toMatch(/from\('recruitment_candidates'\)/);
+    expect(queue).toMatch(/\/admin\/recruitment\/\$\{row\.id\}/);
+    expect(queue).toMatch(/canReviewRecruitment/);
+    expect(detail).toMatch(/from\('recruitment_candidates'\)/);
+    expect(detail).toMatch(/requirePlatformAdmin/);
+    expect(migration).toMatch(/alter column role drop not null/);
   });
 });

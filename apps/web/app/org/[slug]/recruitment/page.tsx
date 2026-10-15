@@ -164,7 +164,9 @@ export default async function OrgRecruitmentPage({
                     {row.full_name as string}
                   </td>
                   <td className="px-4 py-3">
-                    {WORKER_ROLE_LABELS[row.role as WorkerRole] ?? String(row.role)}
+                    {row.role
+                      ? (WORKER_ROLE_LABELS[row.role as WorkerRole] ?? String(row.role))
+                      : '—'}
                   </td>
                   <td className="px-4 py-3 text-bh-text-secondary">
                     {row.current_location as string}

@@ -17,7 +17,7 @@ export const RECRUITMENT_NOTIFY_SUBJECT =
 
 export type RecruitmentNotifyInput = {
   candidateId: string;
-  role: WorkerRole;
+  role: WorkerRole | null;
   submittedAt: Date;
 };
 
@@ -35,7 +35,7 @@ export function buildRecruitmentNotifyPayload(input: RecruitmentNotifyInput): {
   const origin = getAppPublicUrl();
   const reviewPath = `/admin/recruitment/${input.candidateId}`;
   const reviewUrl = `${origin}${reviewPath}`;
-  const roleLabel = recruitmentRoleLabel(input.role);
+  const roleLabel = input.role ? recruitmentRoleLabel(input.role) : 'Not provided';
   const submittedDisplay = formatSubmittedAt(input.submittedAt);
   const submittedIso = input.submittedAt.toISOString();
   const logoUrl = `${origin}/brand/bridge-hive-logo-v2-180.png`;

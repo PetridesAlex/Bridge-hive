@@ -3,20 +3,15 @@
 import {
   RECRUITMENT_APPLY_STEPS,
   RECRUITMENT_CONSENT_PLACEHOLDER,
-  RECRUITMENT_EMPLOYMENT_TYPES,
   RECRUITMENT_EMPLOYMENT_TYPE_LABELS,
   RECRUITMENT_SUCCESS_MESSAGE,
-  WORKER_ROLE_LABELS,
-  WORKER_ROLES,
   emptyRecruitmentApplicationDraft,
-  recruitmentDocumentRequirementsForRole,
+  recruitmentApplicationDocumentRequirements,
   validateRecruitmentConsentStep,
   validateRecruitmentPersonalStep,
   validateRecruitmentPreferencesStep,
-  validateRecruitmentProfessionalStep,
   type RecruitmentApplicationDraft,
   type RecruitmentStepId,
-  type WorkerRole,
 } from '@bridge-hive/domain';
 import { useActionState, useMemo, useState, useTransition } from 'react';
 
@@ -24,8 +19,14 @@ import {
   submitRecruitmentApplicationAction,
   type RecruitmentSubmitState,
 } from '@/app/actions/recruitment-application';
+import { ResidenceFlag } from '@/components/marketing/residence-flags';
 
 const initial: RecruitmentSubmitState = {};
+
+const RESIDENCE_COUNTRIES = [
+  { value: 'Cyprus', label: 'Cyprus' },
+  { value: 'Greece', label: 'Greece' },
+] as const;
 
 type PendingFile = {
   credentialType: string;
@@ -50,11 +51,8 @@ export function RecruitmentApplyForm() {
   const busy = pending || isPending;
 
   const docReqs = useMemo(
-    () =>
-      draft.role
-        ? recruitmentDocumentRequirementsForRole(draft.role as WorkerRole)
-        : [],
-    [draft.role],
+    () => recruitmentApplicationDocumentRequirements(),
+    [],
   );
 
   function update<K extends keyof RecruitmentApplicationDraft>(
@@ -69,8 +67,6 @@ export function RecruitmentApplyForm() {
     switch (step.id as RecruitmentStepId) {
       case 'personal':
         return validateRecruitmentPersonalStep(draft);
-      case 'professional':
-        return validateRecruitmentProfessionalStep(draft);
       case 'preferences':
         return validateRecruitmentPreferencesStep(draft);
       case 'documents': {
@@ -159,22 +155,51 @@ export function RecruitmentApplyForm() {
 
   return (
     <div className="rounded-[1.35rem] border border-[color:var(--m-line)] bg-white p-5 shadow-[0_12px_40px_rgba(11,32,50,0.06)] sm:p-8">
-      <nav aria-label="Application steps" className="mb-6 flex flex-wrap gap-2">
-        {RECRUITMENT_APPLY_STEPS.map((s, index) => (
-          <span
-            key={s.id}
-            className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold tracking-wide ${
-              index === stepIndex
-                ? 'bg-[color:var(--m-navy)] text-white'
-                : index < stepIndex
-                  ? 'bg-[color:var(--m-honey)]/25 text-[color:var(--m-navy)]'
-                  : 'bg-[color:var(--m-porcelain)] text-[color:var(--m-muted)]'
-            }`}
-            aria-current={index === stepIndex ? 'step' : undefined}
-          >
-            {index + 1}. {s.title}
-          </span>
-        ))}
+      <nav
+        aria-label="Application steps"
+        className="m-apply-steps"
+        style={{
+          ['--m-apply-count' as string]: RECRUITMENT_APPLY_STEPS.length,
+          ['--m-apply-progress' as string]:
+            RECRUITMENT_APPLY_STEPS.length > 1
+              ? stepIndex / (RECRUITMENT_APPLY_STEPS.length - 1)
+              : 0,
+        }}
+      >
+        <div className="m-apply-track" aria-hidden="true">
+          <span className="m-apply-track-fill" />
+        </div>
+        <ol>
+          {RECRUITMENT_APPLY_STEPS.map((s, index) => {
+            const status =
+              index < stepIndex ? 'done' : index === stepIndex ? 'current' : 'upcoming';
+            return (
+              <li
+                key={s.id}
+                className={`m-apply-step is-${status}`}
+                aria-current={status === 'current' ? 'step' : undefined}
+              >
+                <span className="m-apply-step-mark" aria-hidden="true">
+                  {status === 'done' ? (
+                    <svg viewBox="0 0 16 16" className="m-apply-step-check">
+                      <path
+                        d="M3.4 8.2 6.3 11.1 12.6 4.8"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  ) : (
+                    index + 1
+                  )}
+                </span>
+                <span className="m-apply-step-label">{s.title}</span>
+              </li>
+            );
+          })}
+        </ol>
       </nav>
 
       <header className="mb-5">
@@ -210,63 +235,42 @@ export function RecruitmentApplyForm() {
               autoComplete="tel"
               required
             />
-            <Field
-              label="Current location"
-              value={draft.currentLocation}
-              onChange={(v) => update('currentLocation', v)}
-              required
-            />
-            <Field
-              label="Country of residence"
-              value={draft.countryOfResidence}
-              onChange={(v) => update('countryOfResidence', v)}
-              required
-            />
+            <fieldset>
+              <legend className="block text-sm font-medium text-[color:var(--m-navy)]">
+                Country of residence
+              </legend>
+              <div
+                role="radiogroup"
+                aria-label="Country of residence"
+                className="mt-1.5 grid grid-cols-2 overflow-hidden rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)]"
+              >
+                {RESIDENCE_COUNTRIES.map((country) => {
+                  const selected = draft.countryOfResidence === country.value;
+                  return (
+                    <button
+                      key={country.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      className={`flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-medium transition-colors ${
+                        selected
+                          ? 'bg-[color:var(--m-navy)] text-white'
+                          : 'text-[color:var(--m-navy)] hover:bg-white'
+                      }`}
+                      onClick={() => update('countryOfResidence', country.value)}
+                    >
+                      <ResidenceFlag country={country.value} />
+                      {country.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
             <Field
               label="Preferred Cyprus location (optional)"
               value={draft.preferredCyprusLocation}
               onChange={(v) => update('preferredCyprusLocation', v)}
             />
-          </>
-        ) : null}
-
-        {step.id === 'professional' ? (
-          <>
-            <label className="block text-sm font-medium text-[color:var(--m-navy)]">
-              Professional role
-              <select
-                className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] px-3 py-2.5 text-sm"
-                value={draft.role}
-                onChange={(e) => {
-                  update('role', e.target.value as WorkerRole | '');
-                  setFiles([]);
-                }}
-                required
-              >
-                <option value="">Select role</option>
-                {WORKER_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {WORKER_ROLE_LABELS[role]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Field
-              label="Registration / qualification state"
-              value={draft.registrationState}
-              onChange={(v) => update('registrationState', v)}
-              required
-            />
-            <label className="block text-sm font-medium text-[color:var(--m-navy)]">
-              Relevant experience
-              <textarea
-                className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] px-3 py-2.5 text-sm"
-                rows={4}
-                value={draft.yearsExperience}
-                onChange={(e) => update('yearsExperience', e.target.value)}
-                required
-              />
-            </label>
           </>
         ) : null}
 
@@ -276,21 +280,13 @@ export function RecruitmentApplyForm() {
               Employment type
               <select
                 className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] px-3 py-2.5 text-sm"
-                value={draft.employmentType}
-                onChange={(e) =>
-                  update(
-                    'employmentType',
-                    e.target.value as RecruitmentApplicationDraft['employmentType'],
-                  )
-                }
+                value="full_time"
+                onChange={() => update('employmentType', 'full_time')}
                 required
               >
-                <option value="">Select type</option>
-                {RECRUITMENT_EMPLOYMENT_TYPES.map((type) => (
-                  <option key={type} value={type}>
-                    {RECRUITMENT_EMPLOYMENT_TYPE_LABELS[type]}
-                  </option>
-                ))}
+                <option value="full_time">
+                  {RECRUITMENT_EMPLOYMENT_TYPE_LABELS.full_time}
+                </option>
               </select>
             </label>
             <Field
@@ -303,16 +299,6 @@ export function RecruitmentApplyForm() {
               value={draft.areasOfInterest}
               onChange={(v) => update('areasOfInterest', v)}
             />
-            <label className="block text-sm font-medium text-[color:var(--m-navy)]">
-              Availability
-              <textarea
-                className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] px-3 py-2.5 text-sm"
-                rows={3}
-                value={draft.availability}
-                onChange={(e) => update('availability', e.target.value)}
-                required
-              />
-            </label>
           </>
         ) : null}
 
@@ -320,6 +306,8 @@ export function RecruitmentApplyForm() {
           <div className="space-y-4">
             <p className="text-sm text-[color:var(--m-muted)]">
               Uploads are stored privately. PDF, JPEG, or PNG — max 10 MB each.
+              Identity documents are required. Add any professional documents that
+              apply.
             </p>
             {docReqs.map((req) => {
               const current = files.find(
@@ -395,14 +383,6 @@ export function RecruitmentApplyForm() {
                 <dt className="text-[color:var(--m-muted)]">Name</dt>
                 <dd className="font-medium text-[color:var(--m-navy)]">
                   {draft.fullName}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--m-muted)]">Role</dt>
-                <dd className="font-medium text-[color:var(--m-navy)]">
-                  {draft.role
-                    ? WORKER_ROLE_LABELS[draft.role as WorkerRole]
-                    : '—'}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">

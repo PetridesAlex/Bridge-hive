@@ -89,7 +89,9 @@ export default async function AdminRecruitmentPage() {
                     </p>
                   </td>
                   <td className="px-4 py-3">
-                    {WORKER_ROLE_LABELS[row.role as WorkerRole] ?? String(row.role)}
+                    {row.role
+                      ? (WORKER_ROLE_LABELS[row.role as WorkerRole] ?? String(row.role))
+                      : '—'}
                   </td>
                   <td className="px-4 py-3">
                     <Badge variant="muted">

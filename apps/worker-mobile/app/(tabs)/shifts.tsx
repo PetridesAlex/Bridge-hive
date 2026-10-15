@@ -119,7 +119,7 @@ export default function ShiftsScreen() {
       ) : isRestricted ? (
         <EmptyState
           title="New shift access paused"
-          description="New shift access is paused because a commission invoice is overdue. You can still open already accepted assignments from Work."
+          description="New shift access is paused because a commission invoice is overdue. You can still open already accepted assignments from My shifts."
           actionLabel="View invoices"
           onAction={() => router.push('/(tabs)/invoices')}
         />

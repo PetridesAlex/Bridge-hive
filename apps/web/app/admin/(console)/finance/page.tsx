@@ -104,7 +104,7 @@ export default async function AdminFinancePage({
       <div>
         <h2 className="text-2xl font-semibold text-slate-900">Finance</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Bridge Hive commission invoices owed by workers (16% of approved gross shift
+          Bridge Hive commission invoices owed by workers (17% of approved gross shift
           pay). Hospitals pay workers the approved gross amount separately.
         </p>
       </div>

@@ -203,11 +203,14 @@ describe('marketing site contracts', () => {
     expect(payments).toMatch(/BRIDGE_HIVE_MARK_SRC|bridge-hive-logo-v2/);
     expect(payments).not.toMatch(/Paid by the organization via bank transfer/);
     expect(payments).not.toMatch(/16%/);
+    expect(payments).not.toMatch(/17%/);
     expect(payments).not.toMatch(/10 calendar days/);
     expect(payments).not.toMatch(/Apple Pay|Stripe/);
     expect(src).not.toMatch(/16%/);
+    expect(src).not.toMatch(/17%/);
     expect(src).not.toMatch(/10 calendar days/);
     expect(home).not.toMatch(/16%/);
+    expect(home).not.toMatch(/17%/);
     expect(home).not.toMatch(/10 calendar days/);
     expect(payments).toMatch(/does not collect, hold, or disburse|does not hold or disburse/i);
     expect(journey).toMatch(/does not use them to collect platform fees/);

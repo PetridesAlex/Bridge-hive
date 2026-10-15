@@ -3,15 +3,22 @@
 ## Model (locked)
 
 - Hospital pays the worker the **approved gross** shift amount.
-- Worker separately owes Bridge Hive **16%** of approved gross (1600 bps).
+- Worker separately owes Bridge Hive **17%** of approved gross (1700 bps).
 - One Bridge Hive commission invoice per approved timesheet.
 - Due in **10 calendar days**.
 - Overdue invoices restrict **new** marketplace claims; existing assignments remain usable.
+- Paying an overdue invoice (or a finance void) restores claiming automatically.
+
+## Attendance (locked)
+
+- After the scheduled end, the worker submits **completed hours**.
+- Check-in / check-out RPCs are retired.
+- No invoice is created on claim or on hours submit — only on organization timesheet approval.
 
 ## Local verification
 
 ```bash
-# Apply migration 018 without resetting data
+# Apply migration 035 without resetting data
 npx supabase migration up --local
 npm run db:types
 npx supabase test db
@@ -30,7 +37,8 @@ npm run build -w @bridge-hive/web
 3. Serve functions: `npx supabase functions serve --env-file supabase/functions/.env.local`
 4. Forward webhooks (if Stripe CLI already installed):
    `stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook`
-5. Worker taps **Pay invoice** → hosted Checkout. Apple Pay appears only when Stripe + device/browser/Wallet are eligible. Expo Go cannot prove native Apple Pay.
+5. Worker taps **Pay invoice** → hosted Checkout. Payment methods follow the Stripe Dashboard
+   configuration (card, Apple Pay, Google Pay when eligible). Expo Go cannot prove native Apple Pay.
 6. Return URL shows **Payment confirmation pending** until the webhook marks paid.
 
 Without Stripe credentials, invoices, restrictions, and dashboards still work; Pay shows a safe “temporarily unavailable” message.

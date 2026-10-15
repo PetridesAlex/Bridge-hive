@@ -97,15 +97,16 @@ export type AssignmentWithShift = ShiftAssignment & {
     | 'required_role'
     | 'status'
     | 'break_minutes'
-    | 'required_positions'
   > | null;
 };
 
 export async function getMyAssignments(workerId: string) {
+  // Keep nested shift columns compatible with deployed schemas that may not
+  // yet have multi-position fields (e.g. required_positions).
   const { data, error } = await supabase
     .from('shift_assignments')
     .select(
-      '*, shifts ( id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes, required_positions )',
+      '*, shifts ( id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes )',
     )
     .eq('worker_id', workerId)
     .order('accepted_at', { ascending: false });
@@ -174,7 +175,7 @@ export async function getTimesheetForAssignment(assignmentId: string) {
   return { data: data as Timesheet | null, error: error?.message };
 }
 
-/** @deprecated Direct assignment status writes are locked. Use checkInAssignment / checkOutAssignment RPCs. */
+/** @deprecated Direct assignment status writes are locked. Use submitTimesheetRpc. */
 export async function updateAssignmentStatus(
   _assignmentId: string,
   _patch: Partial<Pick<ShiftAssignment, 'status' | 'check_in_at' | 'check_out_at' | 'cancellation_reason'>>,
@@ -182,11 +183,11 @@ export async function updateAssignmentStatus(
   return {
     data: null as ShiftAssignment | null,
     error:
-      'Direct assignment updates are blocked. Use check_in_assignment / check_out_assignment RPCs.',
+      'Direct assignment updates are blocked. Use submit_timesheet RPC after the shift ends.',
   };
 }
 
-/** @deprecated Client-chosen minutes are blocked. Use submitTimesheetRpc. */
+/** @deprecated Direct timesheet writes are locked. Use submitTimesheetRpc. */
 export async function submitTimesheet(_params: {
   assignmentId: string;
   submittedMinutes: number;

@@ -172,8 +172,8 @@ export const COMMISSION_STATUSES = [
 ] as const;
 export type CommissionStatus = (typeof COMMISSION_STATUSES)[number];
 
-/** Default pilot commission: 16% (band 15–17%). */
-export const DEFAULT_COMMISSION_RATE_BPS = 1600;
+/** Default worker commission: 17%. */
+export const DEFAULT_COMMISSION_RATE_BPS = 1700;
 
 /** Calendar days from invoice issue to due date. */
 export const WORKER_COMMISSION_DUE_DAYS = 10;

@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAssignments } from '@/hooks/useAssignments';
 import type { AssignmentWithShift } from '@/lib/queries';
+import { canSubmitCompletedHours, shiftHasEnded } from '@/lib/rpcs';
 import { useAuth } from '@/providers/AuthProvider';
 import {
   formatDayLabel,
@@ -31,20 +32,26 @@ import {
   isoDateFromTimestamp,
 } from '@/utils/format';
 
-type WorkSegment = 'upcoming' | 'in_progress' | 'completed';
+type WorkSegment = 'upcoming' | 'to_submit' | 'completed';
 
-function segmentFor(status: string): WorkSegment {
-  if (['accepted'].includes(status)) return 'upcoming';
-  if (['checked_in', 'checked_out', 'submitted'].includes(status)) return 'in_progress';
+function segmentFor(assignment: AssignmentWithShift, now = new Date()): WorkSegment {
+  const status = assignment.status;
+  if (status === 'approved' || status === 'rejected') return 'completed';
+  if (status === 'submitted') return 'to_submit';
+  if (canSubmitCompletedHours(status)) {
+    const endsAt = assignment.shifts?.ends_at;
+    if (endsAt && shiftHasEnded(endsAt, now)) return 'to_submit';
+    return 'upcoming';
+  }
   return 'completed';
 }
 
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
     accepted: 'Accepted',
-    checked_in: 'Checked in',
-    checked_out: 'Checked out',
-    submitted: 'Timesheet submitted',
+    checked_in: 'Accepted',
+    checked_out: 'Accepted',
+    submitted: 'Hours submitted',
     approved: 'Approved',
     rejected: 'Rejected',
   };
@@ -52,9 +59,11 @@ function statusLabel(status: string): string {
 }
 
 function stepState(status: string, target: string): ProgressStepState {
-  const order = ['accepted', 'checked_in', 'checked_out', 'submitted', 'approved'];
+  const order = ['accepted', 'submitted', 'approved'];
   if (status === 'rejected') return target === 'approved' ? 'rejected' : 'complete';
-  const cur = order.indexOf(status);
+  const normalized =
+    status === 'checked_in' || status === 'checked_out' ? 'accepted' : status;
+  const cur = order.indexOf(normalized);
   const tgt = order.indexOf(target);
   if (cur < 0 || tgt < 0) return 'not_started';
   if (cur > tgt) return 'complete';
@@ -67,61 +76,66 @@ export default function WorkScreen() {
   const { assignments, loading, error, refresh } = useAssignments(user?.id);
   const [segment, setSegment] = useState<WorkSegment>('upcoming');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [nowTick, setNowTick] = useState(() => Date.now());
 
   useFocusEffect(
     useCallback(() => {
       void refresh();
+      setNowTick(Date.now());
     }, [refresh]),
   );
 
+  const now = useMemo(() => new Date(nowTick), [nowTick]);
+
   const filtered = useMemo(
-    () => assignments.filter((a) => segmentFor(a.status) === segment),
-    [assignments, segment],
+    () => assignments.filter((a) => segmentFor(a, now) === segment),
+    [assignments, segment, now],
   );
 
-  const active = useMemo(
-    () =>
-      assignments.find((a) =>
-        ['accepted', 'checked_in', 'checked_out'].includes(a.status),
-      ) ?? null,
-    [assignments],
-  );
+  const active = useMemo(() => {
+    const needingSubmit = assignments.find(
+      (a) =>
+        canSubmitCompletedHours(a.status) &&
+        a.shifts?.ends_at &&
+        shiftHasEnded(a.shifts.ends_at, now),
+    );
+    if (needingSubmit) return needingSubmit;
+    return (
+      assignments.find((a) => canSubmitCompletedHours(a.status)) ?? null
+    );
+  }, [assignments, now]);
 
   const sticky = useMemo(() => {
     if (!active) return null;
-    if (active.status === 'accepted') {
+    const ended =
+      active.shifts?.ends_at != null && shiftHasEnded(active.shifts.ends_at, now);
+    if (canSubmitCompletedHours(active.status) && ended) {
       return {
-        label: 'Open shift to check in',
+        label: 'Submit completed hours',
         onPress: () => router.push(`/shifts/${active.shift_id}`),
       };
     }
-    if (active.status === 'checked_in') {
+    if (canSubmitCompletedHours(active.status)) {
       return {
-        label: 'Check out & submit timesheet',
-        onPress: () => router.push(`/shifts/${active.shift_id}`),
-      };
-    }
-    if (active.status === 'checked_out') {
-      return {
-        label: 'Submit timesheet',
+        label: 'Open my shift',
         onPress: () => router.push(`/shifts/${active.shift_id}`),
       };
     }
     return null;
-  }, [active]);
+  }, [active, now]);
 
   return (
     <AppScreen scroll={false} edges={['top']}>
       <View>
         <ScreenHeader
           eyebrow="Assignments"
-          title="Work"
-          subtitle="Your accepted assignments and workday progress"
+          title="My shifts"
+          subtitle="Accepted shifts — submit hours after each scheduled end"
         />
         <SegmentedTabs
           tabs={[
             { key: 'upcoming', label: 'Upcoming' },
-            { key: 'in_progress', label: 'In progress' },
+            { key: 'to_submit', label: 'To submit' },
             { key: 'completed', label: 'Completed' },
           ]}
           activeKey={segment}
@@ -135,7 +149,7 @@ export default function WorkScreen() {
           <SkeletonCard />
         </View>
       ) : error && assignments.length === 0 ? (
-        <ErrorState title="Could not load work" onRetry={refresh} />
+        <ErrorState title="Could not load shifts" onRetry={refresh} />
       ) : (
         <FlatList
           data={filtered}
@@ -146,15 +160,17 @@ export default function WorkScreen() {
             <EmptyState
               title={
                 segment === 'upcoming'
-                  ? 'No upcoming assignments'
-                  : segment === 'in_progress'
-                    ? 'Nothing in progress'
-                    : 'No completed work yet'
+                  ? 'No upcoming shifts'
+                  : segment === 'to_submit'
+                    ? 'Nothing to submit'
+                    : 'No completed shifts yet'
               }
               description={
                 segment === 'upcoming'
                   ? 'Claim an open shift to see it here.'
-                  : 'Workday progress for your accepted shifts appears in these lists.'
+                  : segment === 'to_submit'
+                    ? 'After a shift ends, submit completed hours for organization review.'
+                    : 'Approved and rejected assignments appear here.'
               }
               actionLabel={segment === 'upcoming' ? 'Browse shifts' : undefined}
               onAction={
@@ -169,6 +185,7 @@ export default function WorkScreen() {
               onToggle={() =>
                 setExpandedId((id) => (id === item.id ? null : item.id))
               }
+              now={now}
             />
           )}
         />
@@ -187,16 +204,20 @@ function AssignmentRow({
   assignment,
   expanded,
   onToggle,
+  now,
 }: {
   assignment: AssignmentWithShift;
   expanded: boolean;
   onToggle: () => void;
+  now: Date;
 }) {
   const shift = assignment.shifts;
   const roleLabel = shift
     ? WORKER_ROLE_LABELS[shift.required_role as keyof typeof WORKER_ROLE_LABELS] ??
       shift.required_role
     : 'Shift';
+  const ended = shift?.ends_at != null && shiftHasEnded(shift.ends_at, now);
+  const awaitingSubmit = canSubmitCompletedHours(assignment.status);
 
   return (
     <View style={styles.card}>
@@ -228,7 +249,7 @@ function AssignmentRow({
                 ? 'danger'
                 : assignment.status === 'approved'
                   ? 'success'
-                  : assignment.status === 'checked_in'
+                  : awaitingSubmit && ended
                     ? 'accent'
                     : 'info'
             }
@@ -246,52 +267,62 @@ function AssignmentRow({
           <ProgressStep
             step={1}
             title="Accepted"
-            statusLabel={stepState(assignment.status, 'accepted') === 'complete' || assignment.status === 'accepted' ? 'Done' : 'Pending'}
-            state={
-              assignment.status === 'accepted'
-                ? 'in_progress'
-                : stepState(assignment.status, 'accepted')
-            }
-            isCurrent={assignment.status === 'accepted'}
-          />
-          <ProgressStep
-            step={2}
-            title="Check-in"
             statusLabel={
-              stepState(assignment.status, 'checked_in') === 'complete' ||
-              assignment.status === 'checked_in'
+              stepState(assignment.status, 'accepted') === 'complete' ||
+              awaitingSubmit
                 ? 'Done'
                 : 'Pending'
             }
             state={
-              assignment.status === 'checked_in'
+              awaitingSubmit
                 ? 'in_progress'
-                : stepState(assignment.status, 'checked_in')
+                : stepState(assignment.status, 'accepted')
             }
-            isCurrent={assignment.status === 'accepted'}
+            isCurrent={awaitingSubmit && !ended}
           />
           <ProgressStep
-            step={3}
-            title="Check-out & timesheet"
+            step={2}
+            title="Submit hours"
             statusLabel={
               ['submitted', 'approved', 'rejected'].includes(assignment.status)
                 ? 'Submitted'
-                : assignment.status === 'checked_in' || assignment.status === 'checked_out'
+                : awaitingSubmit && ended
                   ? 'Ready'
-                  : 'Pending'
+                  : 'After end'
             }
             state={
-              assignment.status === 'checked_in' || assignment.status === 'checked_out'
+              awaitingSubmit && ended
                 ? 'in_progress'
                 : stepState(assignment.status, 'submitted')
             }
-            isCurrent={
-              assignment.status === 'checked_in' || assignment.status === 'checked_out'
+            isCurrent={awaitingSubmit && ended}
+          />
+          <ProgressStep
+            step={3}
+            title="Organization review"
+            statusLabel={
+              assignment.status === 'approved'
+                ? 'Approved'
+                : assignment.status === 'rejected'
+                  ? 'Rejected'
+                  : assignment.status === 'submitted'
+                    ? 'Under review'
+                    : 'Pending'
             }
+            state={
+              assignment.status === 'approved'
+                ? 'approved'
+                : assignment.status === 'rejected'
+                  ? 'rejected'
+                  : assignment.status === 'submitted'
+                    ? 'under_review'
+                    : 'not_started'
+            }
+            isCurrent={assignment.status === 'submitted'}
           />
           <ProgressStep
             step={4}
-            title="Organization review"
+            title="Approved"
             statusLabel={
               assignment.status === 'approved'
                 ? 'Approved'
@@ -304,11 +335,9 @@ function AssignmentRow({
                 ? 'approved'
                 : assignment.status === 'rejected'
                   ? 'rejected'
-                  : assignment.status === 'submitted'
-                    ? 'under_review'
-                    : 'not_started'
+                  : 'not_started'
             }
-            isCurrent={assignment.status === 'submitted'}
+            isCurrent={assignment.status === 'approved'}
             isLast
           />
         </View>

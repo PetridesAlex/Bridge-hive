@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     const { data: invoice, error: invoiceError } = await supabase
       .from('worker_commission_invoices')
       .select(
-        'id, invoice_number, worker_id, status, currency, commission_amount_minor, stripe_customer_id, stripe_checkout_session_id',
+        'id, invoice_number, worker_id, status, currency, commission_amount_minor, commission_rate_bps, stripe_customer_id, stripe_checkout_session_id',
       )
       .eq('id', invoiceId)
       .eq('worker_id', user.id)
@@ -177,13 +177,19 @@ Deno.serve(async (req) => {
       priorSessionStatus,
     );
 
+    const rateBps =
+      typeof invoice.commission_rate_bps === 'number'
+        ? invoice.commission_rate_bps
+        : 1700;
+    const ratePercent = (rateBps / 100).toFixed(rateBps % 100 === 0 ? 0 : 2);
+
     const session = await stripe.checkout.sessions.create(
       {
         customer: customerId,
         mode: 'payment',
-        // Card (+ Apple Pay / Google Pay when Stripe + device/browser are eligible).
-        // Do not implement a native Apple Pay button in this phase.
-        payment_method_types: ['card'],
+        // Omit payment_method_types so Checkout offers methods enabled in the
+        // Stripe Dashboard (card, Apple Pay, Google Pay when eligible, etc.).
+        // No native Apple Pay button in this phase.
         line_items: [
           {
             quantity: 1,
@@ -192,7 +198,7 @@ Deno.serve(async (req) => {
               unit_amount: invoice.commission_amount_minor,
               product_data: {
                 name: 'Bridge Hive commission invoice',
-                description: `Invoice ${invoice.invoice_number} — 16% of approved gross shift pay`,
+                description: `Invoice ${invoice.invoice_number} — ${ratePercent}% of approved gross shift pay`,
               },
             },
           },

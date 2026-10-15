@@ -27,6 +27,10 @@ export function TimesheetReviewForm({
 }) {
   const action = reviewTimesheetAction.bind(null, slug, shiftId);
   const [state, formAction, pending] = useActionState(action, initial);
+  const defaultApproved =
+    submittedMinutes != null && submittedMinutes >= 0
+      ? String(submittedMinutes)
+      : '';
 
   useEffect(() => {
     if (state.success) toast.success('Timesheet reviewed');
@@ -52,16 +56,20 @@ export function TimesheetReviewForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="approvedMinutes">Approved minutes (optional)</Label>
+        <Label htmlFor="approvedMinutes">Approved minutes</Label>
         <Input
           id="approvedMinutes"
           name="approvedMinutes"
           type="number"
           min={0}
-          placeholder={
-            submittedMinutes != null ? String(submittedMinutes) : undefined
-          }
+          defaultValue={defaultApproved}
+          required
         />
+        {submittedMinutes != null ? (
+          <p className="text-xs text-slate-500">
+            Worker submitted {submittedMinutes} minutes.
+          </p>
+        ) : null}
       </div>
 
       <div className="sm:col-span-2 space-y-1.5">

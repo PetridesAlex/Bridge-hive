@@ -30,7 +30,7 @@ export function grossFromRateAndMinutes(
   return Math.round((rateMinorPerHour * approvedMinutes) / 60);
 }
 
-/** Commission in minor units from basis points (1600 = 16%). */
+/** Commission in minor units from basis points (1700 = 17%). */
 export function commissionFromGross(
   grossMinor: number,
   commissionRateBps: number = DEFAULT_COMMISSION_RATE_BPS,

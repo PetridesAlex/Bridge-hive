@@ -22,18 +22,19 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { Surface } from '@/components/ui/Surface';
+import { TextInput } from '@/components/ui/TextInput';
 
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
 import { getMyAssignments, type ShiftAssignment } from '@/lib/queries';
 import {
   assignmentActionErrorMessage,
-  checkInAssignment,
-  checkOutAssignment,
+  canSubmitCompletedHours,
   claimErrorMessage,
   claimShift,
-  getCheckInWindow,
   getWorkerShiftDetails,
+  scheduledWorkingMinutes,
+  shiftHasEnded,
   submitTimesheetRpc,
   type WorkerShiftDetails,
 } from '@/lib/rpcs';
@@ -45,10 +46,13 @@ function assignmentStepState(
   status: string | undefined,
   target: string,
 ): ProgressStepState {
-  const order = ['accepted', 'checked_in', 'checked_out', 'submitted', 'approved'];
+  const order = ['accepted', 'submitted', 'approved'];
   if (!status) return 'not_started';
   if (status === 'rejected') return 'rejected';
-  const current = order.indexOf(status);
+  // Legacy in-flight check-in/out rows map to the submit step.
+  const normalized =
+    status === 'checked_in' || status === 'checked_out' ? 'accepted' : status;
+  const current = order.indexOf(normalized);
   const targetIdx = order.indexOf(target);
   if (current < 0 || targetIdx < 0) return 'not_started';
   if (current > targetIdx) return 'complete';
@@ -69,6 +73,24 @@ function stepStatusLabel(
   return 'Pending';
 }
 
+function minutesToHoursMinutes(total: number): { hours: string; minutes: string } {
+  const safe = Math.max(0, Math.floor(total));
+  return {
+    hours: String(Math.floor(safe / 60)),
+    minutes: String(safe % 60),
+  };
+}
+
+function parseCompletedMinutes(hoursText: string, minutesText: string): number | null {
+  const hours = Number.parseInt(hoursText.trim() || '0', 10);
+  const minutes = Number.parseInt(minutesText.trim() || '0', 10);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  if (hours < 0 || minutes < 0 || minutes > 59) return null;
+  const total = hours * 60 + minutes;
+  if (total < 1 || total > 1440) return null;
+  return total;
+}
+
 export default function ShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, isVerified } = useAuth();
@@ -78,8 +100,13 @@ export default function ShiftDetailScreen() {
   const [claiming, setClaiming] = useState(false);
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string>();
+  const [actionError, setActionError] = useState<string>();
+  const [actionSuccess, setActionSuccess] = useState<string>();
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [notesExpanded, setNotesExpanded] = useState(false);
+  const [hoursText, setHoursText] = useState('0');
+  const [minutesText, setMinutesText] = useState('0');
+  const [hoursPrefillKey, setHoursPrefillKey] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -114,79 +141,77 @@ export default function ShiftDetailScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (!shift || assignment?.status !== 'accepted') return;
+    if (!shift || !canSubmitCompletedHours(assignment?.status)) return;
     const idTimer = setInterval(() => setNowTick(Date.now()), 30_000);
     return () => clearInterval(idTimer);
   }, [shift, assignment?.status]);
 
-  const checkInWindow = useMemo(() => {
-    if (!shift) return null;
-    return getCheckInWindow(shift.starts_at, shift.ends_at, new Date(nowTick));
+  useEffect(() => {
+    if (!shift || !assignment) return;
+    const key = `${assignment.id}:${shift.starts_at}:${shift.ends_at}:${shift.break_minutes}`;
+    if (hoursPrefillKey === key) return;
+    const pref = minutesToHoursMinutes(
+      scheduledWorkingMinutes(shift.starts_at, shift.ends_at, shift.break_minutes),
+    );
+    setHoursText(pref.hours);
+    setMinutesText(pref.minutes);
+    setHoursPrefillKey(key);
+  }, [assignment, shift, hoursPrefillKey]);
+
+  const ended = useMemo(() => {
+    if (!shift) return false;
+    return shiftHasEnded(shift.ends_at, new Date(nowTick));
   }, [shift, nowTick]);
 
   const onClaim = async () => {
     if (!id || !isVerified || claiming) return;
     setClaiming(true);
+    setActionError(undefined);
+    setActionSuccess(undefined);
     const result = await claimShift(id);
     setClaiming(false);
     if (result.error) {
-      Alert.alert('Claim failed', claimErrorMessage(result.error, shift?.required_role));
+      const message = claimErrorMessage(result.error, shift?.required_role);
+      setActionError(message);
+      Alert.alert('Claim failed', message);
       return;
     }
+    setActionSuccess('Shift accepted. It is now on My shifts.');
     Alert.alert('Shift accepted.', 'This shift is now on your schedule.');
     void refresh();
   };
 
-  const onCheckIn = async () => {
+  const onSubmitHours = async () => {
     if (!assignment) return;
-    if (checkInWindow && !checkInWindow.isOpen) {
-      const opensLabel = new Intl.DateTimeFormat(undefined, {
-        weekday: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(checkInWindow.opensAt);
-      Alert.alert(
-        'Check-in not available',
-        checkInWindow.isTooEarly
-          ? `Check-in opens 30 minutes before the shift starts (${opensLabel}).`
-          : 'This shift has already ended.',
-      );
+    const total = parseCompletedMinutes(hoursText, minutesText);
+    if (total == null) {
+      const message = 'Enter completed time between 1 minute and 24 hours.';
+      setActionError(message);
+      Alert.alert('Invalid hours', message);
+      return;
+    }
+    if (!ended) {
+      const message = 'You can submit completed hours after the scheduled end time.';
+      setActionError(message);
+      Alert.alert('Shift not ended', message);
       return;
     }
     setActing(true);
-    const result = await checkInAssignment(assignment.id);
-    setActing(false);
-    if (result.error) {
-      Alert.alert('Check-in failed', assignmentActionErrorMessage(result.error));
-      return;
-    }
-    void refresh();
-  };
-
-  const onCheckOut = async () => {
-    if (!assignment) return;
-    setActing(true);
-    const statusResult = await checkOutAssignment(assignment.id);
-    if (statusResult.error) {
-      setActing(false);
-      Alert.alert('Check-out failed', assignmentActionErrorMessage(statusResult.error));
-      return;
-    }
-
-    const ts = await submitTimesheetRpc(assignment.id);
+    setActionError(undefined);
+    setActionSuccess(undefined);
+    const ts = await submitTimesheetRpc(assignment.id, total);
     setActing(false);
     if (ts.error) {
-      Alert.alert('Timesheet error', assignmentActionErrorMessage(ts.error));
+      const message = assignmentActionErrorMessage(ts.error);
+      setActionError(message);
+      Alert.alert('Timesheet error', message);
       return;
     }
 
-    const minutes = ts.data?.submitted_minutes;
-    Alert.alert(
-      'Timesheet submitted',
-      minutes != null
-        ? `${minutes} minutes submitted for review.`
-        : 'Your timesheet was submitted for review.',
-    );
+    const minutes = ts.data?.submitted_minutes ?? total;
+    const message = `${minutes} minutes submitted for organization review.`;
+    setActionSuccess(message);
+    Alert.alert('Hours submitted', message);
     void refresh();
   };
 
@@ -233,16 +258,17 @@ export default function ShiftDetailScreen() {
     shift.status === 'published' &&
     !assignment &&
     openPositions > 0;
-  const canCheckIn = assignment?.status === 'accepted' && Boolean(checkInWindow?.isOpen);
-  const showCheckInWaiting =
-    assignment?.status === 'accepted' && Boolean(checkInWindow?.isTooEarly);
+  const canComplete =
+    canSubmitCompletedHours(assignment?.status) && ended;
   const claimBlockedReason = !isVerified
     ? 'Complete account verification before claiming shifts.'
     : assignment
       ? undefined
       : shift.status !== 'published'
         ? 'This shift is no longer open for claims.'
-        : undefined;
+        : openPositions < 1
+          ? 'All positions on this shift are filled.'
+          : undefined;
 
   const start = new Date(shift.starts_at);
   const end = new Date(shift.ends_at);
@@ -261,6 +287,12 @@ export default function ShiftDetailScreen() {
         ? shift.notes
         : `${shift.notes.slice(0, 160).trim()}…`;
 
+  const endLabel = new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(end);
+
   const primaryAction = canClaim
     ? {
         label: claiming ? 'Claiming shift…' : 'Claim shift',
@@ -268,21 +300,14 @@ export default function ShiftDetailScreen() {
         loading: claiming,
         disabled: claiming,
       }
-    : assignment?.status === 'accepted'
+    : canComplete
       ? {
-          label: 'Check in',
-          onPress: onCheckIn,
+          label: acting ? 'Submitting…' : 'Submit completed hours',
+          onPress: onSubmitHours,
           loading: acting,
-          disabled: !canCheckIn || acting,
+          disabled: acting,
         }
-      : assignment?.status === 'checked_in'
-        ? {
-            label: 'Check out & submit timesheet',
-            onPress: onCheckOut,
-            loading: acting,
-            disabled: acting,
-          }
-        : null;
+      : null;
 
   return (
     <AppScreen scroll={false} edges={['top']} contentKind="detail">
@@ -307,30 +332,29 @@ export default function ShiftDetailScreen() {
                 tone="accent"
                 icon="briefcase-outline"
               />
-            ) : (
+            ) : openPositions > 0 ? (
               <StatusBadge label="Open" tone="accent" icon="calendar-outline" />
+            ) : (
+              <StatusBadge label="Full" tone="neutral" icon="calendar-outline" />
             )}
           </View>
         </View>
 
-        <Surface variant="emphasis">
-          <Text style={styles.heroLabel}>Schedule & pay</Text>
+        <Surface>
+          <Text style={styles.heroLabel}>When & where</Text>
           <DateTimeBlock startsAt={shift.starts_at} endsAt={shift.ends_at} />
           <View style={styles.heroMeta}>
+            <KeyValueRow label="Location" value={shift.location_name} />
+            {shift.ward_name ? (
+              <KeyValueRow label="Ward" value={shift.ward_name} />
+            ) : null}
             <KeyValueRow label="Duration" value={formatDurationMinutes(durationMin)} />
-            <KeyValueRow
-              label="Hourly rate"
-              value={`${formatMoney(shift.rate_minor, shift.currency)} / hour`}
-              emphasize
-            />
-            {estimatedPayMinor > 0 ? (
+            {shift.break_minutes > 0 ? (
               <KeyValueRow
-                label="Est. shift pay"
-                value={formatMoney(estimatedPayMinor, shift.currency)}
-                emphasize
+                label="Break"
+                value={formatDurationMinutes(shift.break_minutes)}
               />
             ) : null}
-            <KeyValueRow label="Required role" value={roleLabel} />
             <KeyValueRow
               label="Positions"
               value={
@@ -341,23 +365,6 @@ export default function ShiftDetailScreen() {
             />
           </View>
         </Surface>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Location</Text>
-          <ListGroup>
-            <View style={styles.groupPad}>
-              <KeyValueRow label="Location" value={shift.location_name || '—'} />
-            </View>
-            {shift.ward_name ? (
-              <>
-                <ListGroupSeparator />
-                <View style={styles.groupPad}>
-                  <KeyValueRow label="Ward" value={shift.ward_name} />
-                </View>
-              </>
-            ) : null}
-          </ListGroup>
-        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Your pay</Text>
@@ -384,8 +391,8 @@ export default function ShiftDetailScreen() {
                 </View>
               ) : null}
               <Text style={styles.hint}>
-                Your rate is per hour for your own assignment. Organizations pay approved
-                gross amounts separately from Bridge Hive commission invoices.
+                Estimated gross uses the scheduled length minus break. Organizations pay
+                approved gross amounts separately from Bridge Hive commission invoices.
               </Text>
             </View>
           </ListGroup>
@@ -419,50 +426,35 @@ export default function ShiftDetailScreen() {
               title="Accepted"
               statusLabel={stepStatusLabel(assignment.status, 'accepted')}
               state={
-                assignment.status === 'accepted'
+                assignment.status === 'accepted' ||
+                assignment.status === 'checked_in' ||
+                assignment.status === 'checked_out'
                   ? 'in_progress'
                   : assignmentStepState(assignment.status, 'accepted')
               }
-              isCurrent={assignment.status === 'accepted'}
+              isCurrent={canSubmitCompletedHours(assignment.status) && !ended}
             />
             <ProgressStep
               step={2}
-              title="Check-in"
-              statusLabel={stepStatusLabel(
-                assignment.status,
-                'checked_in',
-                assignment.status === 'accepted'
-                  ? checkInWindow?.isOpen
-                    ? 'Available'
-                    : showCheckInWaiting
-                      ? 'Waiting'
-                      : 'Closed'
-                  : undefined,
-              )}
-              state={
-                assignment.status === 'checked_in'
-                  ? 'in_progress'
-                  : assignmentStepState(assignment.status, 'checked_in')
-              }
-              isCurrent={assignment.status === 'accepted'}
-            />
-            <ProgressStep
-              step={3}
-              title="Check-out & timesheet"
+              title="Submit hours"
               statusLabel={stepStatusLabel(
                 assignment.status,
                 'submitted',
-                assignment.status === 'checked_in' ? 'Ready' : undefined,
+                canSubmitCompletedHours(assignment.status)
+                  ? ended
+                    ? 'Ready'
+                    : 'After shift end'
+                  : undefined,
               )}
               state={
-                assignment.status === 'checked_in'
+                canSubmitCompletedHours(assignment.status) && ended
                   ? 'in_progress'
                   : assignmentStepState(assignment.status, 'submitted')
               }
-              isCurrent={assignment.status === 'checked_in'}
+              isCurrent={canSubmitCompletedHours(assignment.status) && ended}
             />
             <ProgressStep
-              step={4}
+              step={3}
               title="Organization review"
               statusLabel={
                 assignment.status === 'approved'
@@ -483,28 +475,65 @@ export default function ShiftDetailScreen() {
                       : 'not_started'
               }
               isCurrent={assignment.status === 'submitted'}
+            />
+            <ProgressStep
+              step={4}
+              title="Approved"
+              statusLabel={
+                assignment.status === 'approved'
+                  ? ''
+                  : assignment.status === 'rejected'
+                    ? 'Rejected'
+                    : 'Pending'
+              }
+              state={
+                assignment.status === 'approved'
+                  ? 'approved'
+                  : assignment.status === 'rejected'
+                    ? 'rejected'
+                    : 'not_started'
+              }
+              isCurrent={assignment.status === 'approved'}
               isLast
             />
           </AssignmentTimeline>
         ) : null}
 
-        {showCheckInWaiting && checkInWindow ? (
+        {canSubmitCompletedHours(assignment?.status) && !ended ? (
           <Banner
             variant="info"
-            title="Check-in opens soon"
-            body={`Check-in opens 30 minutes before the shift starts (${new Intl.DateTimeFormat(
-              undefined,
-              { weekday: 'short', hour: '2-digit', minute: '2-digit' },
-            ).format(checkInWindow.opensAt)}).`}
+            title="Complete shift after the end time"
+            body={`Submit completed hours after ${endLabel}. No invoice is created until the organization approves.`}
           />
         ) : null}
 
-        {assignment?.status === 'accepted' && checkInWindow?.isTooLate ? (
-          <Banner
-            variant="warning"
-            title="Check-in window closed"
-            body="This shift has ended. Check-in is no longer available."
-          />
+        {canComplete ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Completed hours</Text>
+            <Surface variant="subtle">
+              <View style={styles.hoursRow}>
+                <TextInput
+                  label="Hours"
+                  value={hoursText}
+                  onChangeText={setHoursText}
+                  keyboardType="number-pad"
+                  containerStyle={styles.hoursField}
+                />
+                <TextInput
+                  label="Minutes"
+                  value={minutesText}
+                  onChangeText={setMinutesText}
+                  keyboardType="number-pad"
+                  helpText="0–59"
+                  containerStyle={styles.hoursField}
+                />
+              </View>
+              <Text style={styles.hint}>
+                Prefill uses the scheduled length minus break. Adjust if your completed
+                time differs before submitting.
+              </Text>
+            </Surface>
+          </View>
         ) : null}
 
         {!canClaim && claimBlockedReason ? (
@@ -512,11 +541,43 @@ export default function ShiftDetailScreen() {
             variant="warning"
             title="Claim unavailable"
             body={claimBlockedReason}
-            actionLabel={!isVerified ? 'Continue account setup' : 'View invoices'}
-            onAction={() =>
-              router.push(!isVerified ? '/auth/worker/pending' : '/(tabs)/invoices')
+            actionLabel={
+              !isVerified
+                ? 'Continue account setup'
+                : shift.status !== 'published'
+                  ? 'View invoices'
+                  : undefined
+            }
+            onAction={
+              !isVerified
+                ? () => router.push('/auth/worker/pending')
+                : shift.status !== 'published'
+                  ? () => router.push('/(tabs)/invoices')
+                  : undefined
             }
           />
+        ) : null}
+
+        {actionError ? (
+          <Banner
+            variant="danger"
+            title="Could not complete action"
+            body={actionError}
+            actionLabel={
+              actionError.toLowerCase().includes('conflicts')
+                ? 'Open My shifts'
+                : undefined
+            }
+            onAction={
+              actionError.toLowerCase().includes('conflicts')
+                ? () => router.push('/(tabs)/work')
+                : undefined
+            }
+          />
+        ) : null}
+
+        {actionSuccess ? (
+          <Banner variant="success" title="Done" body={actionSuccess} />
         ) : null}
       </ScrollView>
 
@@ -622,5 +683,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.semibold,
     fontSize: typography.size.sm,
     color: colors.tealStrong,
+  },
+  hoursRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  hoursField: {
+    flex: 1,
   },
 });

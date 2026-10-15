@@ -16,7 +16,7 @@ const TOPICS = [
   },
   {
     title: 'Shifts & timesheets',
-    body: 'Help with check-in, check-out, or submitted hours.',
+    body: 'Help with completed hours or timesheet review.',
   },
   {
     title: 'Payouts & invoices',

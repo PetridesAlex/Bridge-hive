@@ -44,6 +44,7 @@ describe('worker journey section', () => {
     expect(bodies).toMatch(/platform commission/i);
     expect(bodies).not.toMatch(/automatically verified/i);
     expect(bodies).not.toMatch(/16%/);
+    expect(bodies).not.toMatch(/17%/);
   });
 
   it('uses a full rounded connector without completion ticks', async () => {

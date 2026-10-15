@@ -403,8 +403,8 @@ select is(
     where a.worker_id = 'd3200001-0000-4000-8000-000000000002'
       and a.shift_id = 'd3200001-cccc-4000-8000-0000000000s1'
   ),
-  3200,
-  'commission for A is 16% of €200 (3200 minor), not of €400'
+  3400,
+  'commission for A is 17% of €200 (3400 minor), not of €400'
 );
 
 -- Partial fill: only one of two positions accepted and completed after end.

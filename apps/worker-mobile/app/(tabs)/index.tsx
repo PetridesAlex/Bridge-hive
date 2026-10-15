@@ -28,16 +28,21 @@ import { useAssignments } from '@/hooks/useAssignments';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useShifts } from '@/hooks/useShifts';
-import { getCheckInWindow, getWorkerShiftDetails, type WorkerShiftDetails } from '@/lib/rpcs';
+import {
+  canSubmitCompletedHours,
+  getWorkerShiftDetails,
+  shiftHasEnded,
+  type WorkerShiftDetails,
+} from '@/lib/rpcs';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatDayLabel, formatTimeRange, isoDateFromTimestamp } from '@/utils/format';
 
 function assignmentStatusLabel(status: string): string {
   const map: Record<string, string> = {
     accepted: 'Booked',
-    checked_in: 'On shift',
-    checked_out: 'Checked out',
-    submitted: 'Timesheet sent',
+    checked_in: 'Booked',
+    checked_out: 'Booked',
+    submitted: 'Hours submitted',
     approved: 'Approved',
   };
   return map[status] ?? status.replace(/_/g, ' ');
@@ -135,14 +140,14 @@ export default function HomeScreen() {
   }, [upcoming]);
 
   useEffect(() => {
-    if (nextStatus !== 'accepted' || !nextShift) return;
+    if (!nextShift || !canSubmitCompletedHours(nextStatus)) return;
     const timer = setInterval(() => setNowTick(Date.now()), 30_000);
     return () => clearInterval(timer);
   }, [nextStatus, nextShift]);
 
-  const checkInWindow = useMemo(() => {
-    if (!nextShift || nextStatus !== 'accepted') return null;
-    return getCheckInWindow(nextShift.starts_at, nextShift.ends_at, new Date(nowTick));
+  const nextShiftEnded = useMemo(() => {
+    if (!nextShift || !canSubmitCompletedHours(nextStatus)) return false;
+    return shiftHasEnded(nextShift.ends_at, new Date(nowTick));
   }, [nextShift, nextStatus, nowTick]);
 
   const openShiftCount = openShifts.length;
@@ -172,41 +177,15 @@ export default function HomeScreen() {
         live: false,
       };
     }
-    if (nextShift && nextStatus === 'accepted' && checkInWindow?.isOpen) {
-      return {
-        eyebrow: 'Workday',
-        title: 'Check in to your shift',
-        body: 'Your check-in window is open.',
-        actionLabel: 'Check in',
-        onAction: () => router.push(`/shifts/${nextShift.shift_id}`),
-        icon: 'enter-outline' as const,
-        variant: 'emphasis' as const,
-        live: true,
-        liveLabel: 'Window open',
-      };
-    }
-    if (nextShift && nextStatus === 'checked_in') {
-      return {
-        eyebrow: 'Workday',
-        title: 'Check out & submit timesheet',
-        body: 'You are currently checked in.',
-        actionLabel: 'Open shift',
-        onAction: () => router.push(`/shifts/${nextShift.shift_id}`),
-        icon: 'exit-outline' as const,
-        variant: 'emphasis' as const,
-        live: true,
-        liveLabel: 'On shift',
-      };
-    }
-    if (nextShift && nextStatus === 'checked_out') {
+    if (nextShift && canSubmitCompletedHours(nextStatus) && nextShiftEnded) {
       return {
         eyebrow: 'Timesheet',
-        title: 'Submit your timesheet',
-        body: 'Checkout is done — submit hours for organization review.',
-        actionLabel: 'Submit timesheet',
+        title: 'Submit completed hours',
+        body: 'Your shift has ended — submit hours for organization review.',
+        actionLabel: 'Submit hours',
         onAction: () => router.push(`/shifts/${nextShift.shift_id}`),
         icon: 'document-text-outline' as const,
-        variant: 'light' as const,
+        variant: 'emphasis' as const,
         live: true,
         liveLabel: 'Action needed',
       };
@@ -278,7 +257,7 @@ export default function HomeScreen() {
     isRestricted,
     nextShift,
     nextStatus,
-    checkInWindow?.isOpen,
+    nextShiftEnded,
     pastDueCount,
     dueSoon,
     openShiftCount,
@@ -404,7 +383,7 @@ export default function HomeScreen() {
           <ListGroupSeparator />
           <ListRow
             icon="briefcase-outline"
-            title="My work"
+            title="My shifts"
             subtitle="Accepted assignments"
             onPress={() => router.push('/(tabs)/work')}
           />

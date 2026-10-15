@@ -252,11 +252,11 @@ select is(
 select is(
   (select commission_rate_bps from public.worker_commission_invoices
    where timesheet_id = 'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b00030'),
-  1600,
-  '4. commission rate snapshot is 1600 bps'
+  1700,
+  '4. commission rate snapshot is 1700 bps'
 );
 
--- gross = round(2500 * 450 / 60) = 18750; commission = round(18750 * 1600 / 10000) = 3000
+-- gross = round(2500 * 450 / 60) = 18750; commission = round(18750 * 1700 / 10000) = 3188
 select is(
   (select gross_amount_minor from public.worker_commission_invoices
    where timesheet_id = 'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b00030'),
@@ -267,8 +267,8 @@ select is(
 select is(
   (select commission_amount_minor from public.worker_commission_invoices
    where timesheet_id = 'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b00030'),
-  3000,
-  '6. commission is exactly 16% of gross'
+  3188,
+  '6. commission is exactly 17% of gross'
 );
 
 select is(
@@ -797,15 +797,15 @@ update public.commission_rate_rules
 set effective_until = now() + interval '1 day'
 where scope = 'global'
   and effective_until is null
-  and rate_bps = 1600;
+  and rate_bps = 1700;
 
 insert into public.commission_rate_rules (rate_bps, effective_from, scope, reason)
-values (1700, now() + interval '1 day', 'global', 'Future test rate — do not apply yet');
+values (1800, now() + interval '1 day', 'global', 'Future test rate — do not apply yet');
 
 select is(
   (select commission_rate_bps from public.worker_commission_invoices
    where timesheet_id = 'b0b0b0b0-b0b0-b0b0-b0b0-b0b0b0b00030'),
-  1600,
+  1700,
   '42. existing invoice snapshot unchanged by future rate rule'
 );
 

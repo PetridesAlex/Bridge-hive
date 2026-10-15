@@ -54,6 +54,16 @@ describe('shift notification permission policy', () => {
     ).toBe(false);
   });
 
+  it('does not throw when device settings cannot be opened', () => {
+    const preferences = source('app/profile/notification-preferences.tsx');
+    const client = source('lib/push/client.ts');
+    const opener = client.slice(client.indexOf('export async function openDeviceNotificationSettings'));
+    expect(preferences).not.toContain('Linking.openSettings');
+    expect(preferences).toContain('openDeviceNotificationSettings');
+    expect(opener.indexOf("Platform.OS === 'web'")).toBeGreaterThan(-1);
+    expect(opener.indexOf("Platform.OS === 'web'")).toBeLessThan(opener.indexOf('openSettings'));
+  });
+
   it('does not request again after an OS decline', () => {
     expect(notificationEnableAction('denied')).toBe('settings');
     expect(notificationEnableAction('undetermined')).toBe('request');

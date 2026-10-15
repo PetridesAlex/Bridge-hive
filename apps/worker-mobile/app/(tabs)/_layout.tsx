@@ -105,11 +105,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="work"
         options={{
-          title: 'Work',
-          tabBarAccessibilityLabel: 'Work',
+          title: 'My shifts',
+          tabBarAccessibilityLabel: 'My shifts',
           tabBarLabel: ({ focused }) => (
             <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.work}>
-              Work
+              My shifts
             </AnimatedTabLabel>
           ),
           tabBarIcon: ({ focused }) => (

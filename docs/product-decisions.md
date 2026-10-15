@@ -44,7 +44,7 @@ Capture launch-critical choices before production finance go-live.
 ## Pricing and commission (LOCKED — Phase 6)
 
 - Shift stores immutable `rate_minor` + `currency` at publish time
-- **Default commission rate:** `1600` basis points (**16%**), effective-dated via `commission_rate_rules` (fallback `platform_settings.default_commission_rate_bps`)
+- **Default commission rate:** `1700` basis points (**17%**), effective-dated via `commission_rate_rules` (fallback `platform_settings.default_commission_rate_bps`)
 - Snapshot fields stored on every payout **and** worker commission invoice:
   - `gross_amount_minor`
   - `commission_rate_bps`
@@ -52,13 +52,13 @@ Capture launch-critical choices before production finance go-live.
   - `worker_transfer_amount_minor` (= gross)
   - `organization_total_due_minor` (= gross; hospital does not pay commission)
 - **LOCKED settlement model (Phase 6):** Organization pays worker **gross**; worker pays Bridge Hive commission via `worker_commission_invoices` (Stripe Checkout test integration)
-- Due date: issued_at + **10 calendar days**; overdue restricts new shift claims only
+- Due date: issued_at + **10 calendar days**; overdue restricts new shift claims only (clears automatically on payment or finance void)
 - Changing later rates must not rewrite historical snapshots (DB triggers enforce immutability)
 
 ## Attendance proof
 
-- **MVP:** Manual check-in / check-out + timesheet submission
-- Organization reviews via `review_timesheet` (approve/reject with reason)
+- **MVP:** After the scheduled shift end, the worker submits completed hours (no check-in / check-out)
+- Organization reviews via `review_timesheet` (approve/reject with reason; approved minutes default to submitted)
 - Approval creates immutable financial snapshot via `create_financial_snapshot`
 
 ## Payout account storage (LOCKED)
@@ -121,7 +121,7 @@ Multi-slot shifts, shift swapping, ratings, in-app chat, route tracking, advance
 | Jurisdiction / compliance | Product + legal | Draft (Cyprus) |
 | Workforce classification | Product + legal | Draft (marketplace) |
 | Commission payer | Product + finance | **LOCKED: worker (Phase 6)** |
-| Commission rate bps | Product + finance | **LOCKED default 1600 (16%)** |
+| Commission rate bps | Product + finance | **LOCKED default 1700 (17%)** |
 | Payout account storage | Product + legal | **LOCKED: masked IBAN only** |
 | Credential checklist | Ops / clinical lead | Draft |
 | Payout SLA (due days) | Finance / ops | Default 7 via `platform_settings` |

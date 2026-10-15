@@ -1045,46 +1045,34 @@ select throws_ok(
        'a1000001-cccc-4000-8000-0000000000f1'
      ) $$,
   'P0001',
-  'ACCOUNT_NOT_ACTIVE',
-  'suspended worker cannot check in'
+  'CHECK_IN_RETIRED',
+  'check-in RPC is retired for suspended workers too'
 );
-
--- Manually set check_in for check_out test
-reset role;
-set local role postgres;
-select set_config('bridgehive.allow_assignment_write', 'on', true);
-update public.shift_assignments
-set status = 'checked_in', check_in_at = now()
-where id = 'a1000001-cccc-4000-8000-0000000000f1';
-select set_config('bridgehive.allow_assignment_write', 'off', true);
-
-reset role;
-select pg_temp.auth_as('a1000001-0000-4000-8000-000000000005');
 
 select throws_ok(
   $$ select public.check_out_assignment(
        'a1000001-cccc-4000-8000-0000000000f1'
      ) $$,
   'P0001',
-  'ACCOUNT_NOT_ACTIVE',
-  'suspended worker cannot check out'
+  'CHECK_IN_RETIRED',
+  'check-out RPC is retired for suspended workers too'
 );
 
--- Manually set check_out for submit_timesheet test
+-- Ended shift so submit_timesheet reaches the account-status gate
 reset role;
 set local role postgres;
-select set_config('bridgehive.allow_assignment_write', 'on', true);
-update public.shift_assignments
-set status = 'checked_out', check_out_at = now() + interval '1 hour'
-where id = 'a1000001-cccc-4000-8000-0000000000f1';
-select set_config('bridgehive.allow_assignment_write', 'off', true);
+update public.shifts
+set starts_at = now() - interval '9 hours',
+    ends_at = now() - interval '1 hour'
+where id = 'a1000001-cccc-4000-8000-0000000000c1';
 
 reset role;
 select pg_temp.auth_as('a1000001-0000-4000-8000-000000000005');
 
 select throws_ok(
   $$ select public.submit_timesheet(
-       'a1000001-cccc-4000-8000-0000000000f1'
+       'a1000001-cccc-4000-8000-0000000000f1',
+       480
      ) $$,
   'P0001',
   'ACCOUNT_NOT_ACTIVE',

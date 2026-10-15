@@ -26,7 +26,11 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('worker commission money helpers', () => {
-  it('calculates exact 16% for ordinary gross', () => {
+  it('defaults to 17% (1700 bps)', () => {
+    expect(commissionFromGross(25000)).toBe(4250);
+  });
+
+  it('calculates exact 16% when rate is passed explicitly', () => {
     expect(commissionFromGross(25000, 1600)).toBe(4000);
   });
 
@@ -39,10 +43,11 @@ describe('worker commission money helpers', () => {
   });
 
   it('builds hospital-owes-gross snapshot without deducting commission', () => {
-    const snap = buildOrganizationPaysGrossSnapshot(25000, 1600);
+    const snap = buildOrganizationPaysGrossSnapshot(25000, 1700);
     expect(snap.workerTransferAmountMinor).toBe(25000);
     expect(snap.organizationTotalDueMinor).toBe(25000);
-    expect(snap.commissionAmountMinor).toBe(4000);
+    expect(snap.commissionAmountMinor).toBe(4250);
+    expect(snap.commissionRateBps).toBe(1700);
   });
 });
 

@@ -26,6 +26,7 @@ describe('professionals payments visual', () => {
     expect(section).toMatch(/bridge-hive-logo-v2|BRIDGE_HIVE_MARK_SRC/);
     expect(section).not.toMatch(/Paid by the organization via bank transfer/);
     expect(section).not.toMatch(/16%/);
+    expect(section).not.toMatch(/17%/);
     expect(section).not.toMatch(/Apple Pay/);
     expect(css).toMatch(/\.m-pay-band/);
     expect(css).toMatch(/\.m-pay-connector/);

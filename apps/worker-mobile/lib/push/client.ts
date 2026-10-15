@@ -4,6 +4,7 @@ import {
   type OsNotificationPermission,
 } from '@bridge-hive/domain';
 import Constants from 'expo-constants';
+import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
@@ -64,6 +65,20 @@ async function registerCurrentToken(): Promise<void> {
     } as never,
   );
   if (error) logPush('token_register_failed');
+}
+
+/**
+ * Opens the OS notification settings. Browsers have no settings screen, and
+ * expo-linking throws UnavailabilityError there, so this returns false instead.
+ */
+export async function openDeviceNotificationSettings(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    await Linking.openSettings();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Reads OS permission. Does not present the system prompt. */

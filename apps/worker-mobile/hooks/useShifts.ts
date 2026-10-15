@@ -38,9 +38,10 @@ export function useShifts() {
       } else {
         // Marketplace RLS already enforces role/org/deadline. Keep enum-safe client filter.
         const role = workerProfile?.worker_role;
-        const filtered = role
+        const filtered = (role
           ? result.data.filter((shift) => shift.required_role === role)
-          : result.data;
+          : result.data
+        ).filter((shift) => shift.open_positions > 0);
         setShifts(filtered);
         setOffline(false);
       }

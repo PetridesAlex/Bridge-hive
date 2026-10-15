@@ -26,22 +26,26 @@ export type WorkerShiftDetails = {
   open_positions: number;
 };
 
-/** Pilot check-in opens 30 minutes before shift start (server enforces the same rule). */
-export const CHECK_IN_EARLY_MINUTES = 30;
+/** Scheduled working minutes for a shift (duration minus break). */
+export function scheduledWorkingMinutes(
+  startsAt: string,
+  endsAt: string,
+  breakMinutes = 0,
+): number {
+  const duration = Math.max(
+    0,
+    Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000),
+  );
+  return Math.max(1, duration - Math.max(0, breakMinutes));
+}
 
-export function getCheckInWindow(startsAt: string, endsAt: string, now = new Date()) {
-  const starts = new Date(startsAt).getTime();
-  const ends = new Date(endsAt).getTime();
-  const opensAt = starts - CHECK_IN_EARLY_MINUTES * 60_000;
-  const nowMs = now.getTime();
+export function shiftHasEnded(endsAt: string, now = new Date()): boolean {
+  return now.getTime() >= new Date(endsAt).getTime();
+}
 
-  return {
-    opensAt: new Date(opensAt),
-    closesAt: new Date(ends),
-    isOpen: nowMs >= opensAt && nowMs <= ends,
-    isTooEarly: nowMs < opensAt,
-    isTooLate: nowMs > ends,
-  };
+/** Assignment statuses that can still submit completed hours. */
+export function canSubmitCompletedHours(status: string | undefined): boolean {
+  return status === 'accepted' || status === 'checked_in' || status === 'checked_out';
 }
 
 export async function claimShift(shiftId: string) {
@@ -54,31 +58,13 @@ export async function claimShift(shiftId: string) {
   };
 }
 
-export async function checkInAssignment(assignmentId: string) {
-  const { data, error } = await supabase.rpc('check_in_assignment', {
-    p_assignment_id: assignmentId,
-  });
-
-  return {
-    data: (data as ShiftAssignment | null) ?? null,
-    error: error?.message,
-  };
-}
-
-export async function checkOutAssignment(assignmentId: string) {
-  const { data, error } = await supabase.rpc('check_out_assignment', {
-    p_assignment_id: assignmentId,
-  });
-
-  return {
-    data: (data as ShiftAssignment | null) ?? null,
-    error: error?.message,
-  };
-}
-
-export async function submitTimesheetRpc(assignmentId: string) {
+export async function submitTimesheetRpc(
+  assignmentId: string,
+  submittedMinutes: number,
+) {
   const { data, error } = await supabase.rpc('submit_timesheet', {
     p_assignment_id: assignmentId,
+    p_submitted_minutes: submittedMinutes,
   });
 
   return {
@@ -124,7 +110,17 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
 
   if (!error) {
     const row = (Array.isArray(data) ? data[0] : data) as WorkerShiftDetails | undefined;
-    if (row?.shift_id) return { data: row };
+    if (row?.shift_id) {
+      const required = row.required_positions ?? 1;
+      return {
+        data: {
+          ...row,
+          required_positions: required,
+          open_positions:
+            typeof row.open_positions === 'number' ? row.open_positions : required,
+        },
+      };
+    }
     return { data: null };
   }
 
@@ -188,27 +184,24 @@ export function claimErrorMessage(
   return mapClaimError(error, { requiredRole });
 }
 
-/** Map check-in / check-out / timesheet RPC errors to worker-friendly messages. */
+/** Map completed-hours / timesheet RPC errors to worker-friendly messages. */
 export function assignmentActionErrorMessage(error?: string): string {
   if (!error) return 'Unable to update this assignment.';
   const upper = error.toUpperCase();
-  if (upper.includes('CHECK_IN_TOO_EARLY')) {
-    return 'Check-in opens 30 minutes before the shift starts.';
+  if (upper.includes('SHIFT_NOT_ENDED')) {
+    return 'You can submit completed hours after the scheduled end time.';
   }
-  if (upper.includes('CHECK_IN_TOO_LATE')) {
-    return 'This shift has already ended. Check-in is no longer available.';
+  if (upper.includes('INVALID_SUBMITTED_MINUTES')) {
+    return 'Enter completed time between 1 minute and 24 hours.';
   }
-  if (upper.includes('ASSIGNMENT_NOT_CHECKED_IN')) {
-    return 'Check in before you check out.';
+  if (upper.includes('ASSIGNMENT_NOT_COMPLETABLE')) {
+    return 'This assignment cannot submit completed hours right now.';
   }
-  if (upper.includes('ASSIGNMENT_NOT_CHECKED_OUT')) {
-    return 'Check out before submitting your timesheet.';
+  if (upper.includes('CHECK_IN_RETIRED')) {
+    return 'Check-in is no longer used. Submit completed hours after the shift ends.';
   }
   if (upper.includes('NOT_AUTHORIZED') || upper.includes('NOT_AUTHENTICATED')) {
     return 'You are not allowed to update this assignment.';
-  }
-  if (upper.includes('ASSIGNMENT_NOT_ACCEPTED')) {
-    return 'This assignment cannot be checked in right now.';
   }
   return error;
 }

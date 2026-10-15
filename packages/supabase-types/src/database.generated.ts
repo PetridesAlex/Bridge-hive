@@ -3299,7 +3299,7 @@ export type Database = {
         Returns: string
       }
       submit_timesheet: {
-        Args: { p_assignment_id: string }
+        Args: { p_assignment_id: string; p_submitted_minutes: number }
         Returns: {
           approved_minutes: number | null
           assignment_id: string

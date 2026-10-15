@@ -1,8 +1,7 @@
 import { notificationEnableAction, type OsNotificationPermission } from '@bridge-hive/domain';
-import * as Linking from 'expo-linking';
-import React, { useCallback, useState } from 'react';
-import { StyleSheet, Switch, Text, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Platform, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
@@ -10,6 +9,7 @@ import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import {
   enableShiftNotifications,
+  openDeviceNotificationSettings,
   probeNotificationPermission,
   readShiftPushPreference,
   setShiftPushPreference,
@@ -41,7 +41,7 @@ export default function NotificationPreferencesScreen() {
     if (working) return;
     const action = notificationEnableAction(permission);
     if (next && action === 'settings') {
-      await Linking.openSettings();
+      await openDeviceNotificationSettings();
       return;
     }
     if (next && action === 'request') {
@@ -98,17 +98,24 @@ export default function NotificationPreferencesScreen() {
 
       {denied ? (
         <View style={styles.note}>
-          <Text style={styles.noteTitle}>Notifications are off for BridgeHive</Text>
-          <Text style={styles.help}>
-            You can turn them on later in your device settings. The app stays fully usable
-            without them, and new shifts still appear in Notifications.
+          <Text style={styles.noteTitle}>
+            {Platform.OS === 'web'
+              ? 'Push alerts are available in the BridgeHive app'
+              : 'Notifications are off for BridgeHive'}
           </Text>
-          <Button
-            label="Open device settings"
-            variant="secondary"
-            size="sm"
-            onPress={() => void Linking.openSettings()}
-          />
+          <Text style={styles.help}>
+            {Platform.OS === 'web'
+              ? 'This browser cannot open phone notification settings. New matching shifts still appear in Notifications. Enable alerts from the iOS or Android app.'
+              : 'You can turn them on later in your device settings. The app stays fully usable without them, and new shifts still appear in Notifications.'}
+          </Text>
+          {Platform.OS === 'web' ? null : (
+            <Button
+              label="Open device settings"
+              variant="secondary"
+              size="sm"
+              onPress={() => void openDeviceNotificationSettings()}
+            />
+          )}
         </View>
       ) : null}
     </AppScreen>

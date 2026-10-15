@@ -102,8 +102,20 @@ export const createLocationSchema = z.object({
 
 export const createWardSchema = z.object({
   locationId: z.string().uuid(),
-  name: z.string().min(1).max(200),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Ward / unit name is required.')
+    .max(200, 'Ward / unit name must be 200 characters or fewer.'),
   instructions: z.string().max(2000).optional(),
+});
+
+export const createWardsBatchSchema = z.object({
+  locationId: z.string().uuid(),
+  names: z
+    .array(z.string())
+    .min(1, 'Select at least one ward / unit to add.')
+    .max(50, 'You can add at most 50 wards at once.'),
 });
 
 export const createShiftDraftSchema = z
@@ -131,6 +143,14 @@ export const createShiftDraftSchema = z
     acceptanceDeadline: z.string().datetime({ offset: true }).nullable().optional(),
     title: z.string().max(200).optional(),
     notes: z.string().max(4000).optional(),
+    requiredPositions: z
+      .number({
+        invalid_type_error: 'Positions must be a whole number from 1 to 100.',
+      })
+      .int('Positions must be a whole number from 1 to 100.')
+      .min(1, 'Positions must be at least 1.')
+      .max(100, 'Positions cannot exceed 100.')
+      .default(1),
     requirements: z
       .array(
         z.object({

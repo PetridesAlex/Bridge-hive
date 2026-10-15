@@ -1,12 +1,12 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { getPublishedShifts, type Shift } from '@/lib/queries';
+import { getPublishedShifts, type MarketplaceShift } from '@/lib/queries';
 import { useAuth } from '@/providers/AuthProvider';
 
 export function useShifts() {
   const { user, workerProfile, isVerified } = useAuth();
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  const [shifts, setShifts] = useState<MarketplaceShift[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [offline, setOffline] = useState(false);

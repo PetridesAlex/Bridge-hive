@@ -1,4 +1,9 @@
-import { credentialTypeLabel, formatMoneyMinor } from '@bridge-hive/domain';
+import {
+  credentialTypeLabel,
+  estimatedFullCoveragePayMinor,
+  filledPositionsLabel,
+  formatMoneyMinor,
+} from '@bridge-hive/domain';
 import {
   CalendarClock,
   ClipboardList,
@@ -117,27 +122,58 @@ export default async function ShiftDetailPage({
     .eq('organization_id', ctx.org.id)
     .order('name');
 
-  const { data: assignment } = await supabase
+  const locationIds = (locations ?? []).map((location) => location.id);
+  const { data: wards } =
+    locationIds.length > 0
+      ? await supabase
+          .from('wards')
+          .select('id, name, location_id')
+          .in('location_id', locationIds)
+          .order('name')
+      : { data: [] as Array<{ id: string; name: string; location_id: string }> };
+
+  const { data: assignmentRows } = await supabase
     .from('shift_assignments')
     .select(
       '*, worker:worker_profiles!shift_assignments_worker_id_fkey(user_id, worker_role), timesheet:timesheets(*)',
     )
     .eq('shift_id', shift.id)
     .not('status', 'in', '(withdrawn,cancelled)')
-    .maybeSingle();
+    .order('accepted_at', { ascending: true });
 
-  const timesheet = Array.isArray(assignment?.timesheet)
-    ? assignment?.timesheet[0]
-    : assignment?.timesheet;
+  const assignments = assignmentRows ?? [];
+  const filledCount = assignments.length;
+  const requiredPositions = shift.required_positions ?? 1;
+  const openPositions = Math.max(0, requiredPositions - filledCount);
+  const estimatedFullPayMinor = estimatedFullCoveragePayMinor({
+    rateMinor: shift.rate_minor,
+    startsAtIso: shift.starts_at,
+    endsAtIso: shift.ends_at,
+    breakMinutes: shift.break_minutes,
+    requiredPositions,
+  });
 
-  const { data: payout } =
-    timesheet?.status === 'approved'
-      ? await supabase
-          .from('payouts')
-          .select('*')
-          .eq('assignment_id', assignment!.id)
-          .maybeSingle()
-      : { data: null };
+  const assignmentIds = assignments.map((row) => row.id);
+  const { data: payoutRows } =
+    assignmentIds.length > 0
+      ? await supabase.from('payouts').select('*').in('assignment_id', assignmentIds)
+      : { data: [] as Array<Record<string, unknown>> };
+  const payoutByAssignmentId = new Map(
+    (payoutRows ?? []).map((row) => [String(row.assignment_id), row]),
+  );
+
+  type TimesheetRow = {
+    id: string;
+    status: string;
+    submitted_minutes: number | null;
+    approved_minutes: number | null;
+  };
+
+  function timesheetForAssignment(row: (typeof assignments)[number]): TimesheetRow | null {
+    const raw = row.timesheet;
+    const ts = Array.isArray(raw) ? raw[0] : raw;
+    return ts && typeof ts === 'object' && 'id' in ts ? (ts as TimesheetRow) : null;
+  }
 
   const location =
     shift.location && typeof shift.location === 'object' && 'name' in shift.location
@@ -158,7 +194,7 @@ export default async function ShiftDetailPage({
   const canExtendAcceptance =
     ctx.capabilities.canManageShifts &&
     shift.status === 'published' &&
-    !assignment &&
+    openPositions > 0 &&
     new Date(shift.starts_at) > new Date();
 
   const locationName =
@@ -218,8 +254,18 @@ export default async function ShiftDetailPage({
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <MetaTile label="Role" value={roleLabel(shift.required_role)} />
           <MetaTile
+            label="Positions"
+            value={filledPositionsLabel(filledCount, requiredPositions)}
+          />
+          <MetaTile
             label="Hourly rate"
             value={formatRate(shift.rate_minor, shift.currency)}
+            hint="Per professional"
+          />
+          <MetaTile
+            label="Est. worker pay when full"
+            value={formatMoneyMinor(estimatedFullPayMinor, shift.currency)}
+            hint={`${requiredPositions} × rate × paid hours`}
           />
           <MetaTile
             label="Break"
@@ -299,150 +345,220 @@ export default async function ShiftDetailPage({
           <ShiftForm
             slug={slug}
             locations={locations ?? []}
+            wards={(wards ?? []).map((ward) => ({
+              id: ward.id,
+              name: ward.name,
+              locationId: ward.location_id,
+            }))}
             shift={shift}
             requirements={requirements}
             mode="edit"
+            canManageWards={ctx.capabilities.canManageWards}
           />
         </div>
       </PermissionGuard>
 
       <DetailPanel
-        title="Assignment"
+        title="Assignments"
         description={
-          assignment
-            ? 'Active worker assignment and attendance timestamps.'
+          filledCount > 0
+            ? `${filledPositionsLabel(filledCount, requiredPositions)}.`
             : 'No worker has claimed this shift yet.'
         }
         icon={UserRound}
       >
-        {!assignment ? (
+        {filledCount === 0 ? (
           <div className="rounded-xl border border-dashed border-bh-border bg-bh-subtle/30 px-4 py-8 text-center">
             <p className="text-sm font-medium text-bh-text">Waiting for a claim</p>
             <p className="mt-1 text-sm text-bh-text-secondary">
               {shift.status === 'published'
-                ? 'Published and open for verified workers.'
+                ? `Published with ${requiredPositions} position${requiredPositions === 1 ? '' : 's'} open for verified workers.`
                 : 'Publish the draft to make it claimable.'}
             </p>
           </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <MetaTile
-              label="Worker"
-              value={
-                assignment.worker &&
-                typeof assignment.worker === 'object' &&
-                'worker_role' in assignment.worker
-                  ? roleLabel(String(assignment.worker.worker_role ?? 'worker'))
-                  : 'Assigned worker'
-              }
-              hint={`${assignment.worker_id.slice(0, 8)}…`}
-            />
-            <MetaTile
-              label="Assignment status"
-              value={
-                <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
-                  {assignment.status.replaceAll('_', ' ')}
-                </span>
-              }
-            />
-            <MetaTile
-              label="Check-in"
-              value={
-                assignment.check_in_at
-                  ? formatDateTime(assignment.check_in_at, ctx.org.timezone)
-                  : '—'
-              }
-            />
-            <MetaTile
-              label="Check-out"
-              value={
-                assignment.check_out_at
-                  ? formatDateTime(assignment.check_out_at, ctx.org.timezone)
-                  : '—'
-              }
-            />
+          <div className="space-y-3">
+            {assignments.map((row) => (
+              <div
+                key={row.id}
+                className="grid gap-3 rounded-xl border border-bh-border/80 bg-bh-subtle/30 p-4 sm:grid-cols-2"
+              >
+                <MetaTile
+                  label="Worker"
+                  value={
+                    row.worker &&
+                    typeof row.worker === 'object' &&
+                    'worker_role' in row.worker
+                      ? roleLabel(String(row.worker.worker_role ?? 'worker'))
+                      : 'Assigned worker'
+                  }
+                  hint={`${row.worker_id.slice(0, 8)}…`}
+                />
+                <MetaTile
+                  label="Assignment status"
+                  value={
+                    <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
+                      {row.status.replaceAll('_', ' ')}
+                    </span>
+                  }
+                />
+                <MetaTile
+                  label="Check-in"
+                  value={
+                    row.check_in_at
+                      ? formatDateTime(row.check_in_at, ctx.org.timezone)
+                      : '—'
+                  }
+                />
+                <MetaTile
+                  label="Check-out"
+                  value={
+                    row.check_out_at
+                      ? formatDateTime(row.check_out_at, ctx.org.timezone)
+                      : '—'
+                  }
+                />
+              </div>
+            ))}
+            {openPositions > 0 && shift.status === 'published' ? (
+              <p className="text-sm text-bh-text-secondary">
+                {openPositions === 1
+                  ? '1 position still open.'
+                  : `${openPositions} positions still open.`}
+              </p>
+            ) : null}
           </div>
         )}
       </DetailPanel>
 
-      {timesheet ? (
+      {assignments.some((row) => timesheetForAssignment(row)) ? (
         <DetailPanel
-          title="Timesheet"
-          description="Submitted hours and review status."
+          title="Timesheets"
+          description="Each filled position has its own timesheet. Review and pay are per worker."
           icon={Timer}
         >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <MetaTile
-              label="Status"
-              value={
-                <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
-                  {timesheet.status.replaceAll('_', ' ')}
-                </span>
-              }
-            />
-            <MetaTile
-              label="Submitted"
-              value={formatDurationMinutes(timesheet.submitted_minutes)}
-            />
-            <MetaTile
-              label="Approved"
-              value={formatDurationMinutes(timesheet.approved_minutes)}
-            />
+          <div className="space-y-4">
+            {assignments.map((row) => {
+              const timesheet = timesheetForAssignment(row);
+              if (!timesheet) return null;
+              const workerLabel =
+                row.worker &&
+                typeof row.worker === 'object' &&
+                'worker_role' in row.worker
+                  ? roleLabel(String(row.worker.worker_role ?? 'worker'))
+                  : 'Assigned worker';
+              return (
+                <div
+                  key={row.id}
+                  className="rounded-xl border border-bh-border/80 bg-bh-subtle/30 p-4"
+                >
+                  <p className="text-sm font-semibold text-bh-text">{workerLabel}</p>
+                  <p className="mt-0.5 text-xs text-bh-text-muted">
+                    {row.worker_id.slice(0, 8)}…
+                  </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <MetaTile
+                      label="Status"
+                      value={
+                        <span className="inline-flex rounded-full border border-bh-border bg-bh-surface px-2.5 py-1 text-xs font-semibold capitalize text-bh-text">
+                          {timesheet.status.replaceAll('_', ' ')}
+                        </span>
+                      }
+                    />
+                    <MetaTile
+                      label="Submitted"
+                      value={formatDurationMinutes(timesheet.submitted_minutes)}
+                    />
+                    <MetaTile
+                      label="Approved"
+                      value={formatDurationMinutes(timesheet.approved_minutes)}
+                    />
+                  </div>
+                  <PermissionGuard
+                    allowed={
+                      ctx.capabilities.canReviewTimesheets &&
+                      timesheet.status === 'submitted'
+                    }
+                  >
+                    <div className="mt-4 rounded-xl border border-bh-warning/20 bg-bh-warning-soft/50 p-4">
+                      <div className="mb-3 flex items-center gap-2">
+                        <ClipboardList
+                          className="h-4 w-4 text-bh-warning"
+                          aria-hidden
+                        />
+                        <p className="text-sm font-semibold text-bh-text">
+                          Needs review
+                        </p>
+                      </div>
+                      <TimesheetReviewForm
+                        slug={slug}
+                        shiftId={shift.id}
+                        timesheetId={timesheet.id}
+                        submittedMinutes={timesheet.submitted_minutes ?? 0}
+                      />
+                    </div>
+                  </PermissionGuard>
+                </div>
+              );
+            })}
           </div>
-
-          <PermissionGuard
-            allowed={
-              ctx.capabilities.canReviewTimesheets &&
-              timesheet.status === 'submitted'
-            }
-          >
-            <div className="mt-4 rounded-xl border border-bh-warning/20 bg-bh-warning-soft/50 p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-bh-warning" aria-hidden />
-                <p className="text-sm font-semibold text-bh-text">Needs review</p>
-              </div>
-              <TimesheetReviewForm
-                slug={slug}
-                shiftId={shift.id}
-                timesheetId={timesheet.id}
-                submittedMinutes={timesheet.submitted_minutes}
-              />
-            </div>
-          </PermissionGuard>
         </DetailPanel>
       ) : null}
 
-      {payout ? (
+      {assignments.some((row) => payoutByAssignmentId.has(row.id)) ? (
         <DetailPanel
-          title="Financial snapshot"
-          description="Approved gross amounts for this assignment. Not platform revenue."
+          title="Financial snapshots"
+          description="Approved gross amounts per assignment. Not platform revenue. Commission is billed per completed position."
           icon={Wallet}
         >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <MetaTile
-              label="Approved gross pay"
-              value={formatMoneyMinor(payout.gross_amount_minor, payout.currency)}
-            />
-            <MetaTile
-              label="Hospital payment to worker"
-              value={formatMoneyMinor(
-                payout.worker_transfer_amount_minor,
-                payout.currency,
-              )}
-            />
-            <MetaTile
-              label="Organization total due"
-              value={formatMoneyMinor(
-                payout.organization_total_due_minor,
-                payout.currency,
-              )}
-            />
+          <div className="space-y-4">
+            {assignments.map((row) => {
+              const payout = payoutByAssignmentId.get(row.id);
+              if (!payout) return null;
+              const workerLabel =
+                row.worker &&
+                typeof row.worker === 'object' &&
+                'worker_role' in row.worker
+                  ? roleLabel(String(row.worker.worker_role ?? 'worker'))
+                  : 'Assigned worker';
+              return (
+                <div
+                  key={row.id}
+                  className="rounded-xl border border-bh-border/80 bg-bh-subtle/30 p-4"
+                >
+                  <p className="text-sm font-semibold text-bh-text">{workerLabel}</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    <MetaTile
+                      label="Approved gross pay"
+                      value={formatMoneyMinor(
+                        Number(payout.gross_amount_minor),
+                        String(payout.currency),
+                      )}
+                    />
+                    <MetaTile
+                      label="Hospital payment to worker"
+                      value={formatMoneyMinor(
+                        Number(payout.worker_transfer_amount_minor),
+                        String(payout.currency),
+                      )}
+                    />
+                    <MetaTile
+                      label="Organization total due"
+                      value={formatMoneyMinor(
+                        Number(payout.organization_total_due_minor),
+                        String(payout.currency),
+                      )}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <p className="mt-4 rounded-xl bg-bh-honey-soft/60 px-4 py-3 text-xs leading-5 text-bh-text-secondary">
-            The organization pays the worker the approved gross shift amount directly.
-            Bridge Hive commission is a separate worker invoice and is not an organization
-            expense. Payment instructions and bank-account details remain unavailable in this
-            workspace.
+            The organization pays each worker their approved gross amount directly.
+            Bridge Hive commission is a separate worker invoice per completed position and
+            is not an organization expense. Payment instructions and bank-account details
+            remain unavailable in this workspace.
           </p>
         </DetailPanel>
       ) : null}

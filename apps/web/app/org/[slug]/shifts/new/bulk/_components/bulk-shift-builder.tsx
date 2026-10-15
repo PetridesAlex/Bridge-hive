@@ -13,6 +13,7 @@ import {
   formatMoneyMinor,
   newBulkRequestKey,
   resolveShiftLocalWindow,
+  sumRequiredPositions,
   summarizeBulkBatch,
   type BulkCreationMode,
   type BulkPreviewShift,
@@ -21,19 +22,25 @@ import {
   type WorkerRole,
 } from '@bridge-hive/domain';
 import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  CalendarRange,
   Check,
-  Copy,
+  CheckCircle2,
+  FilePenLine,
   Loader2,
   Plus,
+  Rows3,
+  Send,
   Trash2,
+  type LucideIcon,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
   useMemo,
   useState,
   useTransition,
-  type Dispatch,
-  type SetStateAction,
 } from 'react';
 import { toast } from 'sonner';
 
@@ -42,12 +49,23 @@ import {
   type CreateShiftsBatchInput,
 } from '@/app/actions/bulk-shifts';
 import { ShiftLocationSetupGate } from '@/components/org/shift-location-setup-gate';
+import { WardLibraryDialog } from '@/components/org/ward-library-dialog';
+import { WardUnitSelector } from '@/components/org/ward-unit-selector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { eurosToMinor, localInputToIsoWithTimezone, minorToEurosInput } from '@/lib/format';
 import { cn } from '@/lib/utils';
+
+import {
+  createStarterCustomRows,
+  todayYmdLocal,
+  type BulkCustomRow,
+  type BulkCustomRowSeed,
+} from './custom-row-model';
+import { CustomRowsWorkspace } from './custom-rows-workspace';
+import { Hm24Field } from './hm24-field';
 
 export type BulkTemplateDefaults = {
   locationId: string;
@@ -66,19 +84,6 @@ export type BulkTemplateDefaults = {
 type LocationOption = { id: string; name: string; timezone: string };
 type WardOption = { id: string; name: string; locationId: string };
 
-type CustomRow = {
-  key: string;
-  dateYmd: string;
-  startHm: string;
-  endHm: string;
-  locationId: string;
-  wardId: string;
-  requiredRole: WorkerRole;
-  breakMinutes: number;
-  rateEuros: string;
-  title: string;
-};
-
 type Step = 'build' | 'review' | 'confirm' | 'success';
 
 const WEEKDAY_OPTIONS: Array<{ value: IsoWeekday; label: string }> = [
@@ -90,14 +95,6 @@ const WEEKDAY_OPTIONS: Array<{ value: IsoWeekday; label: string }> = [
   { value: 6, label: 'Sat' },
   { value: 7, label: 'Sun' },
 ];
-
-function todayYmd(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
 
 function addDaysYmd(ymd: string, days: number): string {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -122,12 +119,21 @@ export function BulkShiftBuilder({
   defaults: BulkTemplateDefaults | null;
 }) {
   const [step, setStep] = useState<Step>('build');
-  const [mode, setMode] = useState<BulkCreationMode>(
-    defaults ? 'individual' : 'repeat',
-  );
+  const [mode, setMode] = useState<BulkCreationMode>('custom');
   const [pending, startTransition] = useTransition();
+  const [wardOptions, setWardOptions] = useState<WardOption[]>(wards);
 
   const defaultLocationId = defaults?.locationId ?? locations[0]?.id ?? '';
+  const customRowSeed: BulkCustomRowSeed = {
+    startHm: defaults?.startHm ?? '08:00',
+    endHm: defaults?.endHm ?? '16:00',
+    locationId: defaultLocationId,
+    wardId: defaults?.wardId ?? '',
+    requiredRole: (defaults?.requiredRole ?? 'registered_nurse') as WorkerRole,
+    breakMinutes: defaults?.breakMinutes ?? 30,
+    rateEuros: defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
+    positions: 1,
+  };
   const [locationId, setLocationId] = useState(defaultLocationId);
   const [wardId, setWardId] = useState(defaults?.wardId ?? '');
   const [requiredRole, setRequiredRole] = useState<WorkerRole>(
@@ -142,42 +148,31 @@ export function BulkShiftBuilder({
     defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
   );
   const [title, setTitle] = useState(defaults?.title ?? '');
+  const [positions, setPositions] = useState('1');
   const [deadlineHours, setDeadlineHours] = useState(
     String(defaults?.deadlineHoursBefore ?? 24),
   );
 
   // Repeat mode
-  const [rangeStart, setRangeStart] = useState(todayYmd());
-  const [rangeEnd, setRangeEnd] = useState(addDaysYmd(todayYmd(), 13));
+  const [rangeStart, setRangeStart] = useState(todayYmdLocal());
+  const [rangeEnd, setRangeEnd] = useState(addDaysYmd(todayYmdLocal(), 13));
   const [weekdays, setWeekdays] = useState<IsoWeekday[]>([1, 2, 3, 4, 5]);
 
   // Individual dates
   const [dateDraft, setDateDraft] = useState('');
   const [individualDates, setIndividualDates] = useState<string[]>([]);
 
-  // Custom rows
-  const [customRows, setCustomRows] = useState<CustomRow[]>(() => {
-    const base = {
-      startHm: defaults?.startHm ?? '08:00',
-      endHm: defaults?.endHm ?? '16:00',
-      locationId: defaultLocationId,
-      wardId: defaults?.wardId ?? '',
-      requiredRole: (defaults?.requiredRole ?? 'registered_nurse') as WorkerRole,
-      breakMinutes: defaults?.breakMinutes ?? 30,
-      rateEuros: defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
-      title: defaults?.title ?? '',
-    };
-    return [
-      { key: 'r1', dateYmd: todayYmd(), ...base },
-      { key: 'r2', dateYmd: addDaysYmd(todayYmd(), 1), ...base },
-    ];
-  });
+  // Custom rows — default experience, including when a template is applied
+  const [customRows, setCustomRows] = useState<BulkCustomRow[]>(() =>
+    createStarterCustomRows(customRowSeed),
+  );
 
   const [requestedStatus, setRequestedStatus] =
     useState<BulkRequestedStatus>('draft');
   const [allowExactDuplicates, setAllowExactDuplicates] = useState(false);
   const [requestKey] = useState(() => newBulkRequestKey());
   const [buildError, setBuildError] = useState<string | null>(null);
+  const [showCustomFieldErrors, setShowCustomFieldErrors] = useState(false);
   const [result, setResult] = useState<{
     batchId: string;
     shiftIds: string[];
@@ -187,13 +182,42 @@ export function BulkShiftBuilder({
 
   const selectedLocation = locations.find((l) => l.id === locationId);
   const locationTz = selectedLocation?.timezone ?? organizationTimezone;
-  const locationWards = wards.filter((w) => w.locationId === locationId);
+
+  function mergeCreatedWards(
+    created: Array<{ id: string; name: string; locationId: string }>,
+  ) {
+    setWardOptions((prev) => {
+      const next = [...prev];
+      for (const row of created) {
+        if (!next.some((ward) => ward.id === row.id)) {
+          next.push({
+            id: row.id,
+            name: row.name,
+            locationId: row.locationId,
+          });
+        }
+      }
+      return next;
+    });
+  }
 
   const locationTzById = useMemo(() => {
     const map = new Map<string, string>();
     for (const loc of locations) map.set(loc.id, loc.timezone);
     return map;
   }, [locations]);
+
+  const locationNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const loc of locations) map.set(loc.id, loc.name);
+    return map;
+  }, [locations]);
+
+  const wardNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const ward of wardOptions) map.set(ward.id, ward.name);
+    return map;
+  }, [wardOptions]);
 
   const built = useMemo(() => {
     try {
@@ -233,6 +257,19 @@ export function BulkShiftBuilder({
         };
       }
 
+      const positionsValue = Number.parseInt(positions, 10);
+      if (
+        !Number.isInteger(positionsValue) ||
+        positionsValue < 1 ||
+        positionsValue > 100
+      ) {
+        return {
+          error: 'Positions must be a whole number from 1 to 100.',
+          rows: [] as BuiltRow[],
+          preview: [] as BulkPreviewShift[],
+        };
+      }
+
       return buildFromSharedTemplate({
         dates,
         locationId,
@@ -243,6 +280,7 @@ export function BulkShiftBuilder({
         breakMinutes: Number(breakMinutes) || 0,
         rateMinor: eurosToMinor(rateEuros),
         title: title.trim() || null,
+        requiredPositions: positionsValue,
         locationTz,
         deadlineHours: Number(deadlineHours),
       });
@@ -270,17 +308,22 @@ export function BulkShiftBuilder({
     breakMinutes,
     rateEuros,
     title,
+    positions,
     locationTz,
     deadlineHours,
   ]);
 
   const preview = built.preview;
   const summary = summarizeBulkBatch(preview);
+  const totalPositions = sumRequiredPositions(preview);
   const exactDupes = findExactDuplicateShifts(preview);
   const overlaps = findOverlappingShifts(preview);
   const countCheck = assertBulkShiftCount(preview.length);
 
   function goReview() {
+    if (mode === 'custom') {
+      setShowCustomFieldErrors(true);
+    }
     if (built.error) {
       setBuildError(built.error);
       return;
@@ -290,6 +333,7 @@ export function BulkShiftBuilder({
       return;
     }
     setBuildError(null);
+    setShowCustomFieldErrors(false);
     setStep('review');
   }
 
@@ -314,6 +358,7 @@ export function BulkShiftBuilder({
           acceptanceDeadline: r.acceptanceDeadline,
           title: r.title,
           notes: defaults?.notes ?? null,
+          requiredPositions: r.requiredPositions,
         })),
       };
 
@@ -357,25 +402,44 @@ export function BulkShiftBuilder({
             : 'Draft shifts created'}
         </h2>
         <p className="mt-2 text-sm text-bh-text-secondary">
-          {result.shiftCount} shifts are ready. Filter the schedule by this batch
-          or open individual shifts.
+          {result.shiftCount} shifts are ready. Open this batch on the schedule, or
+          create another set of multiple shifts.
         </p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          <Button asChild variant="honey">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Button
+            asChild
+            variant="honey"
+            size="lg"
+            className="group min-h-12 justify-between gap-3 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)]"
+          >
             <Link href={`/org/${slug}/shifts?batch=${result.batchId}`}>
-              View batch on shifts
+              <span className="inline-flex items-center gap-2.5">
+                <CalendarDays className="h-4 w-4" aria-hidden />
+                View batch on shifts
+              </span>
+              <ArrowRight
+                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                aria-hidden
+              />
             </Link>
           </Button>
-          <Button asChild variant="outline">
-            <Link href={`/org/${slug}/shifts`}>All shifts</Link>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="group min-h-12 justify-between gap-3 rounded-xl border-bh-border/90 bg-white px-5 text-bh-text shadow-[0_1px_2px_rgba(7,29,48,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] hover:shadow-[0_8px_20px_rgba(7,29,48,0.08)]"
+          >
+            <Link href={`/org/${slug}/shifts/new/bulk`}>
+              <span className="inline-flex items-center gap-2.5">
+                <ArrowLeft
+                  className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+                  aria-hidden
+                />
+                Back to multiple shifts
+              </span>
+              <Rows3 className="h-4 w-4 text-bh-text-muted" aria-hidden />
+            </Link>
           </Button>
-          {result.shiftIds[0] ? (
-            <Button asChild variant="ghost">
-              <Link href={`/org/${slug}/shifts/${result.shiftIds[0]}`}>
-                Open first shift
-              </Link>
-            </Button>
-          ) : null}
         </div>
       </div>
     );
@@ -392,19 +456,34 @@ export function BulkShiftBuilder({
 
       {step === 'build' ? (
         <div className="space-y-5">
-          <ModeTabs mode={mode} onChange={setMode} />
+          <ModeCards
+            mode={mode}
+            onChange={(next) => {
+              setMode(next);
+              setBuildError(null);
+              if (next !== 'custom') setShowCustomFieldErrors(false);
+            }}
+          />
 
           {mode !== 'custom' ? (
             <SharedTemplateFields
+              slug={slug}
               locations={locations}
-              locationWards={locationWards}
+              wards={wardOptions}
               locationId={locationId}
               setLocationId={(id) => {
                 setLocationId(id);
-                setWardId('');
+                const stillValid = wardOptions.some(
+                  (ward) => ward.id === wardId && ward.locationId === id,
+                );
+                if (!stillValid) setWardId('');
               }}
               wardId={wardId}
               setWardId={setWardId}
+              onWardsCreated={(created, autoSelectWardId) => {
+                mergeCreatedWards(created);
+                if (autoSelectWardId) setWardId(autoSelectWardId);
+              }}
               requiredRole={requiredRole}
               setRequiredRole={setRequiredRole}
               startHm={startHm}
@@ -417,6 +496,8 @@ export function BulkShiftBuilder({
               setRateEuros={setRateEuros}
               title={title}
               setTitle={setTitle}
+              positions={positions}
+              setPositions={setPositions}
               deadlineHours={deadlineHours}
               setDeadlineHours={setDeadlineHours}
             />
@@ -531,13 +612,28 @@ export function BulkShiftBuilder({
           ) : null}
 
           {mode === 'custom' ? (
-            <CustomRowsEditor
+            <CustomRowsWorkspace
+              slug={slug}
               rows={customRows}
               setRows={setCustomRows}
               locations={locations}
-              wards={wards}
+              wards={wardOptions}
+              onWardsCreated={(created, autoSelectWardId, rowIndex) => {
+                mergeCreatedWards(created);
+                if (autoSelectWardId != null && rowIndex != null) {
+                  setCustomRows((prev) =>
+                    prev.map((row, index) =>
+                      index === rowIndex
+                        ? { ...row, wardId: autoSelectWardId }
+                        : row,
+                    ),
+                  );
+                }
+              }}
               deadlineHours={deadlineHours}
               setDeadlineHours={setDeadlineHours}
+              seed={customRowSeed}
+              showFieldErrors={showCustomFieldErrors}
             />
           ) : null}
 
@@ -564,10 +660,14 @@ export function BulkShiftBuilder({
 
       {step === 'review' || step === 'confirm' ? (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SummaryTile
               label="Shifts"
               value={String(summary.shiftCount)}
+            />
+            <SummaryTile
+              label="Total positions"
+              value={String(totalPositions)}
             />
             <SummaryTile
               label="Est. gross"
@@ -612,13 +712,16 @@ export function BulkShiftBuilder({
 
           <div className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface">
             <div className="max-h-[28rem] overflow-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full min-w-[48rem] text-left text-sm">
                 <thead className="sticky top-0 bg-bh-subtle/90 text-[11px] font-semibold uppercase tracking-wide text-bh-text-muted backdrop-blur">
                   <tr>
                     <th className="px-3 py-2.5">#</th>
                     <th className="px-3 py-2.5">Date</th>
                     <th className="px-3 py-2.5">Time</th>
                     <th className="px-3 py-2.5">Role</th>
+                    <th className="px-3 py-2.5">Location</th>
+                    <th className="px-3 py-2.5">Ward / unit</th>
+                    <th className="px-3 py-2.5">Positions</th>
                     <th className="px-3 py-2.5">Rate</th>
                   </tr>
                 </thead>
@@ -641,6 +744,17 @@ export function BulkShiftBuilder({
                       <td className="px-3 py-2">
                         {WORKER_ROLE_LABELS[row.requiredRole]}
                       </td>
+                      <td className="px-3 py-2 text-bh-text-secondary">
+                        {locationNameById.get(row.locationId) ?? '—'}
+                      </td>
+                      <td className="px-3 py-2 text-bh-text-secondary">
+                        {row.wardId
+                          ? (wardNameById.get(row.wardId) ?? '—')
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-bh-text-secondary">
+                        {row.requiredPositions ?? 1}
+                      </td>
                       <td className="px-3 py-2">
                         {formatMoneyMinor(row.rateMinor, row.currency)}/hr
                       </td>
@@ -652,90 +766,226 @@ export function BulkShiftBuilder({
           </div>
 
           {step === 'confirm' ? (
-            <div className="space-y-3 rounded-2xl border border-bh-border bg-bh-surface p-4 sm:p-5">
-              <p className="text-sm font-medium text-bh-text">Create as</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]">
+              <div className="border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-4 sm:px-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
+                  Release
+                </p>
+                <h3 className="mt-1 text-base font-semibold tracking-tight text-[#071d30]">
+                  How should these shifts go live?
+                </h3>
+                <p className="mt-1 text-sm text-bh-text-secondary">
+                  Choose drafts to review later, or publish now for matching
+                  verified workers.
+                </p>
+              </div>
+              <div
+                role="radiogroup"
+                aria-label="Create as"
+                className={cn(
+                  'grid gap-3 p-4 sm:p-5',
+                  canPublish ? 'sm:grid-cols-2' : 'sm:grid-cols-1',
+                )}
+              >
                 <button
                   type="button"
+                  role="radio"
+                  aria-checked={requestedStatus === 'draft'}
                   onClick={() => setRequestedStatus('draft')}
                   className={cn(
-                    'rounded-xl border px-4 py-2.5 text-sm font-medium',
+                    'group relative flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all duration-200 motion-reduce:transition-none',
                     requestedStatus === 'draft'
-                      ? 'border-bh-sidebar bg-bh-sidebar text-white'
-                      : 'border-bh-border bg-bh-surface text-bh-text',
+                      ? 'border-transparent bg-[linear-gradient(155deg,#16384f_0%,#071d30_62%,#0c3a42_100%)] text-white shadow-[0_12px_28px_rgba(7,29,48,0.22)]'
+                      : 'border-bh-border/80 bg-white text-bh-text hover:-translate-y-0.5 hover:border-[#16384f]/20 hover:bg-[#f7fafc] hover:shadow-[0_8px_20px_rgba(7,29,48,0.06)] motion-reduce:hover:translate-y-0',
                   )}
                 >
-                  Drafts (default)
+                  <span
+                    className={cn(
+                      'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+                      requestedStatus === 'draft'
+                        ? 'bg-white/12 text-white'
+                        : 'bg-[#f7fafc] text-[#16384f] ring-1 ring-bh-border/80',
+                    )}
+                  >
+                    <FilePenLine className="h-4 w-4" aria-hidden />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-2">
+                      <span className="text-sm font-semibold tracking-tight">
+                        Save as drafts
+                      </span>
+                      {requestedStatus === 'draft' ? (
+                        <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/90">
+                          Selected
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-bh-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-bh-text-muted">
+                          Default
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={cn(
+                        'mt-1 block text-xs leading-5',
+                        requestedStatus === 'draft'
+                          ? 'text-white/70'
+                          : 'text-bh-text-secondary',
+                      )}
+                    >
+                      Private to your organization until you publish.
+                    </span>
+                  </span>
+                  {requestedStatus === 'draft' ? (
+                    <CheckCircle2
+                      className="mt-0.5 h-5 w-5 shrink-0 text-bh-honey"
+                      aria-hidden
+                    />
+                  ) : null}
                 </button>
+
                 {canPublish ? (
                   <button
                     type="button"
+                    role="radio"
+                    aria-checked={requestedStatus === 'published'}
                     onClick={() => setRequestedStatus('published')}
                     className={cn(
-                      'rounded-xl border px-4 py-2.5 text-sm font-medium',
+                      'group relative flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all duration-200 motion-reduce:transition-none',
                       requestedStatus === 'published'
-                        ? 'border-bh-honey bg-bh-honey text-bh-text'
-                        : 'border-bh-border bg-bh-surface text-bh-text',
+                        ? 'border-bh-honey bg-[linear-gradient(180deg,#fff8e8_0%,#f6e7b0_100%)] text-[#071d30] shadow-[0_12px_28px_rgba(228,179,52,0.28)] ring-1 ring-bh-honey/50'
+                        : 'border-bh-border/80 bg-white text-bh-text hover:-translate-y-0.5 hover:border-bh-honey/40 hover:bg-bh-honey-soft/30 hover:shadow-[0_8px_20px_rgba(228,179,52,0.12)] motion-reduce:hover:translate-y-0',
                     )}
                   >
-                    Publish now
+                    <span
+                      className={cn(
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+                        requestedStatus === 'published'
+                          ? 'bg-bh-honey text-[#071d30] shadow-sm'
+                          : 'bg-[#f7fafc] text-[#16384f] ring-1 ring-bh-border/80',
+                      )}
+                    >
+                      <Send className="h-4 w-4" aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-2">
+                        <span className="text-sm font-semibold tracking-tight">
+                          Publish now
+                        </span>
+                        {requestedStatus === 'published' ? (
+                          <span className="rounded-full bg-[#071d30]/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#071d30]/80">
+                            Selected
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-bh-text-secondary">
+                        Become claimable for matching verified workers.
+                      </span>
+                    </span>
+                    {requestedStatus === 'published' ? (
+                      <CheckCircle2
+                        className="mt-0.5 h-5 w-5 shrink-0 text-[#071d30]"
+                        aria-hidden
+                      />
+                    ) : null}
                   </button>
                 ) : null}
               </div>
-              {requestedStatus === 'published' ? (
-                <p className="text-xs text-bh-text-muted">
-                  Published shifts become claimable for matching verified workers.
-                </p>
-              ) : (
-                <p className="text-xs text-bh-text-muted">
-                  Drafts stay private to your organization until published.
-                </p>
-              )}
             </div>
           ) : null}
 
-          <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-bh-border bg-bh-surface/95 px-4 py-3 shadow-lg backdrop-blur">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setStep(step === 'confirm' ? 'review' : 'build')}
-              disabled={pending}
-            >
-              Back
-            </Button>
-            {step === 'review' ? (
-              <Button
-                type="button"
-                variant="honey"
-                onClick={() => {
-                  if (exactDupes.length && !allowExactDuplicates) {
-                    toast.error('Confirm exact duplicates or remove them first.');
-                    return;
+          <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface/95 shadow-[0_16px_40px_rgba(7,29,48,0.12)] backdrop-blur-md">
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  disabled={pending}
+                  onClick={() => setStep(step === 'confirm' ? 'review' : 'build')}
+                  className="group min-h-11 rounded-xl border-bh-border/90 bg-white px-4 shadow-[0_1px_2px_rgba(7,29,48,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] motion-reduce:hover:translate-y-0"
+                >
+                  <ArrowLeft
+                    className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+                    aria-hidden
+                  />
+                  Back
+                </Button>
+                <div className="hidden min-w-0 sm:block">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                    {step === 'confirm' ? 'Ready to create' : 'Review batch'}
+                  </p>
+                  <p className="truncate text-sm font-medium text-[#071d30]">
+                    {preview.length} shift{preview.length === 1 ? '' : 's'}
+                    {step === 'confirm'
+                      ? requestedStatus === 'published'
+                        ? ' · publish live'
+                        : ' · save as drafts'
+                      : ` · ${totalPositions} positions`}
+                  </p>
+                </div>
+              </div>
+
+              {step === 'review' ? (
+                <Button
+                  type="button"
+                  variant="honey"
+                  size="lg"
+                  onClick={() => {
+                    if (exactDupes.length && !allowExactDuplicates) {
+                      toast.error(
+                        'Confirm exact duplicates or remove them first.',
+                      );
+                      return;
+                    }
+                    setStep('confirm');
+                  }}
+                  className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)] motion-reduce:hover:translate-y-0"
+                >
+                  Continue to confirm
+                  <ArrowRight
+                    className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="honey"
+                  size="lg"
+                  disabled={
+                    pending ||
+                    (exactDupes.length > 0 && !allowExactDuplicates)
                   }
-                  setStep('confirm');
-                }}
-              >
-                Continue to confirm
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="honey"
-                disabled={pending || (exactDupes.length > 0 && !allowExactDuplicates)}
-                onClick={submitBatch}
-              >
-                {pending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Creating…
-                  </>
-                ) : requestedStatus === 'published' ? (
-                  `Publish ${preview.length} shifts`
-                ) : (
-                  `Create ${preview.length} drafts`
-                )}
-              </Button>
-            )}
+                  onClick={submitBatch}
+                  className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)] motion-reduce:hover:translate-y-0"
+                >
+                  {pending ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Creating…
+                    </>
+                  ) : requestedStatus === 'published' ? (
+                    <>
+                      <Send className="h-4 w-4" aria-hidden />
+                      Publish {preview.length} shifts
+                      <ArrowRight
+                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <FilePenLine className="h-4 w-4" aria-hidden />
+                      Create {preview.length} drafts
+                      <ArrowRight
+                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                        aria-hidden
+                      />
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       ) : null}
@@ -753,6 +1003,7 @@ type BuiltRow = {
   rateMinor: number;
   acceptanceDeadline: string | null;
   title: string | null;
+  requiredPositions: number;
 };
 
 function buildFromSharedTemplate(params: {
@@ -765,6 +1016,7 @@ function buildFromSharedTemplate(params: {
   breakMinutes: number;
   rateMinor: number;
   title: string | null;
+  requiredPositions: number;
   locationTz: string;
   deadlineHours: number;
 }): { error: string | null; rows: BuiltRow[]; preview: BulkPreviewShift[] } {
@@ -811,6 +1063,7 @@ function buildFromSharedTemplate(params: {
       rateMinor: params.rateMinor,
       acceptanceDeadline,
       title: params.title,
+      requiredPositions: params.requiredPositions,
     });
     preview.push({
       rowIndex: i,
@@ -824,6 +1077,7 @@ function buildFromSharedTemplate(params: {
       currency: 'EUR',
       breakMinutes: params.breakMinutes,
       title: params.title,
+      requiredPositions: params.requiredPositions,
     });
   }
 
@@ -831,7 +1085,7 @@ function buildFromSharedTemplate(params: {
 }
 
 function buildFromCustomRows(
-  customRows: CustomRow[],
+  customRows: BulkCustomRow[],
   locationTzById: Map<string, string>,
   fallbackTz: string,
   deadlineHours: number,
@@ -843,6 +1097,17 @@ function buildFromCustomRows(
     const row = customRows[i]!;
     if (!row.locationId || !row.dateYmd) {
       return { error: `Row ${i + 1}: location and date are required.`, rows: [], preview: [] };
+    }
+    if (
+      !Number.isInteger(row.positions) ||
+      row.positions < 1 ||
+      row.positions > 100
+    ) {
+      return {
+        error: `Row ${i + 1}: Positions must be a whole number from 1 to 100.`,
+        rows: [],
+        preview: [],
+      };
     }
     const window = resolveShiftLocalWindow({
       dateYmd: row.dateYmd,
@@ -883,7 +1148,8 @@ function buildFromCustomRows(
       breakMinutes: row.breakMinutes,
       rateMinor,
       acceptanceDeadline,
-      title: row.title.trim() || null,
+      title: null,
+      requiredPositions: row.positions,
     });
     preview.push({
       rowIndex: i,
@@ -896,7 +1162,8 @@ function buildFromCustomRows(
       rateMinor,
       currency: 'EUR',
       breakMinutes: row.breakMinutes,
-      title: row.title.trim() || null,
+      title: null,
+      requiredPositions: row.positions,
     });
   }
 
@@ -904,67 +1171,186 @@ function buildFromCustomRows(
 }
 
 function StepRail({ step }: { step: Step }) {
-  const items: Array<{ id: Step; label: string }> = [
-    { id: 'build', label: 'Build' },
-    { id: 'review', label: 'Review' },
-    { id: 'confirm', label: 'Confirm' },
+  const items: Array<{ id: Step; label: string; hint: string }> = [
+    { id: 'build', label: 'Build', hint: 'Compose shifts' },
+    { id: 'review', label: 'Review', hint: 'Check the batch' },
+    { id: 'confirm', label: 'Confirm', hint: 'Create or publish' },
   ];
   const order = { build: 0, review: 1, confirm: 2, success: 3 };
+  const currentIndex = order[step] ?? 0;
+
   return (
-    <ol className="flex flex-wrap gap-2">
-      {items.map((item, idx) => {
-        const active = order[step] >= idx;
-        const current = step === item.id;
-        return (
-          <li
-            key={item.id}
-            className={cn(
-              'rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide',
-              current
-                ? 'border-bh-honey bg-bh-honey-soft text-bh-text'
-                : active
-                  ? 'border-bh-border bg-bh-subtle text-bh-text'
-                  : 'border-bh-border/60 text-bh-text-muted',
-            )}
-          >
-            {idx + 1}. {item.label}
-          </li>
-        );
-      })}
-    </ol>
+    <nav aria-label="Batch creation steps">
+      <ol className="grid grid-cols-1 gap-2 rounded-2xl border border-bh-border bg-bh-surface p-2 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:grid-cols-3 sm:gap-0 sm:p-1.5">
+        {items.map((item, idx) => {
+          const done = currentIndex > idx;
+          const current = step === item.id || (step === 'success' && idx === 2);
+          const upcoming = currentIndex < idx;
+
+          return (
+            <li
+              key={item.id}
+              aria-current={current ? 'step' : undefined}
+              className={cn(
+                'relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-200 motion-reduce:transition-none',
+                current &&
+                  'bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_8px_18px_rgba(7,29,48,0.22)]',
+                done && !current && 'bg-bh-teal-soft/50 text-bh-text',
+                upcoming && 'text-bh-text-muted',
+              )}
+            >
+              {idx < items.length - 1 ? (
+                <span
+                  aria-hidden
+                  className={cn(
+                    'pointer-events-none absolute right-0 top-1/2 hidden h-px w-3 -translate-y-1/2 translate-x-full sm:block',
+                    done || current ? 'bg-bh-teal' : 'bg-bh-border',
+                  )}
+                />
+              ) : null}
+
+              <span
+                aria-hidden
+                className={cn(
+                  'grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold tracking-tight',
+                  current &&
+                    'bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]',
+                  done &&
+                    !current &&
+                    'bg-bh-teal text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]',
+                  upcoming && 'border border-bh-border bg-bh-subtle text-bh-text-muted',
+                )}
+              >
+                {done && !current ? (
+                  <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+                ) : (
+                  idx + 1
+                )}
+              </span>
+
+              <span className="min-w-0">
+                <span
+                  className={cn(
+                    'block text-[11px] font-semibold uppercase tracking-[0.14em]',
+                    current ? 'text-white/70' : done ? 'text-bh-teal-strong' : 'text-bh-text-muted',
+                  )}
+                >
+                  Step {idx + 1}
+                </span>
+                <span
+                  className={cn(
+                    'mt-0.5 block text-sm font-semibold tracking-tight',
+                    current ? 'text-white' : 'text-bh-text',
+                  )}
+                >
+                  {item.label}
+                </span>
+                <span
+                  className={cn(
+                    'mt-0.5 block text-xs',
+                    current ? 'text-white/65' : 'text-bh-text-muted',
+                  )}
+                >
+                  {item.hint}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 }
 
-function ModeTabs({
+function ModeCards({
   mode,
   onChange,
 }: {
   mode: BulkCreationMode;
   onChange: (m: BulkCreationMode) => void;
 }) {
-  const modes: Array<{ id: BulkCreationMode; label: string; hint: string }> = [
-    { id: 'repeat', label: 'Repeat', hint: 'Weekdays in a range' },
-    { id: 'individual', label: 'Individual dates', hint: 'Pick specific days' },
-    { id: 'custom', label: 'Custom rows', hint: 'Edit each shift' },
+  const modes: Array<{
+    id: BulkCreationMode;
+    label: string;
+    hint: string;
+    icon: LucideIcon;
+  }> = [
+    {
+      id: 'repeat',
+      label: 'Repeat Schedule',
+      hint: 'Create a repeating pattern across selected weekdays.',
+      icon: CalendarRange,
+    },
+    {
+      id: 'individual',
+      label: 'Individual Dates',
+      hint: 'Choose specific dates using one shared shift setup.',
+      icon: CalendarDays,
+    },
+    {
+      id: 'custom',
+      label: 'Custom Rows',
+      hint: 'Create and edit every shift independently.',
+      icon: Rows3,
+    },
   ];
+
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
-      {modes.map((m) => (
-        <button
-          key={m.id}
-          type="button"
-          onClick={() => onChange(m.id)}
-          className={cn(
-            'rounded-2xl border px-4 py-3 text-left transition-colors',
-            mode === m.id
-              ? 'border-bh-honey bg-bh-honey-soft/70'
-              : 'border-bh-border bg-bh-surface hover:bg-bh-subtle/60',
-          )}
-        >
-          <span className="block text-sm font-semibold text-bh-text">{m.label}</span>
-          <span className="mt-0.5 block text-xs text-bh-text-muted">{m.hint}</span>
-        </button>
-      ))}
+    <div
+      className="grid gap-3 sm:grid-cols-3"
+      role="radiogroup"
+      aria-label="Creation mode"
+    >
+      {modes.map((item) => {
+        const selected = mode === item.id;
+        const Icon = item.icon;
+        const isCustom = item.id === 'custom';
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(item.id)}
+            className={cn(
+              'relative rounded-2xl border px-4 py-4 text-left transition-[transform,box-shadow,border-color,background-color] duration-200 motion-reduce:transition-none',
+              'hover:-translate-y-0.5 active:translate-y-0 motion-reduce:hover:translate-y-0',
+              selected && isCustom
+                ? 'border-bh-honey bg-bh-honey-soft shadow-[0_0_0_1px_rgba(224,170,24,0.35),0_10px_28px_rgba(201,146,15,0.18)]'
+                : selected
+                  ? 'border-bh-sidebar bg-bh-subtle shadow-[0_8px_22px_rgba(7,29,48,0.08)]'
+                  : 'border-bh-border bg-bh-surface hover:border-bh-border-strong hover:bg-bh-subtle/50',
+            )}
+          >
+            <span className="flex items-start justify-between gap-3">
+              <span
+                className={cn(
+                  'grid h-10 w-10 place-items-center rounded-xl',
+                  selected && isCustom
+                    ? 'bg-bh-honey text-[#071d30]'
+                    : selected
+                      ? 'bg-bh-sidebar text-white'
+                      : 'bg-bh-teal-soft text-bh-teal-strong',
+                )}
+              >
+                <Icon className="h-5 w-5" aria-hidden />
+              </span>
+              {selected ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-bh-border bg-bh-surface px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-bh-text">
+                  <CheckCircle2 className="h-3 w-3 text-bh-success" aria-hidden />
+                  Selected
+                </span>
+              ) : null}
+            </span>
+            <span className="mt-3 block text-sm font-semibold tracking-tight text-bh-text">
+              {item.label}
+            </span>
+            <span className="mt-1 block text-xs leading-5 text-bh-text-muted">
+              {item.hint}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -981,12 +1367,14 @@ function SummaryTile({ label, value }: { label: string; value: string }) {
 }
 
 function SharedTemplateFields({
+  slug,
   locations,
-  locationWards,
+  wards,
   locationId,
   setLocationId,
   wardId,
   setWardId,
+  onWardsCreated,
   requiredRole,
   setRequiredRole,
   startHm,
@@ -999,15 +1387,22 @@ function SharedTemplateFields({
   setRateEuros,
   title,
   setTitle,
+  positions,
+  setPositions,
   deadlineHours,
   setDeadlineHours,
 }: {
+  slug: string;
   locations: LocationOption[];
-  locationWards: WardOption[];
+  wards: WardOption[];
   locationId: string;
   setLocationId: (v: string) => void;
   wardId: string;
   setWardId: (v: string) => void;
+  onWardsCreated: (
+    created: Array<{ id: string; name: string; locationId: string }>,
+    autoSelectWardId: string | null,
+  ) => void;
   requiredRole: WorkerRole;
   setRequiredRole: (v: WorkerRole) => void;
   startHm: string;
@@ -1020,6 +1415,8 @@ function SharedTemplateFields({
   setRateEuros: (v: string) => void;
   title: string;
   setTitle: (v: string) => void;
+  positions: string;
+  setPositions: (v: string) => void;
   deadlineHours: string;
   setDeadlineHours: (v: string) => void;
 }) {
@@ -1040,19 +1437,24 @@ function SharedTemplateFields({
         </Select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="bulk-ward">Ward (optional)</Label>
-        <Select
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Label htmlFor="bulk-ward">Ward / Unit</Label>
+          <WardLibraryDialog
+            slug={slug}
+            locations={locations}
+            wards={wards}
+            defaultLocationId={locationId}
+            onCreated={onWardsCreated}
+          />
+        </div>
+        <WardUnitSelector
           id="bulk-ward"
-          value={wardId}
-          onChange={(e) => setWardId(e.target.value)}
-        >
-          <option value="">No ward</option>
-          {locationWards.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name}
-            </option>
-          ))}
-        </Select>
+          locationId={locationId}
+          wardId={wardId}
+          wards={wards}
+          onWardChange={setWardId}
+          aria-label="Ward / unit"
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="bulk-role">Required role</Label>
@@ -1078,22 +1480,42 @@ function SharedTemplateFields({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="bulk-start">Start time</Label>
+        <Label htmlFor="bulk-positions">Positions</Label>
         <Input
-          id="bulk-start"
-          type="time"
-          value={startHm}
-          onChange={(e) => setStartHm(e.target.value)}
+          id="bulk-positions"
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={100}
+          step={1}
+          title="Number of professionals needed for this shift"
+          aria-label="Number of professionals needed for this shift"
+          value={positions}
+          onChange={(e) => setPositions(e.target.value)}
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="bulk-end">End time</Label>
-        <Input
-          id="bulk-end"
-          type="time"
-          value={endHm}
-          onChange={(e) => setEndHm(e.target.value)}
+        <Label htmlFor="bulk-start">Start time (24h)</Label>
+        <Hm24Field
+          id="bulk-start"
+          aria-label="Start time"
+          selectClassName="h-10 rounded-md border-slate-300 px-2"
+          value={startHm}
+          onChange={setStartHm}
         />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="bulk-end">End time (24h)</Label>
+        <Hm24Field
+          id="bulk-end"
+          aria-label="End time"
+          selectClassName="h-10 rounded-md border-slate-300 px-2"
+          value={endHm}
+          onChange={setEndHm}
+        />
+        <p className="text-xs text-bh-text-muted">
+          If end is earlier than start (e.g. 18:00–02:00), the shift runs overnight into the next day.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="bulk-break">Break (minutes)</Label>
@@ -1124,257 +1546,6 @@ function SharedTemplateFields({
           onChange={(e) => setDeadlineHours(e.target.value)}
         />
       </div>
-    </div>
-  );
-}
-
-function CustomRowsEditor({
-  rows,
-  setRows,
-  locations,
-  wards,
-  deadlineHours,
-  setDeadlineHours,
-}: {
-  rows: CustomRow[];
-  setRows: Dispatch<SetStateAction<CustomRow[]>>;
-  locations: LocationOption[];
-  wards: WardOption[];
-  deadlineHours: string;
-  setDeadlineHours: (v: string) => void;
-}) {
-  function applyToAll(patch: Partial<CustomRow>) {
-    setRows((prev) => prev.map((r) => ({ ...r, ...patch })));
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-bh-border bg-bh-subtle/40 px-4 py-3">
-        <div className="space-y-1">
-          <Label htmlFor="custom-deadline">Deadline hours before start</Label>
-          <Input
-            id="custom-deadline"
-            type="number"
-            min={0}
-            className="w-28"
-            value={deadlineHours}
-            onChange={(e) => setDeadlineHours(e.target.value)}
-          />
-        </div>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            const first = rows[0];
-            if (!first) return;
-            applyToAll({
-              startHm: first.startHm,
-              endHm: first.endHm,
-              locationId: first.locationId,
-              wardId: first.wardId,
-              requiredRole: first.requiredRole,
-              breakMinutes: first.breakMinutes,
-              rateEuros: first.rateEuros,
-              title: first.title,
-            });
-          }}
-        >
-          Apply first row to all
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (rows.length >= BULK_SHIFT_MAX) return;
-            const last = rows[rows.length - 1];
-            setRows((prev) => [
-              ...prev,
-              {
-                key: `r-${Date.now()}`,
-                dateYmd: last ? addDaysYmd(last.dateYmd, 1) : todayYmd(),
-                startHm: last?.startHm ?? '08:00',
-                endHm: last?.endHm ?? '16:00',
-                locationId: last?.locationId ?? locations[0]?.id ?? '',
-                wardId: last?.wardId ?? '',
-                requiredRole: last?.requiredRole ?? 'registered_nurse',
-                breakMinutes: last?.breakMinutes ?? 30,
-                rateEuros: last?.rateEuros ?? '25.00',
-                title: last?.title ?? '',
-              },
-            ]);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          Add row
-        </Button>
-      </div>
-
-      <ul className="space-y-3">
-        {rows.map((row, idx) => {
-          const rowWards = wards.filter((w) => w.locationId === row.locationId);
-          return (
-            <li
-              key={row.key}
-              className="grid gap-2 rounded-2xl border border-bh-border bg-bh-surface p-3 sm:grid-cols-6 sm:p-4"
-            >
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  value={row.dateYmd}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, dateYmd: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Start</Label>
-                <Input
-                  type="time"
-                  value={row.startHm}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, startHm: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>End</Label>
-                <Input
-                  type="time"
-                  value={row.endHm}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, endHm: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Location</Label>
-                <Select
-                  value={row.locationId}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx
-                          ? { ...r, locationId: e.target.value, wardId: '' }
-                          : r,
-                      ),
-                    )
-                  }
-                >
-                  {locations.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Ward</Label>
-                <Select
-                  value={row.wardId}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, wardId: e.target.value } : r,
-                      ),
-                    )
-                  }
-                >
-                  <option value="">No ward</option>
-                  {rowWards.map((w) => (
-                    <option key={w.id} value={w.id}>
-                      {w.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1 sm:col-span-2">
-                <Label>Role</Label>
-                <Select
-                  value={row.requiredRole}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx
-                          ? { ...r, requiredRole: e.target.value as WorkerRole }
-                          : r,
-                      ),
-                    )
-                  }
-                >
-                  {WORKER_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {WORKER_ROLE_LABELS[r]}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Rate €</Label>
-                <Input
-                  value={row.rateEuros}
-                  onChange={(e) =>
-                    setRows((prev) =>
-                      prev.map((r, i) =>
-                        i === idx ? { ...r, rateEuros: e.target.value } : r,
-                      ),
-                    )
-                  }
-                />
-              </div>
-              <div className="flex items-end gap-2 sm:col-span-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Duplicate row"
-                  onClick={() => {
-                    if (rows.length >= BULK_SHIFT_MAX) return;
-                    setRows((prev) => {
-                      const copy = {
-                        ...row,
-                        key: `r-${Date.now()}-${idx}`,
-                        dateYmd: addDaysYmd(row.dateYmd, 1),
-                      };
-                      const next = [...prev];
-                      next.splice(idx + 1, 0, copy);
-                      return next;
-                    });
-                  }}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Delete row"
-                  disabled={rows.length <= 2}
-                  onClick={() =>
-                    setRows((prev) => prev.filter((_, i) => i !== idx))
-                  }
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }

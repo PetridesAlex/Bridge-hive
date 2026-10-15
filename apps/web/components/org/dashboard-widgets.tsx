@@ -17,85 +17,144 @@ import type { AttentionItem } from '@bridge-hive/domain';
 
 const TINTS = {
   teal: {
-    shell: 'border-bh-border bg-bh-surface hover:border-bh-teal/40',
-    wash: 'from-bh-teal-soft/90 via-bh-teal-soft/30 to-transparent',
-    icon: 'bg-bh-teal-soft text-bh-teal-strong',
+    shell:
+      'border-cyan-200/70 bg-[linear-gradient(165deg,#ffffff_0%,#f0fbfc_48%,#e6f7f8_100%)] hover:border-cyan-300/90',
+    orb: 'bg-[radial-gradient(circle_at_center,rgba(22,166,182,0.45)_0%,rgba(22,166,182,0)_68%)]',
+    bar: 'from-[#16a6b6] via-[#2dd4bf] to-transparent',
+    icon: 'bg-[linear-gradient(145deg,#16384f_0%,#0c3a42_55%,#16a6b6_100%)] text-white shadow-[0_8px_20px_rgba(22,166,182,0.35)] ring-1 ring-white/30',
     spark: '#16A6B6',
-    value: 'text-bh-text',
+    sparkSoft: 'rgba(22,166,182,0.22)',
+    label: 'text-bh-teal-strong',
+    value: 'text-[#071d30]',
+    glow: 'group-hover:shadow-[0_18px_40px_rgba(22,166,182,0.18)]',
   },
   honey: {
-    shell: 'border-bh-border bg-bh-surface hover:border-bh-honey/50',
-    wash: 'from-bh-honey-soft via-bh-honey-soft/40 to-transparent',
-    icon: 'bg-bh-honey-soft text-bh-honey-strong',
+    shell:
+      'border-amber-200/80 bg-[linear-gradient(165deg,#ffffff_0%,#fffaf0_48%,#fff3d6_100%)] hover:border-bh-honey/80',
+    orb: 'bg-[radial-gradient(circle_at_center,rgba(228,179,52,0.42)_0%,rgba(228,179,52,0)_68%)]',
+    bar: 'from-[#e4b334] via-[#f0c95a] to-transparent',
+    icon: 'bg-[linear-gradient(145deg,#16384f_0%,#3a2f12_50%,#e4b334_100%)] text-white shadow-[0_8px_20px_rgba(228,179,52,0.35)] ring-1 ring-white/30',
     spark: '#E0AA18',
-    value: 'text-bh-text',
+    sparkSoft: 'rgba(224,170,24,0.22)',
+    label: 'text-bh-honey-strong',
+    value: 'text-[#071d30]',
+    glow: 'group-hover:shadow-[0_18px_40px_rgba(228,179,52,0.2)]',
   },
   info: {
-    shell: 'border-bh-border bg-bh-surface hover:border-bh-accent-blue/40',
-    wash: 'from-bh-accent-blue-soft via-bh-accent-blue-soft/50 to-transparent',
-    icon: 'bg-bh-accent-blue-soft text-bh-accent-blue',
+    shell:
+      'border-sky-200/80 bg-[linear-gradient(165deg,#ffffff_0%,#f3f8ff_48%,#e8f1ff_100%)] hover:border-sky-300/90',
+    orb: 'bg-[radial-gradient(circle_at_center,rgba(37,99,235,0.38)_0%,rgba(37,99,235,0)_68%)]',
+    bar: 'from-[#2563eb] via-[#38bdf8] to-transparent',
+    icon: 'bg-[linear-gradient(145deg,#0b2a43_0%,#16384f_48%,#2563eb_100%)] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] ring-1 ring-white/30',
     spark: '#2563EB',
-    value: 'text-bh-text',
+    sparkSoft: 'rgba(37,99,235,0.2)',
+    label: 'text-bh-accent-blue',
+    value: 'text-[#071d30]',
+    glow: 'group-hover:shadow-[0_18px_40px_rgba(37,99,235,0.16)]',
   },
   warning: {
-    shell: 'border-bh-border bg-bh-surface hover:border-bh-warning/40',
-    wash: 'from-bh-warning-soft via-bh-warning-soft/50 to-transparent',
-    icon: 'bg-bh-warning-soft text-bh-warning',
+    shell:
+      'border-orange-200/80 bg-[linear-gradient(165deg,#ffffff_0%,#fff8f0_48%,#ffefd9_100%)] hover:border-bh-warning/50',
+    orb: 'bg-[radial-gradient(circle_at_center,rgba(165,104,0,0.32)_0%,rgba(165,104,0,0)_68%)]',
+    bar: 'from-[#a56800] via-[#f59e0b] to-transparent',
+    icon: 'bg-[linear-gradient(145deg,#3a2508_0%,#a56800_55%,#f59e0b_100%)] text-white shadow-[0_8px_20px_rgba(165,104,0,0.28)] ring-1 ring-white/30',
     spark: '#A56800',
-    value: 'text-bh-text',
+    sparkSoft: 'rgba(165,104,0,0.2)',
+    label: 'text-bh-warning',
+    value: 'text-[#071d30]',
+    glow: 'group-hover:shadow-[0_18px_40px_rgba(165,104,0,0.16)]',
   },
   navy: {
-    shell: 'border-bh-border bg-bh-surface hover:border-bh-sidebar/20',
-    wash: 'from-bh-subtle via-bh-subtle/40 to-transparent',
-    icon: 'bg-bh-subtle text-bh-sidebar',
-    spark: '#0B2A43',
-    value: 'text-bh-text',
+    shell:
+      'border-slate-200/90 bg-[linear-gradient(165deg,#ffffff_0%,#f5f8fb_48%,#e8eef4_100%)] hover:border-[#16384f]/25',
+    orb: 'bg-[radial-gradient(circle_at_center,rgba(7,29,48,0.22)_0%,rgba(7,29,48,0)_68%)]',
+    bar: 'from-[#071d30] via-[#16384f] to-transparent',
+    icon: 'bg-[linear-gradient(145deg,#071d30_0%,#16384f_60%,#0c3a42_100%)] text-white shadow-[0_8px_20px_rgba(7,29,48,0.28)] ring-1 ring-white/20',
+    spark: '#16384F',
+    sparkSoft: 'rgba(22,56,79,0.18)',
+    label: 'text-[#16384f]',
+    value: 'text-[#071d30]',
+    glow: 'group-hover:shadow-[0_18px_40px_rgba(7,29,48,0.12)]',
   },
   violet: {
-    shell: 'border-bh-border bg-bh-surface hover:border-violet-300/60',
-    wash: 'from-bh-accent-violet-soft via-bh-accent-violet-soft/45 to-transparent',
-    icon: 'bg-bh-accent-violet-soft text-violet-700',
-    spark: '#7C3AED',
-    value: 'text-bh-text',
+    shell:
+      'border-cyan-200/60 bg-[linear-gradient(165deg,#ffffff_0%,#f4fafb_42%,#eef6ff_100%)] hover:border-cyan-300/70',
+    orb: 'bg-[radial-gradient(circle_at_center,rgba(14,165,233,0.28)_0%,rgba(14,165,233,0)_68%)]',
+    bar: 'from-[#0ea5e9] via-[#67e8f9] to-transparent',
+    icon: 'bg-[linear-gradient(145deg,#071d30_0%,#0c4a6e_55%,#0ea5e9_100%)] text-white shadow-[0_8px_20px_rgba(14,165,233,0.28)] ring-1 ring-white/25',
+    spark: '#0EA5E9',
+    sparkSoft: 'rgba(14,165,233,0.2)',
+    label: 'text-sky-700',
+    value: 'text-[#071d30]',
+    glow: 'group-hover:shadow-[0_18px_40px_rgba(14,165,233,0.14)]',
   },
   success: {
-    shell: 'border-bh-border bg-bh-surface hover:border-bh-success/40',
-    wash: 'from-bh-success-soft via-bh-success-soft/45 to-transparent',
-    icon: 'bg-bh-success-soft text-bh-success',
+    shell:
+      'border-emerald-200/80 bg-[linear-gradient(165deg,#ffffff_0%,#f3fbf6_48%,#e7f7ee_100%)] hover:border-bh-success/45',
+    orb: 'bg-[radial-gradient(circle_at_center,rgba(25,135,84,0.32)_0%,rgba(25,135,84,0)_68%)]',
+    bar: 'from-[#198754] via-[#34d399] to-transparent',
+    icon: 'bg-[linear-gradient(145deg,#0b2a1a_0%,#146c43_55%,#198754_100%)] text-white shadow-[0_8px_20px_rgba(25,135,84,0.28)] ring-1 ring-white/25',
     spark: '#198754',
-    value: 'text-bh-text',
+    sparkSoft: 'rgba(25,135,84,0.2)',
+    label: 'text-bh-success',
+    value: 'text-[#071d30]',
+    glow: 'group-hover:shadow-[0_18px_40px_rgba(25,135,84,0.14)]',
   },
 } as const;
 
-function Sparkline({ values, color }: { values: number[]; color: string }) {
-  const w = 88;
-  const h = 32;
+function Sparkline({
+  values,
+  color,
+  soft,
+  id,
+}: {
+  values: number[];
+  color: string;
+  soft: string;
+  id: string;
+}) {
+  const w = 96;
+  const h = 36;
   const max = Math.max(1, ...values);
   const min = Math.min(0, ...values);
   const range = Math.max(1, max - min);
   const pts = values.map((v, i) => {
     const x = values.length <= 1 ? w / 2 : (i / (values.length - 1)) * w;
-    const y = h - ((v - min) / range) * (h - 4) - 2;
+    const y = h - ((v - min) / range) * (h - 6) - 3;
     return `${x},${y}`;
   });
   const line = pts.join(' ');
   const area = `0,${h} ${line} ${w},${h}`;
+  const gradId = `kpi-spark-${id}`;
 
   return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      className="h-8 w-[88px]"
-      aria-hidden
-    >
-      <polygon points={area} fill={color} opacity="0.18" />
+    <svg viewBox={`0 0 ${w} ${h}`} className="h-9 w-24" aria-hidden>
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="55%" stopColor={color} stopOpacity="1" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.55" />
+        </linearGradient>
+      </defs>
+      <polygon points={area} fill={soft} />
       <polyline
         points={line}
         fill="none"
-        stroke={color}
-        strokeWidth="2"
+        stroke={`url(#${gradId})`}
+        strokeWidth="2.25"
         strokeLinecap="round"
         strokeLinejoin="round"
+        className="transition-[stroke-width] duration-300 group-hover:[stroke-width:2.6]"
       />
+      {pts.length ? (
+        <circle
+          cx={Number(pts[pts.length - 1]!.split(',')[0])}
+          cy={Number(pts[pts.length - 1]!.split(',')[1])}
+          r="2.6"
+          fill={color}
+          className="opacity-80 transition-opacity duration-300 group-hover:opacity-100"
+        />
+      ) : null}
     </svg>
   );
 }
@@ -125,55 +184,96 @@ export function KpiCard({
 }) {
   const theme = TINTS[tint];
   const sparkValues = series && series.length > 0 ? series : null;
+  const sparkId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   return (
     <Link
       href={href}
       className={cn(
-        'group relative block overflow-hidden rounded-2xl border p-5 shadow-[0_4px_16px_rgba(7,29,48,0.04)] transition-[border-color,box-shadow,transform]',
-        'hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(7,29,48,0.08)] focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:hover:translate-y-0',
+        'group relative block overflow-hidden rounded-[1.35rem] border p-5 shadow-[0_6px_20px_rgba(7,29,48,0.05)] transition-[border-color,box-shadow,transform] duration-300',
+        'hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-bh-teal focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
         theme.shell,
-        highlight && 'ring-1 ring-bh-warning/35',
+        theme.glow,
+        highlight && 'ring-1 ring-bh-warning/40',
       )}
     >
       <div
         className={cn(
-          'pointer-events-none absolute inset-0 bg-gradient-to-br',
-          theme.wash,
+          'pointer-events-none absolute -right-10 -top-12 h-36 w-36 rounded-full blur-2xl transition-opacity duration-500 opacity-70 group-hover:opacity-100',
+          theme.orb,
         )}
         aria-hidden
       />
+      <div
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r',
+          theme.bar,
+        )}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.035] [background-image:linear-gradient(rgba(7,29,48,0.9)_1px,transparent_1px),linear-gradient(90deg,rgba(7,29,48,0.9)_1px,transparent_1px)] [background-size:18px_18px]"
+        aria-hidden
+      />
+
       <div className="relative flex items-start justify-between gap-3">
         <span
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-[1.04] motion-reduce:group-hover:scale-100',
             theme.icon,
           )}
         >
           <Icon className="h-5 w-5" aria-hidden />
         </span>
-        {sparkValues ? (
-          <Sparkline values={sparkValues} color={theme.spark} />
-        ) : null}
+        <div className="flex flex-col items-end gap-2">
+          {sparkValues ? (
+            <Sparkline
+              values={sparkValues}
+              color={theme.spark}
+              soft={theme.sparkSoft}
+              id={sparkId}
+            />
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted backdrop-blur-sm">
+              Live
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-bh-teal opacity-40 motion-reduce:animate-none" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-bh-teal" />
+              </span>
+            </span>
+          )}
+          <ArrowRight
+            className="h-4 w-4 text-bh-text-muted opacity-0 transition-all duration-300 group-hover:translate-x-0.5 group-hover:opacity-100 motion-reduce:transition-none"
+            aria-hidden
+          />
+        </div>
       </div>
-      <div className="relative mt-4 space-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">
+
+      <div className="relative mt-5 space-y-1.5">
+        <p
+          className={cn(
+            'text-[11px] font-semibold uppercase tracking-[0.14em]',
+            theme.label,
+          )}
+        >
           {label}
         </p>
         <p
           className={cn(
-            'bh-tabular text-[32px] font-bold leading-none tracking-tight',
+            'bh-tabular text-[2.15rem] font-extrabold leading-none tracking-[-0.04em]',
             theme.value,
           )}
         >
           {value}
         </p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 pt-0.5">
           {trendPercent != null && Number.isFinite(trendPercent) ? (
             <span
               className={cn(
-                'bh-tabular text-xs font-bold',
-                trendPercent >= 0 ? 'text-bh-success' : 'text-bh-danger',
+                'bh-tabular inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 ring-inset',
+                trendPercent >= 0
+                  ? 'bg-bh-success-soft text-bh-success ring-bh-success/20'
+                  : 'bg-bh-danger-soft text-bh-danger ring-bh-danger/20',
               )}
             >
               {trendPercent >= 0 ? '+' : ''}
@@ -181,7 +281,9 @@ export function KpiCard({
             </span>
           ) : null}
           {supporting ? (
-            <p className="text-sm leading-5 text-bh-text-secondary">{supporting}</p>
+            <p className="text-sm leading-5 text-bh-text-secondary">
+              {supporting}
+            </p>
           ) : null}
         </div>
       </div>

@@ -82,7 +82,6 @@ export default async function OrgLayout({
       capabilities={ctx.capabilities}
       userLabel={userLabel}
       userEmail={ctx.user.email}
-      canCreateShift={ctx.capabilities.canManageShifts}
     >
       {children}
     </OrganizationShell>

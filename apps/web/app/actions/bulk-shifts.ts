@@ -56,6 +56,12 @@ const bulkShiftRowSchema = z.object({
   acceptanceDeadline: z.string().datetime({ offset: true }).nullable().optional(),
   title: z.string().max(200).nullable().optional(),
   notes: z.string().max(4000).nullable().optional(),
+  requiredPositions: z
+    .number()
+    .int()
+    .min(1)
+    .max(100)
+    .default(1),
   requirements: z
     .array(
       z.object({
@@ -190,6 +196,7 @@ export async function createShiftsBatchAction(
       acceptanceDeadline: row.acceptanceDeadline ?? null,
       title: row.title ?? undefined,
       notes: row.notes ?? undefined,
+      requiredPositions: row.requiredPositions ?? 1,
       requirements: row.requirements?.map((r) => ({
         requirementType: r.requirementType as never,
         required: r.required,
@@ -231,6 +238,7 @@ export async function createShiftsBatchAction(
       currency: draft.data.currency,
       breakMinutes: draft.data.breakMinutes,
       title: draft.data.title,
+      requiredPositions: draft.data.requiredPositions,
     });
   }
 
@@ -285,6 +293,7 @@ export async function createShiftsBatchAction(
     acceptance_deadline: row.acceptanceDeadline ?? null,
     title: row.title ?? null,
     notes: row.notes ?? null,
+    required_positions: row.requiredPositions ?? 1,
     requirements: (row.requirements ?? []).map((r) => ({
       requirement_type: r.requirementType,
       required: r.required,

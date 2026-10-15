@@ -252,13 +252,22 @@ describe('organization branding helpers', () => {
           ends_at: '2026-09-21T16:00:00.000Z',
           rate_minor: null,
         },
+        {
+          status: 'published',
+          starts_at: '2026-09-22T08:00:00.000Z',
+          ends_at: '2026-09-22T16:00:00.000Z',
+          rate_minor: 2500,
+          break_minutes: 0,
+          required_positions: 2,
+        },
       ],
       now,
       30,
     );
-    expect(gross.counted).toBe(1);
+    expect(gross.counted).toBe(2);
     expect(gross.skipped).toBe(1);
-    expect(gross.amountMinor).toBe(8000);
+    // 8h×€10 + 2 positions×8h×€25 = 8000 + 40000
+    expect(gross.amountMinor).toBe(48000);
     expect(JSON.stringify(gross).toLowerCase()).not.toContain('revenue');
 
     expect(

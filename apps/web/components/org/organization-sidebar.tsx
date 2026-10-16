@@ -72,23 +72,24 @@ export function OrganizationSidebar({
         className,
       )}
     >
-      {/* Matches OrganizationTopbar: h-16 / sm:h-[68px] + shared bottom edge */}
-      <div className="relative flex h-16 shrink-0 items-center overflow-hidden border-b border-white/10 px-5 sm:h-[68px]">
+      {/* Matches OrganizationTopbar height + shared bottom edge */}
+      <div className="relative flex h-[76px] shrink-0 items-center overflow-hidden border-b border-white/10 px-4 sm:h-[80px] sm:px-5">
         <div
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,rgba(20,169,181,0.12)_0%,transparent_45%,rgba(228,179,52,0.1)_100%)]"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,rgba(20,169,181,0.14)_0%,transparent_45%,rgba(228,179,52,0.12)_100%)]"
           aria-hidden
         />
-        <div className="relative flex min-w-0 items-center gap-3">
+        <div className="relative flex min-w-0 items-center gap-3.5">
           <BridgeHiveMark
-            size={36}
-            className="h-9 w-9 shrink-0 rounded-xl shadow-[0_6px_14px_rgba(0,0,0,0.28)] ring-1 ring-white/15"
+            size={52}
+            priority
+            className="h-[52px] w-[52px] shrink-0 rounded-2xl shadow-[0_10px_22px_rgba(0,0,0,0.35)] ring-1 ring-white/20"
           />
           <div className="min-w-0">
-            <p className="text-[13px] font-bold leading-none tracking-tight">
+            <p className="text-[17px] font-extrabold leading-none tracking-[-0.03em]">
               <span className="text-white">Bridge</span>{' '}
               <span className="text-bh-honey">Hive</span>
             </p>
-            <p className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-sidebar-muted">
+            <p className="mt-1.5 truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-sidebar-muted">
               Organization workspace
             </p>
           </div>
@@ -102,11 +103,17 @@ export function OrganizationSidebar({
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-5" aria-label="Organization">
         {groups.map((group) => (
-          <div key={group} className="mb-5">
-            <p className="mb-2.5 px-3 text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-sidebar-muted">
-              {ORG_NAV_GROUP_LABELS[group]}
-            </p>
-            <ul className="space-y-1">
+          <div key={group} className="mb-6">
+            <div className="mb-2.5 flex items-center gap-2.5 px-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-bh-sidebar-muted">
+                {ORG_NAV_GROUP_LABELS[group]}
+              </p>
+              <span
+                aria-hidden
+                className="h-px flex-1 bg-[linear-gradient(90deg,rgba(22,166,182,0.45),rgba(228,179,52,0.2),transparent)]"
+              />
+            </div>
+            <ul className="space-y-1.5">
               {items
                 .filter((item) => item.group === group)
                 .map((item) => {
@@ -120,23 +127,65 @@ export function OrganizationSidebar({
                         aria-current={active ? 'page' : undefined}
                         onClick={onNavigate}
                         className={cn(
-                          'group flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold tracking-tight transition-[color,background-color,box-shadow]',
+                          'group relative flex min-h-12 items-center gap-3 overflow-hidden rounded-2xl px-2.5 py-2.5 text-[15px] font-semibold tracking-tight',
+                          'border transition-all duration-300 ease-out',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/70',
+                          'motion-reduce:transition-none',
                           active
-                            ? 'bg-bh-accent-blue text-white shadow-[0_8px_18px_rgba(37,99,235,0.35)]'
-                            : 'text-bh-sidebar-muted hover:bg-bh-sidebar-hover hover:text-bh-sidebar-text',
+                            ? 'border-bh-teal/35 bg-[linear-gradient(125deg,rgba(22,166,182,0.28)_0%,rgba(10,37,56,0.95)_48%,rgba(228,179,52,0.12)_100%)] text-white shadow-[0_12px_28px_rgba(22,166,182,0.22),inset_0_1px_0_rgba(255,255,255,0.12)]'
+                            : 'border-transparent text-bh-sidebar-muted hover:translate-x-0.5 hover:border-white/10 hover:bg-white/[0.05] hover:text-bh-sidebar-text hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] motion-reduce:hover:translate-x-0',
                         )}
                       >
+                        {active ? (
+                          <>
+                            <span
+                              aria-hidden
+                              className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-[linear-gradient(180deg,#16a6b6_0%,#e0aa18_100%)] shadow-[0_0_12px_rgba(22,166,182,0.65)]"
+                            />
+                            <span
+                              aria-hidden
+                              className="bh-gradient-sheen pointer-events-none absolute inset-0 opacity-40 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.12)_48%,transparent_72%)]"
+                            />
+                          </>
+                        ) : (
+                          <span
+                            aria-hidden
+                            className="absolute inset-y-2.5 left-0 w-[2px] scale-y-0 rounded-full bg-bh-teal/70 opacity-0 transition-all duration-300 group-hover:scale-y-100 group-hover:opacity-100"
+                          />
+                        )}
+
                         <span
                           className={cn(
-                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors',
+                            'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
                             active
-                              ? 'bg-white/15 text-white'
-                              : 'bg-white/5 text-bh-sidebar-muted group-hover:bg-white/10 group-hover:text-bh-sidebar-text',
+                              ? 'bg-[linear-gradient(145deg,rgba(22,166,182,0.55)_0%,rgba(7,29,48,0.9)_55%,rgba(228,179,52,0.35)_130%)] text-white shadow-[0_8px_16px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.2)] ring-1 ring-white/20'
+                              : 'bg-white/[0.04] text-bh-sidebar-muted ring-1 ring-white/8 group-hover:bg-white/[0.08] group-hover:text-bh-teal group-hover:ring-bh-teal/30',
                           )}
                         >
-                          <Icon className="h-[18px] w-[18px]" aria-hidden />
+                          <Icon
+                            className={cn(
+                              'h-[18px] w-[18px] transition-transform duration-300',
+                              active
+                                ? 'scale-105'
+                                : 'group-hover:scale-110 motion-reduce:group-hover:scale-100',
+                            )}
+                            aria-hidden
+                          />
                         </span>
-                        {item.label}
+
+                        <span className="relative min-w-0 flex-1 truncate">
+                          {item.label}
+                        </span>
+
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'relative h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-300',
+                            active
+                              ? 'bg-bh-honey shadow-[0_0_10px_rgba(224,170,24,0.85)]'
+                              : 'bg-transparent group-hover:bg-bh-teal/70',
+                          )}
+                        />
                       </Link>
                     </li>
                   );

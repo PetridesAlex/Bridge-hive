@@ -1,17 +1,15 @@
+import { formatMoneyMinor } from '@bridge-hive/domain';
 import {
-  ORG_PAYMENT_INSTRUCTIONS_UNAVAILABLE,
-  ORG_PAYS_WORKER_GROSS_COPY,
-  formatMoneyMinor,
-} from '@bridge-hive/domain';
-import {
+  ArrowRight,
   ArrowUpRight,
   Banknote,
   BellRing,
   CalendarClock,
+  CheckCircle2,
   ClipboardList,
   FileText,
-  ShieldCheck,
-  Sparkles,
+  Landmark,
+  UserRound,
   Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -27,7 +25,7 @@ import {
 import { PageHeader } from '@/components/org/page-header';
 import { Badge } from '@/components/ui/badge';
 import { requireOrgMembership } from '@/lib/auth';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, roleLabel } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
 
@@ -109,6 +107,12 @@ export default async function WorkerPaymentsPage({
       due_at,
       assignment:shift_assignments!inner(
         id,
+        worker_id,
+        worker:worker_profiles!shift_assignments_worker_id_fkey(
+          user_id,
+          worker_role,
+          profile:profiles!worker_profiles_user_id_fkey(full_name)
+        ),
         shift:shifts!inner(id, title, starts_at, organization_id)
       )
     `,
@@ -336,76 +340,116 @@ export default async function WorkerPaymentsPage({
         </div>
       </section>
 
-      <section className="bh-fade-up-delay-2 overflow-hidden rounded-[1.35rem] border border-bh-border bg-bh-surface shadow-[0_10px_36px_rgba(7,29,48,0.05)]">
-        <div className="h-1 bg-gradient-to-r from-bh-sidebar via-bh-teal to-bh-honey" />
-        <div className="grid gap-0 lg:grid-cols-[1.2fr_1fr]">
-          <div className="border-b border-bh-border p-5 sm:p-6 lg:border-b-0 lg:border-r">
+      <section className="bh-fade-up-delay-2 overflow-hidden rounded-[1.35rem] border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.04)]">
+        <div className="flex flex-col gap-1 border-b border-bh-border px-5 py-4 sm:flex-row sm:items-end sm:justify-between sm:px-6">
+          <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
-              Payment model
+              Settlement
             </p>
-            <h2 className="mt-2 text-lg font-semibold tracking-tight text-bh-text">
-              How settlement works
+            <h2 className="mt-1 text-lg font-semibold tracking-tight text-bh-text">
+              How to pay workers
             </h2>
-            <ol className="mt-5 space-y-4">
-              {[
-                {
-                  step: '01',
-                  icon: ShieldCheck,
-                  title: 'Organization pays worker gross',
-                  body: ORG_PAYS_WORKER_GROSS_COPY,
-                },
-                {
-                  step: '02',
-                  icon: Sparkles,
-                  title: 'Commission stays with the worker',
-                  body: 'Bridge Hive invoices the worker for platform commission. That amount is not an organization expense in this workflow.',
-                },
-              ].map((item) => (
-                <li key={item.step} className="flex gap-3.5">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-teal-soft text-bh-teal-strong ring-1 ring-bh-teal/15">
-                    <item.icon className="h-4 w-4" aria-hidden />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
-                      {item.step}
-                    </p>
-                    <p className="mt-0.5 text-sm font-semibold text-bh-text">{item.title}</p>
-                    <p className="mt-1 text-sm leading-6 text-bh-text-secondary">{item.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
           </div>
-
-          <aside className="relative overflow-hidden bg-[linear-gradient(160deg,#f4f8fb_0%,#eef5fb_55%,#f7fbfc_100%)] p-5 sm:p-6">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-bh-teal/10 blur-2xl"
-            />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-text-muted">
-              Workspace note
-            </p>
-            <h3 className="mt-2 text-base font-semibold tracking-tight text-bh-text">
-              Settlement details
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-bh-text-secondary">
-              {ORG_PAYMENT_INSTRUCTIONS_UNAVAILABLE}
-            </p>
-            <p className="mt-4 rounded-xl border border-bh-border/80 bg-bh-surface/80 px-3.5 py-3 text-xs leading-5 text-bh-text-muted shadow-sm backdrop-blur-sm">
-              Use this page to track approved obligations and open the related shift
-              for timesheet context while you settle outside Bridge Hive.
-            </p>
-          </aside>
+          <p className="max-w-xl text-sm text-bh-text-secondary">
+            You pay the approved gross directly. Bridge Hive commission is billed to the
+            worker separately.
+          </p>
         </div>
+        <ol className="grid gap-0 sm:grid-cols-3">
+          {[
+            {
+              step: '1',
+              title: 'Approve hours',
+              body: 'Review completed timesheets for the shift.',
+              icon: CheckCircle2,
+            },
+            {
+              step: '2',
+              title: 'Open the obligation',
+              body: 'See the worker name, amount due, and bank details.',
+              icon: UserRound,
+            },
+            {
+              step: '3',
+              title: 'Transfer gross pay',
+              body: 'Send the approved amount to the worker’s IBAN.',
+              icon: Landmark,
+            },
+          ].map((item, index) => (
+            <li
+              key={item.step}
+              className={cn(
+                'relative flex gap-3.5 p-5 sm:p-6',
+                index < 2 && 'border-b border-bh-border sm:border-b-0 sm:border-r',
+              )}
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#071d30] text-sm font-bold text-white shadow-sm">
+                {item.step}
+              </span>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-sm font-semibold text-bh-text">
+                  <item.icon className="h-4 w-4 text-bh-teal-strong" aria-hidden />
+                  {item.title}
+                </p>
+                <p className="mt-1.5 text-sm leading-6 text-bh-text-secondary">{item.body}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
       </section>
 
       {!rows.length ? (
-        <div className="bh-fade-up-delay-3">
-          <EmptyState
-            title="No worker payment records yet"
-            description="Approved timesheets create gross payment obligations visible here."
-          />
-        </div>
+        <section className="bh-fade-up-delay-3 overflow-hidden rounded-[1.35rem] border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.04)]">
+          <div className="flex flex-wrap items-end justify-between gap-3 border-b border-bh-border px-5 py-4 sm:px-6">
+            <div>
+              <h2 className="text-[17px] font-semibold tracking-tight text-bh-text">
+                Payment obligations
+              </h2>
+              <p className="mt-1 text-sm text-bh-text-secondary">
+                Worker pay records appear here after you approve completed hours.
+              </p>
+            </div>
+          </div>
+
+          <div className="hidden border-b border-bh-border bg-[#f7fafc] px-5 py-3 sm:block sm:px-6">
+            <div className="grid grid-cols-[1.4fr_1.2fr_1fr_1fr_auto] gap-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+              <span>Shift</span>
+              <span>Worker</span>
+              <span>Due</span>
+              <span>Gross due</span>
+              <span className="text-right">Action</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center px-6 py-14 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#071d30_0%,#16a6b6_100%)] text-white shadow-[0_12px_28px_rgba(7,29,48,0.2)]">
+              <Wallet className="h-6 w-6" aria-hidden />
+            </span>
+            <h3 className="mt-5 text-lg font-semibold tracking-tight text-bh-text">
+              No payment obligations yet
+            </h3>
+            <p className="mt-2 max-w-md text-sm leading-6 text-bh-text-secondary">
+              Approve a worker’s completed hours to create a row with their name, amount
+              owed, and bank details for direct transfer.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs font-medium text-bh-text-muted">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-border bg-bh-subtle px-3 py-1.5">
+                <UserRound className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                Worker profile
+              </span>
+              <ArrowRight className="h-3.5 w-3.5 text-bh-text-muted" aria-hidden />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-border bg-bh-subtle px-3 py-1.5">
+                <Banknote className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                Gross amount
+              </span>
+              <ArrowRight className="h-3.5 w-3.5 text-bh-text-muted" aria-hidden />
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-border bg-bh-subtle px-3 py-1.5">
+                <Landmark className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                IBAN details
+              </span>
+            </div>
+          </div>
+        </section>
       ) : (
         <section className="bh-fade-up-delay-3 space-y-3">
           <div className="flex flex-wrap items-end justify-between gap-2">
@@ -414,8 +458,7 @@ export default async function WorkerPaymentsPage({
                 Payment obligations
               </h2>
               <p className="mt-1 text-sm text-bh-text-secondary">
-                Sorted by due date. Open a shift to review the related timesheet and
-                assignment.
+                Open a row to view the worker, amount, and IBAN for transfer.
               </p>
             </div>
             <p className="inline-flex items-center gap-2 rounded-full border border-bh-border bg-bh-surface px-3 py-1 text-xs font-medium text-bh-text-muted shadow-sm">
@@ -431,6 +474,7 @@ export default async function WorkerPaymentsPage({
                 <thead className={orgTableHeadClassName}>
                   <tr>
                     <OrgTableHeadCell icon={ClipboardList} label="Shift" />
+                    <OrgTableHeadCell icon={UserRound} label="Worker" />
                     <OrgTableHeadCell icon={CalendarClock} label="Due" />
                     <OrgTableHeadCell icon={Banknote} label="Gross due" />
                     <th className="px-4 py-3.5">Status</th>
@@ -449,22 +493,51 @@ export default async function WorkerPaymentsPage({
                         ? assignment.shift[0]
                         : assignment.shift
                       : null;
+                    const workerRaw =
+                      assignment &&
+                      typeof assignment === 'object' &&
+                      'worker' in assignment
+                        ? (assignment as { worker: unknown }).worker
+                        : null;
+                    const worker = Array.isArray(workerRaw) ? workerRaw[0] : workerRaw;
+                    const profileRaw =
+                      worker && typeof worker === 'object' && 'profile' in worker
+                        ? (worker as { profile: unknown }).profile
+                        : null;
+                    const profile = Array.isArray(profileRaw)
+                      ? profileRaw[0]
+                      : profileRaw;
+                    const workerName =
+                      profile &&
+                      typeof profile === 'object' &&
+                      'full_name' in profile &&
+                      typeof (profile as { full_name: unknown }).full_name === 'string'
+                        ? (profile as { full_name: string }).full_name
+                        : 'Assigned worker';
+                    const workerRole =
+                      worker &&
+                      typeof worker === 'object' &&
+                      'worker_role' in worker &&
+                      (worker as { worker_role: unknown }).worker_role
+                        ? roleLabel(
+                            String((worker as { worker_role: string }).worker_role),
+                          )
+                        : null;
                     const shiftObj = shift as {
                       id: string;
                       title: string | null;
                       starts_at: string;
                     } | null;
-                    const initial = (
-                      (shiftObj?.title || 'P').trim()[0] ?? 'P'
-                    ).toUpperCase();
+                    const initial = (workerName.trim()[0] ?? 'W').toUpperCase();
                     const tone = dueTone(payout.due_at, payout.status, now);
                     const amount =
                       payout.organization_total_due_minor ?? payout.gross_amount_minor;
+                    const detailHref = `/org/${slug}/payments/${payout.id}`;
 
                     return (
                       <tr key={payout.id} className={orgTableRowClassName}>
                         <td className="px-4 py-4">
-                          <div className="flex items-center gap-3">
+                          <Link href={detailHref} className="flex items-center gap-3 group">
                             <span
                               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-sm font-semibold text-bh-teal-strong ring-1 ring-bh-teal/15"
                               aria-hidden
@@ -472,7 +545,7 @@ export default async function WorkerPaymentsPage({
                               {initial}
                             </span>
                             <div className="min-w-0">
-                              <p className="truncate font-semibold text-bh-text">
+                              <p className="truncate font-semibold text-bh-text group-hover:text-bh-teal-strong">
                                 {shiftObj?.title || 'Shift'}
                               </p>
                               <p className="mt-0.5 text-xs text-bh-text-muted">
@@ -480,7 +553,17 @@ export default async function WorkerPaymentsPage({
                                 {shiftObj ? formatDateTime(shiftObj.starts_at) : '—'}
                               </p>
                             </div>
-                          </div>
+                          </Link>
+                        </td>
+                        <td className="px-4 py-4">
+                          <Link href={detailHref} className="block min-w-0">
+                            <p className="truncate font-medium text-bh-text">{workerName}</p>
+                            {workerRole ? (
+                              <p className="mt-0.5 text-xs text-bh-text-muted">
+                                {workerRole}
+                              </p>
+                            ) : null}
+                          </Link>
                         </td>
                         <td className="px-4 py-4">
                           {payout.due_at ? (
@@ -510,17 +593,13 @@ export default async function WorkerPaymentsPage({
                           </Badge>
                         </td>
                         <td className="px-4 py-4 text-right">
-                          {shiftObj ? (
-                            <Link
-                              href={`/org/${slug}/shifts/${shiftObj.id}`}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-bh-border bg-bh-surface px-3 py-1.5 text-sm font-medium text-bh-text transition-all hover:-translate-y-0.5 hover:border-bh-teal hover:bg-bh-teal-soft hover:text-bh-teal-strong hover:shadow-sm motion-reduce:hover:translate-y-0"
-                            >
-                              View shift
-                              <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-                            </Link>
-                          ) : (
-                            '—'
-                          )}
+                          <Link
+                            href={detailHref}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-bh-teal/30 bg-bh-teal-soft px-3 py-1.5 text-sm font-medium text-bh-teal-strong transition-all hover:-translate-y-0.5 hover:border-bh-teal hover:shadow-sm motion-reduce:hover:translate-y-0"
+                          >
+                            Payment details
+                            <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                          </Link>
                         </td>
                       </tr>
                     );

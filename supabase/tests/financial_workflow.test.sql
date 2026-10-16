@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(10);
+select plan(11);
 
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -127,7 +127,16 @@ select is(
     where worker_id = 'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa'
   ),
   'CY••••7600',
-  'only masked IBAN is persisted'
+  'masked IBAN is persisted for display'
+);
+
+select ok(
+  (
+    select iban_ciphertext is not null
+    from public.payout_accounts
+    where worker_id = 'aaaaaaaa-1111-1111-1111-aaaaaaaaaaaa'
+  ),
+  'full IBAN ciphertext is persisted for vault reveal'
 );
 
 select ok(

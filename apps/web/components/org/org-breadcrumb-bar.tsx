@@ -23,6 +23,9 @@ function breadcrumbsForPath(slug: string, pathname: string, orgName: string) {
     crumbs.push({ label: 'Shifts' });
   } else if (pathname.includes('/timesheets')) {
     crumbs.push({ label: 'Timesheets' });
+  } else if (/\/payments\/[^/]+$/.test(pathname)) {
+    crumbs.push({ label: 'Worker payments', href: `${base}/payments` });
+    crumbs.push({ label: 'Payment details' });
   } else if (pathname.includes('/payments')) {
     crumbs.push({ label: 'Worker payments' });
   } else if (/\/locations\/[^/]+$/.test(pathname)) {
@@ -47,5 +50,10 @@ export function OrgBreadcrumbBar({
   orgName: string;
 }) {
   const pathname = usePathname();
-  return <Breadcrumbs items={breadcrumbsForPath(slug, pathname, orgName)} />;
+  return (
+    <Breadcrumbs
+      variant="premium"
+      items={breadcrumbsForPath(slug, pathname, orgName)}
+    />
+  );
 }

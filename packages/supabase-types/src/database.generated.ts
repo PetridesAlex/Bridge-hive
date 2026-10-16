@@ -905,6 +905,7 @@ export type Database = {
           created_at: string
           currency: string
           external_account_id: string | null
+          iban_ciphertext: string | null
           id: string
           last_verified_at: string | null
           masked_iban: string
@@ -923,6 +924,7 @@ export type Database = {
           created_at?: string
           currency?: string
           external_account_id?: string | null
+          iban_ciphertext?: string | null
           id?: string
           last_verified_at?: string | null
           masked_iban: string
@@ -941,6 +943,7 @@ export type Database = {
           created_at?: string
           currency?: string
           external_account_id?: string | null
+          iban_ciphertext?: string | null
           id?: string
           last_verified_at?: string | null
           masked_iban?: string
@@ -3260,6 +3263,27 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_org_payout_transfer_details: {
+        Args: { p_payout_id: string }
+        Returns: {
+          account_holder_name: string | null
+          assignment_id: string
+          currency: string
+          due_at: string
+          full_iban: string
+          gross_amount_minor: number
+          masked_iban: string
+          organization_id: string
+          organization_total_due_minor: number
+          payout_id: string
+          payout_status: string
+          shift_id: string | null
+          shift_title: string | null
+          worker_full_name: string
+          worker_id: string
+          worker_role: string | null
+        }[]
+      }
       submit_payout_account: {
         Args: {
           p_account_holder_name: string
@@ -3275,6 +3299,7 @@ export type Database = {
           created_at: string
           currency: string
           external_account_id: string | null
+          iban_ciphertext: string | null
           id: string
           last_verified_at: string | null
           masked_iban: string

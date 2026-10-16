@@ -356,8 +356,12 @@ export function orgLifecycleBannerTone(
 export const ORG_PAYS_WORKER_GROSS_COPY =
   'Your organization pays the worker’s approved gross shift amount directly. Bridge Hive invoices the worker separately for the platform commission.';
 
-export const ORG_PAYMENT_INSTRUCTIONS_UNAVAILABLE =
-  'Payment instructions and bank-account details are not available in this workspace.';
+/** Org pays workers directly; open an obligation to view transfer details. */
+export const ORG_DIRECT_WORKER_TRANSFER_COPY =
+  'After you approve completed hours, open a payment obligation to view the worker’s bank details and transfer the approved gross directly. Bridge Hive never collects or moves worker wages.';
+
+/** @deprecated Use ORG_DIRECT_WORKER_TRANSFER_COPY — kept for older test imports. */
+export const ORG_PAYMENT_INSTRUCTIONS_UNAVAILABLE = ORG_DIRECT_WORKER_TRANSFER_COPY;
 
 export function truncateWorkerId(workerId: string | null | undefined): string {
   if (!workerId) return '—';

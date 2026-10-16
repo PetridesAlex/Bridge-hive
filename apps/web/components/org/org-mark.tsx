@@ -13,25 +13,29 @@ export function OrgMark({
 }: {
   displayName: string;
   logoUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg' | 'display';
+  size?: 'sm' | 'md' | 'lg' | 'display' | 'hero';
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
   const initials = organizationInitials(displayName);
   const dims =
-    size === 'display'
-      ? 'h-14 w-14 text-base'
-      : size === 'lg'
-        ? 'h-20 w-20 text-xl'
-        : size === 'sm'
-          ? 'h-9 w-9 text-xs'
-          : 'h-10 w-10 text-sm';
+    size === 'hero'
+      ? 'h-[4.5rem] w-[4.5rem] text-xl'
+      : size === 'display'
+        ? 'h-14 w-14 text-base'
+        : size === 'lg'
+          ? 'h-20 w-20 text-xl'
+          : size === 'sm'
+            ? 'h-9 w-9 text-xs'
+            : 'h-10 w-10 text-sm';
+  const radius = size === 'hero' ? 'rounded-[1.15rem]' : 'rounded-2xl';
 
   if (logoUrl && !failed) {
     return (
       <span
         className={cn(
-          'relative inline-flex shrink-0 overflow-hidden rounded-2xl bg-bh-subtle ring-1 ring-bh-border',
+          'relative inline-flex shrink-0 overflow-hidden bg-bh-subtle ring-1 ring-bh-border',
+          radius,
           dims,
           className,
         )}
@@ -51,7 +55,8 @@ export function OrgMark({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-2xl bg-bh-teal/20 font-semibold text-bh-teal-strong',
+        'inline-flex shrink-0 items-center justify-center bg-bh-teal/20 font-semibold text-bh-teal-strong',
+        radius,
         dims,
         className,
       )}

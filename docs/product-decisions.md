@@ -63,18 +63,16 @@ Capture launch-critical choices before production finance go-live.
 
 ## Payout account storage (LOCKED)
 
-- **Pilot storage:** Masked IBAN only (`masked_iban`, e.g. `CY••••6789`) after server-side IBAN checksum validation
-- **Do not** store raw full IBAN in application tables for MVP (no vault / encryption claimed)
-- **Masked-only storage cannot support production bank transfers** — Phase 5 vault/tokenization is required before org payment instructions or IBAN reveal
-- Private **payout-proof** document (`payout-proofs` bucket) supports local administrative review only
+- **Storage:** After server-side IBAN checksum validation, persist `masked_iban` (e.g. `CY••••6789`) **and** encrypted full IBAN (`iban_ciphertext` via pgcrypto + private vault-style key). Never store plaintext full IBAN in application tables.
+- Private **payout-proof** document (`payout-proofs` bucket) supports local administrative review only — **not** exposed to organizations
 - Account holder name may be stored for admin matching against proof; never placed in audit/notification metadata
 - Provider field defaults to `manual_bank`
 - Account statuses: `pending` → `verified` / `rejected` / `failed` / `suspended` / `expired`
-- Phase 4: only `platform_super_admin` may view proof / approve/reject via `verify_payout_account` (internal approval for platform use — not bank ownership proof)
+- Only `platform_super_admin` may view proof / approve/reject via `verify_payout_account` (internal approval for platform use — not bank ownership proof)
 - Worker discovers payout setup from **Account Setup** (`/auth/worker/pending`) or verified **Profile → Payout account** only — never by typing a URL
-- Org Phase 4: Financial snapshot shows amounts + payout-approved Yes/No where applicable; **no full IBAN, masked IBAN, proof, or credentials** to organizations; bank transfer / IBAN reveal unavailable until secure payment setup
-- Provider-backed bank ownership verification / full IBAN vault remain deferred (Phase 5)
-- **Production bank transfers remain blocked** until secure IBAN vault/tokenization and access controls exist
+- **Org reveal (after approved timesheet creates a `payouts` row):** `org_admin` / `org_billing` may call `get_org_payout_transfer_details` to view holder name + full IBAN for direct org→worker bank transfer. Reveal is RPC-only (no table SELECT of ciphertext). Audited as `org_view_payout_transfer_details` without IBAN/holder in metadata.
+- Organizations never see payout-proof documents
+- Provider-backed bank ownership verification remains deferred
 - Audit and notification metadata must not include IBAN, masked IBAN, account holder name, proof paths, or signed URLs
 
 ## Payout timing / pilot payment model (LOCKED)
@@ -122,6 +120,6 @@ Multi-slot shifts, shift swapping, ratings, in-app chat, route tracking, advance
 | Workforce classification | Product + legal | Draft (marketplace) |
 | Commission payer | Product + finance | **LOCKED: worker (Phase 6)** |
 | Commission rate bps | Product + finance | **LOCKED default 1700 (17%)** |
-| Payout account storage | Product + legal | **LOCKED: masked IBAN only** |
+| Payout account storage | Product + legal | **LOCKED: masked + encrypted full IBAN; org billing reveal after approved payout** |
 | Credential checklist | Ops / clinical lead | Draft |
 | Payout SLA (due days) | Finance / ops | Default 7 via `platform_settings` |

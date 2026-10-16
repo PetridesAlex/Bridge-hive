@@ -53,9 +53,53 @@ export function PageHeader({
 
 export function Breadcrumbs({
   items,
+  variant = 'default',
 }: {
   items: Array<{ label: string; href?: string }>;
+  variant?: 'default' | 'premium';
 }) {
+  if (variant === 'premium') {
+    return (
+      <nav aria-label="Breadcrumb" className="text-sm">
+        <ol className="flex flex-wrap items-center gap-2">
+          {items.map((item, index) => {
+            const last = index === items.length - 1;
+            return (
+              <li key={`${item.label}-${index}`} className="flex items-center gap-2">
+                {index > 0 ? (
+                  <span
+                    aria-hidden
+                    className="h-1 w-1 rounded-full bg-[linear-gradient(135deg,#16a6b6,#e0aa18)] shadow-[0_0_8px_rgba(22,166,182,0.45)]"
+                  />
+                ) : null}
+                {item.href && !last ? (
+                  <Link
+                    href={item.href}
+                    className="rounded-full border border-[#071d30]/8 bg-white/55 px-3 py-1 text-[13px] font-semibold text-[#3d5564] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 hover:-translate-y-0.5 hover:border-bh-teal/40 hover:bg-bh-teal-soft/80 hover:text-bh-teal-strong motion-reduce:hover:translate-y-0"
+                  >
+                    {item.label}
+                  </Link>
+                ) : (
+                  <span
+                    className={cn(
+                      'rounded-full px-3.5 py-1 text-[13px] font-bold tracking-tight',
+                      last
+                        ? 'border border-bh-teal/25 bg-[linear-gradient(120deg,#071d30_0%,#0e4a5c_55%,#16a6b6_120%)] text-white shadow-[0_8px_18px_rgba(7,29,48,0.18)]'
+                        : 'text-bh-text-muted',
+                    )}
+                    aria-current={last ? 'page' : undefined}
+                  >
+                    {item.label}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+    );
+  }
+
   return (
     <nav aria-label="Breadcrumb" className="text-sm text-bh-text-muted">
       <ol className="flex flex-wrap items-center gap-1.5">

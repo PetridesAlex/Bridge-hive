@@ -154,7 +154,9 @@ describe('org dashboard helpers', () => {
   it('keeps financial wording honest', () => {
     expect(ORG_PAYS_WORKER_GROSS_COPY).toMatch(/approved gross/i);
     expect(ORG_PAYS_WORKER_GROSS_COPY.toLowerCase()).not.toContain('bridge hive revenue');
-    expect(ORG_PAYMENT_INSTRUCTIONS_UNAVAILABLE.toLowerCase()).toContain('not available');
+    expect(ORG_PAYMENT_INSTRUCTIONS_UNAVAILABLE.toLowerCase()).toContain(
+      'transfer the approved gross',
+    );
     expect(truncateWorkerId('abcdefgh-ijkl-mnop')).toBe('abcdefgh…');
     expect(orgLifecycleBannerTone('rejected')).toBe('warning');
     expect(orgRoleExplanation('org_billing')).toMatch(/Billing/);

@@ -5,6 +5,7 @@ import {
   formatMoneyMinor,
 } from '@bridge-hive/domain';
 import {
+  ArrowUpRight,
   CalendarClock,
   ClipboardList,
   MapPin,
@@ -521,12 +522,21 @@ export default async function ShiftDetailPage({
                 'worker_role' in row.worker
                   ? roleLabel(String(row.worker.worker_role ?? 'worker'))
                   : 'Assigned worker';
-              return (
+                  return (
                 <div
                   key={row.id}
                   className="rounded-xl border border-bh-border/80 bg-bh-subtle/30 p-4"
                 >
-                  <p className="text-sm font-semibold text-bh-text">{workerLabel}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <p className="text-sm font-semibold text-bh-text">{workerLabel}</p>
+                    <Link
+                      href={`/org/${slug}/payments/${payout.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-bh-teal/30 bg-bh-teal-soft px-3 py-1.5 text-sm font-medium text-bh-teal-strong transition-colors hover:border-bh-teal"
+                    >
+                      Open payment details
+                      <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
+                    </Link>
+                  </div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <MetaTile
                       label="Approved gross pay"
@@ -557,8 +567,8 @@ export default async function ShiftDetailPage({
           <p className="mt-4 rounded-xl bg-bh-honey-soft/60 px-4 py-3 text-xs leading-5 text-bh-text-secondary">
             The organization pays each worker their approved gross amount directly.
             Bridge Hive commission is a separate worker invoice per completed position and
-            is not an organization expense. Payment instructions and bank-account details
-            remain unavailable in this workspace.
+            is not an organization expense. Open payment details to view the worker’s bank
+            account for direct transfer.
           </p>
         </DetailPanel>
       ) : null}

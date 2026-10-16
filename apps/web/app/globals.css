@@ -127,6 +127,50 @@ body {
   }
 }
 
+@keyframes bh-org-topbar-mesh {
+  0%,
+  100% {
+    background-position: 0% 40%, 100% 60%, 50% 0%;
+    opacity: 0.95;
+  }
+  50% {
+    background-position: 80% 20%, 10% 80%, 40% 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes bh-org-topbar-line {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.bh-org-topbar-mesh {
+  background-image:
+    radial-gradient(ellipse 55% 80% at 8% 50%, rgba(22, 166, 182, 0.22), transparent 62%),
+    radial-gradient(ellipse 50% 70% at 92% 40%, rgba(224, 170, 24, 0.18), transparent 60%),
+    radial-gradient(ellipse 40% 60% at 55% 120%, rgba(7, 29, 48, 0.08), transparent 55%);
+  background-size: 140% 140%, 140% 140%, 160% 160%;
+  animation: bh-org-topbar-mesh 10s ease-in-out infinite;
+}
+
+.bh-org-topbar-line {
+  background-image: linear-gradient(
+    90deg,
+    #071d30 0%,
+    #16a6b6 35%,
+    #e0aa18 65%,
+    #16a6b6 85%,
+    #071d30 100%
+  );
+  background-size: 220% 100%;
+  animation: bh-org-topbar-line 7s ease-in-out infinite;
+}
+
 @keyframes bh-greeting-wave {
   0%,
   100% {
@@ -247,6 +291,8 @@ body {
   .bh-fade-up-delay-3,
   .bh-soft-pulse,
   .bh-gradient-sheen,
+  .bh-org-topbar-mesh,
+  .bh-org-topbar-line,
   .bh-greeting-wave-hand,
   .bh-greeting-sheen-text,
   .bh-greeting-wave-underline {

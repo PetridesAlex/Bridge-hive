@@ -14,7 +14,7 @@
 | `device_tokens` / `notifications` / `audit_events` | 006 | Infra |
 | `platform_admin_roles` | 010 | Server-side platform admins |
 | `platform_settings` | 011 | Commission bps, due days |
-| `payout_accounts` / `payout_account_events` | 011 | Masked IBAN destination |
+| `payout_accounts` / `payout_account_events` | 011 / 037 | Masked + encrypted IBAN destination; org reveal RPC |
 | `pay_runs` | 011 | Optional payment batches |
 | `payouts` | 011 | Immutable snapshot + transfer lifecycle |
 | `commission_obligations` | 011 | Org-funded platform fee |

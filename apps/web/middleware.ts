@@ -17,6 +17,8 @@ const PUBLIC_PATHS = [
   '/how-it-works',
   '/about',
   '/contact',
+  '/privacy',
+  '/terms',
   '/robots.txt',
   '/sitemap.xml',
   '/manifest.webmanifest',

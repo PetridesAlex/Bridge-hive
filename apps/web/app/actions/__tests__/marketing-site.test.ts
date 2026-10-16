@@ -68,6 +68,8 @@ describe('marketing site contracts', () => {
       '/how-it-works',
       '/about',
       '/contact',
+      '/privacy',
+      '/terms',
     ]) {
       expect(src).toContain(`'${pathName}'`);
     }

@@ -210,7 +210,9 @@ export function MarketingFooter() {
             <nav className="m-footer-legal" aria-label="Legal">
               <CookieSettingsButton />
               <span aria-hidden="true" />
-              <Link href="/contact#support">Privacy & terms</Link>
+              <Link href="/privacy">Privacy</Link>
+              <span aria-hidden="true" />
+              <Link href="/terms">Terms</Link>
             </nav>
             <nav className="m-footer-social" aria-label="Social">
               {SOCIAL_LINKS.map((item) => {

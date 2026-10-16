@@ -20,13 +20,18 @@ export default async function SignInPage({
       footer={
         <>
           <div className="auth-footer-support">
-            <p className="auth-footer-kicker">Need access?</p>
-            <a
-              className="auth-footer-mail"
-              href="mailto:support@bridgehive.app"
-            >
-              support@bridgehive.app
-            </a>
+            <span className="auth-footer-support-mesh" aria-hidden="true" />
+            <span className="auth-footer-support-sheen" aria-hidden="true" />
+            <span className="auth-footer-support-line" aria-hidden="true" />
+            <div className="auth-footer-support-body">
+              <p className="auth-footer-kicker">Need access?</p>
+              <a
+                className="auth-footer-mail"
+                href="mailto:support@bridgehive.app"
+              >
+                support@bridgehive.app
+              </a>
+            </div>
           </div>
           <nav className="auth-footer-nav" aria-label="Sign-in help">
             <AuthFooterLink href="/">Back to public site</AuthFooterLink>

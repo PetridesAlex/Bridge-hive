@@ -37,6 +37,20 @@ export function SignInForm({ next }: { next: string }) {
         <AuthPasswordField id="org-sign-in-password" />
       </div>
 
+      <label className="auth-remember auth-field-delay-2" htmlFor="org-sign-in-remember">
+        <input
+          id="org-sign-in-remember"
+          name="remember"
+          type="checkbox"
+          value="on"
+          defaultChecked
+        />
+        <span className="auth-remember-copy">
+          <span className="auth-remember-title">Remember me</span>
+          <span className="auth-remember-hint">Stay signed in on this device</span>
+        </span>
+      </label>
+
       {state.error ? (
         <p id={errorId} className="auth-error" role="alert">
           {state.error}

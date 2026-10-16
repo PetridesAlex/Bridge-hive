@@ -3,6 +3,11 @@ import type { Database } from '@bridge-hive/supabase-types';
 import { NextResponse, type NextRequest } from 'next/server';
 
 import { getSupabaseEnv } from './env';
+import {
+  isOrgRememberMeEnabled,
+  ORG_REMEMBER_ME_COOKIE,
+  withOrgRememberMeCookieOptions,
+} from './org-remember-me';
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -10,6 +15,9 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { url, anonKey } = getSupabaseEnv();
+  const remember = isOrgRememberMeEnabled(
+    request.cookies.get(ORG_REMEMBER_ME_COOKIE)?.value,
+  );
 
   const supabase = createServerClient<Database>(url, anonKey, {
     cookies: {
@@ -24,7 +32,11 @@ export async function updateSession(request: NextRequest) {
           request,
         });
         cookiesToSet.forEach(({ name, value, options }) => {
-          supabaseResponse.cookies.set(name, value, options);
+          supabaseResponse.cookies.set(
+            name,
+            value,
+            withOrgRememberMeCookieOptions(options, remember),
+          );
         });
       },
     },

@@ -35,8 +35,13 @@ describe('premium auth portals', () => {
     expect(form).toMatch(/AuthPasswordField/);
     expect(form).toMatch(/autoComplete="email"/);
     expect(form).toMatch(/aria-invalid/);
+    expect(form).toMatch(/name="remember"/);
+    expect(form).toMatch(/Remember me/);
+    expect(form).toMatch(/defaultChecked/);
     expect(form).not.toMatch(/href="\/sign-up"/);
     expect(form).not.toMatch(/Continue with Google/);
+    expect(page).toMatch(/auth-footer-support-mesh/);
+    expect(page).toMatch(/auth-footer-support-line/);
     expect(shell).toMatch(/AuthHeroPanel/);
     expect(shell).toMatch(/AuthFooterLink/);
     expect(shell).not.toMatch(/AuthSignInDynamics/);
@@ -166,6 +171,22 @@ describe('premium auth portals', () => {
     expect(auth).not.toMatch(/startsWith\('\/'\)/);
     expect(middleware).toMatch(/safeOrgNext/);
     expect(middleware).toMatch(/applySafeNext/);
+  });
+
+  it('org remember-me persists session cookies across browser restarts', async () => {
+    const auth = await readWeb('app/actions/auth.ts');
+    const server = await readWeb('lib/supabase/server.ts');
+    const middleware = await readWeb('lib/supabase/middleware.ts');
+    const helper = await readWeb('lib/supabase/org-remember-me.ts');
+
+    expect(helper).toMatch(/ORG_REMEMBER_ME_COOKIE/);
+    expect(helper).toMatch(/withOrgRememberMeCookieOptions/);
+    expect(helper).toMatch(/ORG_REMEMBERED_SESSION_MAX_AGE_SEC/);
+    expect(auth).toMatch(/rememberMe: remember/);
+    expect(auth).toMatch(/ORG_REMEMBER_ME_COOKIE/);
+    expect(auth).toMatch(/formData\.get\('remember'\) === 'on'/);
+    expect(server).toMatch(/withOrgRememberMeCookieOptions/);
+    expect(middleware).toMatch(/withOrgRememberMeCookieOptions/);
   });
 
   it('marketing CTAs still point at org and admin sign-in portals', async () => {

@@ -1,8 +1,13 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { safeOrgNext } from '@/lib/auth-redirect';
+import {
+  ORG_REMEMBER_ME_COOKIE,
+  ORG_REMEMBER_ME_COOKIE_MAX_AGE_SEC,
+} from '@/lib/supabase/org-remember-me';
 import { createClient } from '@/lib/supabase/server';
 
 export type ActionResult = {
@@ -18,13 +23,23 @@ export async function signInAction(
     .toLowerCase();
   const password = String(formData.get('password') ?? '');
   const next = safeOrgNext(String(formData.get('next') ?? '/dashboard'));
+  const remember = formData.get('remember') === 'on';
 
   if (!email || !password) {
     return { error: 'Email and password are required.' };
   }
 
   try {
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    cookieStore.set(ORG_REMEMBER_ME_COOKIE, remember ? '1' : '0', {
+      path: '/',
+      sameSite: 'lax',
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      ...(remember ? { maxAge: ORG_REMEMBER_ME_COOKIE_MAX_AGE_SEC } : {}),
+    });
+
+    const supabase = await createClient({ rememberMe: remember });
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -89,5 +104,16 @@ export async function signOutAction(): Promise<void> {
     // Cookie/session teardown can fail if the session is already gone.
     // Still send the user to sign-in so the UI recovers cleanly.
   }
+
+  try {
+    const cookieStore = await cookies();
+    cookieStore.set(ORG_REMEMBER_ME_COOKIE, '', {
+      path: '/',
+      maxAge: 0,
+    });
+  } catch {
+    // Preference cookie clear is best-effort after sign-out.
+  }
+
   redirect('/sign-in');
 }

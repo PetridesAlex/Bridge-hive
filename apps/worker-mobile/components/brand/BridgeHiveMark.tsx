@@ -1,8 +1,8 @@
 import React from 'react';
 import { Image, StyleSheet, type ImageStyle, type StyleProp } from 'react-native';
 
-/** Official Bridge Hive app icon — used across auth, welcome, home, and launch. */
-const OFFICIAL_ICON = require('../../assets/images/icon.png');
+/** Official Bridge Hive transparent mark — used across auth, welcome, home, and launch. */
+const OFFICIAL_MARK = require('../../assets/images/brand-mark.png');
 
 /** Official Bridge Hive mark for in-app chrome (Apple/Android cover icon). */
 export function BridgeHiveMark({
@@ -14,9 +14,9 @@ export function BridgeHiveMark({
 }) {
   return (
     <Image
-      source={OFFICIAL_ICON}
+      source={OFFICIAL_MARK}
       accessibilityIgnoresInvertColors
-      style={[styles.mark, { width: size, height: size, borderRadius: size * 0.22 }, style]}
+      style={[styles.mark, { width: size, height: size }, style]}
       resizeMode="contain"
     />
   );

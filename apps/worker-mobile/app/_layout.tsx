@@ -45,7 +45,9 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
-        <AppBootCover />
+        <SafeAreaProvider>
+          <AppBootCover />
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     );
   }

@@ -57,3 +57,8 @@ scripts/bh-enable-pgtap.sql
 
 # Vercel local link (never commit)
 .vercel
+
+# Local Expo prebuild output (never commit)
+apps/worker-mobile/ios/
+apps/worker-mobile/android/
+apps/worker-mobile/dist/

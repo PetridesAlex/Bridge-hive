@@ -98,23 +98,31 @@ describe('marketing site contracts', () => {
     );
   });
 
-  it('homepage CTAs use org sign-in and worker continuation, not open signup', async () => {
+  it('homepage hero uses clinical image CTAs without open signup', async () => {
     const src = await readWeb('app/(marketing)/page.tsx');
     const hero = await readWeb('components/marketing/Hero.tsx');
+    const nav = await readWeb('components/marketing/MarketingNav.tsx');
     const faq = await readWeb('components/marketing/HomeFaq.tsx');
-    expect(hero).toMatch(/href="\/sign-in"/);
-    expect(hero).toMatch(/href="\/auth\/worker\/login"/);
+    expect(hero).toMatch(/home-hero-clinical-team\.png/);
+    expect(hero).toMatch(/Talk to our team/);
+    expect(hero).toMatch(/Explore professionals/);
     expect(hero).toMatch(/\/contact#partnerships/);
-    expect(hero).toMatch(/Prepare an inquiry|Send an inquiry/);
-    expect(hero).toMatch(/Partnership inquiry|Explore for organizations/);
-    expect(hero).toMatch(/Explore for professionals/);
-    expect(hero).toMatch(/Illustrative/);
+    expect(hero).toMatch(/href="\/professionals"/);
+    expect(hero).toMatch(/Verified clinical credentials/);
+    expect(hero).toMatch(/Role-matched shift design/);
+    expect(hero).toMatch(/Transparent payment workflows/);
+    expect(hero).not.toMatch(/href="\/sign-in"/);
+    expect(hero).not.toMatch(/href="\/auth\/worker\/login"/);
+    expect(hero).not.toMatch(/href="\/sign-up"/);
+    expect(hero).not.toMatch(/Illustrative/);
+    expect(hero).not.toMatch(/home-hero-scene\.jpg/);
+    expect(nav).toMatch(/Organization sign in/);
+    expect(nav).toMatch(/\/sign-in/);
+    expect(nav).toMatch(/\/auth\/worker\/login/);
     expect(src).toMatch(/HomeFaq/);
     expect(faq).toMatch(/not a full\s+browser version of the app|not a full web/i);
     expect(faq).toMatch(/Clear answers before you/);
     expect(faq).toMatch(/prepare a partnership inquiry/);
-    expect(hero).not.toMatch(/href="\/sign-up"/);
-    expect(hero).not.toMatch(/Licensed clinical photography TBD/);
     expect(src).not.toMatch(/Organization Dashboard/);
     expect(src).not.toMatch(/Request access/);
   });

@@ -108,9 +108,9 @@ describe('marketing site contracts', () => {
     expect(hero).toMatch(/Explore professionals/);
     expect(hero).toMatch(/\/contact#partnerships/);
     expect(hero).toMatch(/href="\/professionals"/);
-    expect(hero).toMatch(/Verified clinical credentials/);
-    expect(hero).toMatch(/Role-matched shift design/);
-    expect(hero).toMatch(/Transparent payment workflows/);
+    expect(hero).toMatch(/Verified credentials/);
+    expect(hero).toMatch(/Role-matched shifts/);
+    expect(hero).toMatch(/Transparent payments/);
     expect(hero).not.toMatch(/href="\/sign-in"/);
     expect(hero).not.toMatch(/href="\/auth\/worker\/login"/);
     expect(hero).not.toMatch(/href="\/sign-up"/);

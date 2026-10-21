@@ -9,9 +9,9 @@ import Image from 'next/image';
 import { MarketingButton } from '@/components/marketing/Section';
 
 const HERO_POINTS = [
-  { icon: ShieldCheck, label: 'Verified clinical credentials' },
-  { icon: CalendarDays, label: 'Role-matched shift design' },
-  { icon: WalletCards, label: 'Transparent payment workflows' },
+  { icon: ShieldCheck, label: 'Verified credentials' },
+  { icon: CalendarDays, label: 'Role-matched shifts' },
+  { icon: WalletCards, label: 'Transparent payments' },
 ] as const;
 
 export function Hero() {

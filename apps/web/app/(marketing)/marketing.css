@@ -1272,64 +1272,81 @@
 
 .m-hero-points {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  margin: 1.5rem 0 0;
-  padding: 0;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0;
+  margin: 1.45rem 0 0;
+  padding: 0.85rem 0 0;
   list-style: none;
   border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 .m-hero-points li {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 2.15rem;
-  padding: 0.4rem 0.75rem 0.4rem 0.45rem;
+  gap: 0.4rem;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 0;
+  padding: 0 0.7rem;
   margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(242, 247, 250, 0.96);
-  font-size: 0.76rem;
+  border: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: rgba(236, 243, 247, 0.92);
+  font-size: 0.72rem;
   font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.015em;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-  transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease;
+  letter-spacing: 0.02em;
+  transition: color 160ms ease;
+}
+
+.m-hero-points li:first-child {
+  padding-left: 0;
+}
+
+.m-hero-points li:last-child {
+  padding-right: 0;
+  border-right: none;
 }
 
 .m-hero-points li:hover {
-  transform: translateY(-1px);
-  border-color: rgba(20, 169, 181, 0.45);
-  background: rgba(20, 169, 181, 0.12);
+  transform: none;
+  color: #fff;
+}
+
+.m-hero-points li:hover .m-hero-point-icon {
+  color: #f6d56a;
 }
 
 .m-hero-point-label {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .m-hero-point-icon {
   display: inline-flex;
-  width: 1.45rem;
-  height: 1.45rem;
+  width: auto;
+  height: auto;
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  border: 1px solid rgba(228, 179, 52, 0.35);
-  background: rgba(228, 179, 52, 0.14);
-  color: #f0d078;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #e4b334;
 }
 
 .m-hero-point-icon svg {
   display: block;
-  width: 0.85rem;
-  height: 0.85rem;
+  width: 0.9rem;
+  height: 0.9rem;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -1446,16 +1463,26 @@
   }
 
   .m-hero-points {
-    gap: 0.5rem;
+    gap: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .m-hero-points::-webkit-scrollbar {
+    display: none;
   }
 
   .m-hero-points li {
+    flex: 0 0 auto;
     width: auto;
-    max-width: 100%;
+    max-width: none;
+    padding: 0 0.55rem;
+    font-size: 0.68rem;
   }
 
   .m-hero-point-label {
-    white-space: normal;
+    white-space: nowrap;
   }
 
   .m-hero-copy {
@@ -1483,8 +1510,7 @@
 
   .m-hero-ctas .m-btn:hover,
   .m-hero-ctas .m-btn:active,
-  .m-hero-ctas .m-btn:hover svg,
-  .m-hero-points li:hover {
+  .m-hero-ctas .m-btn:hover svg {
     transform: none;
     gap: inherit;
   }

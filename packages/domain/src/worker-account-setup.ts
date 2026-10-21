@@ -3,7 +3,9 @@
  * Marketplace tabs and shifts remain blocked until final verification.
  */
 export const WORKER_ACCOUNT_SETUP_ROUTE_PREFIXES = [
+  '/auth/worker',
   '/auth/worker/pending',
+  '/auth/worker/restricted',
   '/auth/worker/rejected',
   '/auth/worker/login',
   '/auth/worker/register',

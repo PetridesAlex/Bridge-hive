@@ -29,7 +29,6 @@ import Animated, {
 import { AuthShell } from '@/components/auth/AuthShell';
 import { ProgressBar } from '@/components/ui/ProgressRing';
 import { ProgressStep, type ProgressStepState } from '@/components/ui/ProgressStep';
-import { APP_CONFIG } from '@/constants/config';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { supabase } from '@/lib/supabase';
@@ -511,7 +510,7 @@ export default function WorkerAccountSetupScreen() {
   );
 
   if (!loading && !session) {
-    return <Redirect href="/welcome" />;
+    return <Redirect href="/auth/worker/login" />;
   }
 
   if (!loading && accountRejectionReason) {
@@ -520,6 +519,15 @@ export default function WorkerAccountSetupScreen() {
 
   if (!loading && isVerified) {
     return <Redirect href="/(tabs)" />;
+  }
+
+  if (
+    !loading &&
+    (workerProfile?.verification_status === 'suspended' ||
+      workerProfile?.verification_status === 'rejected' ||
+      workerProfile?.verification_status === 'expired')
+  ) {
+    return <Redirect href="/auth/worker/restricted" />;
   }
 
   const role = workerProfile?.worker_role as WorkerRole | null;
@@ -581,10 +589,17 @@ export default function WorkerAccountSetupScreen() {
     }
   };
 
+  const shellTitle = packageSubmitted
+    ? 'Your profile is under review'
+    : 'Account Setup';
+  const shellSubtitle = packageSubmitted
+    ? 'Our team is reviewing your credentials. We will notify you when your BridgeHive account is ready.'
+    : 'Complete each step before marketplace access. Final approval is an administrator action.';
+
   return (
     <AuthShell
-      title="Account Setup"
-      subtitle="Complete each step before marketplace access. Final approval is an administrator action."
+      title={shellTitle}
+      subtitle={shellSubtitle}
       showBack={false}
       centered={false}
     >
@@ -676,16 +691,18 @@ export default function WorkerAccountSetupScreen() {
       </View>
       <Pressable
         accessibilityRole="link"
-        accessibilityLabel={`Email support at ${APP_CONFIG.supportEmail}`}
+        accessibilityLabel="Email support at support@bridgehive.app"
         onPress={() => {
           void Linking.openURL(
-            `mailto:${APP_CONFIG.supportEmail}?subject=${encodeURIComponent('Account Setup')}`,
+            `mailto:support@bridgehive.app?subject=${encodeURIComponent(
+              packageSubmitted ? 'Profile review' : 'Account Setup',
+            )}`,
           );
         }}
         style={styles.support}
       >
         <Ionicons name="mail-outline" size={14} color={colors.tealStrong} />
-        <Text style={styles.supportText}>{APP_CONFIG.supportEmail}</Text>
+        <Text style={styles.supportText}>support@bridgehive.app</Text>
       </Pressable>
       <SubmissionReadyNotice visible={readyNotice} onClose={() => setReadyNotice(false)} />
     </AuthShell>

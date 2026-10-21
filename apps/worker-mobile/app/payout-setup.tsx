@@ -138,7 +138,7 @@ export default function PayoutSetupScreen() {
   };
 
   if (!loading && !session) {
-    return <Redirect href="/welcome" />;
+    return <Redirect href="/auth/worker/login" />;
   }
 
   if (!loading && accountRejectionReason) {

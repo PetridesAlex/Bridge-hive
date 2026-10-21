@@ -26,7 +26,7 @@ export default function TabsLayout() {
   }
 
   if (!session) {
-    return <Redirect href="/welcome" />;
+    return <Redirect href="/auth/worker/login" />;
   }
 
   if (accountRejectionReason) {

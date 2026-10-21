@@ -224,7 +224,7 @@ export default function InvoiceDetailScreen() {
           title="Sign in again"
           description="Your session is not available on this page. Sign in to view your invoice and payment status."
           actionLabel="Sign in again"
-          onAction={() => router.replace('/welcome')}
+          onAction={() => router.replace('/auth/worker/login')}
         />
       </AppScreen>
     );

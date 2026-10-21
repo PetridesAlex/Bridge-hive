@@ -11,7 +11,7 @@ export default function WorkerRejectedScreen() {
   const { session, loading, accountRejectionReason, signOut } = useAuth();
 
   if (!loading && !session) {
-    return <Redirect href="/welcome" />;
+    return <Redirect href="/auth/worker/login" />;
   }
 
   if (!loading && !accountRejectionReason) {
@@ -31,7 +31,7 @@ export default function WorkerRejectedScreen() {
           variant="brand"
           onPress={async () => {
             await signOut();
-            router.replace('/welcome');
+            router.replace('/auth/worker/login');
           }}
         />
       </View>

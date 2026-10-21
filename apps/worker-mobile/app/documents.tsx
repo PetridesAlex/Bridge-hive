@@ -42,24 +42,27 @@ type UploadState = {
   error: string | null;
 };
 
-function statusLabel(status: ChecklistRow['itemStatus']): string {
+function statusLabel(
+  status: ChecklistRow['itemStatus'],
+  isRequired: boolean,
+): string {
   switch (status) {
     case 'not_uploaded':
-      return 'Not uploaded';
+      return isRequired ? 'Required' : 'Optional';
     case 'draft':
-      return 'Draft';
+      return 'Uploaded';
     case 'submitted':
-      return 'Submitted';
+      return 'Uploaded';
     case 'under_review':
       return 'Under review';
     case 'verified':
-      return 'Verified';
+      return 'Uploaded';
     case 'rejected':
-      return 'Rejected';
+      return 'Needs attention';
     case 'expired':
-      return 'Expired';
+      return 'Needs attention';
     case 'suspended':
-      return 'Suspended';
+      return 'Needs attention';
     default:
       return status;
   }
@@ -376,7 +379,7 @@ export default function DocumentsScreen() {
                       </View>
                       <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
                         <Text style={[styles.statusText, { color: tone.fg }]}>
-                          {statusLabel(row.itemStatus)}
+                          {statusLabel(row.itemStatus, row.isRequired)}
                         </Text>
                       </View>
                     </View>
@@ -409,7 +412,7 @@ export default function DocumentsScreen() {
                   <View style={styles.rowActions}>
                     {requiresExpiry ? (
                       <TextInput
-                        label="Licence expiry date"
+                        label="Expires on"
                         value={practisingLicenceExpiryYmd}
                         onChangeText={setPractisingLicenceExpiryYmd}
                         placeholder="YYYY-MM-DD"

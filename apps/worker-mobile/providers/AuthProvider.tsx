@@ -31,6 +31,7 @@ import React, {
 import { Platform } from 'react-native';
 
 import { clearAvatarUrlCache } from '@/lib/avatar';
+import { homeRouteForWorker } from '@/lib/home-route';
 import { deactivateCurrentPushDevice } from '@/lib/push/client';
 import { createSessionFromUrl, signInWithGoogleOAuth } from '@/lib/oauth';
 import {
@@ -103,18 +104,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 function firstNameFromFullName(fullName: string | null | undefined): string {
   if (!fullName?.trim()) return 'there';
   return fullName.trim().split(/\s+/)[0] ?? 'there';
-}
-
-function homeRouteForWorker(params: {
-  hasSession: boolean;
-  workerProfile: WorkerProfile | null;
-  accountRejectionReason: string | null;
-}): string {
-  if (!params.hasSession) return '/welcome';
-  if (params.accountRejectionReason) return '/auth/worker/rejected';
-  if (!params.workerProfile) return '/auth/worker/choose-role';
-  if (params.workerProfile.verification_status === 'verified') return '/(tabs)';
-  return '/auth/worker/pending';
 }
 
 function workerRoleFromUser(user: User): WorkerRole | null {

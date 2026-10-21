@@ -38,7 +38,7 @@ export default function WorkerChooseRoleScreen() {
   const lock = useRef(false);
 
   if (!loading && !session) {
-    return <Redirect href="/welcome" />;
+    return <Redirect href="/auth/worker/login" />;
   }
   if (!loading && accountRejectionReason) {
     return <Redirect href="/auth/worker/rejected" />;

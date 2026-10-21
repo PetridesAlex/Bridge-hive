@@ -183,7 +183,7 @@ export default function AccountHubScreen() {
     setSigningOut(true);
     try {
       await signOut();
-      router.replace('/welcome');
+      router.replace('/auth/worker/login');
     } finally {
       setSigningOut(false);
     }

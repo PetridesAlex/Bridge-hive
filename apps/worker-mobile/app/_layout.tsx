@@ -38,6 +38,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
+      // Hide native splash only once the navy JS boot cover is already mounted.
       SplashScreen.hideAsync().catch(() => undefined);
     }
   }, [fontsLoaded, fontError]);
@@ -45,6 +46,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
+        <StatusBar style="light" />
         <AppBootCover />
       </GestureHandlerRootView>
     );
@@ -66,6 +68,7 @@ export default function RootLayout() {
             >
               <Stack.Screen name="index" />
               <Stack.Screen name="welcome" />
+              <Stack.Screen name="auth/worker/index" />
               <Stack.Screen name="auth/worker/login" />
               <Stack.Screen name="auth/worker/register" />
               <Stack.Screen name="auth/worker/forgot-password" />
@@ -73,6 +76,7 @@ export default function RootLayout() {
               <Stack.Screen name="auth/worker/choose-role" />
               <Stack.Screen name="auth/worker/reset-password" />
               <Stack.Screen name="auth/worker/pending" />
+              <Stack.Screen name="auth/worker/restricted" />
               <Stack.Screen name="auth/worker/rejected" />
               <Stack.Screen name="auth/callback" />
               <Stack.Screen name="(tabs)" />

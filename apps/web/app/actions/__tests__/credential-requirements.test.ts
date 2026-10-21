@@ -386,6 +386,8 @@ describe('Account Setup status labels', () => {
     expect(isWorkerAccountSetupRouteAllowed('/payout-setup')).toBe(true);
     expect(isWorkerAccountSetupRouteAllowed('/documents')).toBe(true);
     expect(isWorkerAccountSetupRouteAllowed('/auth/worker/pending')).toBe(true);
+    expect(isWorkerAccountSetupRouteAllowed('/auth/worker/restricted')).toBe(true);
+    expect(isWorkerAccountSetupRouteAllowed('/auth/worker')).toBe(true);
     expect(isWorkerAccountSetupRouteAllowed('/auth/worker/reset-password')).toBe(true);
     expect(isWorkerAccountSetupRouteAllowed('/auth/worker/check-email')).toBe(true);
     expect(isWorkerMarketplaceRoute('/(tabs)')).toBe(true);

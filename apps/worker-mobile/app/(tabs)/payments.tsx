@@ -21,6 +21,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useInvoices } from '@/hooks/useInvoices';
 import { usePayouts } from '@/hooks/usePayouts';
@@ -30,9 +31,9 @@ type MoneySegment = 'earnings' | 'invoices';
 
 export default function MoneyScreen() {
   const { user } = useAuth();
+  const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { payouts, account, loading: payoutLoading, error: payoutError, refresh: refreshPayouts } =
-    usePayouts(user?.id);
-  const {
+    usePayouts(user?.id);  const {
     invoices,
     allInvoices,
     loading: invoiceLoading,
@@ -160,7 +161,7 @@ export default function MoneyScreen() {
             <FlatList
               data={payouts}
               keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.list}
+              contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
               refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
               ListEmptyComponent={
                 <EmptyState
@@ -180,7 +181,7 @@ export default function MoneyScreen() {
         <FlatList
           data={invoices}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <EmptyState
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   list: {
-    paddingBottom: spacing.huge,
+    paddingBottom: 0,
     gap: spacing.sm,
   },
   fullListLink: {

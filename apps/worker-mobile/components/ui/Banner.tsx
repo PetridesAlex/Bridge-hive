@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { Button } from '@/components/ui/Button';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 export type BannerVariant = 'info' | 'success' | 'warning' | 'danger';
 
@@ -21,31 +24,46 @@ type Props = {
 
 const VARIANT: Record<
   BannerVariant,
-  { bg: string; border: string; fg: string; icon: keyof typeof Ionicons.glyphMap }
+  {
+    bg: string;
+    border: string;
+    fg: string;
+    body: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    iconBg: readonly [string, string];
+  }
 > = {
   info: {
     bg: colors.infoLight,
     border: colors.info,
     fg: colors.navy,
+    body: colors.textSecondary,
     icon: 'information-circle',
+    iconBg: [colors.navy, colors.tealStrong],
   },
   success: {
-    bg: colors.successLight,
+    bg: '#E8F7EE',
     border: colors.success,
-    fg: colors.navy,
+    fg: '#0B3D24',
+    body: '#1F5C3A',
     icon: 'checkmark-circle',
+    iconBg: ['#146C43', colors.success],
   },
   warning: {
     bg: colors.warningLight,
     border: colors.warning,
     fg: colors.navy,
+    body: colors.textSecondary,
     icon: 'warning',
+    iconBg: [colors.navy, colors.warning],
   },
   danger: {
     bg: colors.errorLight,
     border: colors.error,
     fg: colors.navy,
+    body: colors.textSecondary,
     icon: 'alert-circle',
+    iconBg: [colors.navySoft, colors.error],
   },
 };
 
@@ -61,16 +79,47 @@ export function Banner({
   style,
 }: Props) {
   const palette = VARIANT[variant];
+  const reduced = useReducedMotion();
+  const isSuccess = variant === 'success';
+
   return (
-    <View
-      style={[styles.banner, { backgroundColor: palette.bg, borderColor: palette.border }, style]}
+    <Animated.View
+      entering={reduced ? undefined : FadeInDown.duration(360)}
+      style={[
+        styles.banner,
+        {
+          backgroundColor: palette.bg,
+          borderColor: palette.border,
+        },
+        isSuccess && styles.bannerSuccess,
+        style,
+      ]}
       accessibilityRole="alert"
     >
+      {isSuccess ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={['rgba(25, 135, 84, 0.14)', 'rgba(25, 135, 84, 0)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : null}
+      <View style={[styles.accent, { backgroundColor: palette.border }]} />
       <View style={styles.row}>
-        <Ionicons name={icon ?? palette.icon} size={20} color={palette.border} />
+        <LinearGradient
+          colors={palette.iconBg}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.iconWrap}
+        >
+          <Ionicons name={icon ?? palette.icon} size={20} color={colors.white} />
+        </LinearGradient>
         <View style={styles.copy}>
           <Text style={[styles.title, { color: palette.fg }]}>{title}</Text>
-          {body ? <Text style={styles.body}>{body}</Text> : null}
+          {body ? (
+            <Text style={[styles.body, { color: palette.body }]}>{body}</Text>
+          ) : null}
         </View>
       </View>
       {actionLabel && onAction ? (
@@ -86,39 +135,61 @@ export function Banner({
           ) : null}
         </View>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   banner: {
-    borderRadius: radii.md,
-    borderWidth: 1,
-    padding: spacing.md,
-    gap: spacing.sm,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: spacing.lg,
+    gap: spacing.md,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  bannerSuccess: {
+    ...shadows.md,
+    borderWidth: 1.5,
+  },
+  accent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     alignItems: 'flex-start',
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   copy: {
     flex: 1,
-    gap: 4,
+    gap: 6,
     minWidth: 0,
+    paddingTop: 2,
   },
   title: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.sm,
-    lineHeight: typography.lineHeight.sm,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.2,
   },
   body: {
     fontFamily: typography.fonts.regular,
-    fontSize: typography.size.xs,
-    lineHeight: typography.lineHeight.xs,
-    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
   actions: {
     gap: spacing.sm,
+    paddingLeft: 52,
   },
 });

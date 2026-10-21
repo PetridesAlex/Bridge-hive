@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
@@ -10,19 +12,20 @@ import {
 import { router } from 'expo-router';
 import { shiftRouteFromPushData } from '@bridge-hive/domain';
 
+import { ShiftNotificationCard } from '@/components/notifications/ShiftNotificationCard';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useInvoices } from '@/hooks/useInvoices';
 import {
   getMyNotifications,
   markNotificationRead,
   type Notification,
 } from '@/lib/queries';
 import { useAuth } from '@/providers/AuthProvider';
-import { formatRelativeDate } from '@/utils/format';
 import { supabase } from '@/lib/supabase';
 
 function startOfToday(): Date {
@@ -49,18 +52,55 @@ async function loadShiftAvailability(shiftIds: string[]): Promise<Map<string, bo
   return available;
 }
 
+type BillingAlert = {
+  id: string;
+  title: string;
+  body: string;
+  href: string;
+  tone: 'money' | 'danger';
+};
+
 export default function NotificationsScreen() {
   const { user } = useAuth();
+  const { allInvoices, refresh: refreshInvoices } = useInvoices(user?.id);
   const [items, setItems] = useState<Notification[]>([]);
   const [availability, setAvailability] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+
+  const billingAlerts = useMemo(() => {
+    const alerts: BillingAlert[] = [];
+    const pastDue = allInvoices.filter((invoice) => invoice.status === 'past_due');
+    for (const invoice of pastDue) {
+      alerts.push({
+        id: `invoice-past-due-${invoice.id}`,
+        title: 'Commission invoice past due',
+        body: 'Pay this Bridge Hive invoice to keep claiming new shifts.',
+        href: `/invoices/${invoice.id}`,
+        tone: 'danger',
+      });
+    }
+    if (pastDue.length === 0) {
+      const dueSoon = allInvoices.find((invoice) => invoice.status === 'open');
+      if (dueSoon) {
+        alerts.push({
+          id: `invoice-due-soon-${dueSoon.id}`,
+          title: 'Commission invoice due soon',
+          body: 'Bridge Hive invoices are separate from organization earnings.',
+          href: `/invoices/${dueSoon.id}`,
+          tone: 'money',
+        });
+      }
+    }
+    return alerts;
+  }, [allInvoices]);
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
     setLoading(true);
     setError(undefined);
     const result = await getMyNotifications(user.id);
+    void refreshInvoices();
     if (result.error) setError(result.error);
     else {
       setItems(result.data);
@@ -70,7 +110,7 @@ export default function NotificationsScreen() {
       setAvailability(await loadShiftAvailability(shiftIds));
     }
     setLoading(false);
-  }, [user?.id]);
+  }, [refreshInvoices, user?.id]);
 
   useEffect(() => {
     void refresh();
@@ -100,68 +140,114 @@ export default function NotificationsScreen() {
   }, [items]);
 
   const flat = useMemo(() => {
-    const rows: ({ type: 'header'; title: string } | { type: 'item'; item: Notification })[] =
-      [];
+    const rows: (
+      | { type: 'header'; title: string }
+      | { type: 'billing'; alert: BillingAlert }
+      | { type: 'item'; item: Notification }
+    )[] = [];
+    if (billingAlerts.length > 0) {
+      rows.push({ type: 'header', title: 'Action needed' });
+      for (const alert of billingAlerts) rows.push({ type: 'billing', alert });
+    }
     for (const section of sections) {
       rows.push({ type: 'header', title: section.title });
       for (const item of section.data) rows.push({ type: 'item', item });
     }
     return rows;
-  }, [sections]);
+  }, [billingAlerts, sections]);
+
+  const listEmpty = items.length === 0 && billingAlerts.length === 0;
 
   return (
     <AppScreen scroll={false} edges={['top']}>
       <ScreenHeader title="Notifications" showBack />
-      {loading && items.length === 0 ? (
+      {loading && listEmpty ? (
         <View style={styles.list}>
           <SkeletonCard lines={2} />
           <SkeletonCard lines={2} />
         </View>
-      ) : error && items.length === 0 ? (
+      ) : error && listEmpty ? (
         <ErrorState title="Could not load notifications" onRetry={refresh} />
       ) : (
         <FlatList
           data={flat}
-          keyExtractor={(row, index) =>
-            row.type === 'header' ? `h-${row.title}` : row.item.id + String(index)
-          }
+          keyExtractor={(row, index) => {
+            if (row.type === 'header') return `h-${row.title}`;
+            if (row.type === 'billing') return row.alert.id;
+            return row.item.id + String(index);
+          }}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
           ListEmptyComponent={
             <EmptyState
               title="No notifications"
-              description="Shift, verification, and payout alerts will appear here when available."
+              description="Every new matching shift appears here with date, hours, location, and the time it was added."
             />
           }
-          renderItem={({ item: row }) => {
+          renderItem={({ item: row, index }) => {
             if (row.type === 'header') {
-              return <Text style={styles.section}>{row.title}</Text>;
+              return (
+                <View style={styles.sectionRow}>
+                  <View style={styles.sectionDot} />
+                  <Text style={styles.section}>{row.title}</Text>
+                </View>
+              );
+            }
+            if (row.type === 'billing') {
+              const alert = row.alert;
+              const danger = alert.tone === 'danger';
+              return (
+                <Pressable
+                  onPress={() => router.push(alert.href as never)}
+                  style={[styles.billingCard, danger && styles.billingCardDanger]}
+                  accessibilityRole="button"
+                  accessibilityLabel={alert.title}
+                >
+                  <LinearGradient
+                    colors={
+                      danger
+                        ? [colors.error, '#B02A37']
+                        : [colors.honeyStrong, '#C47A12']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.billingIcon}
+                  >
+                    <Ionicons name="receipt" size={18} color={colors.white} />
+                  </LinearGradient>
+                  <View style={styles.body}>
+                    <Text
+                      style={[
+                        styles.billingEyebrow,
+                        danger && { color: colors.error },
+                      ]}
+                    >
+                      {danger ? 'Past due' : 'Money'}
+                    </Text>
+                    <Text style={[styles.title, styles.titleUnread]}>{alert.title}</Text>
+                    <Text style={styles.text} numberOfLines={3}>
+                      {alert.body}
+                    </Text>
+                    <Text style={styles.billingCta}>View invoice</Text>
+                  </View>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={danger ? colors.error : colors.honeyStrong}
+                  />
+                </Pressable>
+              );
             }
             const item = row.item;
-            const unread = !item.read_at;
             const shiftId = shiftRouteFromPushData(item.data)?.replace('/shifts/', '');
             const unavailable = shiftId ? availability.get(shiftId) === false : false;
             return (
-              <Pressable
+              <ShiftNotificationCard
+                item={item}
+                unavailable={unavailable}
+                index={index}
                 onPress={() => void onOpen(item)}
-                style={[styles.row, unread && styles.unread]}
-                accessibilityRole="button"
-                accessibilityLabel={`${item.title}${unread ? ', unread' : ''}${unavailable ? ', no longer available' : ''}`}
-              >
-                <View style={styles.indicatorCol}>
-                  <View style={[styles.dot, unread ? styles.dotUnread : styles.dotRead]} />
-                </View>
-                <View style={styles.body}>
-                  <Text style={[styles.title, unread && styles.titleUnread]}>{item.title}</Text>
-                  <Text style={styles.text} numberOfLines={3}>
-                    {item.body}
-                  </Text>
-                  {unavailable ? (
-                    <Text style={styles.unavailable}>No longer available</Text>
-                  ) : null}
-                </View>
-                <Text style={styles.time}>{formatRelativeDate(item.created_at)}</Text>
-              </Pressable>
+              />
             );
           }}
         />
@@ -173,44 +259,62 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   list: {
     paddingBottom: spacing.huge,
-    gap: spacing.sm,
+    gap: spacing.md,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: spacing.sm,
+    marginBottom: 2,
+  },
+  sectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.tealStrong,
   },
   section: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
+    fontFamily: typography.fonts.bold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
   },
-  row: {
-    backgroundColor: colors.card,
-    borderRadius: radii.md,
+  billingCard: {
+    backgroundColor: colors.yellowLight,
+    borderRadius: radii.lg,
     padding: spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: 'rgba(212, 148, 36, 0.35)',
     flexDirection: 'row',
-    gap: spacing.sm,
-    alignItems: 'flex-start',
-    minHeight: 64,
+    gap: spacing.md,
+    alignItems: 'center',
+    minHeight: 88,
   },
-  unread: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.teal,
-    backgroundColor: colors.tealSoft,
+  billingCardDanger: {
+    backgroundColor: colors.errorLight,
+    borderColor: 'rgba(220, 53, 69, 0.35)',
   },
-  indicatorCol: {
-    paddingTop: 6,
+  billingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  billingEyebrow: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 10,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+    color: colors.honeyStrong,
   },
-  dotUnread: {
-    backgroundColor: colors.navy,
-  },
-  dotRead: {
-    backgroundColor: colors.borderStrong,
+  billingCta: {
+    marginTop: 2,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.navy,
   },
   body: {
     flex: 1,
@@ -230,15 +334,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     lineHeight: 18,
-  },
-  unavailable: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  time: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 11,
-    color: colors.textMuted,
   },
 });

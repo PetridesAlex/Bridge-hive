@@ -1,31 +1,30 @@
 import {
+  commissionFromGross,
+  DEFAULT_COMMISSION_RATE_BPS,
   estimatedWorkerShiftPayMinor,
   openPositionsLabel,
   SHIFT_UNAVAILABLE_TITLE,
 } from '@bridge-hive/domain';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AssignmentTimeline } from '@/components/ui/AssignmentTimeline';
+import { Ionicons } from '@expo/vector-icons';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
-import { DateTimeBlock } from '@/components/ui/DateTimeBlock';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { KeyValueRow } from '@/components/ui/KeyValueRow';
-import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
-import { MoneyAmount } from '@/components/ui/MoneyAmount';
-import { ProgressStep, type ProgressStepState } from '@/components/ui/ProgressStep';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { StatusBadge } from '@/components/ui/StatusBadge';
+import { PremiumActionButton } from '@/components/ui/PremiumActionButton';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { Surface } from '@/components/ui/Surface';
 import { TextInput } from '@/components/ui/TextInput';
 
 import { WORKER_ROLE_LABELS } from '@/constants/config';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { getMyAssignments, type ShiftAssignment } from '@/lib/queries';
 import {
   assignmentActionErrorMessage,
@@ -40,38 +39,12 @@ import {
 } from '@/lib/rpcs';
 import { clearPendingShiftRoute, peekPendingShiftRoute } from '@/lib/push/pending-shift';
 import { useAuth } from '@/providers/AuthProvider';
-import { formatDurationMinutes, formatMoney } from '@/utils/format';
-
-function assignmentStepState(
-  status: string | undefined,
-  target: string,
-): ProgressStepState {
-  const order = ['accepted', 'submitted', 'approved'];
-  if (!status) return 'not_started';
-  if (status === 'rejected') return 'rejected';
-  // Legacy in-flight check-in/out rows map to the submit step.
-  const normalized =
-    status === 'checked_in' || status === 'checked_out' ? 'accepted' : status;
-  const current = order.indexOf(normalized);
-  const targetIdx = order.indexOf(target);
-  if (current < 0 || targetIdx < 0) return 'not_started';
-  if (current > targetIdx) return 'complete';
-  if (current === targetIdx) return 'in_progress';
-  return 'not_started';
-}
-
-function stepStatusLabel(
-  assignmentStatus: string,
-  target: string,
-  extras?: string,
-): string {
-  const state = assignmentStepState(assignmentStatus, target);
-  if (state === 'complete' || state === 'approved') return '';
-  if (extras) return extras;
-  if (state === 'in_progress') return 'Current';
-  if (state === 'rejected') return 'Rejected';
-  return 'Pending';
-}
+import {
+  formatDate,
+  formatDurationMinutes,
+  formatMoney,
+  formatTimeRange,
+} from '@/utils/format';
 
 function minutesToHoursMinutes(total: number): { hours: string; minutes: string } {
   const safe = Math.max(0, Math.floor(total));
@@ -79,6 +52,30 @@ function minutesToHoursMinutes(total: number): { hours: string; minutes: string 
     hours: String(Math.floor(safe / 60)),
     minutes: String(safe % 60),
   };
+}
+
+function ScheduleMetaRow({
+  icon,
+  label,
+  value,
+  last = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.metaRow, !last && styles.metaRowBorder]}>
+      <View style={styles.metaIconWrap}>
+        <Ionicons name={icon} size={14} color={colors.tealStrong} />
+      </View>
+      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={styles.metaValue} numberOfLines={2}>
+        {value}
+      </Text>
+    </View>
+  );
 }
 
 function parseCompletedMinutes(hoursText: string, minutesText: string): number | null {
@@ -209,7 +206,13 @@ export default function ShiftDetailScreen() {
     }
 
     const minutes = ts.data?.submitted_minutes ?? total;
-    const message = `${minutes} minutes submitted for organization review.`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    const durationLabel =
+      hours > 0
+        ? `${hours}h${mins > 0 ? ` ${mins}m` : ''}`
+        : `${mins} minutes`;
+    const message = `${durationLabel} submitted. The organization will review and approve your hours before pay is finalized.`;
     setActionSuccess(message);
     Alert.alert('Hours submitted', message);
     void refresh();
@@ -279,6 +282,10 @@ export default function ShiftDetailScreen() {
     endsAtIso: shift.ends_at,
     breakMinutes: shift.break_minutes,
   });
+  const commissionMinor =
+    estimatedPayMinor > 0 ? commissionFromGross(estimatedPayMinor) : 0;
+  const netAfterCommissionMinor = Math.max(0, estimatedPayMinor - commissionMinor);
+  const commissionPercent = DEFAULT_COMMISSION_RATE_BPS / 100;
   const notesLong = (shift.notes?.length ?? 0) > 160;
   const notesVisible =
     !shift.notes
@@ -322,80 +329,149 @@ export default function ShiftDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.titleBlock}>
+          <Text style={styles.orgEyebrow}>{shift.organization_name}</Text>
           <Text style={styles.shiftTitle}>{shift.title || roleLabel}</Text>
-          <Text style={styles.orgLine}>{shift.organization_name}</Text>
           <View style={styles.badgeRow}>
-            <StatusBadge label={roleLabel} tone="info" icon="medkit-outline" />
+            <StatusBadge label={roleLabel} tone="info" icon="medkit-outline" solid />
             {assignment ? (
               <StatusBadge
                 label={assignment.status.replace(/_/g, ' ')}
                 tone="accent"
                 icon="briefcase-outline"
+                solid
               />
             ) : openPositions > 0 ? (
-              <StatusBadge label="Open" tone="accent" icon="calendar-outline" />
+              <StatusBadge label="Open" tone="accent" icon="calendar-outline" solid />
             ) : (
               <StatusBadge label="Full" tone="neutral" icon="calendar-outline" />
             )}
           </View>
         </View>
 
-        <Surface>
-          <Text style={styles.heroLabel}>When & where</Text>
-          <DateTimeBlock startsAt={shift.starts_at} endsAt={shift.ends_at} />
-          <View style={styles.heroMeta}>
-            <KeyValueRow label="Location" value={shift.location_name} />
+        <View style={styles.scheduleCard}>
+          <View style={styles.scheduleHeader}>
+            <Text style={styles.scheduleEyebrow}>When & where</Text>
+            <View style={styles.scheduleAccent} />
+          </View>
+
+          <View style={styles.scheduleHero}>
+            <View style={styles.scheduleChip}>
+              <View style={styles.scheduleIconWrap}>
+                <Ionicons name="calendar" size={16} color={colors.white} />
+              </View>
+              <View style={styles.scheduleChipText}>
+                <Text style={styles.scheduleChipLabel}>Date</Text>
+                <Text style={styles.scheduleChipValue}>
+                  {formatDate(shift.starts_at)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.scheduleChip}>
+              <View style={[styles.scheduleIconWrap, styles.scheduleIconTeal]}>
+                <Ionicons name="time" size={16} color={colors.white} />
+              </View>
+              <View style={styles.scheduleChipText}>
+                <Text style={styles.scheduleChipLabel}>Hours</Text>
+                <Text style={styles.scheduleChipValue}>
+                  {formatTimeRange(shift.starts_at, shift.ends_at)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.scheduleMeta}>
+            <ScheduleMetaRow
+              icon="location"
+              label="Location"
+              value={shift.location_name}
+            />
             {shift.ward_name ? (
-              <KeyValueRow label="Ward" value={shift.ward_name} />
+              <ScheduleMetaRow icon="business" label="Ward" value={shift.ward_name} />
             ) : null}
-            <KeyValueRow label="Duration" value={formatDurationMinutes(durationMin)} />
-            {shift.break_minutes > 0 ? (
-              <KeyValueRow
-                label="Break"
-                value={formatDurationMinutes(shift.break_minutes)}
-              />
-            ) : null}
-            <KeyValueRow
+            <ScheduleMetaRow
+              icon="hourglass"
+              label="Duration"
+              value={formatDurationMinutes(durationMin)}
+            />
+            <ScheduleMetaRow
+              icon="people"
               label="Positions"
               value={
                 shift.status === 'published'
                   ? openPositionsLabel(openPositions)
                   : `${shift.required_positions ?? 1}`
               }
+              last
             />
           </View>
-        </Surface>
+        </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Your pay</Text>
-          <ListGroup>
-            <View style={styles.groupPad}>
-              <View style={styles.payRow}>
-                <Text style={styles.payLabel}>Hourly rate</Text>
-                <MoneyAmount
-                  amountMinor={shift.rate_minor}
-                  currency={shift.currency}
-                  emphasize
-                  accessibilityLabel={`${formatMoney(shift.rate_minor, shift.currency)} per hour`}
-                />
+          <Text style={styles.sectionLabel}>Price overview</Text>
+          <View style={styles.priceCard}>
+            <View style={styles.priceHeader}>
+              <LinearGradient
+                colors={[colors.navy, colors.tealStrong]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.priceIcon}
+              >
+                <Text style={styles.priceIconText}>€</Text>
+              </LinearGradient>
+              <View style={styles.priceHeaderCopy}>
+                <Text style={styles.priceTitle}>Price overview</Text>
+                <Text style={styles.priceSubtitle}>
+                  Based on scheduled hours at{' '}
+                  {formatMoney(shift.rate_minor, shift.currency)}/hr
+                </Text>
               </View>
-              {estimatedPayMinor > 0 ? (
-                <View style={[styles.payRow, { marginTop: spacing.sm }]}>
-                  <Text style={styles.payLabel}>Est. for this assignment</Text>
-                  <MoneyAmount
-                    amountMinor={estimatedPayMinor}
-                    currency={shift.currency}
-                    emphasize
-                    accessibilityLabel={`${formatMoney(estimatedPayMinor, shift.currency)} estimated for this assignment`}
-                  />
-                </View>
-              ) : null}
-              <Text style={styles.hint}>
-                Estimated gross uses the scheduled length minus break. Organizations pay
-                approved gross amounts separately from Bridge Hive commission invoices.
-              </Text>
+              <View style={styles.rateBadge}>
+                <Text style={styles.rateBadgeText}>
+                  {formatMoney(shift.rate_minor, shift.currency)}/hr
+                </Text>
+              </View>
             </View>
-          </ListGroup>
+
+            {estimatedPayMinor > 0 ? (
+              <View style={styles.priceRows}>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Total pay</Text>
+                  <Text style={styles.priceValue}>
+                    {formatMoney(estimatedPayMinor, shift.currency)}
+                  </Text>
+                </View>
+                <View style={styles.priceRow}>
+                  <View style={styles.priceLabelCol}>
+                    <Text style={styles.priceLabel}>Commission</Text>
+                    <Text style={styles.priceHint}>
+                      Bridge Hive invoice · {commissionPercent}%
+                    </Text>
+                  </View>
+                  <Text style={styles.priceCommission}>
+                    −{formatMoney(commissionMinor, shift.currency)}
+                  </Text>
+                </View>
+                <View style={styles.priceDivider} />
+                <View style={styles.priceRow}>
+                  <View style={styles.priceLabelCol}>
+                    <Text style={styles.priceEarningsLabel}>Earnings</Text>
+                    <Text style={styles.priceHint}>After commission invoice</Text>
+                  </View>
+                  <Text style={styles.priceEarnings}>
+                    {formatMoney(netAfterCommissionMinor, shift.currency)}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.priceEmpty}>
+                Estimate unavailable for this schedule.
+              </Text>
+            )}
+          </View>
+          <Text style={styles.hint}>
+            The organization pays you the full total. Bridge Hive invoices commission
+            separately. Final amounts follow approved hours.
+          </Text>
         </View>
 
         {shift.notes ? (
@@ -420,83 +496,7 @@ export default function ShiftDetailScreen() {
         ) : null}
 
         {assignment ? (
-          <AssignmentTimeline>
-            <ProgressStep
-              step={1}
-              title="Accepted"
-              statusLabel={stepStatusLabel(assignment.status, 'accepted')}
-              state={
-                assignment.status === 'accepted' ||
-                assignment.status === 'checked_in' ||
-                assignment.status === 'checked_out'
-                  ? 'in_progress'
-                  : assignmentStepState(assignment.status, 'accepted')
-              }
-              isCurrent={canSubmitCompletedHours(assignment.status) && !ended}
-            />
-            <ProgressStep
-              step={2}
-              title="Submit hours"
-              statusLabel={stepStatusLabel(
-                assignment.status,
-                'submitted',
-                canSubmitCompletedHours(assignment.status)
-                  ? ended
-                    ? 'Ready'
-                    : 'After shift end'
-                  : undefined,
-              )}
-              state={
-                canSubmitCompletedHours(assignment.status) && ended
-                  ? 'in_progress'
-                  : assignmentStepState(assignment.status, 'submitted')
-              }
-              isCurrent={canSubmitCompletedHours(assignment.status) && ended}
-            />
-            <ProgressStep
-              step={3}
-              title="Organization review"
-              statusLabel={
-                assignment.status === 'approved'
-                  ? ''
-                  : assignment.status === 'rejected'
-                    ? 'Rejected'
-                    : assignment.status === 'submitted'
-                      ? 'Under review'
-                      : 'Pending'
-              }
-              state={
-                assignment.status === 'approved'
-                  ? 'approved'
-                  : assignment.status === 'rejected'
-                    ? 'rejected'
-                    : assignment.status === 'submitted'
-                      ? 'under_review'
-                      : 'not_started'
-              }
-              isCurrent={assignment.status === 'submitted'}
-            />
-            <ProgressStep
-              step={4}
-              title="Approved"
-              statusLabel={
-                assignment.status === 'approved'
-                  ? ''
-                  : assignment.status === 'rejected'
-                    ? 'Rejected'
-                    : 'Pending'
-              }
-              state={
-                assignment.status === 'approved'
-                  ? 'approved'
-                  : assignment.status === 'rejected'
-                    ? 'rejected'
-                    : 'not_started'
-              }
-              isCurrent={assignment.status === 'approved'}
-              isLast
-            />
-          </AssignmentTimeline>
+          <AssignmentTimeline status={assignment.status} shiftEnded={ended} />
         ) : null}
 
         {canSubmitCompletedHours(assignment?.status) && !ended ? (
@@ -577,18 +577,30 @@ export default function ShiftDetailScreen() {
         ) : null}
 
         {actionSuccess ? (
-          <Banner variant="success" title="Done" body={actionSuccess} />
+          <Banner
+            variant="success"
+            title="Hours submitted successfully"
+            body={actionSuccess}
+            actionLabel="View My shifts"
+            onAction={() => router.push('/(tabs)/work')}
+          />
         ) : null}
       </ScrollView>
 
       {primaryAction ? (
         <StickyActionBar>
-          <Button
+          <PremiumActionButton
             label={primaryAction.label}
-            variant="primary"
             loading={primaryAction.loading}
             disabled={primaryAction.disabled}
             onPress={primaryAction.onPress}
+            icon={
+              primaryAction.label.includes('Submit')
+                ? 'checkmark-circle-outline'
+                : primaryAction.label.includes('Claim')
+                  ? 'flash-outline'
+                  : 'arrow-forward'
+            }
           />
         </StickyActionBar>
       ) : null}
@@ -605,20 +617,21 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.huge,
   },
   titleBlock: {
-    gap: spacing.xs,
+    gap: 6,
+  },
+  orgEyebrow: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
   },
   shiftTitle: {
     fontFamily: typography.fonts.display,
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 26,
+    lineHeight: 32,
     color: colors.navy,
-    letterSpacing: -0.3,
-  },
-  orgLine: {
-    fontFamily: typography.fonts.regular,
-    fontSize: typography.size.md,
-    lineHeight: typography.lineHeight.md,
-    color: colors.textSecondary,
+    letterSpacing: -0.4,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -626,47 +639,242 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
   },
-  heroLabel: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.sm,
-    color: colors.tealStrong,
-    marginBottom: spacing.sm,
+  scheduleCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.16)',
+    ...shadows.md,
   },
-  heroMeta: {
-    marginTop: spacing.sm,
-    gap: 0,
+  scheduleHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    gap: 8,
+  },
+  scheduleEyebrow: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
+  },
+  scheduleAccent: {
+    height: 3,
+    width: 36,
+    borderRadius: 2,
+    backgroundColor: colors.yellow,
+  },
+  scheduleHero: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+  },
+  scheduleChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surfaceSubdued,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  scheduleIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.navy,
+  },
+  scheduleIconTeal: {
+    backgroundColor: colors.tealStrong,
+  },
+  scheduleChipText: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  scheduleChipLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+  },
+  scheduleChipValue: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.navy,
+    letterSpacing: -0.2,
+  },
+  scheduleMeta: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 12,
+  },
+  metaRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  metaIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.tealSoft,
+  },
+  metaLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
+    color: colors.textSecondary,
+    width: 78,
+  },
+  metaValue: {
+    flex: 1,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    color: colors.text,
+    textAlign: 'right',
   },
   section: {
     gap: spacing.sm,
   },
   sectionLabel: {
-    fontFamily: typography.fonts.semibold,
+    fontFamily: typography.fonts.displaySemibold,
     fontSize: typography.size.sm,
-    color: colors.textSecondary,
+    color: colors.navy,
+    letterSpacing: -0.1,
     paddingHorizontal: 2,
   },
-  groupPad: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xs,
+  priceCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadows.sm,
   },
-  payRow: {
+  priceHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: spacing.md,
-    paddingVertical: spacing.sm,
   },
-  payLabel: {
+  priceIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceIconText: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 18,
+    color: colors.white,
+  },
+  priceHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  priceTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    color: colors.tealStrong,
+    letterSpacing: -0.2,
+  },
+  priceSubtitle: {
     fontFamily: typography.fonts.regular,
-    fontSize: typography.size.md,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  rateBadge: {
+    backgroundColor: colors.navy,
+    borderRadius: radii.full,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  rateBadgeText: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 12,
+    color: colors.white,
+  },
+  priceRows: {
+    gap: spacing.md,
+    paddingTop: spacing.xs,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  priceLabelCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  priceLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 15,
+    color: colors.text,
+  },
+  priceHint: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  priceValue: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 16,
+    color: colors.text,
+    letterSpacing: -0.2,
+  },
+  priceCommission: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 16,
+    color: colors.navy,
+    letterSpacing: -0.2,
+  },
+  priceDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+  },
+  priceEarningsLabel: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 15,
+    color: colors.text,
+  },
+  priceEarnings: {
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 22,
+    lineHeight: 26,
+    color: colors.success,
+    letterSpacing: -0.4,
+  },
+  priceEmpty: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
     color: colors.textSecondary,
   },
   hint: {
     fontFamily: typography.fonts.regular,
-    fontSize: typography.size.sm,
-    lineHeight: typography.lineHeight.sm,
-    color: colors.textMuted,
-    marginBottom: spacing.sm,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.textSecondary,
+    paddingHorizontal: 2,
   },
   notes: {
     fontFamily: typography.fonts.regular,

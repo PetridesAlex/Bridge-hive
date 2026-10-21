@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -18,6 +18,10 @@ export type SegmentTab = {
   icon?: keyof typeof Ionicons.glyphMap;
   iconFocused?: keyof typeof Ionicons.glyphMap;
   badge?: number;
+  /** Optional per-tab indicator gradient when selected. */
+  accentGradient?: readonly [string, string, ...string[]];
+  /** Inactive label/icon tint for this tab. */
+  accentColor?: string;
 };
 
 type Props = {
@@ -29,6 +33,7 @@ type Props = {
 const SPRING = { damping: 18, stiffness: 240 };
 const PAD = 4;
 const GAP = 4;
+const DEFAULT_GRADIENT = [colors.navy, '#0C3E56', colors.tealStrong] as const;
 
 /** Sliding segmented control for Work, Money, and similar surfaces. */
 export function SegmentedTabs({ tabs, activeKey, onChange }: Props) {
@@ -40,6 +45,11 @@ export function SegmentedTabs({ tabs, activeKey, onChange }: Props) {
     tabs.findIndex((tab) => tab.key === activeKey),
   );
   const offset = useSharedValue(index);
+  const activeTab = tabs[index];
+  const indicatorColors = useMemo(
+    () => activeTab?.accentGradient ?? DEFAULT_GRADIENT,
+    [activeTab],
+  );
 
   useEffect(() => {
     offset.value = reduced ? index : withSpring(index, SPRING);
@@ -71,7 +81,7 @@ export function SegmentedTabs({ tabs, activeKey, onChange }: Props) {
       {tabWidth > 0 ? (
         <Animated.View pointerEvents="none" style={[styles.indicator, indicatorStyle]}>
           <LinearGradient
-            colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+            colors={[...indicatorColors]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -81,6 +91,7 @@ export function SegmentedTabs({ tabs, activeKey, onChange }: Props) {
       {tabs.map((tab) => {
         const active = tab.key === activeKey;
         const iconName = active ? (tab.iconFocused ?? tab.icon) : tab.icon;
+        const inactiveTint = tab.accentColor ?? colors.navy;
         return (
           <Pressable
             key={tab.key}
@@ -95,15 +106,36 @@ export function SegmentedTabs({ tabs, activeKey, onChange }: Props) {
               <Ionicons
                 name={iconName}
                 size={15}
-                color={active ? colors.white : colors.navy}
+                color={active ? colors.white : inactiveTint}
               />
             ) : null}
-            <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>
+            <Text
+              style={[
+                styles.label,
+                !active && tab.accentColor ? { color: tab.accentColor } : null,
+                active && styles.labelActive,
+              ]}
+              numberOfLines={1}
+            >
               {tab.label}
             </Text>
             {tab.badge && tab.badge > 0 ? (
-              <View style={[styles.badge, active && styles.badgeActive]}>
-                <Text style={[styles.badgeText, active && styles.badgeTextActive]}>
+              <View
+                style={[
+                  styles.badge,
+                  !active && tab.accentColor
+                    ? { backgroundColor: `${tab.accentColor}22` }
+                    : null,
+                  active && styles.badgeActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.badgeText,
+                    !active && tab.accentColor ? { color: tab.accentColor } : null,
+                    active && styles.badgeTextActive,
+                  ]}
+                >
                   {tab.badge}
                 </Text>
               </View>
@@ -140,11 +172,11 @@ const styles = StyleSheet.create({
     minHeight: 42,
     borderRadius: 16,
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
     zIndex: 1,
   },
   tabHover: {
@@ -152,7 +184,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.navy,
   },
   labelActive: {
@@ -169,7 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tealSoft,
   },
   badgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   badgeText: {
     fontFamily: typography.fonts.semibold,

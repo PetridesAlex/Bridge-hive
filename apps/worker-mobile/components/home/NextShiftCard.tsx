@@ -64,12 +64,16 @@ export function NextShiftCard({ shift, assignmentStatus }: Props) {
       </View>
       <Text style={styles.org}>{shift.organization_name}</Text>
       <Text style={styles.role}>{roleLabel}</Text>
-      <Text style={styles.dept}>
-        {shift.location_name}
-        {shift.ward_name ? ` · ${shift.ward_name}` : ''}
-      </Text>
 
       <View style={styles.meta}>
+        <MetaRow
+          icon="location"
+          label={
+            [shift.location_name, shift.ward_name].filter(Boolean).join(' · ') ||
+            'Location not listed'
+          }
+          accent
+        />
         <MetaRow
           icon="calendar-outline"
           label={formatDayLabel(isoDateFromTimestamp(shift.starts_at))}
@@ -89,14 +93,24 @@ export function NextShiftCard({ shift, assignmentStatus }: Props) {
 function MetaRow({
   icon,
   label,
+  accent = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  accent?: boolean;
 }) {
   return (
-    <View style={styles.metaRow}>
-      <Ionicons name={icon} size={15} color={colors.navy} />
-      <Text style={styles.metaLabel}>{label}</Text>
+    <View style={[styles.metaRow, accent && styles.metaRowAccent]}>
+      <View style={[styles.metaIcon, accent && styles.metaIconAccent]}>
+        <Ionicons
+          name={icon}
+          size={14}
+          color={accent ? colors.white : colors.navy}
+        />
+      </View>
+      <Text style={[styles.metaLabel, accent && styles.metaLabelAccent]} numberOfLines={2}>
+        {label}
+      </Text>
     </View>
   );
 }
@@ -141,17 +155,34 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     color: colors.text,
   },
-  dept: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  meta: { gap: 6, marginTop: spacing.xs },
+  meta: { gap: 8, marginTop: spacing.xs },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  metaRowAccent: {
+    backgroundColor: colors.tealSoft,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+  },
+  metaIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceSubdued,
+  },
+  metaIconAccent: {
+    backgroundColor: colors.tealStrong,
+  },
   metaLabel: {
+    flex: 1,
     fontFamily: typography.fonts.medium,
     fontSize: 14,
     color: colors.text,
+  },
+  metaLabelAccent: {
+    fontFamily: typography.fonts.semibold,
+    color: colors.navy,
   },
   pay: {
     fontFamily: typography.fonts.bold,

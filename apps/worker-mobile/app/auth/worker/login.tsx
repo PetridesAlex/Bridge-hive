@@ -1,14 +1,61 @@
 import { Redirect, router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { AuthField } from '@/components/auth/AuthField';
+import { AuthPrimaryButton } from '@/components/auth/AuthPrimaryButton';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
-import { Button } from '@/components/ui/Button';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { peekPendingShiftRoute } from '@/lib/push/pending-shift';
 import { useAuth } from '@/providers/AuthProvider';
+
+function DynamicPressable({
+  onPress,
+  accessibilityLabel,
+  accessibilityRole = 'button',
+  children,
+  style,
+}: {
+  onPress: () => void;
+  accessibilityLabel: string;
+  accessibilityRole?: 'button' | 'link';
+  children: React.ReactNode;
+  style?: object;
+}) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+  const motion = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={motion}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
+        hitSlop={10}
+        onPressIn={() => {
+          if (reduced) return;
+          scale.value = withSpring(0.97, { damping: 18, stiffness: 420 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+        }}
+        style={style}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function WorkerLoginScreen() {
   const { signIn, session, loading, homeRoute, isVerified } = useAuth();
@@ -49,13 +96,13 @@ export default function WorkerLoginScreen() {
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>New to Bridge Hive?</Text>
-          <Pressable
+          <DynamicPressable
             onPress={() => router.push('/auth/worker/register')}
             accessibilityRole="link"
             accessibilityLabel="Create worker account"
           >
             <Text style={styles.footerLink}>Create worker account</Text>
-          </Pressable>
+          </DynamicPressable>
         </View>
       }
     >
@@ -88,23 +135,18 @@ export default function WorkerLoginScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        <Button
+        <AuthPrimaryButton
           label="Sign in"
-          variant="primary"
-          size="lg"
           loading={submitting}
-          onPress={onSubmit}
-          style={styles.cta}
+          onPress={() => void onSubmit()}
         />
-        <Pressable
+        <DynamicPressable
           onPress={() => router.push('/auth/worker/forgot-password')}
-          hitSlop={10}
-          style={styles.forgotBtn}
-          accessibilityRole="button"
           accessibilityLabel="Forgot password"
+          style={styles.forgotBtn}
         >
           <Text style={styles.forgot}>Forgot password?</Text>
-        </Pressable>
+        </DynamicPressable>
         <GoogleSignInButton />
       </View>
     </AuthShell>
@@ -115,9 +157,6 @@ const styles = StyleSheet.create({
   actions: {
     gap: spacing.md,
     marginTop: spacing.sm,
-  },
-  cta: {
-    borderRadius: radii.full,
   },
   error: {
     fontFamily: typography.fonts.regular,
@@ -137,18 +176,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   footer: {
-    marginTop: spacing.xxl,
+    marginTop: spacing.lg,
     alignItems: 'center',
     gap: 6,
   },
   footerText: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.6)',
+    fontFamily: typography.fonts.medium,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.text,
   },
   footerLink: {
     fontFamily: typography.fonts.semibold,
     fontSize: 16,
+    lineHeight: 22,
     color: colors.tealStrong,
   },
 });

@@ -20,6 +20,8 @@ type Props = {
   icon?: keyof typeof Ionicons.glyphMap;
   /** Soft live pulse — for marketplace “Open” and similar live states only. */
   pulse?: boolean;
+  /** Solid fill using the tone foreground as background (stronger marketplace badges). */
+  solid?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -35,8 +37,18 @@ const TONE: Record<StatusTone, { fg: string; bg: string }> = {
 /**
  * Status meaning uses icon/label plus color — never color alone.
  */
-export function StatusBadge({ label, tone = 'neutral', icon, pulse = false, style }: Props) {
-  const palette = TONE[tone];
+export function StatusBadge({
+  label,
+  tone = 'neutral',
+  icon,
+  pulse = false,
+  solid = false,
+  style,
+}: Props) {
+  const base = TONE[tone];
+  const palette = solid
+    ? { fg: colors.white, bg: base.fg }
+    : base;
   const reduced = useReducedMotion();
   const pulseProgress = useSharedValue(1);
 

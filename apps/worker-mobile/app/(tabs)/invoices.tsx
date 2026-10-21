@@ -17,6 +17,7 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { MoneyAmount } from '@/components/ui/MoneyAmount';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { type InvoiceFilter, useInvoices } from '@/hooks/useInvoices';
 import { useAuth } from '@/providers/AuthProvider';
@@ -30,6 +31,7 @@ const FILTERS: { key: InvoiceFilter; label: string }[] = [
 
 export default function InvoicesScreen() {
   const { user } = useAuth();
+  const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { invoices, allInvoices, loading, error, refresh, filter, setFilter } = useInvoices(user?.id);
 
   const totals = useMemo(() => {
@@ -96,7 +98,7 @@ export default function InvoicesScreen() {
         <FlatList
           data={invoices}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
           ListEmptyComponent={
             <EmptyState
@@ -194,7 +196,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.semibold,
   },
   list: {
-    paddingBottom: spacing.huge,
+    paddingBottom: 0,
     gap: spacing.md,
   },
 });

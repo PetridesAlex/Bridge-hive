@@ -9,12 +9,14 @@ import {
   AnimatedTabLabel,
   TAB_ACCENTS,
   TabBarBackground,
+  useAdaptiveTabBarStyle,
 } from '@/components/navigation/AnimatedTabBar';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabsLayout() {
   const { loading, session, isVerified, accountRejectionReason, homeRoute } = useAuth();
+  const tabBarStyle = useAdaptiveTabBarStyle();
 
   if (loading) {
     return (
@@ -43,18 +45,7 @@ export default function TabsLayout() {
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarShowLabel: true,
-        tabBarStyle: {
-          backgroundColor: 'transparent',
-          borderTopWidth: 0,
-          elevation: 12,
-          shadowColor: '#0B2A43',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          height: 68,
-          paddingBottom: 8,
-          paddingTop: 4,
-        },
+        tabBarStyle,
         tabBarItemStyle: {
           paddingHorizontal: 0,
         },
@@ -108,7 +99,11 @@ export default function TabsLayout() {
           title: 'My shifts',
           tabBarAccessibilityLabel: 'My shifts',
           tabBarLabel: ({ focused }) => (
-            <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.work}>
+            <AnimatedTabLabel
+              focused={focused}
+              accent={TAB_ACCENTS.work}
+              compactLabel="Work"
+            >
               My shifts
             </AnimatedTabLabel>
           ),

@@ -1,8 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useMemo, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { isoDateFromTimestamp, parseLocalDate } from '@/utils/format';
 
 type Props = {
@@ -59,12 +68,95 @@ function rangeTitle(start: Date, offset: number): string {
   return `${left} – ${right}`;
 }
 
+function DayCell({
+  day,
+  selected,
+  onPress,
+}: {
+  day: {
+    iso: string;
+    label: string;
+    dayNum: number;
+    isToday: boolean;
+    booked: number;
+    open: number;
+  };
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+  const motion = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const busy = day.booked > 0 || day.open > 0;
+
+  return (
+    <Animated.View style={[styles.dayWrap, motion]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ selected }}
+        accessibilityLabel={`${day.label} ${day.dayNum}${day.booked ? `, ${day.booked} booked` : ''}${day.open ? `, ${day.open} open` : ''}`}
+        onPress={onPress}
+        onPressIn={() => {
+          if (reduced) return;
+          scale.value = withSpring(0.94, { damping: 18, stiffness: 420 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+        }}
+        style={[
+          styles.day,
+          day.isToday && !selected && styles.dayToday,
+          busy && !selected && styles.dayBusy,
+          selected && styles.dayOn,
+        ]}
+      >
+        {selected ? (
+          <LinearGradient
+            pointerEvents="none"
+            colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
+        <Text style={[styles.dayLabel, selected && styles.dayLabelOn]}>{day.label}</Text>
+        <Text style={[styles.dayNum, selected && styles.dayNumOn]}>{day.dayNum}</Text>
+        <View style={styles.marks}>
+          {day.booked > 0 ? (
+            <View style={[styles.mark, styles.markBooked, selected && styles.markOn]} />
+          ) : null}
+          {day.open > 0 ? (
+            <View style={[styles.mark, styles.markOpen, selected && styles.markOn]} />
+          ) : null}
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 /** Week calendar for booked work and open marketplace shifts. */
 export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: Props) {
   const [weekOffset, setWeekOffset] = useState(0);
+  const reduced = useReducedMotion();
   const today = todayIso();
   const workCount = useMemo(() => counts(workDates), [workDates]);
   const openCount = useMemo(() => counts(openDates), [openDates]);
+  const enter = useSharedValue(reduced ? 1 : 0);
+
+  useEffect(() => {
+    if (reduced) {
+      enter.value = 1;
+      return;
+    }
+    enter.value = withSpring(1, { damping: 16, stiffness: 140 });
+  }, [enter, reduced]);
+
+  const cardMotion = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: (1 - enter.value) * 10 }],
+  }));
 
   const weekStart = useMemo(
     () => addDays(mondayOf(today), weekOffset * 7),
@@ -101,118 +193,143 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
   const showingToday = weekOffset === 0;
 
   return (
-    <View style={styles.card}>
-      <View style={styles.header}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Previous week"
-          onPress={() => moveWeek(-1)}
-          style={styles.nav}
-        >
-          <Ionicons name="chevron-back" size={18} color={colors.navy} />
-        </Pressable>
-        <View style={styles.heading}>
-          <Text style={styles.kicker}>Schedule</Text>
-          <Text style={styles.title}>{rangeTitle(weekStart, weekOffset)}</Text>
-          <Text style={styles.summary}>
-            {weekBooked} booked · {weekOpen} open
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Next week"
-          onPress={() => moveWeek(1)}
-          style={styles.nav}
-        >
-          <Ionicons name="chevron-forward" size={18} color={colors.navy} />
-        </Pressable>
-      </View>
-
-      <View style={styles.tools}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ selected: selectedIso == null }}
-          accessibilityLabel="Show all upcoming"
-          onPress={() => onSelect(null)}
-          style={[styles.tool, selectedIso == null && styles.toolOn]}
-        >
-          <Text style={[styles.toolText, selectedIso == null && styles.toolTextOn]}>All days</Text>
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Jump to today"
-          onPress={() => {
-            setWeekOffset(0);
-            onSelect(today);
-          }}
-          style={[styles.tool, showingToday && selectedIso === today && styles.toolOn]}
-        >
-          <Ionicons
-            name="today-outline"
-            size={14}
-            color={showingToday && selectedIso === today ? colors.white : colors.tealStrong}
-          />
-          <Text
-            style={[
-              styles.toolText,
-              showingToday && selectedIso === today && styles.toolTextOn,
-            ]}
+    <Animated.View style={[styles.card, cardMotion]}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroBand}
+      >
+        <View style={styles.header}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Previous week"
+            onPress={() => moveWeek(-1)}
+            style={styles.nav}
           >
-            Today
-          </Text>
-        </Pressable>
-      </View>
+            <Ionicons name="chevron-back" size={18} color={colors.white} />
+          </Pressable>
+          <View style={styles.heading}>
+            <Text style={styles.kicker}>Schedule</Text>
+            <Text style={styles.title}>{rangeTitle(weekStart, weekOffset)}</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Next week"
+            onPress={() => moveWeek(1)}
+            style={styles.nav}
+          >
+            <Ionicons name="chevron-forward" size={18} color={colors.white} />
+          </Pressable>
+        </View>
 
-      <View style={styles.grid}>
-        {days.map((day) => {
-          const selected = selectedIso === day.iso;
-          return (
-            <Pressable
-              key={day.iso}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              accessibilityLabel={`${day.label} ${day.dayNum}${day.booked ? `, ${day.booked} booked` : ''}${day.open ? `, ${day.open} open` : ''}`}
-              onPress={() => onSelect(selected ? null : day.iso)}
-              style={[styles.day, day.isToday && !selected && styles.dayToday, selected && styles.dayOn]}
+        <View style={styles.statRow}>
+          <View style={styles.statChip}>
+            <View style={[styles.statDot, styles.markBooked]} />
+            <Text style={styles.statValue}>{weekBooked}</Text>
+            <Text style={styles.statLabel}>booked</Text>
+          </View>
+          <View style={styles.statChip}>
+            <View style={[styles.statDot, styles.markOpen]} />
+            <Text style={styles.statValue}>{weekOpen}</Text>
+            <Text style={styles.statLabel}>open</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.body}>
+        <View style={styles.tools}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ selected: selectedIso == null }}
+            accessibilityLabel="Show all upcoming"
+            onPress={() => onSelect(null)}
+            style={[styles.tool, selectedIso == null && styles.toolOn]}
+          >
+            <Text style={[styles.toolText, selectedIso == null && styles.toolTextOn]}>
+              All days
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Jump to today"
+            onPress={() => {
+              setWeekOffset(0);
+              onSelect(today);
+            }}
+            style={[styles.tool, showingToday && selectedIso === today && styles.toolOn]}
+          >
+            <Ionicons
+              name="today-outline"
+              size={14}
+              color={
+                showingToday && selectedIso === today ? colors.white : colors.tealStrong
+              }
+            />
+            <Text
+              style={[
+                styles.toolText,
+                showingToday && selectedIso === today && styles.toolTextOn,
+              ]}
             >
-              <Text style={[styles.dayLabel, selected && styles.dayLabelOn]}>{day.label}</Text>
-              <Text style={[styles.dayNum, selected && styles.dayNumOn]}>{day.dayNum}</Text>
-              <View style={styles.marks}>
-                {day.booked > 0 ? (
-                  <View style={[styles.mark, styles.markBooked, selected && styles.markOn]} />
-                ) : null}
-                {day.open > 0 ? (
-                  <View style={[styles.mark, styles.markOpen, selected && styles.markOn]} />
-                ) : null}
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+              Today
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open full month calendar"
+            onPress={() => router.push('/shifts/calendar')}
+            style={styles.tool}
+          >
+            <Ionicons name="calendar-outline" size={14} color={colors.tealStrong} />
+            <Text style={styles.toolText}>Month</Text>
+          </Pressable>
+        </View>
 
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.mark, styles.markBooked]} />
-          <Text style={styles.legendText}>Booked</Text>
-        </View>
-        <View style={styles.legendItem}>
-          <View style={[styles.mark, styles.markOpen]} />
-          <Text style={styles.legendText}>Open to claim</Text>
+        <Animated.View
+          entering={reduced ? undefined : FadeIn.delay(80).duration(320)}
+          style={styles.grid}
+        >
+          {days.map((day) => (
+            <DayCell
+              key={day.iso}
+              day={day}
+              selected={selectedIso === day.iso}
+              onPress={() => onSelect(selectedIso === day.iso ? null : day.iso)}
+            />
+          ))}
+        </Animated.View>
+
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.mark, styles.markBooked]} />
+            <Text style={styles.legendText}>Booked</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.mark, styles.markOpen]} />
+            <Text style={styles.legendText}>Open to claim</Text>
+          </View>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
     borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: '#D5E2EE',
-    padding: spacing.md,
-    gap: spacing.sm,
-    ...shadows.md,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.2)',
+    backgroundColor: colors.card,
+    ...shadows.lg,
+  },
+  heroBand: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -225,43 +342,76 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F8FB',
-    borderWidth: 1,
-    borderColor: '#E3EEF6',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
   },
   heading: {
     flex: 1,
     alignItems: 'center',
-    gap: 1,
+    gap: 2,
   },
   kicker: {
-    fontFamily: typography.fonts.displaySemibold,
+    fontFamily: typography.fonts.semibold,
     fontSize: 11,
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: colors.tealStrong,
+    color: colors.yellow,
   },
   title: {
     fontFamily: typography.fonts.displaySemibold,
-    fontSize: 18,
-    color: colors.navy,
+    fontSize: 20,
+    color: colors.white,
+    letterSpacing: -0.3,
   },
-  summary: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  tools: {
+  statRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.sm,
   },
+  statChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  statDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  statValue: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 14,
+    color: colors.white,
+  },
+  statLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.78)',
+  },
+  body: {
+    padding: spacing.md,
+    gap: spacing.md,
+    backgroundColor: colors.card,
+  },
+  tools: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
   tool: {
-    minHeight: 32,
+    minHeight: 34,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: '#D5E2EE',
-    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.28)',
+    backgroundColor: colors.tealSoft,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -272,46 +422,56 @@ const styles = StyleSheet.create({
     borderColor: colors.navy,
   },
   toolText: {
-    fontFamily: typography.fonts.displaySemibold,
+    fontFamily: typography.fonts.semibold,
     fontSize: 12,
-    color: colors.navy,
+    color: colors.tealStrong,
   },
   toolTextOn: {
     color: colors.white,
   },
   grid: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 5,
+  },
+  dayWrap: {
+    flex: 1,
   },
   day: {
-    flex: 1,
-    minHeight: 68,
+    minHeight: 74,
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F7FBFE',
-    borderWidth: 1,
-    borderColor: '#E3EEF6',
-    paddingVertical: 6,
+    backgroundColor: colors.surfaceSubdued,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingVertical: 8,
+    overflow: 'hidden',
+    gap: 2,
   },
   dayToday: {
     borderColor: colors.tealStrong,
+    borderWidth: 1.5,
+  },
+  dayBusy: {
+    backgroundColor: colors.tealSoft,
+    borderColor: 'rgba(20, 169, 181, 0.35)',
   },
   dayOn: {
-    backgroundColor: colors.navy,
-    borderColor: colors.navy,
+    borderColor: 'transparent',
   },
   dayLabel: {
     fontFamily: typography.fonts.medium,
     fontSize: 10,
     color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   dayLabelOn: {
-    color: 'rgba(255,255,255,0.72)',
+    color: 'rgba(255,255,255,0.75)',
   },
   dayNum: {
     fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
+    fontSize: 17,
     color: colors.navy,
   },
   dayNumOn: {
@@ -342,7 +502,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.lg,
-    paddingTop: 2,
   },
   legendItem: {
     flexDirection: 'row',

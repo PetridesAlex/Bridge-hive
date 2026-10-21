@@ -2,21 +2,21 @@ import React from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { colors, spacing } from '@/constants/theme';
+import { spacing } from '@/constants/theme';
 
 type Props = {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 };
 
-/** Safe-area sticky bottom action bar for detail / workday screens. */
+/** Safe-area sticky bottom actions — transparent shell; CTA floats on its own. */
 export function StickyActionBar({ children, style }: Props) {
   const insets = useSafeAreaInsets();
   return (
     <View
       style={[
         styles.bar,
-        { paddingBottom: Math.max(insets.bottom, spacing.sm) },
+        { paddingBottom: Math.max(insets.bottom, spacing.md) },
         style,
       ]}
     >
@@ -28,10 +28,8 @@ export function StickyActionBar({ children, style }: Props) {
 const styles = StyleSheet.create({
   bar: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.card,
+    paddingTop: spacing.sm,
+    backgroundColor: 'transparent',
     gap: spacing.sm,
   },
 });

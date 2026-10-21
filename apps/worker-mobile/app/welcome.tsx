@@ -61,7 +61,7 @@ function WelcomeAction({
         {tone === 'primary' ? (
           <LinearGradient
             pointerEvents="none"
-            colors={[colors.tealStrong, '#0A6C78', colors.yellow]}
+            colors={['#14A9B5', colors.tealStrong, '#0A6C78']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -70,7 +70,7 @@ function WelcomeAction({
         <Text
           style={[
             styles.actionLabel,
-            tone === 'secondary' && styles.actionLabelSecondary,
+            tone === 'primary' ? styles.actionLabelPrimary : styles.actionLabelSecondary,
           ]}
         >
           {label}
@@ -79,7 +79,7 @@ function WelcomeAction({
           <Ionicons
             name="arrow-forward"
             size={18}
-            color={WELCOME_NAVY}
+            color={colors.white}
             style={styles.actionIcon}
           />
         ) : null}
@@ -222,11 +222,12 @@ const styles = StyleSheet.create({
   eyebrow: {
     fontFamily: typography.fonts.semibold,
     fontSize: 12,
+    lineHeight: 16,
     letterSpacing: 1.4,
-    color: 'rgba(228, 179, 52, 0.92)',
+    color: colors.yellow,
   },
   title: {
-    fontFamily: typography.fonts.displayExtra,
+    fontFamily: typography.fonts.display,
     fontSize: 34,
     lineHeight: 40,
     letterSpacing: -0.8,
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.regular,
     fontSize: 17,
     lineHeight: 26,
-    color: 'rgba(247, 251, 253, 0.78)',
+    color: 'rgba(247, 251, 253, 0.92)',
     maxWidth: 360,
   },
   actions: {
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
   },
   action: {
-    minHeight: 52,
+    minHeight: 54,
     borderRadius: radii.xl,
     overflow: 'hidden',
     alignItems: 'center',
@@ -262,15 +263,18 @@ const styles = StyleSheet.create({
     ...shadows.lg,
   },
   actionSecondary: {
-    borderWidth: 1,
-    borderColor: 'rgba(247, 251, 253, 0.28)',
-    backgroundColor: 'rgba(247, 251, 253, 0.06)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(247, 251, 253, 0.45)',
+    backgroundColor: 'rgba(247, 251, 253, 0.1)',
   },
   actionLabel: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    letterSpacing: -0.2,
-    color: WELCOME_NAVY,
+    fontFamily: typography.fonts.bold,
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.1,
+  },
+  actionLabelPrimary: {
+    color: colors.white,
   },
   actionLabelSecondary: {
     color: colors.white,

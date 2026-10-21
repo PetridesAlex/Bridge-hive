@@ -14,19 +14,21 @@ import { ListGroupSeparator } from '@/components/ui/Card';
 import { OfflineState } from '@/components/ui/OfflineState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { colors, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useShifts } from '@/hooks/useShifts';
-import type { Shift } from '@/lib/queries';
+import type { MarketplaceShift } from '@/lib/queries';
 import { formatDayLabel, isoDateFromTimestamp } from '@/utils/format';
 
 type Row =
   | { type: 'header'; key: string; title: string }
-  | { type: 'shift'; key: string; shift: Shift; first: boolean; last: boolean };
+  | { type: 'shift'; key: string; shift: MarketplaceShift; first: boolean; last: boolean };
 
 export default function ShiftsScreen() {
   const { shifts, loading, error, offline, refresh, workerRole, isVerified } = useShifts();
   const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(isVerified);
+  const tabScrollInset = useTabBarScrollInset(spacing.xl);
 
   const roleLabel =
     workerRole && workerRole in WORKER_ROLE_LABELS
@@ -34,7 +36,7 @@ export default function ShiftsScreen() {
       : 'Worker';
 
   const rows = useMemo(() => {
-    const byDate = new Map<string, Shift[]>();
+    const byDate = new Map<string, MarketplaceShift[]>();
     for (const shift of shifts) {
       const key = isoDateFromTimestamp(shift.starts_at);
       const list = byDate.get(key) ?? [];
@@ -127,7 +129,7 @@ export default function ShiftsScreen() {
         <FlatList
           data={rows}
           keyExtractor={(item) => item.key}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
@@ -155,6 +157,12 @@ export default function ShiftsScreen() {
               >
                 <ShiftCard
                   shift={item.shift}
+                  organizationName={item.shift.organization_name ?? undefined}
+                  locationName={
+                    [item.shift.location_name, item.shift.ward_name]
+                      .filter(Boolean)
+                      .join(' · ') || undefined
+                  }
                   onPress={() => router.push(`/shifts/${item.shift.id}`)}
                 />
                 {!item.last ? <ListGroupSeparator /> : null}
@@ -175,38 +183,38 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   list: {
-    paddingBottom: spacing.huge,
     flexGrow: 0,
   },
   emptyWrap: {
     paddingTop: spacing.sm,
   },
   groupTitle: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.sm,
-    color: colors.textSecondary,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: typography.size.md,
+    color: colors.navy,
     marginBottom: spacing.sm,
     marginTop: spacing.xs,
+    letterSpacing: -0.2,
   },
   groupTitleSpaced: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
   },
   groupItem: {
     backgroundColor: colors.card,
-    borderColor: colors.border,
+    borderColor: 'rgba(20, 169, 181, 0.14)',
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderRightWidth: StyleSheet.hairlineWidth,
     overflow: 'hidden',
   },
   groupTop: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   groupBottom: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    marginBottom: spacing.sm,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    marginBottom: spacing.md,
   },
 });

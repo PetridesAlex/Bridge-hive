@@ -20,6 +20,8 @@ export default function WorkerAuthLandingScreen() {
       title="Your BridgeHive workspace"
       subtitle="Sign in to manage shifts, documents, timesheets and payment records."
       showBack={false}
+      centered
+      compact
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already registered?</Text>
@@ -27,6 +29,8 @@ export default function WorkerAuthLandingScreen() {
             onPress={() => router.push('/auth/worker/login')}
             accessibilityRole="link"
             accessibilityLabel="Sign in"
+            hitSlop={8}
+            style={styles.footerLinkHit}
           >
             <Text style={styles.footerLink}>Sign in</Text>
           </Pressable>
@@ -44,7 +48,9 @@ export default function WorkerAuthLandingScreen() {
           variant="secondary"
           onPress={() => router.push('/auth/worker/login')}
         />
-        <GoogleSignInButton />
+        <View style={styles.googleWrap}>
+          <GoogleSignInButton />
+        </View>
       </View>
     </AuthShell>
   );
@@ -55,14 +61,26 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     width: '100%',
   },
+  googleWrap: {
+    marginTop: spacing.xs,
+  },
   footer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: spacing.xs,
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
   },
   footerText: {
     fontFamily: typography.fonts.regular,
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  footerLinkHit: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   footerLink: {
     fontFamily: typography.fonts.semibold,

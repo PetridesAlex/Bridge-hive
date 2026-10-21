@@ -29,11 +29,11 @@ import {
 
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
-import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { KeyValueRow } from '@/components/ui/KeyValueRow';
 import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
 import { MoneySummary } from '@/components/ui/MoneySummary';
+import { PremiumActionButton } from '@/components/ui/PremiumActionButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { Surface } from '@/components/ui/Surface';
@@ -433,11 +433,11 @@ export default function InvoiceDetailScreen() {
       {payable ? (
         <StickyActionBar>
           {payError ? <Text style={styles.error}>{payError}</Text> : null}
-          <Button
+          <PremiumActionButton
             label={payLabel}
-            variant="primary"
             loading={paying}
             onPress={() => void onPay()}
+            icon="card-outline"
           />
         </StickyActionBar>
       ) : null}

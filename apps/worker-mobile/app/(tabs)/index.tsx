@@ -1,3 +1,5 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
@@ -8,8 +10,16 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { GreetingHeader } from '@/components/home/GreetingHeader';
+import { QuickAccess } from '@/components/home/QuickAccess';
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { ShiftNotificationPrompt } from '@/components/push/ShiftNotificationPrompt';
 import { NextShiftCard } from '@/components/home/NextShiftCard';
 import { ShiftCalendar } from '@/components/home/ShiftCalendar';
@@ -21,9 +31,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
 import { ListRow } from '@/components/ui/ListRow';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAssignments } from '@/hooks/useAssignments';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -54,6 +64,7 @@ export default function HomeScreen() {
   const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(isVerified);
   const { allInvoices, refresh: refreshInvoices } = useInvoices(user?.id);
   const { shifts: openShifts, refresh: refreshOpenShifts } = useShifts();
+  const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const [nextShift, setNextShift] = useState<WorkerShiftDetails | null>(null);
   const [nextStatus, setNextStatus] = useState<string>();
   const [detailLoading, setDetailLoading] = useState(false);
@@ -190,23 +201,14 @@ export default function HomeScreen() {
         liveLabel: 'Action needed',
       };
     }
-    if (pastDueCount === 0 && dueSoon) {
-      return {
-        eyebrow: 'Money',
-        title: 'Commission invoice due soon',
-        body: 'Bridge Hive invoices are separate from organization earnings.',
-        actionLabel: 'View invoice',
-        onAction: () => router.push(`/invoices/${dueSoon.id}`),
-        icon: 'receipt-outline' as const,
-        variant: 'light' as const,
-        live: false,
-      };
-    }
+    // Commission invoice alerts surface on the notifications bell, not here.
     if (nextShift) {
+      const role = nextShift.title?.trim() || nextShift.required_role?.replace(/_/g, ' ');
+      const when = formatTimeRange(nextShift.starts_at, nextShift.ends_at);
       return {
         eyebrow: 'Next shift',
         title: nextShift.organization_name,
-        body: 'Open your assignment for details and workday actions.',
+        body: [role, when].filter(Boolean).join(' · ') || undefined,
         actionLabel: 'View shift',
         onAction: () => router.push(`/shifts/${nextShift.shift_id}`),
         onPressCard: () => router.push(`/shifts/${nextShift.shift_id}`),
@@ -258,11 +260,16 @@ export default function HomeScreen() {
     nextShift,
     nextStatus,
     nextShiftEnded,
-    pastDueCount,
-    dueSoon,
     openShiftCount,
     roleLabel,
   ]);
+
+  const notificationAlertCount = useMemo(() => {
+    let count = 0;
+    if (pastDueCount > 0) count += pastDueCount;
+    else if (dueSoon) count += 1;
+    return count;
+  }, [pastDueCount, dueSoon]);
 
   const onRefresh = () => {
     void refresh();
@@ -274,10 +281,16 @@ export default function HomeScreen() {
   return (
     <AppScreen scroll={false} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: tabScrollInset }]}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
       >
-        <GreetingHeader firstName={firstName} roleLabel={roleLabel} initials={initials} />
+        <GreetingHeader
+          firstName={firstName}
+          roleLabel={roleLabel}
+          initials={initials}
+          unreadCount={notificationAlertCount}
+          alertTone={pastDueCount > 0 ? 'danger' : dueSoon ? 'money' : 'default'}
+        />
 
         {isRestricted && summary ? <BillingRestrictionBanner summary={summary} /> : null}
 
@@ -372,52 +385,112 @@ export default function HomeScreen() {
           )
         ) : null}
 
-        <SectionHeader title="Quick access" />
-        <ListGroup>
-          <ListRow
-            icon="calendar-outline"
-            title="Open shifts"
-            subtitle="Role-matched marketplace"
-            onPress={() => router.push('/(tabs)/shifts')}
-          />
-          <ListGroupSeparator />
-          <ListRow
-            icon="briefcase-outline"
-            title="My shifts"
-            subtitle="Accepted assignments"
-            onPress={() => router.push('/(tabs)/work')}
-          />
-          <ListGroupSeparator />
-          <ListRow
-            icon="wallet-outline"
-            title="Money"
-            subtitle="Earnings and invoices"
-            onPress={() => router.push('/(tabs)/payments')}
-          />
-        </ListGroup>
+        <QuickAccess />
 
         {openInvoices.length > 0 ? (
-          <Pressable
-            style={styles.moneySummary}
-            onPress={() => router.push('/(tabs)/invoices')}
-            accessibilityRole="button"
-            accessibilityLabel="View invoices"
-          >
-            <Text style={styles.moneyTitle}>Invoices</Text>
-            <Text style={styles.moneyBody}>
-              {openInvoices.length} open
-              {pastDueCount > 0 ? ` · ${pastDueCount} past due` : ''}
-            </Text>
-          </Pressable>
+          <InvoiceSummaryCard
+            openCount={openInvoices.length}
+            pastDueCount={pastDueCount}
+          />
         ) : null}
       </ScrollView>
     </AppScreen>
   );
 }
 
+function InvoiceSummaryCard({
+  openCount,
+  pastDueCount,
+}: {
+  openCount: number;
+  pastDueCount: number;
+}) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(1);
+  const motionStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const urgent = pastDueCount > 0;
+  const gradient: [string, string] = urgent
+    ? ['#9B1C1C', colors.error]
+    : ['#146C43', colors.success];
+  const soft = urgent ? colors.errorLight : colors.successLight;
+  const border = urgent ? 'rgba(220, 53, 69, 0.35)' : 'rgba(25, 135, 84, 0.28)';
+  const subtitle =
+    pastDueCount > 0
+      ? `${openCount} open · ${pastDueCount} past due`
+      : openCount === 1
+        ? '1 invoice needs attention'
+        : `${openCount} invoices need attention`;
+
+  return (
+    <Animated.View
+      entering={reduced ? undefined : FadeInDown.delay(160).duration(360)}
+      style={motionStyle}
+    >
+      <Pressable
+        onPress={() => router.push('/(tabs)/invoices')}
+        onPressIn={() => {
+          if (!reduced) scale.value = withSpring(0.975, { damping: 16, stiffness: 340 });
+        }}
+        onPressOut={() => {
+          if (!reduced) scale.value = withSpring(1, { damping: 14, stiffness: 280 });
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="View invoices"
+        style={({ pressed }) => [
+          styles.invoiceCard,
+          { backgroundColor: soft, borderColor: border },
+          pressed && styles.invoiceCardPressed,
+        ]}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={[`${gradient[0]}18`, 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.invoiceRail, { backgroundColor: gradient[1] }]} />
+
+        <LinearGradient
+          colors={gradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.invoiceIcon}
+        >
+          <Ionicons
+            name={urgent ? 'alert-circle' : 'receipt'}
+            size={20}
+            color={colors.white}
+          />
+        </LinearGradient>
+
+        <View style={styles.invoiceCopy}>
+          <View style={styles.invoiceTitleRow}>
+            <Text style={styles.invoiceTitle}>Invoices</Text>
+            <View style={[styles.invoiceBadge, { backgroundColor: gradient[0] }]}>
+              <Text style={styles.invoiceBadgeText}>
+                {urgent ? 'Past due' : `${openCount} open`}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.invoiceSubtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        </View>
+
+        <View style={[styles.invoiceChevron, { backgroundColor: `${gradient[1]}22` }]}>
+          <Ionicons name="arrow-forward" size={16} color={gradient[0]} />
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: spacing.huge,
     gap: spacing.lg,
   },
   scheduleBlock: {
@@ -431,23 +504,77 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.navy,
   },
-  moneySummary: {
+  invoiceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 84,
     marginTop: spacing.sm,
-    backgroundColor: colors.card,
-    borderRadius: radii.md,
-    padding: spacing.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1.5,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingLeft: spacing.lg + 4,
+    overflow: 'hidden',
+    position: 'relative',
+    ...shadows.sm,
   },
-  moneyTitle: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.lg,
+  invoiceCardPressed: {
+    opacity: 0.92,
+  },
+  invoiceRail: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
+  },
+  invoiceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  invoiceCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  invoiceTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  invoiceTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    letterSpacing: -0.2,
     color: colors.text,
   },
-  moneyBody: {
+  invoiceBadge: {
+    borderRadius: radii.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  invoiceBadgeText: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.white,
+  },
+  invoiceSubtitle: {
     fontFamily: typography.fonts.regular,
-    fontSize: typography.size.sm,
+    fontSize: 13,
     color: colors.textSecondary,
-    marginTop: 4,
+  },
+  invoiceChevron: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -1,6 +1,7 @@
 import type { Tables } from '@bridge-hive/supabase-types';
 import { remainingOpenPositions } from '@bridge-hive/domain';
 
+import { getWorkerShiftDetails } from '@/lib/rpcs';
 import { supabase } from '@/lib/supabase';
 
 export type Shift = Tables<'shifts'>;
@@ -23,6 +24,9 @@ const ACTIVE_ASSIGNMENT_STATUSES = [
 export type MarketplaceShift = Shift & {
   open_positions: number;
   filled_positions: number;
+  location_name?: string | null;
+  ward_name?: string | null;
+  organization_name?: string | null;
 };
 
 export async function getPublishedShifts() {
@@ -52,13 +56,30 @@ export async function getPublishedShifts() {
     filledByShift.set(row.shift_id, (filledByShift.get(row.shift_id) ?? 0) + 1);
   }
 
+  // Workers cannot read locations/wards via RLS. Use the security-definer
+  // details RPC so marketplace cards can show location (same source as detail).
+  const detailRows = await Promise.all(
+    data.map(async (shift) => {
+      const result = await getWorkerShiftDetails(shift.id);
+      return [shift.id, result.data] as const;
+    }),
+  );
+  const detailsById = new Map(detailRows);
+
   const enriched = data.map((shift) => {
     const filled = filledByShift.get(shift.id) ?? 0;
     const required = shift.required_positions ?? 1;
+    const detail = detailsById.get(shift.id);
     return {
       ...shift,
+      location_name: detail?.location_name?.trim() || null,
+      ward_name: detail?.ward_name?.trim() || null,
+      organization_name: detail?.organization_name?.trim() || null,
       filled_positions: filled,
-      open_positions: remainingOpenPositions(required, filled),
+      open_positions:
+        typeof detail?.open_positions === 'number'
+          ? detail.open_positions
+          : remainingOpenPositions(required, filled),
     } satisfies MarketplaceShift;
   });
 

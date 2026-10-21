@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -11,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { actionGradient, colors, motion, radii, shadows, spacing, typography } from '@/constants/theme';
+import { colors, motion, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Stat = {
@@ -35,76 +36,8 @@ type Props = {
   stats?: Stat[];
 };
 
-function CardAction({
-  label,
-  onPress,
-  tone,
-}: {
-  label: string;
-  onPress: () => void;
-  tone: 'solid' | 'light';
-}) {
-  const reduced = useReducedMotion();
-  const [hovered, setHovered] = useState(false);
-  const scale = useSharedValue(1);
-  const nudge = useSharedValue(0);
-
-  const motionStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: nudge.value }],
-  }));
-
-  return (
-    <Animated.View style={motionStyle}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        onPress={onPress}
-        onHoverIn={() => setHovered(true)}
-        onHoverOut={() => setHovered(false)}
-        onPressIn={() => {
-          if (reduced) return;
-          scale.value = withSpring(0.97, { damping: 18, stiffness: 420 });
-          nudge.value = withSpring(6, { damping: 14, stiffness: 320 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 14, stiffness: 260 });
-          nudge.value = withSpring(0, { damping: 14, stiffness: 260 });
-        }}
-        style={[styles.action, tone === 'light' && styles.actionLight]}
-      >
-        <LinearGradient
-          pointerEvents="none"
-          colors={
-            tone === 'solid'
-              ? [colors.navy, '#0C3E56', colors.tealStrong]
-              : hovered
-                ? ['#FFFFFF', '#F4F8FB']
-                : ['#FFFFFF', '#EEF5F8']
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        {hovered && tone === 'solid' ? <View pointerEvents="none" style={styles.actionWash} /> : null}
-        <Text style={[styles.actionLabel, tone === 'light' && styles.actionLabelLight]}>{label}</Text>
-        <Animated.View style={iconStyle}>
-          <Ionicons
-            name="arrow-forward"
-            size={16}
-            color={tone === 'solid' ? colors.yellow : colors.navy}
-          />
-        </Animated.View>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
 /**
- * Single most-important next action on Home.
- * Prefer one of these over duplicated Browse CTAs.
+ * Home “next action” — notification-style, minimal, with a living background.
  */
 export function ContextualActionCard({
   eyebrow,
@@ -121,10 +54,11 @@ export function ContextualActionCard({
 }: Props) {
   const emphasis = variant === 'emphasis';
   const reduced = useReducedMotion();
-  const [hovered, setHovered] = useState(false);
   const enter = useSharedValue(reduced ? 1 : 0);
-  const iconPulse = useSharedValue(1);
-  const lift = useSharedValue(0);
+  const sheen = useSharedValue(0);
+  const glow = useSharedValue(0);
+  const pulse = useSharedValue(1);
+  const press = useSharedValue(1);
 
   useEffect(() => {
     if (reduced) {
@@ -138,216 +72,316 @@ export function ContextualActionCard({
   }, [enter, reduced]);
 
   useEffect(() => {
-    if (!live || reduced) {
-      iconPulse.value = 1;
+    if (reduced) {
+      sheen.value = 0.45;
+      glow.value = 0.5;
       return;
     }
-    iconPulse.value = withRepeat(
-      withTiming(1.08, {
-        duration: motion.duration.slow * 5,
+    sheen.value = withRepeat(
+      withTiming(1, { duration: 4800, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+    glow.value = withRepeat(
+      withTiming(1, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [glow, reduced, sheen]);
+
+  useEffect(() => {
+    if (!live || reduced) {
+      pulse.value = 1;
+      return;
+    }
+    pulse.value = withRepeat(
+      withTiming(1.12, {
+        duration: motion.duration.slow * 4,
         easing: Easing.inOut(Easing.quad),
       }),
       -1,
       true,
     );
-  }, [iconPulse, live, reduced]);
+  }, [live, pulse, reduced]);
 
   const cardAnim = useAnimatedStyle(() => ({
     opacity: enter.value,
-    transform: [{ translateY: (1 - enter.value) * 10 + lift.value }],
+    transform: [
+      { translateY: (1 - enter.value) * 8 },
+      { scale: press.value },
+    ],
   }));
 
-  const iconAnim = useAnimatedStyle(() => ({
-    transform: [{ scale: iconPulse.value }],
+  const sheenStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(sheen.value, [0, 1], [-120, 280]) }],
+    opacity: emphasis ? 0.35 : 0.55,
   }));
 
-  const content = (
-    <>
-      <View style={[styles.accent, emphasis && styles.accentOnDark]} />
-      {emphasis ? (
-        <LinearGradient
-          colors={[...actionGradient]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
-      ) : (
-        <LinearGradient
-          colors={['rgba(22,166,182,0.08)', 'rgba(255,255,255,0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
-      )}
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glow.value, [0, 1], [0.25, 0.55]),
+  }));
 
-      <View style={styles.topRow}>
-        <Animated.View style={[styles.iconWrap, iconAnim]}>
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: interpolate(pulse.value, [1, 1.12], [0.9, 0.45]),
+  }));
+
+  const handlePress = () => {
+    (onPressCard ?? onAction)();
+  };
+
+  return (
+    <Animated.View style={cardAnim}>
+      <Pressable
+        onPress={handlePress}
+        onPressIn={() => {
+          if (!reduced) press.value = withSpring(0.985, { damping: 18, stiffness: 380 });
+        }}
+        onPressOut={() => {
+          if (!reduced) press.value = withSpring(1, { damping: 14, stiffness: 260 });
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={`${eyebrow}. ${title}. ${actionLabel}`}
+        style={[styles.card, emphasis && styles.cardEmphasis]}
+      >
+        {emphasis ? (
           <LinearGradient
+            colors={['#08253C', '#0B3A4F', '#0E6670']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
             pointerEvents="none"
+          />
+        ) : (
+          <LinearGradient
+            colors={['#F2FBFC', '#FFFFFF', '#EEF6FA']}
+            locations={[0, 0.45, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+        )}
+
+        <Animated.View style={[styles.glowBlob, glowStyle]} pointerEvents="none">
+          <LinearGradient
             colors={
               emphasis
-                ? ['rgba(255,255,255,0.24)', 'rgba(255,255,255,0.08)']
-                : [colors.navy, colors.tealStrong]
+                ? ['rgba(245, 197, 66, 0.28)', 'transparent']
+                : ['rgba(20, 169, 181, 0.22)', 'rgba(11, 42, 67, 0.06)', 'transparent']
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          <Ionicons name={icon} size={20} color={emphasis ? colors.yellow : colors.white} />
         </Animated.View>
-        <View style={styles.topCopy}>
-          <Text style={[styles.eyebrow, emphasis && styles.eyebrowOnDark]}>{eyebrow}</Text>
-          {live ? (
-            <View style={[styles.livePill, emphasis && styles.livePillOnDark]}>
-              <View style={[styles.liveDot, emphasis && styles.liveDotOnDark]} />
-              <Text style={[styles.liveText, emphasis && styles.liveTextOnDark]}>{liveLabel}</Text>
-            </View>
-          ) : null}
-        </View>
-      </View>
 
-      <View style={styles.copy}>
-        <Text style={[styles.title, emphasis && styles.titleOnDark]}>{title}</Text>
-        {body ? (
-          <Text style={[styles.body, emphasis && styles.bodyOnDark]} numberOfLines={3}>
-            {body}
-          </Text>
-        ) : null}
-      </View>
+        <Animated.View style={[styles.sheen, sheenStyle]} pointerEvents="none">
+          <LinearGradient
+            colors={[
+              'transparent',
+              emphasis ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.9)',
+              'transparent',
+            ]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
 
-      {stats && stats.length > 0 ? (
-        <View style={styles.statsRow}>
-          {stats.map((stat) => (
-            <View
-              key={stat.label}
-              style={[styles.statChip, emphasis && styles.statChipOnDark]}
+        <View style={[styles.rail, emphasis && styles.railEmphasis]} />
+
+        <View style={styles.row}>
+          <View style={styles.iconStack}>
+            {live ? <Animated.View style={[styles.liveRing, pulseStyle]} /> : null}
+            <LinearGradient
+              colors={
+                emphasis
+                  ? ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.08)']
+                  : [colors.navy, colors.tealStrong]
+              }
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.icon}
             >
-              <Text style={[styles.statValue, emphasis && styles.statValueOnDark]}>
-                {stat.value}
+              <Ionicons
+                name={icon}
+                size={18}
+                color={emphasis ? colors.yellow : colors.white}
+              />
+            </LinearGradient>
+          </View>
+
+          <View style={styles.copy}>
+            <View style={styles.metaRow}>
+              <Text
+                style={[styles.eyebrow, emphasis && styles.eyebrowOnDark]}
+                numberOfLines={1}
+              >
+                {eyebrow}
               </Text>
-              <Text style={[styles.statLabel, emphasis && styles.statLabelOnDark]}>
-                {stat.label}
-              </Text>
+              {live ? (
+                <View style={[styles.livePill, emphasis && styles.livePillOnDark]}>
+                  <View style={[styles.liveDot, emphasis && styles.liveDotOnDark]} />
+                  <Text style={[styles.liveText, emphasis && styles.liveTextOnDark]}>
+                    {liveLabel}
+                  </Text>
+                </View>
+              ) : null}
             </View>
-          ))}
+
+            <Text style={[styles.title, emphasis && styles.titleOnDark]} numberOfLines={1}>
+              {title}
+            </Text>
+
+            {body ? (
+              <Text style={[styles.body, emphasis && styles.bodyOnDark]} numberOfLines={1}>
+                {body}
+              </Text>
+            ) : null}
+
+            {stats && stats.length > 0 ? (
+              <View style={styles.statsRow}>
+                {stats.map((stat) => (
+                  <View
+                    key={stat.label}
+                    style={[styles.statChip, emphasis && styles.statChipOnDark]}
+                  >
+                    <Text style={[styles.statValue, emphasis && styles.statValueOnDark]}>
+                      {stat.value}
+                    </Text>
+                    <Text style={[styles.statLabel, emphasis && styles.statLabelOnDark]}>
+                      {stat.label}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
+
+          <View style={[styles.chevron, emphasis && styles.chevronOnDark]}>
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={emphasis ? colors.yellow : colors.navy}
+            />
+          </View>
         </View>
-      ) : null}
 
-      <CardAction label={actionLabel} onPress={onAction} tone={emphasis ? 'light' : 'solid'} />
-    </>
+        <Text style={[styles.actionHint, emphasis && styles.actionHintOnDark]} numberOfLines={1}>
+          {actionLabel}
+        </Text>
+      </Pressable>
+    </Animated.View>
   );
-
-  const cardStyle = [styles.card, emphasis && styles.cardEmphasis];
-
-  if (onPressCard) {
-    return (
-      <Animated.View style={cardAnim}>
-        <Pressable
-          style={cardStyle}
-          onPress={onPressCard}
-          accessibilityRole="button"
-          accessibilityLabel={title}
-          onHoverIn={() => {
-            setHovered(true);
-            if (!reduced) lift.value = withSpring(-3, { damping: 16, stiffness: 260 });
-          }}
-          onHoverOut={() => {
-            setHovered(false);
-            lift.value = withSpring(0, { damping: 16, stiffness: 240 });
-          }}
-        >
-          {hovered && !emphasis ? <View pointerEvents="none" style={styles.cardWash} /> : null}
-          {content}
-        </Pressable>
-      </Animated.View>
-    );
-  }
-
-  return <Animated.View style={[...cardStyle, cardAnim]}>{content}</Animated.View>;
 }
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.card,
-    borderRadius: radii.xl,
+    borderRadius: radii.lg,
     borderWidth: 1,
-    borderColor: '#D5E2EE',
-    padding: spacing.lg,
-    gap: spacing.md,
+    borderColor: 'rgba(20, 169, 181, 0.22)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingLeft: spacing.md + 4,
+    gap: spacing.xs,
     overflow: 'hidden',
-    ...shadows.md,
-  },
-  cardWash: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(11, 42, 67, 0.03)',
+    position: 'relative',
+    ...shadows.sm,
   },
   cardEmphasis: {
-    backgroundColor: colors.navy,
-    borderColor: colors.navySoft,
+    borderColor: 'rgba(245, 197, 66, 0.28)',
   },
-  accent: {
+  glowBlob: {
     position: 'absolute',
-    left: 0,
+    top: -36,
+    right: -20,
+    width: 160,
+    height: 120,
+    borderRadius: 80,
+  },
+  sheen: {
+    position: 'absolute',
     top: 0,
     bottom: 0,
-    width: 3,
-    backgroundColor: colors.teal,
-    zIndex: 1,
+    width: 72,
   },
-  accentOnDark: {
+  rail: {
+    position: 'absolute',
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 3,
+    borderRadius: 2,
+    backgroundColor: colors.tealStrong,
+  },
+  railEmphasis: {
     backgroundColor: colors.yellow,
   },
-  topRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  topCopy: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    minWidth: 0,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    overflow: 'hidden',
+  iconStack: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.navy,
   },
-  copy: { gap: 6 },
+  liveRing: {
+    position: 'absolute',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: colors.tealStrong,
+  },
+  icon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  copy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+  },
   eyebrow: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    color: colors.tealStrong,
+    fontSize: 10,
+    letterSpacing: 0.7,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    color: colors.tealStrong,
   },
   eyebrowOnDark: {
-    color: colors.tealSoft,
+    color: 'rgba(255,255,255,0.72)',
   },
   livePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: radii.full,
-    backgroundColor: colors.tealSoft,
+    backgroundColor: 'rgba(20, 169, 181, 0.12)',
   },
   livePillOnDark: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
     backgroundColor: colors.tealStrong,
   },
   liveDotOnDark: {
@@ -355,79 +389,52 @@ const styles = StyleSheet.create({
   },
   liveText: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.tealStrong,
-    letterSpacing: 0.2,
   },
   liveTextOnDark: {
     color: colors.white,
   },
   title: {
-    fontFamily: typography.fonts.display,
-    fontSize: 18,
-    lineHeight: 24,
-    color: colors.text,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    lineHeight: 21,
+    letterSpacing: -0.2,
+    color: colors.navy,
   },
   titleOnDark: {
     color: colors.white,
   },
   body: {
     fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.textSecondary,
   },
   bodyOnDark: {
-    color: 'rgba(255,255,255,0.75)',
+    color: 'rgba(255,255,255,0.7)',
   },
   statsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: 6,
+    marginTop: 4,
   },
   statChip: {
-    flex: 1,
-    minWidth: 88,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.lg,
-    backgroundColor: '#F4F8FB',
-    borderWidth: 1,
-    borderColor: '#E3EEF6',
-    gap: 2,
-  },
-  action: {
-    minHeight: 48,
-    borderRadius: radii.lg,
-    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.navy,
-    ...shadows.sm,
-  },
-  actionLight: {
-    backgroundColor: colors.white,
-  },
-  actionWash: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  actionLabel: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 15,
-    color: colors.white,
-  },
-  actionLabelLight: {
-    color: colors.navy,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.full,
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
   },
   statChipOnDark: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   statValue: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
     color: colors.navy,
   },
   statValueOnDark: {
@@ -435,12 +442,33 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontFamily: typography.fonts.medium,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   statLabelOnDark: {
     color: 'rgba(255,255,255,0.65)',
+  },
+  chevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
+  },
+  chevronOnDark: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  actionHint: {
+    marginLeft: 52,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    color: colors.tealStrong,
+  },
+  actionHintOnDark: {
+    color: colors.yellow,
   },
 });

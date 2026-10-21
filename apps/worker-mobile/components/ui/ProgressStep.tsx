@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 
 export type ProgressStepState =
   | 'not_started'
@@ -25,6 +26,8 @@ type Props = {
   onAction?: () => void;
   isCurrent?: boolean;
   isLast?: boolean;
+  /** When true, the connector below this step renders as completed. */
+  connectorDone?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -75,33 +78,61 @@ export function ProgressStep({
   onAction,
   isCurrent = false,
   isLast = false,
+  connectorDone = false,
   style,
 }: Props) {
   const tone = toneForState(state);
   const done = state === 'approved' || state === 'complete';
+  const rejected = state === 'rejected' || state === 'action_required';
+  const active = isCurrent || state === 'in_progress' || state === 'under_review';
 
   return (
-    <View style={[styles.row, style]} accessibilityRole="summary">
+    <View
+      style={[styles.row, isCurrent && styles.rowCurrent, style]}
+      accessibilityRole="summary"
+    >
       <View style={styles.rail}>
-        <View
-          style={[
-            styles.stepMark,
-            done && styles.stepMarkDone,
-            isCurrent && styles.stepMarkCurrent,
-          ]}
-        >
-          {done ? (
-            <Ionicons name="checkmark" size={12} color={colors.white} />
-          ) : (
-            <Text style={[styles.stepNum, isCurrent && styles.stepNumCurrent]}>{step}</Text>
-          )}
-        </View>
-        {!isLast ? <View style={styles.connector} /> : null}
+        {done ? (
+          <LinearGradient
+            colors={['#146C43', colors.success]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.stepMark}
+          >
+            <Ionicons name="checkmark" size={14} color={colors.white} />
+          </LinearGradient>
+        ) : rejected ? (
+          <View style={[styles.stepMark, styles.stepMarkRejected]}>
+            <Ionicons name="close" size={14} color={colors.white} />
+          </View>
+        ) : active ? (
+          <LinearGradient
+            colors={[colors.navy, colors.tealStrong]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.stepMark, styles.stepMarkRing]}
+          >
+            <Text style={styles.stepNumActive}>{step}</Text>
+          </LinearGradient>
+        ) : (
+          <View style={styles.stepMark}>
+            <Text style={styles.stepNum}>{step}</Text>
+          </View>
+        )}
+        {!isLast ? (
+          <View
+            style={[
+              styles.connector,
+              (done || connectorDone) && styles.connectorDone,
+              rejected && styles.connectorRejected,
+            ]}
+          />
+        ) : null}
       </View>
-      <View style={styles.body}>
+      <View style={[styles.body, isLast && styles.bodyLast]}>
         <View style={styles.top}>
           <View style={styles.copy}>
-            <Text style={styles.title}>{title}</Text>
+            <Text style={[styles.title, (done || active) && styles.titleActive]}>{title}</Text>
             {description ? <Text style={styles.description}>{description}</Text> : null}
           </View>
           {statusLabel ? (
@@ -128,32 +159,41 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: spacing.md,
-    minHeight: 56,
+    minHeight: 64,
+    marginHorizontal: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radii.md,
+  },
+  rowCurrent: {
+    backgroundColor: 'rgba(14, 116, 144, 0.06)',
   },
   rail: {
     alignItems: 'center',
-    width: 28,
+    width: 32,
   },
   stepMark: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: colors.surfaceSubdued,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepMarkDone: {
-    backgroundColor: colors.success,
+  stepMarkRing: {
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
-  stepMarkCurrent: {
-    backgroundColor: colors.teal,
+  stepMarkRejected: {
+    backgroundColor: colors.error,
   },
   stepNum: {
     fontFamily: typography.fonts.bold,
     fontSize: 12,
     color: colors.textSecondary,
   },
-  stepNumCurrent: {
+  stepNumActive: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 12,
     color: colors.white,
   },
   connector: {
@@ -161,15 +201,27 @@ const styles = StyleSheet.create({
     width: 2,
     backgroundColor: colors.border,
     marginVertical: 4,
-    minHeight: 16,
+    minHeight: 18,
+    borderRadius: 1,
+  },
+  connectorDone: {
+    backgroundColor: colors.success,
+  },
+  connectorRejected: {
+    backgroundColor: colors.error,
   },
   body: {
     flex: 1,
     minWidth: 0,
     paddingBottom: spacing.md,
+    paddingTop: 4,
     gap: spacing.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
+  },
+  bodyLast: {
+    borderBottomWidth: 0,
+    paddingBottom: spacing.xs,
   },
   top: {
     flexDirection: 'row',
@@ -179,18 +231,23 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: 3,
   },
   title: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.lg,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 15,
+    lineHeight: 20,
+    letterSpacing: -0.2,
+    color: colors.textSecondary,
+  },
+  titleActive: {
     color: colors.text,
   },
   description: {
     fontFamily: typography.fonts.regular,
-    fontSize: typography.size.sm,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.textSecondary,
-    lineHeight: typography.lineHeight.sm,
   },
   action: {
     flexDirection: 'row',

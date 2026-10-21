@@ -25,6 +25,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { ProfileMenuRow, type MenuTone } from '@/components/profile/ProfileMenuRow';
 import { SignOutButton } from '@/components/profile/SignOutButton';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -100,6 +101,7 @@ export default function AccountHubScreen() {
     isVerified,
   } = useAuth();
   const reducedMotion = useReducedMotion();
+  const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const [signingOut, setSigningOut] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
@@ -204,7 +206,7 @@ export default function AccountHubScreen() {
   };
 
   return (
-    <AppScreen edges={['top']}>
+    <AppScreen edges={['top']} contentStyle={{ paddingBottom: tabScrollInset }}>
       <ScreenHeader
         title="Account"
         subtitle="Manage your profile, verification, and preferences."

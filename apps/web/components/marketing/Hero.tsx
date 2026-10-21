@@ -9,9 +9,9 @@ import Image from 'next/image';
 import { MarketingButton } from '@/components/marketing/Section';
 
 const HERO_POINTS = [
-  { icon: ShieldCheck, label: 'Verified credentials' },
-  { icon: CalendarDays, label: 'Structured shifts' },
-  { icon: WalletCards, label: 'Clear payment workflows' },
+  { icon: ShieldCheck, label: 'Verified clinical credentials' },
+  { icon: CalendarDays, label: 'Role-matched shift design' },
+  { icon: WalletCards, label: 'Transparent payment workflows' },
 ] as const;
 
 export function Hero() {
@@ -38,9 +38,13 @@ export function Hero() {
             <span className="m-hero-eyebrow-rule" aria-hidden="true" />
           </p>
 
-          <h1 id="m-hero-heading" className="m-rise m-rise-d1">
-            The right care professional,
-            <span className="m-hero-break"> when your team needs one.</span>
+          <h1 id="m-hero-heading" className="m-hero-title m-rise m-rise-d1">
+            <span className="m-hero-title-line m-hero-title-line--1">
+              The right care professional,
+            </span>
+            <span className="m-hero-title-line m-hero-title-line--2">
+              when your team needs one.
+            </span>
           </h1>
 
           <p className="m-hero-sub m-rise m-rise-d2">
@@ -65,7 +69,7 @@ export function Hero() {
                 <span className="m-hero-point-icon" aria-hidden="true">
                   <Icon size={15} strokeWidth={2.2} />
                 </span>
-                {label}
+                <span className="m-hero-point-label">{label}</span>
               </li>
             ))}
           </ul>

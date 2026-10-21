@@ -2,28 +2,32 @@ import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
-  interpolate,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withTiming,
 } from 'react-native-reanimated';
+import { StatusBar } from 'expo-status-bar';
 
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
-/** White canvas for the launch cover. */
-export const APP_BOOT_BG = '#FFFFFF';
+/** Native splash–matched navy canvas for the launch cover. */
+export const APP_BOOT_BG = '#071A2F';
 
 /** @deprecated Prefer APP_BOOT_BG — kept for leftover imports. */
 export const APP_BOOT_NAVY = APP_BOOT_BG;
 
-/** Website marketing navy (`--m-navy`) for Bridge Hive wordmark. */
-export const BRIDGE_HIVE_TEXT = '#0B2032';
+/** Primary title color on navy. */
+export const BRIDGE_HIVE_TEXT = '#FFFFFF';
+
+/** Soft-blue subtitle — readable on `#071A2F`. */
+export const BRIDGE_HIVE_SUBTITLE = '#A8C4E0';
+
+/** Matches expo-splash-screen `imageWidth` so the handoff does not resize. */
+export const APP_BOOT_MARK_SIZE = 260;
 
 /** Minimum time the launch cover stays visible. */
-export const APP_BOOT_MIN_MS = 3800;
+export const APP_BOOT_MIN_MS = 800;
 
 /**
  * Holds the launch cover until `ready` and the minimum boot duration have both elapsed.
@@ -40,40 +44,30 @@ export function useLaunchGate(ready: boolean, minMs: number = APP_BOOT_MIN_MS): 
 }
 
 /**
- * White launch cover — official icon + website-navy wordmark, both breathing.
+ * Navy launch cover — official mark + BridgeHive App lockup.
+ * Continues the native splash without a white flash. One short entrance only.
  * System fonts keep every glyph visible even before custom fonts load.
  */
 export function AppBootCover() {
   const reducedMotion = useReducedMotion();
-  const breath = useSharedValue(0);
+  const progress = useSharedValue(reducedMotion ? 1 : 0);
 
   useEffect(() => {
     if (reducedMotion) {
-      breath.value = 1;
+      progress.value = 1;
       return;
     }
-    breath.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
-      ),
-      -1,
-      false,
-    );
-  }, [breath, reducedMotion]);
+    progress.value = withTiming(1, {
+      duration: 450,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [progress, reducedMotion]);
 
-  const logoMotion = useAnimatedStyle(() => {
-    const t = breath.value;
+  const lockupMotion = useAnimatedStyle(() => {
+    const t = progress.value;
     return {
-      transform: [{ scale: interpolate(t, [0, 1], [1, 1.1]) }],
-    };
-  });
-
-  const textMotion = useAnimatedStyle(() => {
-    const t = breath.value;
-    return {
-      transform: [{ scale: interpolate(t, [0, 1], [1, 1.035]) }],
-      opacity: interpolate(t, [0, 1], [0.9, 1]),
+      opacity: t,
+      transform: [{ scale: 0.96 + 0.04 * t }],
     };
   });
 
@@ -81,18 +75,20 @@ export function AppBootCover() {
     <View
       style={styles.root}
       accessibilityRole="progressbar"
-      accessibilityLabel="Welcome to Bridge Hive"
+      accessibilityLabel="BridgeHive App"
     >
-      <Animated.View style={[styles.logoWrap, logoMotion]}>
-        <BridgeHiveMark size={140} />
-      </Animated.View>
+      <StatusBar style="light" />
+      <Animated.View style={[styles.lockup, lockupMotion]}>
+        <View style={styles.logoWrap}>
+          <BridgeHiveMark size={APP_BOOT_MARK_SIZE} />
+        </View>
 
-      <Animated.View style={[styles.copy, textMotion]}>
-        <Text style={styles.welcome} allowFontScaling={false}>
-          {'Welcome to'}
+        <Text style={styles.title} allowFontScaling={false}>
+          {'BridgeHive App'}
         </Text>
-        <Text style={styles.brand} allowFontScaling={false}>
-          {'Bridge Hive'}
+
+        <Text style={styles.subtitle} allowFontScaling={false}>
+          {'Healthcare staffing, structured'}
         </Text>
       </Animated.View>
     </View>
@@ -105,45 +101,38 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: APP_BOOT_BG,
-    paddingHorizontal: 24,
-    overflow: 'visible',
+    paddingHorizontal: 28,
   },
-  logoWrap: {
-    marginBottom: 40,
-    padding: 16,
-    overflow: 'visible',
-  },
-  copy: {
+  lockup: {
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    overflow: 'visible',
   },
-  welcome: {
-    ...Platform.select({
-      ios: { fontFamily: 'System', fontWeight: '500' as const },
-      android: { fontFamily: 'sans-serif-medium', fontWeight: '500' as const },
-      default: { fontWeight: '500' as const },
-    }),
-    fontSize: 20,
-    lineHeight: 32,
-    color: '#5F6F79',
-    textAlign: 'center',
-    width: '100%',
+  logoWrap: {
+    marginBottom: 28,
   },
-  brand: {
+  title: {
     ...Platform.select({
       ios: { fontFamily: 'System', fontWeight: '700' as const },
       android: { fontFamily: 'sans-serif-medium', fontWeight: '700' as const },
       default: { fontWeight: '700' as const },
     }),
-    fontSize: 32,
-    lineHeight: 44,
+    fontSize: 28,
+    lineHeight: 36,
     color: BRIDGE_HIVE_TEXT,
     textAlign: 'center',
-    width: '100%',
-    marginTop: 4,
+    letterSpacing: 0.2,
+  },
+  subtitle: {
+    ...Platform.select({
+      ios: { fontFamily: 'System', fontWeight: '500' as const },
+      android: { fontFamily: 'sans-serif', fontWeight: '500' as const },
+      default: { fontWeight: '500' as const },
+    }),
+    fontSize: 16,
+    lineHeight: 24,
+    color: BRIDGE_HIVE_SUBTITLE,
+    textAlign: 'center',
+    maxWidth: 280,
+    marginTop: 12,
   },
 });

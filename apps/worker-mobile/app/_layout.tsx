@@ -12,6 +12,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -24,6 +25,7 @@ import { UnverifiedRouteGuard } from '@/components/auth/UnverifiedRouteGuard';
 import { PushNotificationController } from '@/components/push/PushNotificationController';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+SystemUI.setBackgroundColorAsync(APP_BOOT_BG).catch(() => undefined);
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -45,7 +47,9 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
-        <AppBootCover />
+        <SafeAreaProvider>
+          <AppBootCover />
+        </SafeAreaProvider>
       </GestureHandlerRootView>
     );
   }

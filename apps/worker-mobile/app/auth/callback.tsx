@@ -12,6 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { createSessionFromUrl } from '@/lib/oauth';
@@ -147,7 +148,7 @@ export default function AuthCallbackScreen() {
       <HiveFlowBackground />
       <Animated.View entering={FadeIn.duration(280)} style={styles.card}>
         <Animated.View style={[styles.markWrap, markStyle]}>
-          <View style={styles.mark} />
+          <BridgeHiveMark size={48} />
         </Animated.View>
         <Text style={styles.brand}>Bridge Hive</Text>
         <Text style={styles.title}>Securing your session</Text>
@@ -175,13 +176,6 @@ const styles = StyleSheet.create({
   },
   markWrap: {
     marginBottom: spacing.sm,
-  },
-  mark: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.lg,
-    backgroundColor: colors.tealStrong,
-    opacity: 0.92,
   },
   brand: {
     fontFamily: typography.fonts.semibold,

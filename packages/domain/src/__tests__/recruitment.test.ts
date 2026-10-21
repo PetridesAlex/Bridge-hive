@@ -11,6 +11,7 @@ import {
   validateRecruitmentConsentStep,
   validateRecruitmentDocumentBatch,
   validateRecruitmentPersonalStep,
+  validateRecruitmentPreferencesStep,
   validateRecruitmentProfessionalStep,
   validateRecruitmentUpload,
 } from '../recruitment';
@@ -39,9 +40,60 @@ describe('recruitment domain', () => {
     draft.fullName = 'Alex Example';
     draft.email = 'alex@example.com';
     draft.phone = '+357';
-    draft.currentLocation = 'Nicosia';
     draft.countryOfResidence = 'Cyprus';
+    expect(validateRecruitmentPersonalStep(draft)).toMatch(/location/i);
+    draft.currentLocation = 'Nicosia';
     expect(validateRecruitmentPersonalStep(draft)).toBeNull();
+  });
+
+  it('requires a professional role on preferences', () => {
+    const draft = emptyRecruitmentApplicationDraft();
+    draft.employmentType = 'full_time';
+    expect(validateRecruitmentPreferencesStep(draft)).toMatch(/role/i);
+    draft.role = 'ward_assistant';
+    expect(validateRecruitmentPreferencesStep(draft)).toBeNull();
+  });
+
+  it('requires role checklist documents when a role is selected', () => {
+    expect(
+      validateRecruitmentDocumentBatch({
+        role: 'ward_assistant',
+        documents: [
+          {
+            documentType: 'identity_document_front',
+            mimeType: 'application/pdf',
+            sizeBytes: 100,
+          },
+          {
+            documentType: 'identity_document_back',
+            mimeType: 'application/pdf',
+            sizeBytes: 100,
+          },
+        ],
+      }).ok,
+    ).toBe(false);
+    expect(
+      validateRecruitmentDocumentBatch({
+        role: 'ward_assistant',
+        documents: [
+          {
+            documentType: 'identity_document_front',
+            mimeType: 'application/pdf',
+            sizeBytes: 100,
+          },
+          {
+            documentType: 'identity_document_back',
+            mimeType: 'application/pdf',
+            sizeBytes: 100,
+          },
+          {
+            documentType: 'employment_certificate',
+            mimeType: 'application/pdf',
+            sizeBytes: 100,
+          },
+        ],
+      }).ok,
+    ).toBe(true);
   });
 
   it('reuses credential checklist for physiotherapist including practising licence', () => {

@@ -5,13 +5,19 @@ import {
   RECRUITMENT_CONSENT_PLACEHOLDER,
   RECRUITMENT_EMPLOYMENT_TYPE_LABELS,
   RECRUITMENT_SUCCESS_MESSAGE,
+  WORKER_ROLES,
+  WORKER_ROLE_LABELS,
   emptyRecruitmentApplicationDraft,
+  isRecruitmentWorkerRole,
   recruitmentApplicationDocumentRequirements,
+  recruitmentDocumentRequirementsForRole,
+  recruitmentRoleLabel,
   validateRecruitmentConsentStep,
   validateRecruitmentPersonalStep,
   validateRecruitmentPreferencesStep,
   type RecruitmentApplicationDraft,
   type RecruitmentStepId,
+  type WorkerRole,
 } from '@bridge-hive/domain';
 import { useActionState, useMemo, useState, useTransition } from 'react';
 
@@ -50,10 +56,12 @@ export function RecruitmentApplyForm() {
   const step = RECRUITMENT_APPLY_STEPS[stepIndex]!;
   const busy = pending || isPending;
 
-  const docReqs = useMemo(
-    () => recruitmentApplicationDocumentRequirements(),
-    [],
-  );
+  const docReqs = useMemo(() => {
+    if (isRecruitmentWorkerRole(draft.role)) {
+      return recruitmentDocumentRequirementsForRole(draft.role);
+    }
+    return recruitmentApplicationDocumentRequirements();
+  }, [draft.role]);
 
   function update<K extends keyof RecruitmentApplicationDraft>(
     key: K,
@@ -235,6 +243,13 @@ export function RecruitmentApplyForm() {
               autoComplete="tel"
               required
             />
+            <Field
+              label="Current location"
+              value={draft.currentLocation}
+              onChange={(v) => update('currentLocation', v)}
+              autoComplete="address-level2"
+              required
+            />
             <fieldset>
               <legend className="block text-sm font-medium text-[color:var(--m-navy)]">
                 Country of residence
@@ -277,11 +292,36 @@ export function RecruitmentApplyForm() {
         {step.id === 'preferences' ? (
           <>
             <label className="block text-sm font-medium text-[color:var(--m-navy)]">
+              Professional role
+              <select
+                className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] px-3 py-2.5 text-sm"
+                value={draft.role}
+                onChange={(e) => {
+                  const next = e.target.value as WorkerRole | '';
+                  update('role', next);
+                  setFiles([]);
+                }}
+                required
+              >
+                <option value="">Select a role</option>
+                {WORKER_ROLES.map((role) => (
+                  <option key={role} value={role}>
+                    {WORKER_ROLE_LABELS[role]}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-sm font-medium text-[color:var(--m-navy)]">
               Employment type
               <select
                 className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] px-3 py-2.5 text-sm"
-                value="full_time"
-                onChange={() => update('employmentType', 'full_time')}
+                value={draft.employmentType || 'full_time'}
+                onChange={(e) =>
+                  update(
+                    'employmentType',
+                    e.target.value as RecruitmentApplicationDraft['employmentType'],
+                  )
+                }
                 required
               >
                 <option value="full_time">
@@ -306,8 +346,7 @@ export function RecruitmentApplyForm() {
           <div className="space-y-4">
             <p className="text-sm text-[color:var(--m-muted)]">
               Uploads are stored privately. PDF, JPEG, or PNG — max 10 MB each.
-              Identity documents are required. Add any professional documents that
-              apply.
+              Required documents depend on your selected role.
             </p>
             {docReqs.map((req) => {
               const current = files.find(
@@ -389,6 +428,20 @@ export function RecruitmentApplyForm() {
                 <dt className="text-[color:var(--m-muted)]">Email</dt>
                 <dd className="font-medium text-[color:var(--m-navy)]">
                   {draft.email.replace(/(.{2}).+(@.+)/, '$1•••$2')}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-[color:var(--m-muted)]">Location</dt>
+                <dd className="font-medium text-[color:var(--m-navy)]">
+                  {draft.currentLocation}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt className="text-[color:var(--m-muted)]">Role</dt>
+                <dd className="font-medium text-[color:var(--m-navy)]">
+                  {isRecruitmentWorkerRole(draft.role)
+                    ? recruitmentRoleLabel(draft.role)
+                    : '—'}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">

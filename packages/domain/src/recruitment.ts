@@ -304,18 +304,14 @@ export function validateRecruitmentDocumentBatch(params: {
   const allowed = new Set(checklist.map((d) => d.credentialType));
   const maxForRole = Math.min(checklist.length, RECRUITMENT_MAX_UPLOAD_FILES);
 
-  if (!params.role) {
-    const missing = checklist.find(
-      (req) =>
-        req.isRequired &&
-        !params.documents.some((doc) => doc.documentType === req.credentialType),
-    );
-    if (missing) {
-      return { ok: false, error: `Add required document: ${missing.label}.` };
-    }
-  }
-
   if (params.documents.length === 0) {
+    const missingWhenEmpty = checklist.find((req) => req.isRequired);
+    if (missingWhenEmpty) {
+      return {
+        ok: false,
+        error: `Add required document: ${missingWhenEmpty.label}.`,
+      };
+    }
     return { ok: false, error: 'Upload at least one supporting document.' };
   }
   if (params.documents.length > RECRUITMENT_MAX_UPLOAD_FILES) {
@@ -380,6 +376,15 @@ export function validateRecruitmentDocumentBatch(params: {
       extension,
       expiresAt: expiry.expiresAt,
     });
+  }
+
+  const missing = checklist.find(
+    (req) =>
+      req.isRequired &&
+      !normalized.some((doc) => doc.documentType === req.credentialType),
+  );
+  if (missing) {
+    return { ok: false, error: `Add required document: ${missing.label}.` };
   }
 
   return { ok: true, documents: normalized };
@@ -464,6 +469,7 @@ export function validateRecruitmentPersonalStep(
     return 'Enter a valid email address.';
   }
   if (!draft.phone.trim()) return 'Enter a phone number.';
+  if (!draft.currentLocation.trim()) return 'Enter your current location.';
   if (!draft.countryOfResidence.trim()) return 'Enter your country of residence.';
   return null;
 }
@@ -486,6 +492,9 @@ export function validateRecruitmentProfessionalStep(
 export function validateRecruitmentPreferencesStep(
   draft: RecruitmentApplicationDraft,
 ): string | null {
+  if (!isRecruitmentWorkerRole(draft.role)) {
+    return 'Select a professional role.';
+  }
   if (!draft.employmentType) return 'Select an employment type.';
   return null;
 }

@@ -265,15 +265,16 @@ describe('recruitment route contracts', () => {
     expect(middleware).toMatch(/\/recruitment/);
   });
 
-  it('keeps consent unchecked and does not collect a professional role', async () => {
+  it('collects location and professional role with consent unchecked by default', async () => {
     const form = await readWeb('components/marketing/recruitment-apply-form.tsx');
     expect(form).toMatch(/consentAccepted/);
-    expect(form).not.toMatch(/Professional role/);
-    expect(form).not.toMatch(/WORKER_ROLES/);
+    expect(form).toMatch(/Professional role/);
+    expect(form).toMatch(/Current location/);
+    expect(form).toMatch(/WORKER_ROLES/);
+    expect(form).toMatch(/recruitmentDocumentRequirementsForRole/);
     expect(form).toMatch(/checked=\{draft\.consentAccepted\}/);
     expect(form).not.toMatch(/defaultChecked=\{true\}/);
     expect(form).toMatch(/Submit talent profile/);
-    expect(form).toMatch(/recruitmentApplicationDocumentRequirements/);
     expect(form).not.toMatch(/No documents are required/);
   });
 
@@ -430,6 +431,17 @@ describe('submitRecruitmentApplicationAction forged requests', () => {
     expect(notifyMock).not.toHaveBeenCalled();
   });
 
+  function attachRequiredNurseDocs(fd: FormData) {
+    fd.append('documents', pdfFile('front.pdf'));
+    fd.append('documentTypes', 'identity_document_front');
+    fd.append('documents', pdfFile('back.pdf'));
+    fd.append('documentTypes', 'identity_document_back');
+    fd.append('documents', pdfFile('licence.pdf'));
+    fd.append('documentTypes', 'nursing_licence');
+    fd.append('documents', pdfFile('degree.pdf'));
+    fd.append('documentTypes', 'nursing_degree');
+  }
+
   it('returns a generic error for duplicate/replay without uploading', async () => {
     rpcMock.mockResolvedValue({
       data: null,
@@ -439,8 +451,7 @@ describe('submitRecruitmentApplicationAction forged requests', () => {
       '../recruitment-application'
     );
     const fd = validDraftFields();
-    fd.append('documents', pdfFile('cv.pdf'));
-    fd.append('documentTypes', 'cv');
+    attachRequiredNurseDocs(fd);
 
     const result = await submitRecruitmentApplicationAction({}, fd);
     expect(result.error).toBe('Unable to submit your application. Please try again.');
@@ -460,8 +471,7 @@ describe('submitRecruitmentApplicationAction forged requests', () => {
       '../recruitment-application'
     );
     const fd = validDraftFields();
-    fd.append('documents', pdfFile('cv.pdf'));
-    fd.append('documentTypes', 'cv');
+    attachRequiredNurseDocs(fd);
 
     const result = await submitRecruitmentApplicationAction({}, fd);
     expect(result.success).toBe(true);
@@ -488,8 +498,7 @@ describe('submitRecruitmentApplicationAction forged requests', () => {
       '../recruitment-application'
     );
     const fd = validDraftFields();
-    fd.append('documents', pdfFile('cv.pdf'));
-    fd.append('documentTypes', 'cv');
+    attachRequiredNurseDocs(fd);
 
     const result = await submitRecruitmentApplicationAction({}, fd);
     expect(result.error).toBe('Unable to submit your application. Please try again.');
@@ -507,8 +516,7 @@ describe('submitRecruitmentApplicationAction forged requests', () => {
       '../recruitment-application'
     );
     const fd = validDraftFields();
-    fd.append('documents', pdfFile('cv.pdf'));
-    fd.append('documentTypes', 'cv');
+    attachRequiredNurseDocs(fd);
 
     const result = await submitRecruitmentApplicationAction({}, fd);
     expect(result.success).toBe(true);
@@ -541,10 +549,10 @@ describe('public recruitment submission reaches admin review', () => {
 
   function publicApplication(): FormData {
     return validDraftFields({
-      currentLocation: '',
+      currentLocation: 'Nicosia',
       countryOfResidence: 'Cyprus',
       preferredCyprusLocation: 'Limassol',
-      role: '',
+      role: 'ward_assistant',
       yearsExperience: '',
       registrationState: '',
       employmentType: 'full_time',
@@ -555,7 +563,7 @@ describe('public recruitment submission reaches admin review', () => {
     });
   }
 
-  it('stores a full-time application without a role and alerts the admin inbox', async () => {
+  it('stores a full-time application with a role and alerts the admin inbox', async () => {
     uploadMock.mockResolvedValue({ error: null });
     insertMock.mockResolvedValue({ error: null });
     const { submitRecruitmentApplicationAction } = await import(
@@ -566,8 +574,8 @@ describe('public recruitment submission reaches admin review', () => {
     fd.append('documentTypes', 'identity_document_front');
     fd.append('documents', pdfFile('back.pdf'));
     fd.append('documentTypes', 'identity_document_back');
-    fd.append('documents', pdfFile('cv.pdf'));
-    fd.append('documentTypes', 'cv');
+    fd.append('documents', pdfFile('employment.pdf'));
+    fd.append('documentTypes', 'employment_certificate');
 
     const result = await submitRecruitmentApplicationAction({}, fd);
 
@@ -589,9 +597,10 @@ describe('public recruitment submission reaches admin review', () => {
         full_name: 'Alex Example',
         email: 'alex.example@test.local',
         phone: '+35799000099',
+        current_location: 'Nicosia',
         country_of_residence: 'Cyprus',
         preferred_cyprus_location: 'Limassol',
-        role: null,
+        role: 'ward_assistant',
         employment_type: 'full_time',
         availability: '',
         years_experience: '',
@@ -603,7 +612,7 @@ describe('public recruitment submission reaches admin review', () => {
     expect(notifyMock).toHaveBeenCalledWith(
       expect.objectContaining({
         candidateId,
-        role: null,
+        role: 'ward_assistant',
       }),
     );
   });
@@ -617,7 +626,7 @@ describe('public recruitment submission reaches admin review', () => {
       publicApplication(),
     );
     expect(result.success).toBeUndefined();
-    expect(result.error).toMatch(/national identity card — front/i);
+    expect(result.error).toMatch(/required document|identity/i);
     expect(rpcMock).not.toHaveBeenCalled();
     expect(uploadMock).not.toHaveBeenCalled();
   });

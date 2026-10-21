@@ -190,12 +190,11 @@ describe('premium auth portals', () => {
   });
 
   it('marketing CTAs still point at org and admin sign-in portals', async () => {
-    const hero = await readWeb('components/marketing/Hero.tsx');
+    const nav = await readWeb('components/marketing/MarketingNav.tsx');
     const footer = await readWeb('components/marketing/MarketingFooter.tsx');
-    const home = await readWeb('app/(marketing)/page.tsx');
 
-    expect(hero).toMatch(/href="\/sign-in"/);
+    expect(nav).toMatch(/\/sign-in/);
+    expect(nav).toMatch(/Organization sign in/);
     expect(footer).toMatch(/\/admin\/sign-in/);
-    expect(home + hero).toMatch(/\/sign-in/);
   });
 });

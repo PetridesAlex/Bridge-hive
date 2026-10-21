@@ -12,7 +12,7 @@ const MARKETING_ROUTES = [
 const WIDTHS = [320, 390, 430, 768, 1440] as const;
 
 const DECORATIVE =
-  /m-audience-atmosphere|m-audience-blob|m-.*-orb|m-flow-bg|m-flow-shell-media|m-hero-visual-wash|m-.*glow|m-.*sheen|m-footer-bg|m-contact-hero|m-org-mock-blob|m-faq-atmosphere|m-hiw-atmosphere/i;
+  /m-audience-atmosphere|m-audience-blob|m-.*-orb|m-flow-bg|m-flow-shell-media|m-hero-wash|m-hero-media|m-.*glow|m-.*sheen|m-footer-bg|m-contact-hero|m-org-mock-blob|m-faq-atmosphere|m-hiw-atmosphere/i;
 
 async function documentOverflow(page: Page) {
   return page.evaluate(() => {

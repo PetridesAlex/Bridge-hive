@@ -7,7 +7,8 @@
 | `organizations-hero-4k.jpg` | Same master, 3840×2160 JPEG @ q95 | Bridge Hive brand photography for public marketing | Alternate/legacy marketing portrait |
 | `home-hero.jpg` | Owner-supplied home hero composite (JPEG, 1024×576) | Bridge Hive brand photography for public marketing | Earlier home hero frame; not the current hero scene |
 | `home-hero-ward.jpg` | Owner-supplied ward scene (JPEG, 1024×577) | Bridge Hive brand photography for public marketing | Ward photography; not the current hero scene |
-| `home-hero-scene.jpg` | Owner-supplied pharmacy scene with hospital exterior (JPEG, 1024×576) | Bridge Hive brand photography for public marketing | Current home hero scene. Illustrative. Includes the Bridge Hive mark in the photograph |
+| `home-hero-scene.jpg` | Owner-supplied pharmacy scene with hospital exterior (JPEG, 1024×576) | Bridge Hive brand photography for public marketing | Superseded home hero scene (kept for provenance); replaced by `home-hero-clinical-team.png` |
+| `home-hero-clinical-team.png` | Owner-supplied clinical team / hospital pharmacy photograph (PNG from master JPEG) | Bridge Hive brand photography for public marketing | Current full-bleed home hero background |
 | `contact-hero-bg.jpg` | Owner-supplied abstract hive background | Bridge Hive brand graphic for public marketing | `/contact` page hero + cards background |
 | `footer-bg.jpg` | Owner-supplied abstract hive background | Bridge Hive brand graphic for public marketing | Site-wide marketing footer background |
 | `audience-hex.jpg` | Owner-supplied hospital exterior (JPEG @ q95) | Bridge Hive brand photography for public marketing | Home dual-audience hex — Organizations tab |
@@ -27,4 +28,4 @@
 | `../auth/admin-hero-photo.*` | Crop of `admin-hero.jpg` (clinicians + hospital; standalone B excluded) | Same owner rights as the source composite | Admin sign-in photographic pane |
 | `../org/bridge-hive-dashboard-banner.*` | Owner-supplied dashboard chrome | Intended for organization dashboard banner | **Not used on marketing pages** |
 
-No third-party stock photographs, clinic-template screenshots, or watermarked search images are published on marketing routes. Photographic hero slots remain illustrative SVG until a rights-cleared healthcare-team image is approved for public marketing.
+No third-party stock photographs, clinic-template screenshots, or watermarked search images are published on marketing routes. The homepage hero uses the owner-supplied clinical-team photograph `home-hero-clinical-team.png`.

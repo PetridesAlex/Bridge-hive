@@ -183,8 +183,19 @@ export function MarketingNav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [workerNotice, setWorkerNotice] = useState(false);
   const panelId = useId();
+  const workerNoticeId = useId();
+  const workerNoticeTitleId = useId();
   const headerRef = useRef<HTMLElement>(null);
+  const workerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const workerCloseRef = useRef<HTMLButtonElement>(null);
+
+  const openWorkerNotice = (trigger: HTMLButtonElement) => {
+    workerTriggerRef.current = trigger;
+    setOpen(false);
+    setWorkerNotice(true);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -222,11 +233,32 @@ export function MarketingNav() {
   }, [open]);
 
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
+    document.body.style.overflow = open || workerNotice ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
-  }, [open]);
+  }, [open, workerNotice]);
+
+  useEffect(() => {
+    if (!workerNotice) return;
+
+    workerCloseRef.current?.focus();
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setWorkerNotice(false);
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (workerTriggerRef.current?.isConnected) {
+        workerTriggerRef.current.focus();
+      }
+    };
+  }, [workerNotice]);
 
   return (
     <>
@@ -271,17 +303,21 @@ export function MarketingNav() {
           </nav>
 
           <div className="m-nav-actions">
-            <Link
-              href="/auth/worker/login"
+            <button
+              type="button"
               className="m-nav-btn m-nav-btn--worker"
-              aria-label="Worker app — iOS and Android"
+              aria-label="Worker app — under development"
+              aria-haspopup="dialog"
+              aria-expanded={workerNotice}
+              aria-controls={workerNoticeId}
+              onClick={(event) => openWorkerNotice(event.currentTarget)}
             >
               <WorkerAppIcon size={22} />
               <span className="m-nav-worker-copy">
                 <span className="m-nav-worker-label">Worker app</span>
-                <span className="m-nav-worker-platforms">iOS and Android</span>
+                <span className="m-nav-worker-platforms">Under development</span>
               </span>
-            </Link>
+            </button>
             <Link href="/sign-in" className="m-nav-btn m-nav-btn--org">
               Organization sign in
               <ArrowRight size={17} strokeWidth={2.1} aria-hidden="true" />
@@ -324,18 +360,21 @@ export function MarketingNav() {
                   </Link>
                 );
               })}
-              <Link
-                href="/auth/worker/login"
+              <button
+                type="button"
                 className="m-nav-btn m-nav-btn--worker"
-                aria-label="Worker app — iOS and Android"
-                onClick={() => setOpen(false)}
+                aria-label="Worker app — under development"
+                aria-haspopup="dialog"
+                aria-expanded={workerNotice}
+                aria-controls={workerNoticeId}
+                onClick={(event) => openWorkerNotice(event.currentTarget)}
               >
                 <WorkerAppIcon size={22} />
                 <span className="m-nav-worker-copy">
                   <span className="m-nav-worker-label">Worker app</span>
-                  <span className="m-nav-worker-platforms">iOS and Android</span>
+                  <span className="m-nav-worker-platforms">Under development</span>
                 </span>
-              </Link>
+              </button>
               <Link
                 href="/sign-in"
                 className="m-nav-btn m-nav-btn--org"
@@ -355,6 +394,41 @@ export function MarketingNav() {
           aria-label="Close menu"
           onClick={() => setOpen(false)}
         />
+      ) : null}
+      {workerNotice ? (
+        <div className="m-worker-notice">
+          <button
+            type="button"
+            className="m-worker-notice-backdrop"
+            aria-label="Close"
+            onClick={() => setWorkerNotice(false)}
+          />
+          <div
+            id={workerNoticeId}
+            className="m-worker-notice-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={workerNoticeTitleId}
+          >
+            <WorkerAppIcon size={36} />
+            <p className="m-worker-notice-kicker">Worker app</p>
+            <h2 id={workerNoticeTitleId} className="m-worker-notice-title">
+              Under development
+            </h2>
+            <p className="m-worker-notice-copy">
+              The Bridge Hive worker app for iOS and Android is still being
+              built. It is not available to open yet.
+            </p>
+            <button
+              ref={workerCloseRef}
+              type="button"
+              className="m-worker-notice-close"
+              onClick={() => setWorkerNotice(false)}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
       ) : null}
     </>
   );

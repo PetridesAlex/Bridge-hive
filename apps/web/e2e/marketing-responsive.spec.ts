@@ -84,11 +84,13 @@ test.describe('marketing responsive layout', () => {
       'How it works',
       'About',
       'Contact',
-      'Worker app',
       'Organization sign in',
     ]) {
       await expect(panel.getByRole('link', { name: new RegExp(label, 'i') })).toBeVisible();
     }
+    await expect(
+      panel.getByRole('button', { name: /worker app/i }),
+    ).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);
   });

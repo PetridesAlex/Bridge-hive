@@ -92,7 +92,7 @@ export function WorkerJourneySection({ professionals }: WorkerJourneySectionProp
             playMotion={playMotion}
             reduceMotion={reduceMotion}
             steps={steps}
-            caption={professionals.journeyEyebrow}
+            caption={professionals.journeyVisualCaption}
             diagramAriaLabel={professionals.journeyCardTitle}
             stepAriaTemplate={professionals.journeyStepAriaTemplate}
           />

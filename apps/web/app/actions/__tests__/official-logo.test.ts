@@ -35,7 +35,9 @@ describe('official Bridge Hive logo v2', () => {
     const mark = await readWeb('components/brand/BridgeHiveMark.tsx');
     const admin = await readWeb('components/admin/admin-sidebar.tsx');
     const org = await readWeb('components/org/organization-sidebar.tsx');
-    const layout = await readWeb('app/(marketing)/layout.tsx');
+    const layout =
+      (await readWeb('app/(marketing)/layout.tsx')) +
+      (await readWeb('lib/marketing-i18n/metadata.ts'));
 
     expect(brand).toMatch(/bridge-hive-logo-v2-512\.png/);
     expect(logo).toMatch(/bridge-hive-logo-v2-192\.png/);

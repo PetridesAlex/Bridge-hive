@@ -31,7 +31,17 @@ const MARKETING_SOURCE_GLOBS = [
   'components/marketing/worker-journey-data.ts',
   'app/robots.ts',
   'app/sitemap.ts',
+  'components/marketing/pages/HomePage.tsx',
+  'components/marketing/pages/OrganizationsPage.tsx',
+  'components/marketing/pages/ProfessionalsPage.tsx',
+  'components/marketing/pages/HowItWorksPage.tsx',
+  'components/marketing/pages/AboutPage.tsx',
+  'components/marketing/pages/ContactPage.tsx',
+  'lib/marketing-i18n/dictionaries/en.ts',
+  'lib/marketing-i18n/dictionaries/el.ts',
 ] as const;
+
+const readEn = () => readWeb('lib/marketing-i18n/dictionaries/en.ts');
 
 describe('marketing site contracts', () => {
 
@@ -99,30 +109,33 @@ describe('marketing site contracts', () => {
   });
 
   it('homepage hero uses clinical image CTAs without open signup', async () => {
-    const src = await readWeb('app/(marketing)/page.tsx');
+    const src = await readWeb('components/marketing/pages/HomePage.tsx');
     const hero = await readWeb('components/marketing/Hero.tsx');
     const nav = await readWeb('components/marketing/MarketingNav.tsx');
     const faq = await readWeb('components/marketing/HomeFaq.tsx');
+    const en = await readEn();
     expect(hero).toMatch(/home-hero-clinical-team\.png/);
-    expect(hero).toMatch(/Talk to our team/);
-    expect(hero).toMatch(/Explore professionals/);
+    expect(en).toMatch(/Talk to our team/);
+    expect(en).toMatch(/Explore professionals/);
     expect(hero).toMatch(/\/contact#partnerships/);
-    expect(hero).toMatch(/href="\/professionals"/);
-    expect(hero).toMatch(/Verified clinical credentials/);
-    expect(hero).toMatch(/Role-matched shift design/);
-    expect(hero).toMatch(/Transparent payment workflows/);
+    expect(hero).toMatch(/localizePath\('\/professionals', locale\)/);
+    expect(en).toMatch(/Verified clinical credentials/);
+    expect(en).toMatch(/Role-matched shift design/);
+    expect(en).toMatch(/Transparent payment workflows/);
     expect(hero).not.toMatch(/href="\/sign-in"/);
     expect(hero).not.toMatch(/href="\/auth\/worker\/login"/);
     expect(hero).not.toMatch(/href="\/sign-up"/);
     expect(hero).not.toMatch(/Illustrative/);
     expect(hero).not.toMatch(/home-hero-scene\.jpg/);
-    expect(nav).toMatch(/Organization sign in/);
+    expect(en).toMatch(/orgSignIn: 'Organization sign in'/);
     expect(nav).toMatch(/\/sign-in/);
-    expect(nav).toMatch(/\/auth\/worker\/login/);
+    expect(nav).not.toMatch(/\/auth\/worker\/login/);
+    expect(en).toMatch(/workerAppPlatforms: 'Under development'/);
     expect(src).toMatch(/HomeFaq/);
-    expect(faq).toMatch(/not a full\s+browser version of the app|not a full web/i);
-    expect(faq).toMatch(/Clear answers before you/);
-    expect(faq).toMatch(/prepare a partnership inquiry/);
+    expect(faq).toMatch(/faq\./);
+    expect(en).toMatch(/not a full\s+browser version of the app|not a full web/i);
+    expect(en).toMatch(/Clear answers before you/);
+    expect(en).toMatch(/prepare a partnership inquiry/);
     expect(src).not.toMatch(/Organization Dashboard/);
     expect(src).not.toMatch(/Request access/);
   });
@@ -131,20 +144,23 @@ describe('marketing site contracts', () => {
     const nav = await readWeb('components/marketing/MarketingNav.tsx');
     const footer = await readWeb('components/marketing/MarketingFooter.tsx');
     const navConfig = await readWeb('components/marketing/nav-config.ts');
-    expect(nav).toMatch(/Organization sign in/);
-    expect(nav).toMatch(/\/auth\/worker\/login/);
+    const en = await readEn();
+    expect(en).toMatch(/orgSignIn: 'Organization sign in'/);
+    expect(nav).not.toMatch(/\/auth\/worker\/login/);
     expect(nav).not.toMatch(/\/sign-up/);
-    expect(navConfig).toMatch(/href: '\/organizations'/);
-    expect(navConfig).not.toMatch(/href: '\/organisation'/);
+    const routes = await readWeb('lib/marketing-i18n/routes.ts');
+    expect(navConfig).toMatch(/MARKETING_ROUTE_TABLE\[key\]\.path/);
+    expect(routes).toMatch(/organizations: \{ path: '\/organizations'/);
+    expect(routes).not.toMatch(/path: '\/organisation'/);
     expect(footer).not.toMatch(/\/sign-up/);
     expect(footer).toMatch(/\/admin\/sign-in/);
     expect(footer).not.toMatch(/Coming soon/);
     expect(footer).toMatch(/\/contact#partnerships/);
     expect(footer).toMatch(/\/contact#support/);
     expect(footer).toMatch(/\/organisation/);
-    expect(footer).toMatch(/Organization portal/);
+    expect(en).toMatch(/orgPortal: 'Organization portal'/);
     expect(footer).toMatch(/MARKETING_NAV/);
-    expect(navConfig).toMatch(/label: 'Organizations'/);
+    expect(en).toMatch(/organizations: 'Organizations'/);
   });
 
   it('organisation portal aliases to dashboard and stays private', async () => {
@@ -167,41 +183,47 @@ describe('marketing site contracts', () => {
   });
 
   it('contact page routes partnerships and support to the correct public mailboxes', async () => {
-    const src = await readWeb('app/(marketing)/contact/page.tsx');
+    const page = await readWeb('components/marketing/pages/ContactPage.tsx');
+    const en = await readEn();
+    const src = page + en;
     const email = await readWeb('components/marketing/ContactEmail.tsx');
-    expect(src).toMatch(/id="partnerships"/);
-    expect(src).toMatch(/id="support"/);
+    expect(page).toMatch(/id="partnerships"/);
+    expect(page).toMatch(/id="support"/);
     expect(src).toMatch(/info@bridgehive\.app/);
     expect(src).toMatch(/support@bridgehive\.app/);
-    expect(src).toMatch(/Partnership inquiry/);
-    expect(src).toMatch(/Bridge Hive support/);
-    expect(src).toMatch(/not a substitute\s+for organization sign-in/i);
-    expect(src).toMatch(/Do not email identity documents, IBANs/);
+    expect(en).toMatch(/Partnership inquiry/);
+    expect(en).toMatch(/Bridge Hive support/);
+    expect(en).toMatch(/not a substitute\s+for organization sign-in/i);
+    expect(en).toMatch(/Do not email identity documents, IBANs/);
     expect(src).not.toMatch(/will be published later/i);
     expect(src).not.toMatch(/TODO/);
     expect(src).not.toMatch(/Submission endpoint not configured/);
     expect(src).not.toMatch(/Coming soon/);
     expect(src).not.toMatch(/message sent|thank you for contacting/i);
     expect(src).not.toMatch(/<form/i);
-    expect(src).toMatch(/href="\/sign-in"/);
-    expect(src).toMatch(/href="\/auth\/worker\/login"/);
+    expect(page).toMatch(/localizePath\('\/sign-in', locale\)/);
+    expect(page).toMatch(/localizePath\('\/auth\/worker\/login', locale\)/);
     expect(email).toMatch(/mailto:\$\{address\}/);
     expect(email).toMatch(/Copy address/);
   });
 
   it('professionals page distinguishes wage bank transfer from commission without published fee percentages', async () => {
-    const src = await readWeb('app/(marketing)/professionals/page.tsx');
-    const payments = await readWeb('components/marketing/ProfessionalsPaymentsSection.tsx');
+    const en = await readEn();
+    const enProfessionals = en.slice(en.indexOf('  professionals: {'));
+    const page = await readWeb('components/marketing/pages/ProfessionalsPage.tsx');
+    const src = page + enProfessionals.slice(0, enProfessionals.indexOf('\n  },\n'));
+    const payments =
+      (await readWeb('components/marketing/ProfessionalsPaymentsSection.tsx')) + src;
     const journey = await readWeb('components/marketing/worker-journey-data.ts');
-    const section = await readWeb('components/marketing/WorkerJourneySection.tsx');
-    const how = await readWeb('components/marketing/HowItWorksClient.tsx');
-    const home = await readWeb('app/(marketing)/page.tsx');
+    const section = (await readWeb('components/marketing/WorkerJourneySection.tsx')) + en;
+    const how = (await readWeb('components/marketing/HowItWorksClient.tsx')) + en;
+    const home = await readWeb('components/marketing/pages/HomePage.tsx');
     const css = await readWeb('app/marketing.css');
-    expect(src).toMatch(/WorkerJourneySection/);
+    expect(page).toMatch(/WorkerJourneySection/);
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
     expect(src).toMatch(/physiotherapists/);
-    expect(src).toMatch(/ProfessionalsPaymentsSection/);
+    expect(page).toMatch(/ProfessionalsPaymentsSection/);
     expect(payments).toMatch(/bank transfer/);
     expect(payments).toMatch(/separate Bridge Hive commission invoice/i);
     expect(payments).toMatch(/on its own schedule/i);
@@ -243,7 +265,7 @@ describe('marketing site contracts', () => {
   });
 
   it('scopes marketing fonts and styles to the marketing layout shell', async () => {
-    const layout = await readWeb('app/(marketing)/layout.tsx');
+    const layout = await readWeb('components/marketing/MarketingDocument.tsx');
     const css = await readWeb('app/marketing.css');
     const shell = await readWeb('components/marketing/MarketingShell.tsx');
     const signIn = await readWeb('app/(app)/sign-in/page.tsx');
@@ -284,15 +306,19 @@ describe('marketing site contracts', () => {
 
   it('marketing metadata is not organization-dashboard copy', async () => {
     const layout = await readWeb('app/(marketing)/layout.tsx');
-    const home = await readWeb('app/(marketing)/page.tsx');
+    const home = await readWeb('components/marketing/pages/HomePage.tsx');
+    const metadata = await readWeb('lib/marketing-i18n/metadata.ts');
+    const en = await readEn();
     expect(layout).not.toMatch(/Organization dashboard/);
     expect(home).not.toMatch(/Organization dashboard/);
-    expect(layout).toMatch(/canonical/);
+    expect(en).not.toMatch(/Organization dashboard/);
+    expect(layout).toMatch(/buildMarketingLayoutMetadata/);
+    expect(metadata).toMatch(/canonical/);
   });
 
   it('sitemap lists only public marketing URLs', async () => {
     const src = await readWeb('app/sitemap.ts');
-    expect(src).toMatch(/PUBLIC_MARKETING_PATHS/);
+    expect(src).toMatch(/indexableMarketingPaths/);
     expect(src).not.toMatch(/\/admin/);
     expect(src).not.toMatch(/\/org\//);
     expect(src).not.toMatch(/\/auth\//);

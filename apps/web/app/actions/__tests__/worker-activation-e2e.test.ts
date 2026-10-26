@@ -36,7 +36,7 @@ describe('worker mobile auth recovery and package submit contracts', () => {
   });
 
   it('register routes email-confirm users to check-email without URL email param', async () => {
-    const src = await readMobile('app/(app)/auth/worker/register.tsx');
+    const src = await readMobile('app/auth/worker/register.tsx');
     expect(src).toMatch(/check-email/);
     expect(src).toMatch(/needsEmailConfirm/);
     expect(src).toMatch(/setPendingConfirmEmail/);
@@ -45,7 +45,7 @@ describe('worker mobile auth recovery and package submit contracts', () => {
   });
 
   it('check-email uses request-accepted copy and resend with cooldown', async () => {
-    const src = await readMobile('app/(app)/auth/worker/check-email.tsx');
+    const src = await readMobile('app/auth/worker/check-email.tsx');
     expect(src).toMatch(/workerConfirmRequestAcceptedCopy/);
     expect(src).toMatch(/resendSignupConfirmation/);
     expect(src).toMatch(/WORKER_CONFIRM_RESEND_COOLDOWN_MS/);
@@ -54,7 +54,7 @@ describe('worker mobile auth recovery and package submit contracts', () => {
   });
 
   it('pending screen exposes Submit for review from server eligibility', async () => {
-    const src = await readMobile('app/(app)/auth/worker/pending.tsx');
+    const src = await readMobile('app/auth/worker/pending.tsx');
     expect(src).toMatch(/canSubmitWorkerVerificationPackage/);
     expect(src).toMatch(/Submit for review/);
     expect(src).toMatch(/Final platform review/);

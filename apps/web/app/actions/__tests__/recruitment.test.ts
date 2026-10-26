@@ -252,27 +252,35 @@ async function readWeb(...parts: string[]) {
 
 describe('recruitment route contracts', () => {
   it('exposes public /recruitment and apply under marketing', async () => {
-    const landing = await readWeb('app/(marketing)/recruitment/page.tsx');
-    const apply = await readWeb('app/(marketing)/recruitment/apply/page.tsx');
+    const landing =
+      (await readWeb('app/(marketing)/recruitment/page.tsx')) +
+      (await readWeb('components/marketing/pages/RecruitmentPage.tsx')) +
+      (await readWeb('lib/marketing-i18n/dictionaries/en.ts'));
+    const routes = await readWeb('lib/marketing-i18n/routes.ts');
+    const apply = await readWeb('components/marketing/pages/RecruitmentApplyPage.tsx');
     const nav = await readWeb('components/marketing/nav-config.ts');
     const middleware = await readWeb('middleware.ts');
 
-    expect(landing).toMatch(/bridgehive\.app\/recruitment/);
+    expect(routes).toMatch(/SITE_ORIGIN = 'https:\/\/bridgehive\.app'/);
+    expect(routes).toMatch(/recruitment: \{ path: '\/recruitment'/);
+    expect(landing).toMatch(/buildMarketingMetadata\('recruitment', 'en'\)/);
     expect(landing).toMatch(/Join the talent network|talent network/i);
     expect(landing).not.toMatch(/\/organization\/recruitment/);
     expect(apply).toMatch(/RecruitmentApplyForm/);
-    expect(nav).toMatch(/href: '\/recruitment'/);
+    expect(nav).toMatch(/MARKETING_ROUTE_TABLE\[key\]\.path/);
     expect(middleware).toMatch(/\/recruitment/);
   });
 
   it('keeps consent unchecked and does not collect a professional role', async () => {
     const form = await readWeb('components/marketing/recruitment-apply-form.tsx');
+    const en = await readWeb('lib/marketing-i18n/dictionaries/en.ts');
     expect(form).toMatch(/consentAccepted/);
     expect(form).not.toMatch(/Professional role/);
     expect(form).not.toMatch(/WORKER_ROLES/);
     expect(form).toMatch(/checked=\{draft\.consentAccepted\}/);
     expect(form).not.toMatch(/defaultChecked=\{true\}/);
-    expect(form).toMatch(/Submit talent profile/);
+    expect(form).toMatch(/recruitmentApply\.btnSubmit/);
+    expect(en).toMatch(/btnSubmit: 'Submit talent profile'/);
     expect(form).toMatch(/recruitmentApplicationDocumentRequirements/);
     expect(form).not.toMatch(/No documents are required/);
   });

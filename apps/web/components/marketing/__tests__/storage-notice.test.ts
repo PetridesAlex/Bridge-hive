@@ -53,7 +53,9 @@ describe('marketing storage notice', () => {
   });
 
   it('is an informational notice with Got it and real storage copy — no fake accept/reject', async () => {
-    const notice = await read('components/marketing/MarketingStorageNotice.tsx');
+    const notice =
+      (await read('components/marketing/MarketingStorageNotice.tsx')) +
+      (await read('lib/marketing-i18n/dictionaries/en.ts'));
     const css = await read('app/marketing.css');
 
     expect(notice).toMatch(/Got it/);

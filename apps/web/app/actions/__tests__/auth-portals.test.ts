@@ -194,7 +194,10 @@ describe('premium auth portals', () => {
     const footer = await readWeb('components/marketing/MarketingFooter.tsx');
 
     expect(nav).toMatch(/\/sign-in/);
-    expect(nav).toMatch(/Organization sign in/);
+    expect(nav).toMatch(/nav\.orgSignIn/);
+    expect(await readWeb('lib/marketing-i18n/dictionaries/en.ts')).toMatch(
+      /orgSignIn: 'Organization sign in'/,
+    );
     expect(footer).toMatch(/\/admin\/sign-in/);
   });
 });

@@ -72,7 +72,7 @@ describe('organization activation helpers', () => {
 
   it('describes redirectTo without secrets and flags loopback', () => {
     const preview =
-      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/(app)/auth/confirm?next=%2Factivate-organization-account';
+      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/auth/confirm?next=%2Factivate-organization-account';
     expect(describeActivationRedirectTo(preview)).toEqual({
       redirectTo: preview,
       origin: 'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app',
@@ -90,7 +90,7 @@ describe('organization activation helpers', () => {
 
   it('byte-matches the Preview allowlist confirm URL', () => {
     const expected =
-      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/(app)/auth/confirm?next=%2Factivate-organization-account';
+      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/auth/confirm?next=%2Factivate-organization-account';
     expect(
       buildActivationRedirectTo(
         'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app',

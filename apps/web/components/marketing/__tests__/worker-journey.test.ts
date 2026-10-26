@@ -55,7 +55,10 @@ describe('worker journey section', () => {
 
     expect(visual).toMatch(/BRIDGE_HIVE_MARK_SRC/);
     expect(visual).toMatch(/from '@\/components\/brand\/BridgeHiveMark'/);
-    expect(visual).toMatch(/Illustrative journey/);
+    expect(section).toMatch(/caption=\{professionals\.journeyVisualCaption\}/);
+    expect(await readWeb('lib/marketing-i18n/dictionaries/en.ts')).toMatch(
+      /journeyVisualCaption: 'Illustrative journey'/,
+    );
     const brand = await readWeb('components/marketing/MarketingBrand.tsx');
     expect(brand).toMatch(/bridge-hive-logo-v2-512\.png/);
     expect(brand).not.toMatch(/bridge-hive-logo-512\.webp/);
@@ -70,8 +73,8 @@ describe('worker journey section', () => {
     expect(visual).toMatch(/PATH_POINTS\[0\]\.x/);
     expect(section).toMatch(/IntersectionObserver/);
     expect(section).toMatch(/activeStep/);
-    expect(card).toMatch(/aria-label=\{`Step \$\{index \+ 1\}/);
-    expect(visual).toMatch(/aria-label=\{`Step \$\{index \+ 1\}/);
+    expect(card).toMatch(/aria-label=\{renderAriaLabel\(stepAriaTemplate, index, step\.label\)\}/);
+    expect(visual).toMatch(/aria-label=\{renderAriaLabel\(stepAriaTemplate, index, step\.label\)\}/);
     expect(css).toMatch(/\.m-wj-path/);
     expect(css).toMatch(/\.m-wj-particle/);
     const logoBlock = css.match(/\.m-wj-logo-anchor\s*\{([\s\S]*?)\n\}/);

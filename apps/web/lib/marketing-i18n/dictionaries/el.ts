@@ -349,6 +349,10 @@ export const el: MarketingDictionary = {
     supportEmail: 'support@bridgehive.app',
     supportSubject: 'Υποστήριξη Bridge Hive',
     supportEmailLabel: 'Email',
+    emailCopyLabel: 'Αντιγραφή διεύθυνσης',
+    emailCopiedLabel: 'Αντιγράφηκε',
+    emailHint:
+      'Ανοίγει την εφαρμογή email σας με ένα σύντομο θέμα. Μπορείτε επίσης να αντιγράψετε τη διεύθυνση αν δεν έχει ρυθμιστεί email σε αυτή τη συσκευή.',
     supportQuickGuidance: 'Σύντομες οδηγίες',
     supportGuidance1Prefix: 'Επαγγελματίες: χρησιμοποιήστε τη σελίδα ',
     supportGuidance1LinkText: 'συνέχισης εφαρμογής επαγγελματία',
@@ -487,6 +491,7 @@ export const el: MarketingDictionary = {
     disclaimerLinkText: 'υποστήριξη πλατφόρμας',
     disclaimerSuffix: '.',
     journeyEyebrow: 'Πώς λειτουργεί',
+    journeyVisualCaption: 'Ενδεικτική διαδρομή',
     journeyTitlePrefix: 'Πώς γίνεται η ρύθμιση του',
     journeyTitleAccent: 'λογαριασμού',
     journeyCardTitle: 'Διαδρομή επαγγελματία',

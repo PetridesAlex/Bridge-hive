@@ -9,9 +9,10 @@ describe('marketing logo intro', () => {
     const shell = await read('components/marketing/MarketingShell.tsx');
     const intro = await read('components/marketing/MarketingLogoIntro.tsx');
     const layout = await read('app/(marketing)/layout.tsx');
-    const rootLayout = await read('app/layout.tsx');
+    const rootLayout = await read('components/marketing/MarketingDocument.tsx');
 
-    expect(layout).toMatch(/MarketingShell/);
+    expect(layout).toMatch(/MarketingDocument/);
+    expect(rootLayout).toMatch(/MarketingShell/);
     expect(shell).toMatch(/MarketingLogoIntro/);
     expect(intro).toMatch(/bridge-hive-logo-v2-512\.png/);
     expect(intro).toMatch(/BridgeHive\s*<span>Medical Recruitment Limited<\/span>/);

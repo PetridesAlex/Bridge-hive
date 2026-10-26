@@ -185,6 +185,9 @@ export function ContactPage({ locale }: { locale: MarketingLocale }) {
                 mailtoSubject={c.partnershipsSubject}
                 label={c.partnershipsEmailLabel}
                 tone="teal"
+                copyLabel={c.emailCopyLabel}
+                copiedLabel={c.emailCopiedLabel}
+                hint={c.emailHint}
               />
 
               <h3 className="m-contact-card-list-title">
@@ -240,6 +243,9 @@ export function ContactPage({ locale }: { locale: MarketingLocale }) {
                 mailtoSubject={c.supportSubject}
                 label={c.supportEmailLabel}
                 tone="honey"
+                copyLabel={c.emailCopyLabel}
+                copiedLabel={c.emailCopiedLabel}
+                hint={c.emailHint}
               />
 
               <h3 className="m-contact-card-list-title">{c.supportQuickGuidance}</h3>

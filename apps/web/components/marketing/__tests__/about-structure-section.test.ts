@@ -6,8 +6,10 @@ const read = (...parts: string[]) => fs.readFile(path.join(webRoot, ...parts), '
 
 describe('about structure section', () => {
   it('ships the clear-structure band with three cards, CTAs, and no 3D image', async () => {
-    const page = await read('app/(marketing)/about/page.tsx');
-    const section = await read('components/marketing/AboutStructureSection.tsx');
+    const page = await read('components/marketing/pages/AboutPage.tsx');
+    const section =
+      (await read('components/marketing/AboutStructureSection.tsx')) +
+      (await read('lib/marketing-i18n/dictionaries/en.ts'));
     const css = await read('app/marketing.css');
 
     expect(page).toMatch(/AboutStructureSection/);

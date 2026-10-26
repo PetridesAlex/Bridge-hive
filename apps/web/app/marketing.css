@@ -11264,6 +11264,31 @@ html[data-m-intro="done"] .marketing .m-intro {
   background: var(--m-navy);
 }
 
+.m-header.is-scrolled .m-lang-switch:not(.m-lang-switch--mobile) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+.m-header.is-scrolled .m-lang-switch:not(.m-lang-switch--mobile) .m-lang-switch-icon {
+  color: var(--m-honey);
+}
+
+.m-header.is-scrolled .m-lang-switch:not(.m-lang-switch--mobile) .m-lang-switch-link {
+  color: rgba(246, 248, 247, 0.78);
+}
+
+.m-header.is-scrolled .m-lang-switch:not(.m-lang-switch--mobile) .m-lang-switch-link:hover,
+.m-header.is-scrolled .m-lang-switch:not(.m-lang-switch--mobile) .m-lang-switch-link:focus-visible {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.m-header.is-scrolled .m-lang-switch:not(.m-lang-switch--mobile) .m-lang-switch-link.is-active {
+  color: #132433;
+  background: linear-gradient(180deg, #f6d56a 0%, var(--m-honey) 100%);
+}
+
 /* Mobile variant — full width inside the panel, 44px minimum tap targets. */
 .m-lang-switch--mobile {
   display: flex;
@@ -11304,10 +11329,6 @@ html[data-m-intro="done"] .marketing .m-intro {
   line-height: 1.15;
 }
 
-:lang(el) .m-nav-link {
-  white-space: normal;
-}
-
 :lang(el) .m-nav-worker-copy {
   flex-direction: column;
   align-items: flex-start;
@@ -11322,4 +11343,78 @@ html[data-m-intro="done"] .marketing .m-intro {
 
 :lang(el) .m-mobile-link {
   white-space: normal;
+}
+
+/* ---------- Desktop header fit with the language switch ----------------- */
+/* Brand + six links + EN/ΕΛ + worker app + org sign-in must stay on one line.
+   The worker app button collapses to its icon (label stays in aria-label and
+   title) until there is room for its text: 1280px in English, 1440px in Greek. */
+
+@media (min-width: 1120px) {
+  .m-header-inner {
+    gap: 0.75rem;
+  }
+
+  .m-nav-desktop {
+    gap: 0.1rem;
+    padding: 0;
+  }
+
+  .m-nav-link {
+    min-width: 0;
+    padding-inline: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .m-nav-actions {
+    gap: 0.45rem;
+  }
+
+  .m-nav-actions .m-nav-btn--org {
+    padding-inline: 1rem;
+  }
+
+  :lang(el) .m-nav-actions .m-nav-btn--org,
+  :lang(el) .m-nav-actions .m-nav-btn--worker {
+    white-space: nowrap;
+  }
+
+  .m-lang-switch {
+    gap: 0.1rem;
+    padding: 0.25rem;
+  }
+
+  .m-lang-switch-icon {
+    margin: 0 0.1rem 0 0.3rem;
+  }
+
+  .m-lang-switch-link {
+    padding: 0.3rem 0.5rem;
+  }
+}
+
+@media (min-width: 1120px) and (max-width: 1279.98px) {
+  .m-nav-actions .m-nav-btn--worker .m-nav-worker-copy {
+    display: none;
+  }
+
+  .m-nav-actions .m-nav-btn--worker {
+    padding: 0.4rem;
+  }
+}
+
+@media (min-width: 1120px) and (max-width: 1439.98px) {
+  :lang(el) .m-nav-actions .m-nav-btn--worker .m-nav-worker-copy {
+    display: none;
+  }
+
+  :lang(el) .m-nav-actions .m-nav-btn--worker {
+    padding: 0.4rem;
+  }
+}
+
+@media (min-width: 1440px) {
+  .m-header-inner {
+    max-width: 82rem;
+  }
 }

@@ -332,6 +332,7 @@ export function MarketingNav({ locale, dictionary }: MarketingNavProps) {
               type="button"
               className="m-nav-btn m-nav-btn--worker"
               aria-label={nav.workerAppAria}
+              title={nav.workerAppAria}
               aria-haspopup="dialog"
               aria-expanded={workerNotice}
               aria-controls={workerNoticeId}

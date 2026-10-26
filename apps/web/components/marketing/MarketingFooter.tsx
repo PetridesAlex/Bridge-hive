@@ -17,45 +17,47 @@ import Link from 'next/link';
 import { CookieSettingsButton } from '@/components/marketing/CookieSettingsButton';
 import { MarketingBrand } from '@/components/marketing/MarketingBrand';
 import { MARKETING_NAV } from '@/components/marketing/nav-config';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import { localizePath, type MarketingLocale } from '@/lib/marketing-i18n';
 
 const SOCIAL_LINKS = [
   {
-    label: 'Instagram',
+    key: 'instagram' as const,
     href: 'https://www.instagram.com/bridgehive.app/',
     icon: Instagram,
   },
   {
-    label: 'LinkedIn',
+    key: 'linkedin' as const,
     href: 'https://www.linkedin.com/company/bridgehive-medical-recruitment/',
     icon: Linkedin,
   },
   {
-    label: 'Facebook',
+    key: 'facebook' as const,
     href: 'https://www.facebook.com/profile.php?id=61595007450717',
     icon: Facebook,
   },
 ] as const;
 
-const TRUST_ITEMS = [
-  {
-    icon: ShieldCheck,
-    tone: 'teal' as const,
-    label: 'Verified professionals',
-  },
-  {
-    icon: Building2,
-    tone: 'honey' as const,
-    label: 'Organization workflows',
-  },
-  {
-    icon: Users,
-    tone: 'teal' as const,
-    label: 'Clear roles and review steps',
-  },
-] as const;
+type MarketingFooterProps = {
+  locale: MarketingLocale;
+  dictionary: MarketingDictionary;
+};
 
-export function MarketingFooter() {
+export function MarketingFooter({ locale, dictionary }: MarketingFooterProps) {
   const year = new Date().getFullYear();
+  const f = dictionary.footer;
+
+  const trustItems = [
+    { icon: ShieldCheck, tone: 'teal' as const, label: f.trustVerifiedProfessionals },
+    { icon: Building2, tone: 'honey' as const, label: f.trustOrgWorkflows },
+    { icon: Users, tone: 'teal' as const, label: f.trustClearRoles },
+  ] as const;
+
+  const socialLabels: Record<(typeof SOCIAL_LINKS)[number]['key'], string> = {
+    instagram: f.instagram,
+    linkedin: f.linkedin,
+    facebook: f.facebook,
+  };
 
   return (
     <footer className="m-footer">
@@ -73,14 +75,15 @@ export function MarketingFooter() {
       <div className="m-footer-inner">
         <div className="m-footer-grid">
           <div className="m-footer-brand">
-            <MarketingBrand tone="dark" markSize={56} />
-            <p className="m-footer-brand-copy">
-              A staffing platform that connects healthcare organizations with verified
-              registered nurses, ward assistants, and physiotherapists — with clear roles, review workflows,
-              and accountability on both sides.
-            </p>
+            <MarketingBrand
+              locale={locale}
+              tone="dark"
+              markSize={56}
+              ariaLabel={dictionary.brand.homeAria}
+            />
+            <p className="m-footer-brand-copy">{f.brandCopy}</p>
             <ul className="m-footer-trust">
-              {TRUST_ITEMS.map((item) => {
+              {trustItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <li key={item.label}>
@@ -98,54 +101,73 @@ export function MarketingFooter() {
           </div>
 
           <div>
-            <h3>Explore</h3>
+            <h3>{f.exploreHeading}</h3>
             <ul>
               {MARKETING_NAV.map((item) => (
-                <li key={item.href}>
-                  <Link href={item.href}>{item.label}</Link>
+                <li key={item.key}>
+                  <Link href={localizePath(item.href, locale)}>
+                    {dictionary.nav[item.key]}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
           <div>
-            <h3>Access</h3>
+            <h3>{f.accessHeading}</h3>
             <ul>
               <li>
-                <Link href="/sign-in">Organization sign in</Link>
+                <Link href={localizePath('/sign-in', locale)}>{f.orgSignIn}</Link>
               </li>
               <li>
-                <Link href="/organisation">Organization portal</Link>
+                <Link href={localizePath('/organisation', locale)}>
+                  {f.orgPortal}
+                </Link>
               </li>
               <li>
-                <Link href="/auth/worker/login">Worker app continuation</Link>
+                <Link href={localizePath('/auth/worker/login', locale)}>
+                  {f.workerAppContinuation}
+                </Link>
               </li>
               <li>
-                <Link href="/contact#partnerships">Partnership inquiry</Link>
+                <Link href={localizePath('/contact#partnerships', locale)}>
+                  {f.partnershipInquiry}
+                </Link>
               </li>
               <li>
-                <Link href="/contact#support">Support</Link>
+                <Link href={localizePath('/contact#support', locale)}>
+                  {f.support}
+                </Link>
               </li>
               <li>
-                <Link href="/admin/sign-in" className="m-footer-admin">
+                <Link
+                  href={localizePath('/admin/sign-in', locale)}
+                  className="m-footer-admin"
+                >
                   <Lock size={13} strokeWidth={2.2} aria-hidden="true" />
-                  Platform admin
+                  {f.platformAdmin}
                 </Link>
               </li>
             </ul>
 
             <div className="m-footer-pro-block">
-              <h3>For professionals</h3>
+              <h3>{f.forProfessionalsHeading}</h3>
               <ul>
                 <li>
-                  <Link href="/auth/worker/login" className="m-footer-ext">
-                    Worker app continuation
+                  <Link
+                    href={localizePath('/auth/worker/login', locale)}
+                    className="m-footer-ext"
+                  >
+                    {f.workerAppContinuation}
                     <ExternalLink size={15} strokeWidth={2.2} aria-hidden="true" />
                   </Link>
                 </li>
                 <li>
-                  <Link href="/contact#support" className="m-footer-ext">
-                    Platform support
+                  <Link
+                    href={localizePath('/contact#support', locale)}
+                    className="m-footer-ext"
+                  >
+                    {f.platformSupport}
                     <ExternalLink size={15} strokeWidth={2.2} aria-hidden="true" />
                   </Link>
                 </li>
@@ -154,40 +176,57 @@ export function MarketingFooter() {
           </div>
 
           <div className="m-footer-contact">
-            <h3>Contact</h3>
+            <h3>{f.contactHeading}</h3>
             <ul className="m-footer-emails">
               <li>
-                <span className="m-footer-mail-icon m-footer-mail-icon--teal" aria-hidden="true">
+                <span
+                  className="m-footer-mail-icon m-footer-mail-icon--teal"
+                  aria-hidden="true"
+                >
                   <Mail size={16} strokeWidth={2.1} />
                 </span>
                 <div>
-                  <p>Organization inquiries</p>
-                  <a href="mailto:info@bridgehive.app?subject=Partnership%20inquiry">
-                    info@bridgehive.app
+                  <p>{f.orgInquiriesLabel}</p>
+                  <a
+                    href={`mailto:${f.orgInquiriesEmail}?subject=${encodeURIComponent(
+                      f.orgInquiriesSubject,
+                    )}`}
+                  >
+                    {f.orgInquiriesEmail}
                   </a>
                 </div>
               </li>
               <li>
-                <span className="m-footer-mail-icon m-footer-mail-icon--honey" aria-hidden="true">
+                <span
+                  className="m-footer-mail-icon m-footer-mail-icon--honey"
+                  aria-hidden="true"
+                >
                   <Mail size={16} strokeWidth={2.1} />
                 </span>
                 <div>
-                  <p>Support</p>
-                  <a href="mailto:support@bridgehive.app?subject=Bridge%20Hive%20support">
-                    support@bridgehive.app
+                  <p>{f.supportLabel}</p>
+                  <a
+                    href={`mailto:${f.supportEmail}?subject=${encodeURIComponent(
+                      f.supportSubject,
+                    )}`}
+                  >
+                    {f.supportEmail}
                   </a>
                 </div>
               </li>
             </ul>
 
-            <Link href="/auth/worker/login" className="m-footer-app-cta">
+            <Link
+              href={localizePath('/auth/worker/login', locale)}
+              className="m-footer-app-cta"
+            >
               <span className="m-footer-app-cta-sheen" aria-hidden="true" />
               <span className="m-footer-app-cta-icon" aria-hidden="true">
                 <Smartphone size={22} strokeWidth={1.9} />
               </span>
               <span className="m-footer-app-cta-copy">
-                <strong>Return to the worker app</strong>
-                <em>Sign-in help for registered workers</em>
+                <strong>{f.returnToWorkerApp}</strong>
+                <em>{f.signInHelpForWorkers}</em>
               </span>
               <ArrowRight
                 className="m-footer-app-cta-arrow"
@@ -201,18 +240,20 @@ export function MarketingFooter() {
 
         <div className="m-footer-note">
           <div className="m-footer-note-left">
-            <p className="m-footer-copy">© {year} Bridge Hive</p>
-            <p className="m-footer-disclaimer">
-              All rights reserved. Healthcare staffing platform — not a clinical service provider.
+            <p className="m-footer-copy">
+              {f.copyYear.replace('{year}', String(year))}
             </p>
+            <p className="m-footer-disclaimer">{f.disclaimer}</p>
           </div>
           <div className="m-footer-note-actions">
-            <nav className="m-footer-legal" aria-label="Legal">
-              <CookieSettingsButton />
+            <nav className="m-footer-legal" aria-label={f.legalAria}>
+              <CookieSettingsButton label={f.cookieSettings} />
               <span aria-hidden="true" />
-              <Link href="/contact#support">Privacy & terms</Link>
+              <Link href={localizePath('/contact#support', locale)}>
+                {f.privacyTerms}
+              </Link>
             </nav>
-            <nav className="m-footer-social" aria-label="Social">
+            <nav className="m-footer-social" aria-label={f.socialAria}>
               {SOCIAL_LINKS.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -222,7 +263,7 @@ export function MarketingFooter() {
                     className="m-footer-social-btn"
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label={item.label}
+                    aria-label={socialLabels[item.key]}
                   >
                     <Icon size={16} strokeWidth={2} aria-hidden="true" />
                   </a>

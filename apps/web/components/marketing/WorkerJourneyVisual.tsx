@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { BRIDGE_HIVE_MARK_SRC } from '@/components/brand/BridgeHiveMark';
-import { WORKER_JOURNEY_STEPS } from '@/components/marketing/worker-journey-data';
+import type { WorkerJourneyStep } from '@/components/marketing/worker-journey-data';
 
 const VIEW_W = 920;
 const VIEW_H = 920;
@@ -25,31 +25,42 @@ function polar(radius: number, deg: number) {
   };
 }
 
-/**
- * Full rounded connector around the centered mark.
- * Cards share the same distance from the logo; the path meets each card edge.
- */
 const NODE_POINTS = ANGLES_DEG.map((deg) => polar(CARD_R, deg));
 const PATH_POINTS = ANGLES_DEG.map((deg) => polar(PATH_R, deg));
 
-/** Complete circle through each card’s inner connection point. */
+/** Complete circle through each card's inner connection point. */
 const PATH_D =
   PATH_POINTS.reduce((d, point, index) => {
     if (index === 0) return `M ${point.x} ${point.y}`;
     return `${d} A ${PATH_R} ${PATH_R} 0 0 1 ${point.x} ${point.y}`;
   }, '') + ` A ${PATH_R} ${PATH_R} 0 0 1 ${PATH_POINTS[0].x} ${PATH_POINTS[0].y}`;
 
+type WorkerJourneyVisualProps = {
+  activeStep: number | null;
+  onStepChange: (index: number | null) => void;
+  playMotion: boolean;
+  reduceMotion: boolean;
+  steps: WorkerJourneyStep[];
+  caption: string;
+  diagramAriaLabel: string;
+  /** Template with `{n}` and `{label}` placeholders. */
+  stepAriaTemplate: string;
+};
+
+function renderAriaLabel(template: string, index: number, label: string): string {
+  return template.replace('{n}', String(index + 1)).replace('{label}', label);
+}
+
 export function WorkerJourneyVisual({
   activeStep,
   onStepChange,
   playMotion,
   reduceMotion,
-}: {
-  activeStep: number | null;
-  onStepChange: (index: number | null) => void;
-  playMotion: boolean;
-  reduceMotion: boolean;
-}) {
+  steps,
+  caption,
+  diagramAriaLabel,
+  stepAriaTemplate,
+}: WorkerJourneyVisualProps) {
   const reactId = useId();
   const gradId = `m-wj-grad-${reactId.replace(/:/g, '')}`;
   const glowId = `m-wj-glow-${reactId.replace(/:/g, '')}`;
@@ -119,7 +130,7 @@ export function WorkerJourneyVisual({
 
   return (
     <div className="m-wj-visual">
-      <p className="m-wj-visual-caption">Illustrative journey</p>
+      <p className="m-wj-visual-caption">{caption}</p>
 
       <div className="m-wj-visual-desktop" hidden={!isDesktopVisual}>
         <div className="m-wj-visual-ambience" aria-hidden="true" />
@@ -139,7 +150,7 @@ export function WorkerJourneyVisual({
           className="m-wj-svg"
           viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
           role="img"
-          aria-label="Illustrative six-step worker journey from account creation to timesheets and commission"
+          aria-label={diagramAriaLabel}
         >
           <defs>
             <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -173,7 +184,7 @@ export function WorkerJourneyVisual({
             const card = NODE_POINTS[index];
             const hub = polar(96, ANGLES_DEG[index]);
             return (
-              <g key={`spoke-${WORKER_JOURNEY_STEPS[index].id}`} aria-hidden="true">
+              <g key={`spoke-${steps[index].id}`} aria-hidden="true">
                 <line
                   className={`m-wj-spoke${activeStep === index ? ' is-active' : ''}`}
                   x1={hub.x}
@@ -215,7 +226,7 @@ export function WorkerJourneyVisual({
           />
           {PATH_POINTS.map((point, index) => (
             <circle
-              key={`dot-${WORKER_JOURNEY_STEPS[index].id}`}
+              key={`dot-${steps[index].id}`}
               className={`m-wj-path-dot${activeStep === index ? ' is-active' : ''}${
                 activeStep !== null && activeStep >= index ? ' is-passed' : ''
               }`}
@@ -237,7 +248,7 @@ export function WorkerJourneyVisual({
         </svg>
 
         <ul className="m-wj-nodes">
-          {WORKER_JOURNEY_STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const point = NODE_POINTS[index];
             const active = activeStep === index;
             return (
@@ -256,7 +267,7 @@ export function WorkerJourneyVisual({
                   type="button"
                   className="m-wj-node-btn"
                   aria-current={active ? 'step' : undefined}
-                  aria-label={`Step ${index + 1}: ${step.label}`}
+                  aria-label={renderAriaLabel(stepAriaTemplate, index, step.label)}
                   onMouseEnter={() => onStepChange(index)}
                   onMouseLeave={() => onStepChange(null)}
                   onFocus={() => onStepChange(index)}
@@ -290,7 +301,7 @@ export function WorkerJourneyVisual({
           />
         </div>
         <ul className="m-wj-nodes m-wj-nodes--mobile">
-          {WORKER_JOURNEY_STEPS.map((step, index) => {
+          {steps.map((step, index) => {
             const active = activeStep === index;
             return (
               <li
@@ -301,7 +312,7 @@ export function WorkerJourneyVisual({
                   type="button"
                   className="m-wj-node-btn"
                   aria-current={active ? 'step' : undefined}
-                  aria-label={`Step ${index + 1}: ${step.label}`}
+                  aria-label={renderAriaLabel(stepAriaTemplate, index, step.label)}
                   onFocus={() => onStepChange(index)}
                   onBlur={() => onStepChange(null)}
                   onClick={() => onStepChange(active ? null : index)}

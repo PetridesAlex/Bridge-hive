@@ -22,10 +22,14 @@ const PUBLIC_PATHS = [
   '/manifest.webmanifest',
 ];
 
-function isPublicPath(pathname: string): boolean {
+export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
   if (pathname.startsWith('/auth/')) return true;
   if (pathname === '/recruitment' || pathname.startsWith('/recruitment/')) {
+    return true;
+  }
+  // Greek marketing mirrors — unknown /el/* must reach the 404 page, not /sign-in.
+  if (pathname === '/el' || pathname.startsWith('/el/')) {
     return true;
   }
   return false;

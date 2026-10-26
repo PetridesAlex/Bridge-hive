@@ -20,6 +20,8 @@ import {
   type RecruitmentSubmitState,
 } from '@/app/actions/recruitment-application';
 import { ResidenceFlag } from '@/components/marketing/residence-flags';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import type { MarketingLocale } from '@/lib/marketing-i18n/locales';
 
 const initial: RecruitmentSubmitState = {};
 
@@ -34,7 +36,46 @@ type PendingFile = {
   expiresAt: string;
 };
 
-export function RecruitmentApplyForm() {
+type RecruitmentApplyFormProps = {
+  locale: MarketingLocale;
+  recruitmentApply: MarketingDictionary['recruitmentApply'];
+};
+
+/** Map a domain validation message to a localized string with English fallback. */
+function translateMessage(
+  message: string,
+  messageMap: MarketingDictionary['recruitmentApply']['messageMap'],
+): string {
+  if (!message) return message;
+  if (message in messageMap) {
+    return (messageMap as Record<string, string>)[message] ?? message;
+  }
+  const prefixes = [
+    'Add required document: ',
+    'Enter an expiry date for ',
+  ] as const;
+  for (const prefix of prefixes) {
+    if (message.startsWith(prefix)) {
+      const inner = message.slice(prefix.length).replace(/\.$/, '');
+      const translatedPrefix =
+        (messageMap as Record<string, string>)[`${prefix}${inner}.`] ??
+        (messageMap as Record<string, string>)[`${prefix}${inner}`];
+      if (translatedPrefix) return translatedPrefix;
+      const innerTranslation = (messageMap as Record<string, string>)[inner];
+      if (innerTranslation) {
+        const basePrefix =
+          (messageMap as Record<string, string>)[prefix.trim()] ?? prefix;
+        return `${basePrefix}${innerTranslation}.`;
+      }
+    }
+  }
+  return message;
+}
+
+export function RecruitmentApplyForm({
+  locale,
+  recruitmentApply,
+}: RecruitmentApplyFormProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [draft, setDraft] = useState<RecruitmentApplicationDraft>(
     emptyRecruitmentApplicationDraft,
@@ -54,6 +95,31 @@ export function RecruitmentApplyForm() {
     () => recruitmentApplicationDocumentRequirements(),
     [],
   );
+
+  // Localized step titles / descriptions (positional map to domain step list).
+  const stepCopy = [
+    {
+      title: recruitmentApply.stepPersonalTitle,
+      description: recruitmentApply.stepPersonalDescription,
+    },
+    {
+      title: recruitmentApply.stepPreferencesTitle,
+      description: recruitmentApply.stepPreferencesDescription,
+    },
+    {
+      title: recruitmentApply.stepDocumentsTitle,
+      description: recruitmentApply.stepDocumentsDescription,
+    },
+    {
+      title: recruitmentApply.stepConsentTitle,
+      description: recruitmentApply.stepConsentDescription,
+    },
+  ] as const;
+
+  const currentStepCopy = stepCopy[stepIndex] ?? {
+    title: step.title,
+    description: step.description,
+  };
 
   function update<K extends keyof RecruitmentApplicationDraft>(
     key: K,
@@ -141,22 +207,26 @@ export function RecruitmentApplyForm() {
   if (state.success) {
     return (
       <div className="rounded-[1.35rem] border border-[color:var(--m-line)] bg-white p-6 shadow-[0_12px_40px_rgba(11,32,50,0.06)] sm:p-8">
-        <p className="m-eyebrow">Application received</p>
+        <p className="m-eyebrow">{recruitmentApply.eyebrow}</p>
         <h2 className="mt-3 text-2xl font-bold tracking-tight text-[color:var(--m-navy)]">
-          {state.message ?? RECRUITMENT_SUCCESS_MESSAGE}
+          {state.message
+            ? translateMessage(state.message, recruitmentApply.messageMap)
+            : recruitmentApply.successMessage ?? RECRUITMENT_SUCCESS_MESSAGE}
         </h2>
-        <p className="m-lede mt-3">
-          Bridge Hive will review your profile. This does not guarantee employment or
-          contact from an organization.
-        </p>
+        <p className="m-lede mt-3">{recruitmentApply.lede}</p>
       </div>
     );
   }
 
+  const errorRaw = localError ?? state.error ?? null;
+  const errorText = errorRaw
+    ? translateMessage(errorRaw, recruitmentApply.messageMap)
+    : null;
+
   return (
     <div className="rounded-[1.35rem] border border-[color:var(--m-line)] bg-white p-5 shadow-[0_12px_40px_rgba(11,32,50,0.06)] sm:p-8">
       <nav
-        aria-label="Application steps"
+        aria-label={recruitmentApply.title}
         className="m-apply-steps"
         style={{
           ['--m-apply-count' as string]: RECRUITMENT_APPLY_STEPS.length,
@@ -173,6 +243,7 @@ export function RecruitmentApplyForm() {
           {RECRUITMENT_APPLY_STEPS.map((s, index) => {
             const status =
               index < stepIndex ? 'done' : index === stepIndex ? 'current' : 'upcoming';
+            const label = stepCopy[index]?.title ?? s.title;
             return (
               <li
                 key={s.id}
@@ -195,7 +266,7 @@ export function RecruitmentApplyForm() {
                     index + 1
                   )}
                 </span>
-                <span className="m-apply-step-label">{s.title}</span>
+                <span className="m-apply-step-label">{label}</span>
               </li>
             );
           })}
@@ -204,23 +275,25 @@ export function RecruitmentApplyForm() {
 
       <header className="mb-5">
         <h1 className="text-2xl font-bold tracking-tight text-[color:var(--m-navy)]">
-          {step.title}
+          {currentStepCopy.title}
         </h1>
-        <p className="mt-1 text-sm text-[color:var(--m-muted)]">{step.description}</p>
+        <p className="mt-1 text-sm text-[color:var(--m-muted)]">
+          {currentStepCopy.description}
+        </p>
       </header>
 
       <form onSubmit={onSubmitFinal} className="space-y-4" noValidate>
         {step.id === 'personal' ? (
           <>
             <Field
-              label="Full name"
+              label={recruitmentApply.fieldFullName}
               value={draft.fullName}
               onChange={(v) => update('fullName', v)}
               autoComplete="name"
               required
             />
             <Field
-              label="Email"
+              label={recruitmentApply.fieldEmail}
               type="email"
               value={draft.email}
               onChange={(v) => update('email', v)}
@@ -228,7 +301,7 @@ export function RecruitmentApplyForm() {
               required
             />
             <Field
-              label="Phone"
+              label={recruitmentApply.fieldPhone}
               type="tel"
               value={draft.phone}
               onChange={(v) => update('phone', v)}
@@ -237,11 +310,11 @@ export function RecruitmentApplyForm() {
             />
             <fieldset>
               <legend className="block text-sm font-medium text-[color:var(--m-navy)]">
-                Country of residence
+                {recruitmentApply.fieldCountryOfResidence}
               </legend>
               <div
                 role="radiogroup"
-                aria-label="Country of residence"
+                aria-label={recruitmentApply.fieldCountryOfResidence}
                 className="mt-1.5 grid grid-cols-2 overflow-hidden rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)]"
               >
                 {RESIDENCE_COUNTRIES.map((country) => {
@@ -267,7 +340,7 @@ export function RecruitmentApplyForm() {
               </div>
             </fieldset>
             <Field
-              label="Preferred Cyprus location (optional)"
+              label={recruitmentApply.fieldPreferredCyprusLocation}
               value={draft.preferredCyprusLocation}
               onChange={(v) => update('preferredCyprusLocation', v)}
             />
@@ -277,7 +350,7 @@ export function RecruitmentApplyForm() {
         {step.id === 'preferences' ? (
           <>
             <label className="block text-sm font-medium text-[color:var(--m-navy)]">
-              Employment type
+              {recruitmentApply.fieldEmploymentType}
               <select
                 className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] px-3 py-2.5 text-sm"
                 value="full_time"
@@ -285,17 +358,18 @@ export function RecruitmentApplyForm() {
                 required
               >
                 <option value="full_time">
-                  {RECRUITMENT_EMPLOYMENT_TYPE_LABELS.full_time}
+                  {recruitmentApply.employmentTypeFullTime ??
+                    RECRUITMENT_EMPLOYMENT_TYPE_LABELS.full_time}
                 </option>
               </select>
             </label>
             <Field
-              label="Preferred healthcare environments"
+              label={recruitmentApply.fieldPreferredEnvironments}
               value={draft.preferredEnvironments}
               onChange={(v) => update('preferredEnvironments', v)}
             />
             <Field
-              label="Areas of interest"
+              label={recruitmentApply.fieldAreasOfInterest}
               value={draft.areasOfInterest}
               onChange={(v) => update('areasOfInterest', v)}
             />
@@ -305,13 +379,15 @@ export function RecruitmentApplyForm() {
         {step.id === 'documents' ? (
           <div className="space-y-4">
             <p className="text-sm text-[color:var(--m-muted)]">
-              Uploads are stored privately. PDF, JPEG, or PNG — max 10 MB each.
-              Identity documents are required. Add any professional documents that
-              apply.
+              {recruitmentApply.documentUploadHint}
             </p>
             {docReqs.map((req) => {
               const current = files.find(
                 (f) => f.credentialType === req.credentialType,
+              );
+              const localizedLabel = translateMessage(
+                req.label,
+                recruitmentApply.messageMap,
               );
               return (
                 <div
@@ -319,8 +395,10 @@ export function RecruitmentApplyForm() {
                   className="rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] p-4"
                 >
                   <label className="block text-sm font-medium text-[color:var(--m-navy)]">
-                    {req.label}
-                    {req.isRequired ? ' *' : ' (optional)'}
+                    {localizedLabel}
+                    {req.isRequired
+                      ? ` ${recruitmentApply.documentRequired}`
+                      : ` ${recruitmentApply.documentOptional}`}
                     <input
                       type="file"
                       accept=".pdf,image/jpeg,image/png"
@@ -344,12 +422,12 @@ export function RecruitmentApplyForm() {
                   </label>
                   {current ? (
                     <p className="mt-2 text-xs text-[color:var(--m-muted)]">
-                      Selected: {current.file.name}
+                      {current.file.name}
                     </p>
                   ) : null}
                   {req.requiresExpiry ? (
                     <label className="mt-3 block text-sm font-medium text-[color:var(--m-navy)]">
-                      Expiry date
+                      {recruitmentApply.documentExpiryLabel}
                       <input
                         type="date"
                         className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-white px-3 py-2 text-sm"
@@ -380,21 +458,27 @@ export function RecruitmentApplyForm() {
           <div className="space-y-4">
             <dl className="grid gap-2 rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] p-4 text-sm">
               <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--m-muted)]">Name</dt>
+                <dt className="text-[color:var(--m-muted)]">
+                  {recruitmentApply.fieldFullName}
+                </dt>
                 <dd className="font-medium text-[color:var(--m-navy)]">
                   {draft.fullName}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--m-muted)]">Email</dt>
+                <dt className="text-[color:var(--m-muted)]">
+                  {recruitmentApply.fieldEmail}
+                </dt>
                 <dd className="font-medium text-[color:var(--m-navy)]">
                   {draft.email.replace(/(.{2}).+(@.+)/, '$1•••$2')}
                 </dd>
               </div>
               <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--m-muted)]">Documents</dt>
+                <dt className="text-[color:var(--m-muted)]">
+                  {recruitmentApply.documentUploadLabel}
+                </dt>
                 <dd className="font-medium text-[color:var(--m-navy)]">
-                  {files.length} file{files.length === 1 ? '' : 's'}
+                  {files.length}
                 </dd>
               </div>
             </dl>
@@ -405,20 +489,36 @@ export function RecruitmentApplyForm() {
                 checked={draft.consentAccepted}
                 onChange={(e) => update('consentAccepted', e.target.checked)}
               />
-              <span>{RECRUITMENT_CONSENT_PLACEHOLDER}</span>
+              {/*
+                Consent wording stays in English pending legal approval; the
+                lang="en" wrapper tells assistive tech + translators to leave
+                the placeholder copy intact. We never change the submission
+                payload, so server validation remains authoritative.
+              */}
+              <span lang="en">{RECRUITMENT_CONSENT_PLACEHOLDER}</span>
             </label>
-            <p className="text-xs text-[color:var(--m-muted)]">
-              Consent wording is a draft pending legal review and is not a claim of
-              regulatory compliance.
-            </p>
+            {locale !== 'en' ? (
+              <p className="text-xs text-[color:var(--m-muted)]">
+                Η συγκατάθεση παραμένει στα Αγγλικά έως την ολοκλήρωση του νομικού
+                ελέγχου. Το περιεχόμενο που υποβάλλεται στον διακομιστή δεν αλλάζει.
+              </p>
+            ) : (
+              <p className="text-xs text-[color:var(--m-muted)]">
+                Consent wording is a draft pending legal review and is not a claim
+                of regulatory compliance.
+              </p>
+            )}
           </div>
         ) : null}
 
-        {(localError || state.error) && (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800" role="alert">
-            {localError ?? state.error}
+        {errorText ? (
+          <p
+            className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+            role="alert"
+          >
+            {errorText}
           </p>
-        )}
+        ) : null}
 
         <div className="flex flex-wrap gap-3 pt-2">
           {stepIndex > 0 ? (
@@ -428,7 +528,7 @@ export function RecruitmentApplyForm() {
               onClick={goBack}
               disabled={busy}
             >
-              Back
+              {recruitmentApply.btnBack}
             </button>
           ) : null}
           {step.id !== 'consent' ? (
@@ -438,7 +538,7 @@ export function RecruitmentApplyForm() {
               onClick={goNext}
               disabled={busy}
             >
-              Continue
+              {recruitmentApply.btnNext}
             </button>
           ) : (
             <button
@@ -447,7 +547,7 @@ export function RecruitmentApplyForm() {
               disabled={busy}
               aria-busy={busy}
             >
-              {busy ? 'Submitting…' : 'Submit talent profile'}
+              {busy ? recruitmentApply.btnSubmitting : recruitmentApply.btnSubmit}
             </button>
           )}
         </div>

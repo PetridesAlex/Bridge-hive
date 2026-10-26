@@ -13,14 +13,17 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { MarketingBrand } from '@/components/marketing/MarketingBrand';
+import { MarketingLanguageSwitch } from '@/components/marketing/MarketingLanguageSwitch';
 import { MARKETING_NAV } from '@/components/marketing/nav-config';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import { localizePath, type MarketingLocale } from '@/lib/marketing-i18n';
 
 const NAV_ICONS = {
-  '/organizations': Building2,
-  '/professionals': UserRound,
-  '/how-it-works': Zap,
-  '/about': Info,
-  '/contact': Mail,
+  organizations: Building2,
+  professionals: UserRound,
+  howItWorks: Zap,
+  about: Info,
+  contact: Mail,
 } as const;
 
 /** Premium talent-credential mark for Recruitment — badge + brand honey. */
@@ -179,7 +182,12 @@ function WorkerAppIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-export function MarketingNav() {
+type MarketingNavProps = {
+  locale: MarketingLocale;
+  dictionary: MarketingDictionary;
+};
+
+export function MarketingNav({ locale, dictionary }: MarketingNavProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -190,6 +198,8 @@ export function MarketingNav() {
   const headerRef = useRef<HTMLElement>(null);
   const workerTriggerRef = useRef<HTMLButtonElement | null>(null);
   const workerCloseRef = useRef<HTMLButtonElement>(null);
+
+  const nav = dictionary.nav;
 
   const openWorkerNotice = (trigger: HTMLButtonElement) => {
     workerTriggerRef.current = trigger;
@@ -260,6 +270,8 @@ export function MarketingNav() {
     };
   }, [workerNotice]);
 
+  const brandAria = dictionary.brand.homeAria;
+
   return (
     <>
       <header
@@ -267,23 +279,30 @@ export function MarketingNav() {
         className={`m-header ${scrolled || open ? 'is-scrolled' : ''}`}
       >
         <div className="m-header-inner">
-          <MarketingBrand priority markSize={50} tone="light" />
+          <MarketingBrand
+            locale={locale}
+            priority
+            markSize={50}
+            tone="light"
+            ariaLabel={brandAria}
+          />
 
-          <nav className="m-nav-desktop" aria-label="Primary">
+          <nav className="m-nav-desktop" aria-label={nav.primaryAria}>
             {MARKETING_NAV.map((item) => {
               const Icon =
-                item.href in NAV_ICONS
-                  ? NAV_ICONS[item.href as keyof typeof NAV_ICONS]
+                item.key in NAV_ICONS
+                  ? NAV_ICONS[item.key as keyof typeof NAV_ICONS]
                   : null;
-              const current = pathname === item.href;
+              const localizedHref = localizePath(item.href, locale);
+              const current = pathname === localizedHref;
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={item.key}
+                  href={localizedHref}
                   className="m-nav-link"
                   aria-current={current ? 'page' : undefined}
                 >
-                  {item.href === '/recruitment' ? (
+                  {item.key === 'recruitment' ? (
                     <RecruitmentNavIcon
                       className="m-nav-link-icon"
                       size={18}
@@ -296,17 +315,23 @@ export function MarketingNav() {
                       aria-hidden="true"
                     />
                   ) : null}
-                  <span>{item.label}</span>
+                  <span>{nav[item.key]}</span>
                 </Link>
               );
             })}
           </nav>
 
           <div className="m-nav-actions">
+            <MarketingLanguageSwitch
+              locale={locale}
+              langEnLabel={nav.langEn}
+              langElLabel={nav.langEl}
+              switchAriaLabel={nav.langSwitchAria}
+            />
             <button
               type="button"
               className="m-nav-btn m-nav-btn--worker"
-              aria-label="Worker app — under development"
+              aria-label={nav.workerAppAria}
               aria-haspopup="dialog"
               aria-expanded={workerNotice}
               aria-controls={workerNoticeId}
@@ -314,12 +339,14 @@ export function MarketingNav() {
             >
               <WorkerAppIcon size={22} />
               <span className="m-nav-worker-copy">
-                <span className="m-nav-worker-label">Worker app</span>
-                <span className="m-nav-worker-platforms">Under development</span>
+                <span className="m-nav-worker-label">{nav.workerAppLabel}</span>
+                <span className="m-nav-worker-platforms">
+                  {nav.workerAppPlatforms}
+                </span>
               </span>
             </button>
             <Link href="/sign-in" className="m-nav-btn m-nav-btn--org">
-              Organization sign in
+              {nav.orgSignIn}
               <ArrowRight size={17} strokeWidth={2.1} aria-hidden="true" />
             </Link>
           </div>
@@ -331,39 +358,47 @@ export function MarketingNav() {
             aria-controls={panelId}
             onClick={() => setOpen((value) => !value)}
           >
-            {open ? 'Close' : 'Menu'}
+            {open ? nav.menuClose : nav.menuOpen}
           </button>
         </div>
 
         {open ? (
           <div id={panelId} className="m-mobile-panel">
-            <nav aria-label="Mobile">
+            <nav aria-label={nav.mobileAria}>
               {MARKETING_NAV.map((item) => {
                 const Icon =
-                  item.href in NAV_ICONS
-                    ? NAV_ICONS[item.href as keyof typeof NAV_ICONS]
+                  item.key in NAV_ICONS
+                    ? NAV_ICONS[item.key as keyof typeof NAV_ICONS]
                     : null;
+                const localizedHref = localizePath(item.href, locale);
                 return (
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    key={item.key}
+                    href={localizedHref}
                     className="m-mobile-link"
-                    aria-current={pathname === item.href ? 'page' : undefined}
+                    aria-current={pathname === localizedHref ? 'page' : undefined}
                     onClick={() => setOpen(false)}
                   >
-                    {item.href === '/recruitment' ? (
+                    {item.key === 'recruitment' ? (
                       <RecruitmentNavIcon size={18} />
                     ) : Icon ? (
                       <Icon size={18} strokeWidth={1.85} aria-hidden="true" />
                     ) : null}
-                    {item.label}
+                    {nav[item.key]}
                   </Link>
                 );
               })}
+              <MarketingLanguageSwitch
+                locale={locale}
+                variant="mobile"
+                langEnLabel={nav.langEn}
+                langElLabel={nav.langEl}
+                switchAriaLabel={nav.langSwitchAria}
+              />
               <button
                 type="button"
                 className="m-nav-btn m-nav-btn--worker"
-                aria-label="Worker app — under development"
+                aria-label={nav.workerAppAria}
                 aria-haspopup="dialog"
                 aria-expanded={workerNotice}
                 aria-controls={workerNoticeId}
@@ -371,8 +406,10 @@ export function MarketingNav() {
               >
                 <WorkerAppIcon size={22} />
                 <span className="m-nav-worker-copy">
-                  <span className="m-nav-worker-label">Worker app</span>
-                  <span className="m-nav-worker-platforms">Under development</span>
+                  <span className="m-nav-worker-label">{nav.workerAppLabel}</span>
+                  <span className="m-nav-worker-platforms">
+                    {nav.workerAppPlatforms}
+                  </span>
                 </span>
               </button>
               <Link
@@ -380,7 +417,7 @@ export function MarketingNav() {
                 className="m-nav-btn m-nav-btn--org"
                 onClick={() => setOpen(false)}
               >
-                Organization sign in
+                {nav.orgSignIn}
                 <ArrowRight size={16} strokeWidth={2} aria-hidden="true" />
               </Link>
             </nav>
@@ -391,7 +428,7 @@ export function MarketingNav() {
         <button
           type="button"
           className="m-mobile-backdrop"
-          aria-label="Close menu"
+          aria-label={nav.closeMenuAria}
           onClick={() => setOpen(false)}
         />
       ) : null}
@@ -400,7 +437,7 @@ export function MarketingNav() {
           <button
             type="button"
             className="m-worker-notice-backdrop"
-            aria-label="Close"
+            aria-label={nav.workerDialogCloseAria}
             onClick={() => setWorkerNotice(false)}
           />
           <div
@@ -411,21 +448,18 @@ export function MarketingNav() {
             aria-labelledby={workerNoticeTitleId}
           >
             <WorkerAppIcon size={36} />
-            <p className="m-worker-notice-kicker">Worker app</p>
+            <p className="m-worker-notice-kicker">{nav.workerDialogKicker}</p>
             <h2 id={workerNoticeTitleId} className="m-worker-notice-title">
-              Under development
+              {nav.workerDialogTitle}
             </h2>
-            <p className="m-worker-notice-copy">
-              The Bridge Hive worker app for iOS and Android is still being
-              built. It is not available to open yet.
-            </p>
+            <p className="m-worker-notice-copy">{nav.workerDialogBody}</p>
             <button
               ref={workerCloseRef}
               type="button"
               className="m-worker-notice-close"
               onClick={() => setWorkerNotice(false)}
             >
-              Got it
+              {nav.workerDialogGotIt}
             </button>
           </div>
         </div>

@@ -51,7 +51,7 @@ describe('worker journey section', () => {
     const visual = await readWeb('components/marketing/WorkerJourneyVisual.tsx');
     const section = await readWeb('components/marketing/WorkerJourneySection.tsx');
     const card = await readWeb('components/marketing/WorkerJourneyCard.tsx');
-    const css = await readWeb('app/(marketing)/marketing.css');
+    const css = await readWeb('app/marketing.css');
 
     expect(visual).toMatch(/BRIDGE_HIVE_MARK_SRC/);
     expect(visual).toMatch(/from '@\/components\/brand\/BridgeHiveMark'/);

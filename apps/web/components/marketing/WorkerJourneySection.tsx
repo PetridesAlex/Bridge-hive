@@ -1,17 +1,28 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { WorkerJourneyCard } from '@/components/marketing/WorkerJourneyCard';
 import { WorkerJourneyVisual } from '@/components/marketing/WorkerJourneyVisual';
+import { buildWorkerJourneySteps } from '@/components/marketing/worker-journey-data';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
 
-/** Premium “How account setup works” band for /professionals. */
-export function WorkerJourneySection() {
+type WorkerJourneySectionProps = {
+  professionals: MarketingDictionary['professionals'];
+};
+
+/** Premium "How account setup works" band for /professionals. */
+export function WorkerJourneySection({ professionals }: WorkerJourneySectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [activeStep, setActiveStep] = useState<number | null>(null);
   const [entered, setEntered] = useState(false);
   const [inView, setInView] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
+
+  const steps = useMemo(
+    () => buildWorkerJourneySteps(professionals),
+    [professionals],
+  );
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -58,19 +69,32 @@ export function WorkerJourneySection() {
       <div className="m-wj-atmosphere" aria-hidden="true" />
       <div className="m-section m-wj-section">
         <header className="m-wj-header" id="m-wj-heading-block">
-          <p className="m-wj-eyebrow">How it works</p>
+          <p className="m-wj-eyebrow">{professionals.journeyEyebrow}</p>
           <h2 id="m-wj-heading" className="m-wj-heading">
-            How account setup <span className="m-wj-heading-accent">works</span>
+            {professionals.journeyTitlePrefix}{' '}
+            <span className="m-wj-heading-accent">
+              {professionals.journeyTitleAccent}
+            </span>
           </h2>
         </header>
 
         <div className="m-wj-layout">
-          <WorkerJourneyCard activeStep={activeStep} onStepChange={setActiveStep} />
+          <WorkerJourneyCard
+            activeStep={activeStep}
+            onStepChange={setActiveStep}
+            steps={steps}
+            cardTitle={professionals.journeyCardTitle}
+            stepAriaTemplate={professionals.journeyStepAriaTemplate}
+          />
           <WorkerJourneyVisual
             activeStep={activeStep}
             onStepChange={setActiveStep}
             playMotion={playMotion}
             reduceMotion={reduceMotion}
+            steps={steps}
+            caption={professionals.journeyEyebrow}
+            diagramAriaLabel={professionals.journeyCardTitle}
+            stepAriaTemplate={professionals.journeyStepAriaTemplate}
           />
         </div>
       </div>

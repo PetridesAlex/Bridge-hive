@@ -11,6 +11,8 @@ import Link from 'next/link';
 
 import { AudienceJourney } from '@/components/marketing/AudienceJourney';
 import { Reveal } from '@/components/marketing/Reveal';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import { localizePath, type MarketingLocale } from '@/lib/marketing-i18n';
 
 const ICONS = {
   locations: MapPin,
@@ -51,8 +53,14 @@ export function FeatureRow({
   );
 }
 
-export function AudienceSplit() {
-  return <AudienceJourney />;
+export function AudienceSplit({
+  locale,
+  audience,
+}: {
+  locale: MarketingLocale;
+  audience: MarketingDictionary['home']['audience'];
+}) {
+  return <AudienceJourney locale={locale} audience={audience} />;
 }
 
 export function ProcessSteps({
@@ -86,57 +94,63 @@ export function ProcessSteps({
   );
 }
 
-export function TrustPanel() {
+export function TrustPanel({
+  trust,
+}: {
+  trust: MarketingDictionary['home']['trust'];
+}) {
   return (
     <Reveal>
       <div className="m-band m-band--teal overflow-hidden rounded-[1.4rem] px-6 py-10 sm:px-10">
-        <p className="m-eyebrow">Trust & verification</p>
+        <p className="m-eyebrow">{trust.eyebrow}</p>
         <h3 className="mt-3 max-w-2xl text-[length:var(--m-title)] font-extrabold tracking-tight text-white">
-          Platform checks — not a blanket clinical guarantee
+          {trust.title}
         </h3>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-[rgba(220,232,238,0.78)]">
-          Bridge Hive runs structured account review for organizations and workers:
-          credentials and bank details for wage payouts are examined by a platform
-          administrator before marketplace access. The platform does not replace
-          employer clinical judgment, professional registration boards, or local
-          employment law — and activation is never automatic after signup alone.
+          {trust.body}
         </p>
       </div>
     </Reveal>
   );
 }
 
-const INQUIRY_STEPS = [
-  {
-    title: 'Partnership inquiry',
-    body: 'New hospitals start here. Accounts are provisioned after review — sign-in is not a substitute.',
-    href: '/contact#partnerships',
-    label: 'Prepare an inquiry',
-    tone: 'primary' as const,
-  },
-  {
-    title: 'Organization sign in',
-    body: 'Organizations sign in once Bridge Hive has invited them.',
-    href: '/sign-in',
-    label: 'Organization sign in',
-    tone: 'secondary' as const,
-  },
-  {
-    title: 'Worker app continuation',
-    body: 'Professionals return to the worker app after email confirmation.',
-    href: '/auth/worker/login',
-    label: 'Worker app continuation',
-    tone: 'quiet' as const,
-  },
-];
+export function InquiryCta({
+  locale,
+  inquiry,
+}: {
+  locale: MarketingLocale;
+  inquiry: MarketingDictionary['home']['inquiry'];
+}) {
+  const steps = [
+    {
+      title: inquiry.step1Title,
+      body: inquiry.step1Body,
+      href: localizePath('/contact#partnerships', locale),
+      label: inquiry.step1Cta,
+      tone: 'primary' as const,
+    },
+    {
+      title: inquiry.step2Title,
+      body: inquiry.step2Body,
+      href: localizePath('/sign-in', locale),
+      label: inquiry.step2Cta,
+      tone: 'secondary' as const,
+    },
+    {
+      title: inquiry.step3Title,
+      body: inquiry.step3Body,
+      href: localizePath('/auth/worker/login', locale),
+      label: inquiry.step3Cta,
+      tone: 'quiet' as const,
+    },
+  ];
 
-export function InquiryCta() {
   return (
     <Reveal>
       <div className="m-inquiry">
-        <h2>Ready to structure your staffing workflow?</h2>
+        <h2>{inquiry.title}</h2>
         <ol className="m-inquiry-steps">
-          {INQUIRY_STEPS.map((step, index) => (
+          {steps.map((step, index) => (
             <li key={step.href} className="m-inquiry-step">
               <span className="m-inquiry-index" aria-hidden="true">
                 {index + 1}
@@ -195,16 +209,15 @@ export function FaqAccordion({
   );
 }
 
-export function DualJourneyVisual() {
+export function DualJourneyVisual({
+  steps,
+}: {
+  steps: ReadonlyArray<{ label: string; tone: 'teal' | 'honey' }>;
+}) {
   return (
     <Reveal>
       <div className="mt-10 grid gap-4 lg:grid-cols-4">
-        {[
-          { label: 'Shift published', tone: 'teal' },
-          { label: 'Professional claims', tone: 'honey' },
-          { label: 'Timesheet reviewed', tone: 'teal' },
-          { label: 'Wage + invoice settle', tone: 'honey' },
-        ].map((step, index) => (
+        {steps.map((step, index) => (
           <div key={step.label} className="relative m-panel text-center">
             <span
               className="mx-auto flex h-10 w-10 items-center justify-center rounded-full text-sm font-extrabold"
@@ -219,7 +232,7 @@ export function DualJourneyVisual() {
               {index + 1}
             </span>
             <p className="mt-3 text-sm font-bold text-[var(--m-navy)]">{step.label}</p>
-            {index < 3 ? (
+            {index < steps.length - 1 ? (
               <span
                 className="pointer-events-none absolute right-[-0.7rem] top-1/2 hidden h-px w-6 bg-[var(--m-honey)] lg:block"
                 aria-hidden="true"

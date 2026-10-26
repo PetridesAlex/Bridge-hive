@@ -1,14 +1,30 @@
-export const MARKETING_NAV = [
-  { href: '/organizations', label: 'Organizations' },
-  { href: '/professionals', label: 'Professionals' },
-  { href: '/recruitment', label: 'Recruitment' },
-  { href: '/how-it-works', label: 'How it works' },
-  { href: '/about', label: 'About' },
-  { href: '/contact', label: 'Contact' },
-] as const;
+import {
+  MARKETING_NAV_KEYS,
+  MARKETING_ROUTE_TABLE,
+  SITE_ORIGIN as MARKETING_SITE_ORIGIN,
+  type MarketingRouteKey,
+} from '@/lib/marketing-i18n/routes';
 
-export const SITE_ORIGIN = 'https://bridgehive.app';
+/**
+ * Marketing nav entries. English `href` stays here so sitemap / legacy consumers
+ * keep working; the human-readable label now lives in dictionary.nav[key] and
+ * MarketingNav localizes the href via `localizePath` at render time.
+ */
+export type MarketingNavItem = {
+  key: (typeof MARKETING_NAV_KEYS)[number];
+  href: string;
+};
 
+export const MARKETING_NAV: readonly MarketingNavItem[] = MARKETING_NAV_KEYS.map(
+  (key) => ({ key, href: MARKETING_ROUTE_TABLE[key].path }),
+);
+
+export const SITE_ORIGIN = MARKETING_SITE_ORIGIN;
+
+/**
+ * Canonical English-language public marketing paths — used by sitemap/robots.
+ * Greek mirrors are composed separately via `indexableMarketingPaths('el')`.
+ */
 export const PUBLIC_MARKETING_PATHS = [
   '/',
   '/organizations',
@@ -19,3 +35,5 @@ export const PUBLIC_MARKETING_PATHS = [
   '/about',
   '/contact',
 ] as const;
+
+export type MarketingNavKey = MarketingRouteKey;

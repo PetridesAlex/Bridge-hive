@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Copy, Mail } from 'lucide-react';
+import { Copy, Mail } from 'lucide-react';
 import { useState } from 'react';
 
 type ContactEmailProps = {
@@ -8,6 +8,12 @@ type ContactEmailProps = {
   mailtoSubject: string;
   label?: string;
   tone?: 'teal' | 'honey';
+  /** Default (idle) copy-button label. */
+  copyLabel?: string;
+  /** Label shown briefly after a successful copy. */
+  copiedLabel?: string;
+  /** Helper text under the row explaining the mailto behaviour. */
+  hint?: string;
 };
 
 export function ContactEmail({
@@ -15,6 +21,9 @@ export function ContactEmail({
   mailtoSubject,
   label = 'Email',
   tone = 'teal',
+  copyLabel = 'Copy address',
+  copiedLabel = 'Copied',
+  hint = 'Opens your email app with a short subject line. You can also copy the address if mail is not configured on this device.',
 }: ContactEmailProps) {
   const [copied, setCopied] = useState(false);
   const mailto = `mailto:${address}?subject=${encodeURIComponent(mailtoSubject)}`;
@@ -53,13 +62,10 @@ export function ContactEmail({
           aria-live="polite"
         >
           <Copy size={14} strokeWidth={2} aria-hidden="true" />
-          {copied ? 'Copied' : 'Copy address'}
+          {copied ? copiedLabel : copyLabel}
         </button>
       </div>
-      <p className="m-contact-email-hint">
-        Opens your email app with a short subject line. You can also copy the address
-        if mail is not configured on this device.
-      </p>
+      <p className="m-contact-email-hint">{hint}</p>
     </div>
   );
 }

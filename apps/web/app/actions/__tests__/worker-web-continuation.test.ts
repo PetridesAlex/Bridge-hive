@@ -32,7 +32,7 @@ describe('worker web email continuation', () => {
   });
 
   it('worker login page is server-rendered and never verifies OTP on GET', async () => {
-    const src = await readWeb('app/auth/worker/login/page.tsx');
+    const src = await readWeb('app/(app)/auth/worker/login/page.tsx');
     expect(src).toMatch(/WorkerAppContinuePanel/);
     expect(src).toMatch(/getUser\(\)/);
     expect(src).toMatch(/email_confirmed_at/);
@@ -43,7 +43,7 @@ describe('worker web email continuation', () => {
   });
 
   it('worker login page uses neutral wording when email is not proven', async () => {
-    const src = await readWeb('app/auth/worker/login/page.tsx');
+    const src = await readWeb('app/(app)/auth/worker/login/page.tsx');
     expect(src).toMatch(/Continue in the worker app/);
     expect(src).toMatch(/variant = emailConfirmed \? 'signup-confirmed' : 'neutral'/);
   });
@@ -59,9 +59,9 @@ describe('worker web email continuation', () => {
   });
 
   it('worker reset-password success routes to worker sign-in not org portal', async () => {
-    const page = await readWeb('app/auth/worker/reset-password/page.tsx');
+    const page = await readWeb('app/(app)/auth/worker/reset-password/page.tsx');
     const client = await readWeb(
-      'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+      'app/(app)/auth/worker/reset-password/worker-reset-password-client.tsx',
     );
     expect(page).toMatch(/WorkerResetPasswordClient/);
     expect(client).toMatch(/Password updated/);
@@ -73,7 +73,7 @@ describe('worker web email continuation', () => {
   });
 
   it('auth confirm POST still redirects signup to allowlisted worker login', async () => {
-    const src = await readWeb('app/auth/confirm/actions.ts');
+    const src = await readWeb('app/(app)/auth/confirm/actions.ts');
     expect(src).toMatch(/redirect\(next\)/);
     expect(src).toMatch(/isWorkerSignupConfirmNext/);
     expect(src).toMatch(/verifyOtp/);

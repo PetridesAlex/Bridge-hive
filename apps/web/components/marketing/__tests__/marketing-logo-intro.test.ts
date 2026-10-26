@@ -27,7 +27,7 @@ describe('marketing logo intro', () => {
   });
 
   it('reveals server-rendered content without JS and bypasses motion for accessibility', async () => {
-    const css = await read('app/(marketing)/marketing.css');
+    const css = await read('app/marketing.css');
     expect(css).toMatch(/\.marketing \.m-intro\s*\{[^}]*position:\s*fixed/);
     expect(css).toMatch(/m-intro-reveal 3s/);
     expect(css).toMatch(/m-intro-breathe 1\.6s/);
@@ -40,9 +40,9 @@ describe('marketing logo intro', () => {
 
   it('keeps the intro only in the marketing shell (not auth/admin/org dashboards)', async () => {
     const shell = await read('components/marketing/MarketingShell.tsx');
-    const workerLogin = await read('app/auth/worker/login/page.tsx');
-    const adminLayout = await read('app/admin/(console)/layout.tsx');
-    const orgLayout = await read('app/org/[slug]/layout.tsx');
+    const workerLogin = await read('app/(app)/auth/worker/login/page.tsx');
+    const adminLayout = await read('app/(app)/admin/(console)/layout.tsx');
+    const orgLayout = await read('app/(app)/org/[slug]/layout.tsx');
 
     expect(shell).toMatch(/MarketingLogoIntro/);
     expect(adminLayout).not.toMatch(/MarketingLogoIntro/);

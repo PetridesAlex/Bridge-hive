@@ -15,91 +15,34 @@ import {
   UserRound,
   Users,
   Wallet,
+  type LucideIcon,
 } from 'lucide-react';
-import { useId, type ComponentType } from 'react';
+import { useId } from 'react';
 
 import { Reveal } from '@/components/marketing/Reveal';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+
+type HomeHowItWorksProps = {
+  hiw: MarketingDictionary['home']['hiw'];
+};
 
 type LoopStep = {
   label: string;
   body: string;
-  icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  icon: LucideIcon;
   tone: 'teal' | 'honey';
 };
 
 type PathStep = {
   label: string;
   body: string;
-  icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  icon: LucideIcon;
 };
-
-const LOOP: readonly LoopStep[] = [
-  {
-    label: 'Shift published',
-    body: 'Organizations create role-specific openings for wards and locations after platform approval.',
-    icon: FileText,
-    tone: 'teal',
-  },
-  {
-    label: 'Professional claims',
-    body: 'Eligible nurses, ward assistants, and physiotherapists browse and accept shifts that match their activation.',
-    icon: Users,
-    tone: 'honey',
-  },
-  {
-    label: 'Timesheet reviewed',
-    body: 'Completed work flows through organization review before wages are approved.',
-    icon: ClipboardList,
-    tone: 'teal',
-  },
-  {
-    label: 'Wage + invoice settle',
-    body: 'Organizations pay wages by bank transfer; workers settle a separate platform commission invoice.',
-    icon: Wallet,
-    tone: 'teal',
-  },
-];
-
-const ORG_STEPS: readonly PathStep[] = [
-  {
-    label: 'Provisioned access',
-    body: 'Bridge Hive creates organization accounts. Use the activation email or organization sign-in once invited — there is no open hospital self-registration.',
-    icon: Mail,
-  },
-  {
-    label: 'Set up and publish',
-    body: 'Configure locations and wards, then publish shifts for registered nurses, ward assistants, or physiotherapists after platform approval.',
-    icon: Settings2,
-  },
-  {
-    label: 'Review completed work',
-    body: 'Accept timesheets and keep operational visibility across locations and wards.',
-    icon: BarChart3,
-  },
-];
-
-const PRO_STEPS: readonly PathStep[] = [
-  {
-    label: 'Create an account',
-    body: 'Register in the Bridge Hive worker app and confirm your email. Confirmation is not the same as account verification.',
-    icon: UserPlus,
-  },
-  {
-    label: 'Submit for review',
-    body: 'Upload role-specific documents and bank details for wage payouts. A platform admin reviews the package before activation.',
-    icon: FileText,
-  },
-  {
-    label: 'Accept eligible shifts',
-    body: 'After activation, browse and accept openings that match your role — then complete timesheets in the app.',
-    icon: Check,
-  },
-];
 
 const FLOW_PATH =
   'M28 128 C72 88, 118 148, 152 96 C178 58, 210 42, 248 54';
 
-function FlowMotif() {
+function FlowMotif({ hiw }: { hiw: HomeHowItWorksProps['hiw'] }) {
   const reactId = useId().replace(/:/g, '');
   const glow = `m-hiw-flow-glow-${reactId}`;
   const soft = `m-hiw-flow-soft-${reactId}`;
@@ -120,7 +63,6 @@ function FlowMotif() {
           </linearGradient>
         </defs>
 
-        {/* Quiet track */}
         <path
           className="m-hiw-flow-track"
           d={FLOW_PATH}
@@ -130,7 +72,6 @@ function FlowMotif() {
           strokeLinecap="round"
         />
 
-        {/* Static fallback when motion is reduced */}
         <path
           className="m-hiw-flow-progress-static"
           d={FLOW_PATH}
@@ -139,7 +80,6 @@ function FlowMotif() {
           strokeLinecap="round"
         />
 
-        {/* Color fill that draws along the path */}
         <path
           className="m-hiw-flow-progress"
           d={FLOW_PATH}
@@ -168,7 +108,6 @@ function FlowMotif() {
           />
         </path>
 
-        {/* Soft dashed guide on top */}
         <path
           className="m-hiw-flow-dash"
           d={FLOW_PATH}
@@ -192,7 +131,6 @@ function FlowMotif() {
           <circle className="m-hiw-flow-node m-hiw-flow-node--3" cx="248" cy="54" r="7" />
         </g>
 
-        {/* Travelling pulse along the path */}
         <circle className="m-hiw-flow-runner" r="5.5" fill="#fff">
           <animateMotion
             dur="4.8s"
@@ -218,17 +156,17 @@ function FlowMotif() {
       <div className="m-hiw-float m-hiw-float--cal">
         <span className="m-hiw-float-fill" />
         <CalendarDays size={28} strokeWidth={1.7} />
-        <span>Shift</span>
+        <span>{hiw.floatShift}</span>
       </div>
       <div className="m-hiw-float m-hiw-float--check">
         <span className="m-hiw-float-fill" />
         <CheckCircle2 size={26} strokeWidth={1.7} />
-        <span>Review</span>
+        <span>{hiw.floatReview}</span>
       </div>
       <div className="m-hiw-float m-hiw-float--pay">
         <span className="m-hiw-float-fill" />
         <span className="m-hiw-float-currency">€</span>
-        <span>Settle</span>
+        <span>{hiw.floatSettle}</span>
       </div>
     </div>
   );
@@ -287,7 +225,46 @@ function PhoneGlyph() {
   );
 }
 
-export function HomeHowItWorks() {
+export function HomeHowItWorks({ hiw }: HomeHowItWorksProps) {
+  const LOOP: readonly LoopStep[] = [
+    {
+      label: hiw.loopStep1Label,
+      body: hiw.loopStep1Body,
+      icon: FileText,
+      tone: 'teal',
+    },
+    {
+      label: hiw.loopStep2Label,
+      body: hiw.loopStep2Body,
+      icon: Users,
+      tone: 'honey',
+    },
+    {
+      label: hiw.loopStep3Label,
+      body: hiw.loopStep3Body,
+      icon: ClipboardList,
+      tone: 'teal',
+    },
+    {
+      label: hiw.loopStep4Label,
+      body: hiw.loopStep4Body,
+      icon: Wallet,
+      tone: 'teal',
+    },
+  ];
+
+  const ORG_STEPS: readonly PathStep[] = [
+    { label: hiw.orgStep1Label, body: hiw.orgStep1Body, icon: Mail },
+    { label: hiw.orgStep2Label, body: hiw.orgStep2Body, icon: Settings2 },
+    { label: hiw.orgStep3Label, body: hiw.orgStep3Body, icon: BarChart3 },
+  ];
+
+  const PRO_STEPS: readonly PathStep[] = [
+    { label: hiw.proStep1Label, body: hiw.proStep1Body, icon: UserPlus },
+    { label: hiw.proStep2Label, body: hiw.proStep2Body, icon: FileText },
+    { label: hiw.proStep3Label, body: hiw.proStep3Body, icon: Check },
+  ];
+
   return (
     <Reveal>
       <div className="m-hiw">
@@ -299,19 +276,17 @@ export function HomeHowItWorks() {
 
         <div className="m-hiw-intro">
           <div className="m-hiw-copy">
-            <p className="m-eyebrow">How it works</p>
+            <p className="m-eyebrow">{hiw.eyebrow}</p>
             <h2 className="m-hiw-title m-display">
-              From opening to <span className="m-hiw-title-accent">settlement</span>
+              {hiw.title}{' '}
+              <span className="m-hiw-title-accent">{hiw.titleAccent}</span>
             </h2>
-            <p className="m-hiw-lede">
-              A concise view of the shared operational loop — then the two detailed paths
-              below.
-            </p>
+            <p className="m-hiw-lede">{hiw.lede}</p>
           </div>
-          <FlowMotif />
+          <FlowMotif hiw={hiw} />
         </div>
 
-        <ol className="m-hiw-loop" aria-label="Shared operational loop">
+        <ol className="m-hiw-loop" aria-label={hiw.loopAria}>
           {LOOP.map((step, index) => {
             const Icon = step.icon;
             return (
@@ -353,12 +328,9 @@ export function HomeHowItWorks() {
                 <span className="m-hiw-path-badge m-hiw-path-badge--teal" aria-hidden="true">
                   <Building2 size={18} strokeWidth={2.1} />
                 </span>
-                <p className="m-eyebrow">For organizations</p>
-                <h3>Publish shifts with role and ward clarity</h3>
-                <p className="m-hiw-path-lede">
-                  Provisioned access, ward setup, and timesheet review — without open
-                  hospital self-registration.
-                </p>
+                <p className="m-eyebrow">{hiw.orgPathEyebrow}</p>
+                <h3>{hiw.orgPathTitle}</h3>
+                <p className="m-hiw-path-lede">{hiw.orgPathLede}</p>
               </div>
               <HospitalGlyph />
             </div>
@@ -389,12 +361,9 @@ export function HomeHowItWorks() {
                 <span className="m-hiw-path-badge m-hiw-path-badge--honey" aria-hidden="true">
                   <UserRound size={18} strokeWidth={2.1} />
                 </span>
-                <p className="m-eyebrow m-eyebrow--honey">For professionals</p>
-                <h3>From registration to eligible shifts</h3>
-                <p className="m-hiw-path-lede">
-                  App signup, document review, and role-matched openings — activation is
-                  never automatic after email confirmation alone.
-                </p>
+                <p className="m-eyebrow m-eyebrow--honey">{hiw.proPathEyebrow}</p>
+                <h3>{hiw.proPathTitle}</h3>
+                <p className="m-hiw-path-lede">{hiw.proPathLede}</p>
               </div>
               <PhoneGlyph />
             </div>

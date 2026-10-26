@@ -110,7 +110,7 @@ describe('recruitment notify payload', () => {
     const detail = await fs.readFile(
       path.join(
         webRoot,
-        'app/admin/(console)/recruitment/[candidateId]/page.tsx',
+        'app/(app)/admin/(console)/recruitment/[candidateId]/page.tsx',
       ),
       'utf8',
     );

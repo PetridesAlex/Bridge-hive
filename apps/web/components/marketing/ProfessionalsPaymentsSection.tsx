@@ -10,53 +10,37 @@ import {
   FileText,
   Landmark,
   Receipt,
+  type LucideIcon,
 } from 'lucide-react';
-import { useEffect, useId, useRef, useState, type ComponentType, type CSSProperties } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 
 import { BRIDGE_HIVE_MARK_SRC } from '@/components/brand/BridgeHiveMark';
 import { Reveal } from '@/components/marketing/Reveal';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+
+type ProfessionalsPaymentsSectionProps = {
+  professionals: MarketingDictionary['professionals'];
+};
 
 type PayStep = {
   id: string;
   title: string;
   body: string;
   bullets: readonly string[];
-  Icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  Icon: LucideIcon;
 };
 
-const PAY_STEPS: readonly PayStep[] = [
-  {
-    id: 'approved',
-    title: 'Work is approved',
-    body: 'The worker completes a shift. The organization reviews the timesheet and approves the completed work before the payment steps below.',
-    bullets: ['Shift completed', 'Timesheet reviewed', 'Work approved'],
-    Icon: ClipboardCheck,
-  },
-  {
-    id: 'wages',
-    title: 'Organizations pay workers directly',
-    body: 'The healthcare organization pays approved gross wages by bank transfer. Bridge Hive does not collect, hold, or disburse hospital wages.',
-    bullets: [
-      'Paid by the organization',
-      'Direct bank transfer of approved wages',
-      'Bridge Hive never holds wages',
-    ],
-    Icon: Landmark,
-  },
-  {
-    id: 'commission',
-    title: 'Separate platform commission',
-    body: 'Bridge Hive separately invoices the worker for its platform commission after approved work. The worker settles that invoice on its own schedule — it is not deducted from wages.',
-    bullets: [
-      'Separate Bridge Hive commission invoice',
-      'Paid separately by the worker',
-      'Not deducted from organization wage transfer',
-    ],
-    Icon: Receipt,
-  },
-];
-
-function PaymentsVisual() {
+function PaymentsVisual({
+  wagesTitle,
+  wagesSubtitle,
+  commissionTitle,
+  commissionSubtitle,
+}: {
+  wagesTitle: string;
+  wagesSubtitle: string;
+  commissionTitle: string;
+  commissionSubtitle: string;
+}) {
   const reactId = useId().replace(/:/g, '');
   const trail = `m-pay-trail-${reactId}`;
   const glow = `m-pay-glow-${reactId}`;
@@ -115,8 +99,8 @@ function PaymentsVisual() {
           <Building2 size={18} strokeWidth={2} />
         </span>
         <span className="m-pay-float-copy">
-          <strong>Wages to workers</strong>
-          <em>Organization bank transfer</em>
+          <strong>{wagesTitle}</strong>
+          <em>{wagesSubtitle}</em>
         </span>
       </div>
 
@@ -125,8 +109,8 @@ function PaymentsVisual() {
           <FileText size={18} strokeWidth={2} />
         </span>
         <span className="m-pay-float-copy">
-          <strong>Platform commission</strong>
-          <em>Worker invoice</em>
+          <strong>{commissionTitle}</strong>
+          <em>{commissionSubtitle}</em>
         </span>
       </div>
     </div>
@@ -148,7 +132,9 @@ function StageConnector({ orientation }: { orientation: 'horizontal' | 'vertical
   );
 }
 
-export function ProfessionalsPaymentsSection() {
+export function ProfessionalsPaymentsSection({
+  professionals,
+}: ProfessionalsPaymentsSectionProps) {
   const bandRef = useRef<HTMLElement>(null);
   const [entered, setEntered] = useState(false);
 
@@ -173,6 +159,42 @@ export function ProfessionalsPaymentsSection() {
     return () => observer.disconnect();
   }, []);
 
+  const PAY_STEPS: readonly PayStep[] = [
+    {
+      id: 'approved',
+      title: professionals.pay1Title,
+      body: professionals.pay1Body,
+      bullets: [
+        professionals.pay1Bullet1,
+        professionals.pay1Bullet2,
+        professionals.pay1Bullet3,
+      ],
+      Icon: ClipboardCheck,
+    },
+    {
+      id: 'wages',
+      title: professionals.pay2Title,
+      body: professionals.pay2Body,
+      bullets: [
+        professionals.pay2Bullet1,
+        professionals.pay2Bullet2,
+        professionals.pay2Bullet3,
+      ],
+      Icon: Landmark,
+    },
+    {
+      id: 'commission',
+      title: professionals.pay3Title,
+      body: professionals.pay3Body,
+      bullets: [
+        professionals.pay3Bullet1,
+        professionals.pay3Bullet2,
+        professionals.pay3Bullet3,
+      ],
+      Icon: Receipt,
+    },
+  ];
+
   return (
     <section
       ref={bandRef}
@@ -191,19 +213,26 @@ export function ProfessionalsPaymentsSection() {
             <div className="m-pay-copy">
               <p className="m-pay-eyebrow">
                 <span className="m-pay-eyebrow-mark" aria-hidden="true" />
-                <span className="m-pay-eyebrow-text">How payments work</span>
+                <span className="m-pay-eyebrow-text">
+                  {professionals.paymentsEyebrow}
+                </span>
               </p>
               <h2 id="m-pay-heading" className="m-pay-heading">
-                How payments <span className="m-pay-heading-accent">work</span>
+                {professionals.paymentsTitlePrefix}{' '}
+                <span className="m-pay-heading-accent">
+                  {professionals.paymentsTitleAccent}
+                </span>
               </h2>
-              <p className="m-pay-lede">
-                Wage pay and platform commission are separate obligations with separate
-                payment methods.
-              </p>
+              <p className="m-pay-lede">{professionals.paymentsLede}</p>
             </div>
           </Reveal>
           <Reveal delay={90}>
-            <PaymentsVisual />
+            <PaymentsVisual
+              wagesTitle={professionals.paymentsFloatWagesTitle}
+              wagesSubtitle={professionals.paymentsFloatWagesSubtitle}
+              commissionTitle={professionals.paymentsFloatCommissionTitle}
+              commissionSubtitle={professionals.paymentsFloatCommissionSubtitle}
+            />
           </Reveal>
         </div>
 

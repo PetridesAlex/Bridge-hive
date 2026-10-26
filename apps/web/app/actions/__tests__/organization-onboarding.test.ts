@@ -127,7 +127,7 @@ describe('submit action admin revalidation contract', () => {
 
   it('admin dashboard separates org review from worker under_review', async () => {
     const src = await fs.readFile(
-      path.join(process.cwd(), 'app/admin/(console)/page.tsx'),
+      path.join(process.cwd(), 'app/(app)/admin/(console)/page.tsx'),
       'utf8',
     );
     expect(src).toMatch(/Orgs awaiting review/);

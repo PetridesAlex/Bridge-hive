@@ -13,8 +13,8 @@ async function readWeb(...parts: string[]) {
 
 describe('premium auth portals', () => {
   it('org sign-in uses AuthShell, invitation-only copy, and partnership CTA', async () => {
-    const page = await readWeb('app/sign-in/page.tsx');
-    const form = await readWeb('app/sign-in/sign-in-form.tsx');
+    const page = await readWeb('app/(app)/sign-in/page.tsx');
+    const form = await readWeb('app/(app)/sign-in/sign-in-form.tsx');
     const shell = await readWeb('components/auth/AuthShell.tsx');
 
     expect(page).toMatch(/Organization sign in/);
@@ -49,8 +49,8 @@ describe('premium auth portals', () => {
   });
 
   it('admin sign-in uses restricted copy, org portal link, and never exposes admin mailbox', async () => {
-    const page = await readWeb('app/admin/sign-in/page.tsx');
-    const form = await readWeb('app/admin/sign-in/admin-sign-in-form.tsx');
+    const page = await readWeb('app/(app)/admin/sign-in/page.tsx');
+    const form = await readWeb('app/(app)/admin/sign-in/admin-sign-in-form.tsx');
     const shell = await readWeb('components/auth/AuthShell.tsx');
     const action = await readWeb('app/actions/admin.ts');
 
@@ -83,8 +83,8 @@ describe('premium auth portals', () => {
     const shell = await readWeb('components/auth/AuthShell.tsx');
     const css = await readWeb('components/auth/auth-portal.css');
     const hero = await readWeb('components/auth/AuthHeroPanel.tsx');
-    const orgDash = await readWeb('app/dashboard/layout.tsx').catch(() => '');
-    const adminLayout = await readWeb('app/admin/layout.tsx').catch(() => '');
+    const orgDash = await readWeb('app/(app)/dashboard/layout.tsx').catch(() => '');
+    const adminLayout = await readWeb('app/(app)/admin/layout.tsx').catch(() => '');
 
     expect(shell).toMatch(/auth-portal\.css/);
     expect(shell).toMatch(/AuthHeroPanel variant=\{variant\}/);
@@ -128,7 +128,7 @@ describe('premium auth portals', () => {
   });
 
   it('keeps organization activity analytics on the dashboard', async () => {
-    const dash = await readWeb('app/org/[slug]/dashboard/page.tsx');
+    const dash = await readWeb('app/(app)/org/[slug]/dashboard/page.tsx');
     const panel = await readWeb('components/org/organization-activity-panel.tsx');
     const domain = await fs.readFile(
       path.join(webRoot, '../../packages/domain/src/org-dashboard.ts'),

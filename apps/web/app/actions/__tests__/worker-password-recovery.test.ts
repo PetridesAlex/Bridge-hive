@@ -48,7 +48,7 @@ describe('worker password recovery — redirect construction', () => {
       if (result.ok) {
         expect(result.redirectTo).toBe(WORKER_RECOVERY_PRODUCTION_REDIRECT_TO);
         expect(result.redirectTo).toBe(
-          'https://bridgehive.app/auth/confirm?next=%2Fauth%2Fworker%2Freset-password',
+          'https://bridgehive.app/(app)/auth/confirm?next=%2Fauth%2Fworker%2Freset-password',
         );
         expect(result.source).toBe('web');
       }
@@ -276,7 +276,7 @@ describe('worker password recovery — password policy', () => {
 describe('worker password recovery — URL parsing and explicit confirm', () => {
   it('accepts public confirm URLs with token_hash and type=recovery', () => {
     const parsed = parseWorkerRecoveryUrl(
-      'https://bridgehive.app/auth/confirm?next=%2Fauth%2Fworker%2Freset-password&token_hash=abc123&type=recovery',
+      'https://bridgehive.app/(app)/auth/confirm?next=%2Fauth%2Fworker%2Freset-password&token_hash=abc123&type=recovery',
     );
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
@@ -306,16 +306,16 @@ describe('worker password recovery — URL parsing and explicit confirm', () => 
     ).toBe(false);
     expect(
       parseWorkerRecoveryUrl(
-        'https://bridgehive.app/auth/confirm?token_hash=x&type=invite',
+        'https://bridgehive.app/(app)/auth/confirm?token_hash=x&type=invite',
       ).ok,
     ).toBe(false);
     expect(
       parseWorkerRecoveryUrl(
-        'https://bridgehive.app/auth/confirm?type=recovery',
+        'https://bridgehive.app/(app)/auth/confirm?type=recovery',
       ).ok,
     ).toBe(false);
     const oauth = parseWorkerRecoveryUrl(
-      'https://bridgehive.app/auth/callback?code=xyz',
+      'https://bridgehive.app/(app)/auth/callback?code=xyz',
     );
     expect(oauth.ok).toBe(false);
     if (!oauth.ok) expect(oauth.reason).toBe('oauth_callback');
@@ -323,12 +323,12 @@ describe('worker password recovery — URL parsing and explicit confirm', () => 
 
   it('rejects expired / access_denied recovery links', () => {
     const expired = parseWorkerRecoveryUrl(
-      'https://bridgehive.app/auth/confirm?error_code=otp_expired&type=recovery',
+      'https://bridgehive.app/(app)/auth/confirm?error_code=otp_expired&type=recovery',
     );
     expect(expired.ok).toBe(false);
     if (!expired.ok) expect(expired.reason).toBe('expired');
     const denied = parseWorkerRecoveryUrl(
-      'https://bridgehive.app/auth/confirm?error=access_denied&type=recovery',
+      'https://bridgehive.app/(app)/auth/confirm?error=access_denied&type=recovery',
     );
     expect(denied.ok).toBe(false);
     if (!denied.ok) expect(denied.reason).toBe('access_denied');
@@ -348,12 +348,12 @@ describe('worker password recovery — URL parsing and explicit confirm', () => 
     ).toBe(true);
     expect(
       isWorkerRecoveryDeepLinkCandidate(
-        'https://bridgehive.app/auth/confirm?token_hash=abc&type=recovery&next=%2Fauth%2Fworker%2Freset-password',
+        'https://bridgehive.app/(app)/auth/confirm?token_hash=abc&type=recovery&next=%2Fauth%2Fworker%2Freset-password',
       ),
     ).toBe(true);
     expect(
       isWorkerRecoveryDeepLinkCandidate(
-        'https://bridgehive.app/auth/confirm?error_code=otp_expired&type=recovery',
+        'https://bridgehive.app/(app)/auth/confirm?error_code=otp_expired&type=recovery',
       ),
     ).toBe(true);
   });
@@ -373,7 +373,7 @@ describe('worker password recovery — URL parsing and explicit confirm', () => 
 
 describe('worker password recovery — source contracts', () => {
   it('web confirm GET never verifies OTP or mutates auth state', async () => {
-    const src = await read(webRoot, 'app/auth/confirm/page.tsx');
+    const src = await read(webRoot, 'app/(app)/auth/confirm/page.tsx');
     expect(src).toMatch(/GET must never consume Auth OTPs/);
     expect(src).not.toMatch(/verifyOtp/);
     expect(src).not.toMatch(/updateUser/);
@@ -381,7 +381,7 @@ describe('worker password recovery — source contracts', () => {
   });
 
   it('web confirm POST verifies OTP only after explicit form submit', async () => {
-    const actions = await read(webRoot, 'app/auth/confirm/actions.ts');
+    const actions = await read(webRoot, 'app/(app)/auth/confirm/actions.ts');
     expect(actions).toMatch(/Explicit user POST only/);
     expect(actions).toMatch(/verifyOtp/);
     expect(actions).toMatch(/shouldMarkWorkerRecoverySession/);
@@ -390,10 +390,10 @@ describe('worker password recovery — source contracts', () => {
   });
 
   it('web reset GET page does not call verifyOtp or updateUser inline', async () => {
-    const page = await read(webRoot, 'app/auth/worker/reset-password/page.tsx');
+    const page = await read(webRoot, 'app/(app)/auth/worker/reset-password/page.tsx');
     const client = await read(
       webRoot,
-      'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+      'app/(app)/auth/worker/reset-password/worker-reset-password-client.tsx',
     );
     expect(page).toMatch(/GET never verifies OTP/);
     expect(page).not.toMatch(/verifyOtp/);
@@ -415,7 +415,7 @@ describe('worker password recovery — source contracts', () => {
   });
 
   it('web reset action requires recovery cookie and signs out after success', async () => {
-    const actions = await read(webRoot, 'app/auth/worker/reset-password/actions.ts');
+    const actions = await read(webRoot, 'app/(app)/auth/worker/reset-password/actions.ts');
     expect(actions).toMatch(/WORKER_RECOVERY_SESSION_COOKIE/);
     expect(actions).toMatch(/validateWorkerRecoveryPassword/);
     expect(actions).toMatch(/updateUser/);
@@ -424,14 +424,14 @@ describe('worker password recovery — source contracts', () => {
   });
 
   it('mobile login navigates to forgot-password instead of inline reset', async () => {
-    const login = await read(mobileRoot, 'app/auth/worker/login.tsx');
+    const login = await read(mobileRoot, 'app/(app)/auth/worker/login.tsx');
     expect(login).toMatch(/forgot-password/);
     expect(login).not.toMatch(/resetPassword\(/);
     expect(login).not.toMatch(/Alert\.alert/);
   });
 
   it('mobile forgot-password screen has cooldown, generic success, and a11y', async () => {
-    const src = await read(mobileRoot, 'app/auth/worker/forgot-password.tsx');
+    const src = await read(mobileRoot, 'app/(app)/auth/worker/forgot-password.tsx');
     expect(src).toMatch(/WORKER_RECOVERY_REQUEST_SUCCESS_MESSAGE/);
     expect(src).toMatch(/workerRecoveryResendCooldown/);
     expect(src).toMatch(/accessibilityLabel/);
@@ -441,7 +441,7 @@ describe('worker password recovery — source contracts', () => {
   });
 
   it('mobile reset requires explicit confirm before verifyOtp', async () => {
-    const screen = await read(mobileRoot, 'app/auth/worker/reset-password.tsx');
+    const screen = await read(mobileRoot, 'app/(app)/auth/worker/reset-password.tsx');
     const auth = await read(mobileRoot, 'providers/AuthProvider.tsx');
     expect(screen).toMatch(/Continue password reset/);
     expect(screen).toMatch(/confirmRecoveryOtp/);
@@ -468,9 +468,9 @@ describe('worker password recovery — source contracts', () => {
   it('web and mobile recovery UIs share the 6-character policy without letter/number rules', async () => {
     const client = await read(
       webRoot,
-      'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+      'app/(app)/auth/worker/reset-password/worker-reset-password-client.tsx',
     );
-    const mobile = await read(mobileRoot, 'app/auth/worker/reset-password.tsx');
+    const mobile = await read(mobileRoot, 'app/(app)/auth/worker/reset-password.tsx');
     const passwordField = await read(webRoot, 'components/auth/AuthPasswordField.tsx');
     for (const src of [client, mobile]) {
       expect(src).toMatch(/WORKER_RECOVERY_PASSWORD_MIN_LENGTH/);
@@ -487,13 +487,13 @@ describe('worker password recovery — source contracts', () => {
     const files = [
       await read(domainRoot, 'worker-password-recovery.ts'),
       await read(mobileRoot, 'lib/pending-recovery.ts'),
-      await read(mobileRoot, 'app/auth/worker/forgot-password.tsx'),
-      await read(mobileRoot, 'app/auth/worker/reset-password.tsx'),
-      await read(webRoot, 'app/auth/worker/reset-password/actions.ts'),
-      await read(webRoot, 'app/auth/worker/reset-password/page.tsx'),
+      await read(mobileRoot, 'app/(app)/auth/worker/forgot-password.tsx'),
+      await read(mobileRoot, 'app/(app)/auth/worker/reset-password.tsx'),
+      await read(webRoot, 'app/(app)/auth/worker/reset-password/actions.ts'),
+      await read(webRoot, 'app/(app)/auth/worker/reset-password/page.tsx'),
       await read(
         webRoot,
-        'app/auth/worker/reset-password/worker-reset-password-client.tsx',
+        'app/(app)/auth/worker/reset-password/worker-reset-password-client.tsx',
       ),
     ];
     for (const src of files) {

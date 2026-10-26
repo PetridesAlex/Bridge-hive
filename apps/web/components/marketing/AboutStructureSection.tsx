@@ -3,50 +3,63 @@ import { ArrowRight, Combine, RefreshCw, Users, Waypoints } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Reveal } from '@/components/marketing/Reveal';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import { localizePath, type MarketingLocale } from '@/lib/marketing-i18n';
 
-const PRINCIPLES: {
-  title: string;
-  body: string;
-  tone: 'blue' | 'violet' | 'honey';
-  icon: LucideIcon;
-}[] = [
-  {
-    title: 'Role honesty',
-    body: 'We speak precisely about registered nurses, ward assistants, and physiotherapists — and about what platform review does and does not decide.',
-    tone: 'blue',
-    icon: Users,
-  },
-  {
-    title: 'Operational structure',
-    body: 'Locations, wards, shifts, timesheets, and invoices are modeled as real workflows with clear ownership on each side.',
-    tone: 'violet',
-    icon: Waypoints,
-  },
-  {
-    title: 'Separated responsibilities',
-    body: 'Organizations pay workers for approved work. Workers settle Bridge Hive’s platform commission separately. Those paths are never blended.',
-    tone: 'honey',
-    icon: Combine,
-  },
-];
+type AboutStructureSectionProps = {
+  locale: MarketingLocale;
+  about: MarketingDictionary['about'];
+};
 
-export function AboutStructureSection() {
+export function AboutStructureSection({
+  locale,
+  about,
+}: AboutStructureSectionProps) {
+  const PRINCIPLES: {
+    title: string;
+    body: string;
+    tone: 'blue' | 'violet' | 'honey';
+    icon: LucideIcon;
+  }[] = [
+    {
+      title: about.principle1Title,
+      body: about.principle1Body,
+      tone: 'blue',
+      icon: Users,
+    },
+    {
+      title: about.principle2Title,
+      body: about.principle2Body,
+      tone: 'violet',
+      icon: Waypoints,
+    },
+    {
+      title: about.principle3Title,
+      body: about.principle3Body,
+      tone: 'honey',
+      icon: Combine,
+    },
+  ];
+
+  const howItWorksHref = localizePath('/how-it-works', locale);
+  const partnershipsHref = localizePath('/contact#partnerships', locale);
+
   return (
-    <section className="m-band m-band--porcelain m-structure-band" aria-labelledby="m-structure-heading">
+    <section
+      className="m-band m-band--porcelain m-structure-band"
+      aria-labelledby="m-structure-heading"
+    >
       <div className="m-section m-structure-section">
         <Reveal className="m-structure-copy">
           <p className="m-structure-eyebrow">
             <RefreshCw size={13} strokeWidth={2.4} aria-hidden="true" />
-            How it works
+            {about.structureEyebrow}
           </p>
           <h2 id="m-structure-heading" className="m-structure-heading">
-            A clear structure for <span>everyone</span>
+            {about.structureHeading}{' '}
+            <span>{about.structureHeadingAccent}</span>
           </h2>
-          <p className="m-structure-lede">
-            Bridge Hive is built for clarity. We make it easy to understand who is
-            invited, who is verified, which role a shift needs, and how wage pay and
-            platform commission stay separate.
-          </p>
+          <p className="m-structure-lede">{about.structureLede}</p>
         </Reveal>
 
         <div className="m-structure-cards">
@@ -60,9 +73,12 @@ export function AboutStructureSection() {
                       <Icon size={22} strokeWidth={1.9} />
                     </span>
                     <Link
-                      href="/how-it-works"
+                      href={howItWorksHref}
                       className="m-structure-card-arrow"
-                      aria-label={`Learn more about ${item.title}`}
+                      aria-label={about.learnMoreAriaTemplate.replace(
+                        '{title}',
+                        item.title,
+                      )}
                     >
                       <ArrowRight size={16} strokeWidth={2.1} aria-hidden="true" />
                     </Link>
@@ -77,15 +93,18 @@ export function AboutStructureSection() {
 
         <Reveal delay={160}>
           <div className="m-structure-actions">
-            <Link href="/how-it-works" className="m-structure-btn m-structure-btn--primary">
-              How it works
+            <Link
+              href={howItWorksHref}
+              className="m-structure-btn m-structure-btn--primary"
+            >
+              {about.actionHowItWorks}
               <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
             </Link>
             <Link
-              href="/contact#partnerships"
+              href={partnershipsHref}
               className="m-structure-btn m-structure-btn--secondary"
             >
-              Partnership inquiry
+              {about.actionPartnershipInquiry}
               <ArrowRight size={16} strokeWidth={2.2} aria-hidden="true" />
             </Link>
           </div>

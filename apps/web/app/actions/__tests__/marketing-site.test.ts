@@ -37,7 +37,7 @@ describe('marketing site contracts', () => {
 
   it('keeps audience card mark in a mobile reflow header and avoids 100vw overflow calcs', async () => {
     const audience = await readWeb('components/marketing/AudienceJourney.tsx');
-    const css = await readWeb('app/(marketing)/marketing.css');
+    const css = await readWeb('app/marketing.css');
     expect(audience).toMatch(/m-audience-card-head/);
     expect(css).toMatch(/m-audience-card-head/);
     expect(css).toMatch(/Mobile responsive repair/);
@@ -148,7 +148,7 @@ describe('marketing site contracts', () => {
   });
 
   it('organisation portal aliases to dashboard and stays private', async () => {
-    const page = await readWeb('app/organisation/page.tsx');
+    const page = await readWeb('app/(app)/organisation/page.tsx');
     const middleware = await readWeb('middleware.ts');
     const robots = await readWeb('app/robots.ts');
     const sitemap = await readWeb('app/sitemap.ts');
@@ -162,7 +162,7 @@ describe('marketing site contracts', () => {
     expect(sitemap).not.toMatch(/organisation/);
     expect(marketingPaths).not.toMatch(/\/organisation/);
     await expect(
-      fs.access(path.join(webRoot, 'app/organisation/page.tsx')),
+      fs.access(path.join(webRoot, 'app/(app)/organisation/page.tsx')),
     ).resolves.toBeUndefined();
   });
 
@@ -196,7 +196,7 @@ describe('marketing site contracts', () => {
     const section = await readWeb('components/marketing/WorkerJourneySection.tsx');
     const how = await readWeb('components/marketing/HowItWorksClient.tsx');
     const home = await readWeb('app/(marketing)/page.tsx');
-    const css = await readWeb('app/(marketing)/marketing.css');
+    const css = await readWeb('app/marketing.css');
     expect(src).toMatch(/WorkerJourneySection/);
     expect(src).toMatch(/registered nurses/);
     expect(src).toMatch(/ward assistants/);
@@ -244,10 +244,10 @@ describe('marketing site contracts', () => {
 
   it('scopes marketing fonts and styles to the marketing layout shell', async () => {
     const layout = await readWeb('app/(marketing)/layout.tsx');
-    const css = await readWeb('app/(marketing)/marketing.css');
+    const css = await readWeb('app/marketing.css');
     const shell = await readWeb('components/marketing/MarketingShell.tsx');
-    const signIn = await readWeb('app/sign-in/page.tsx');
-    const adminSignIn = await readWeb('app/admin/sign-in/page.tsx');
+    const signIn = await readWeb('app/(app)/sign-in/page.tsx');
+    const adminSignIn = await readWeb('app/(app)/admin/sign-in/page.tsx');
     expect(layout).toMatch(/DM_Sans|dm_sans|DM Sans/i);
     expect(layout).toMatch(/--font-marketing/);
     expect(css).toMatch(/\.marketing\s*\{/);

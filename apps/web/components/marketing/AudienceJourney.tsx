@@ -12,12 +12,20 @@ import {
   Settings2,
   Smartphone,
   UserRound,
+  type LucideIcon,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useId, useState, type ComponentType } from 'react';
+import { useId, useState } from 'react';
 
 import { Reveal } from '@/components/marketing/Reveal';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import { localizePath, type MarketingLocale } from '@/lib/marketing-i18n';
+
+type AudienceJourneyProps = {
+  locale: MarketingLocale;
+  audience: MarketingDictionary['home']['audience'];
+};
 
 function AudienceHexVisual({
   audience,
@@ -55,7 +63,7 @@ function AudienceHexVisual({
 type Step = {
   label: string;
   body: string;
-  icon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  icon: LucideIcon;
   tone: 'teal' | 'honey';
 };
 
@@ -65,7 +73,7 @@ type AudienceContent = {
   body: string;
   href: string;
   cta: string;
-  cardIcon: ComponentType<{ size?: number; strokeWidth?: number; className?: string }>;
+  cardIcon: LucideIcon;
   calloutTitle: string;
   calloutBody: string;
   workflowTitle: string;
@@ -73,87 +81,68 @@ type AudienceContent = {
   floatChecks: readonly string[];
 };
 
-const ORG: AudienceContent = {
-  eyebrow: 'Organizations',
-  title: 'Publish shifts with role and ward clarity',
-  body: 'Configure locations and wards, create openings for registered nurses, ward assistants, or physiotherapists, and review completed timesheets. Platform approval is required before your organization can publish shifts.',
-  href: '/organizations',
-  cta: 'How organizations use Bridge Hive',
-  cardIcon: Building2,
-  calloutTitle: 'Streamline your staffing',
-  calloutBody:
-    'Get the right professionals in the right wards, with full visibility and control.',
-  workflowTitle: 'From invitation to published shifts',
-  floatChecks: [
-    'Role and ward clarity',
-    'Credential review workflows',
-    'Separate wage and commission paths',
-  ],
-  steps: [
-    {
-      label: 'Provisioned access',
-      body: 'Bridge Hive creates organization accounts. Use the activation email or organization sign-in once invited.',
-      icon: Mail,
-      tone: 'teal',
-    },
-    {
-      label: 'Set up and publish',
-      body: 'Configure locations and wards, then publish role-specific shifts after platform approval.',
-      icon: Settings2,
-      tone: 'honey',
-    },
-    {
-      label: 'Review and pay wages',
-      body: 'Accept timesheets, then pay approved worker wages by bank transfer.',
-      icon: FileText,
-      tone: 'teal',
-    },
-  ],
-};
-
-const PRO: AudienceContent = {
-  eyebrow: 'Professionals',
-  title: 'Verify once, then work eligible shifts',
-  body: 'Create an account in the worker app, upload role-specific documents, and submit bank details for wage payouts. A platform admin reviews your package before shifts become available — email confirmation alone is not activation.',
-  href: '/professionals',
-  cta: 'How professionals use Bridge Hive',
-  cardIcon: UserRound,
-  calloutTitle: 'Activation before marketplace access',
-  calloutBody:
-    'Upload documents and bank details for review — shifts appear only after a platform admin activates your account.',
-  workflowTitle: 'From registration to eligible shifts',
-  floatChecks: [
-    'Worker app continuation',
-    'Document and bank review',
-    'Role-matched openings',
-  ],
-  steps: [
-    {
-      label: 'Create an account',
-      body: 'Register in the Bridge Hive worker app and confirm your email.',
-      icon: Smartphone,
-      tone: 'teal',
-    },
-    {
-      label: 'Submit for review',
-      body: 'Upload role-specific documents and bank details. A platform admin reviews before activation.',
-      icon: FileCheck2,
-      tone: 'honey',
-    },
-    {
-      label: 'Accept eligible shifts',
-      body: 'After activation, browse and accept openings that match your role — then complete timesheets.',
-      icon: CalendarCheck,
-      tone: 'teal',
-    },
-  ],
-};
-
-export function AudienceJourney() {
+export function AudienceJourney({ locale, audience: a }: AudienceJourneyProps) {
   const [audience, setAudience] = useState<'organization' | 'professional'>(
     'organization',
   );
   const baseId = useId();
+
+  const ORG: AudienceContent = {
+    eyebrow: a.orgEyebrow,
+    title: a.orgTitle,
+    body: a.orgBody,
+    href: localizePath('/organizations', locale),
+    cta: a.orgCta,
+    cardIcon: Building2,
+    calloutTitle: a.orgCalloutTitle,
+    calloutBody: a.orgCalloutBody,
+    workflowTitle: a.orgWorkflowTitle,
+    floatChecks: [a.orgFloatCheck1, a.orgFloatCheck2, a.orgFloatCheck3],
+    steps: [
+      { label: a.orgStep1Label, body: a.orgStep1Body, icon: Mail, tone: 'teal' },
+      {
+        label: a.orgStep2Label,
+        body: a.orgStep2Body,
+        icon: Settings2,
+        tone: 'honey',
+      },
+      { label: a.orgStep3Label, body: a.orgStep3Body, icon: FileText, tone: 'teal' },
+    ],
+  };
+
+  const PRO: AudienceContent = {
+    eyebrow: a.proEyebrow,
+    title: a.proTitle,
+    body: a.proBody,
+    href: localizePath('/professionals', locale),
+    cta: a.proCta,
+    cardIcon: UserRound,
+    calloutTitle: a.proCalloutTitle,
+    calloutBody: a.proCalloutBody,
+    workflowTitle: a.proWorkflowTitle,
+    floatChecks: [a.proFloatCheck1, a.proFloatCheck2, a.proFloatCheck3],
+    steps: [
+      {
+        label: a.proStep1Label,
+        body: a.proStep1Body,
+        icon: Smartphone,
+        tone: 'teal',
+      },
+      {
+        label: a.proStep2Label,
+        body: a.proStep2Body,
+        icon: FileCheck2,
+        tone: 'honey',
+      },
+      {
+        label: a.proStep3Label,
+        body: a.proStep3Body,
+        icon: CalendarCheck,
+        tone: 'teal',
+      },
+    ],
+  };
+
   const active = audience === 'organization' ? ORG : PRO;
   const CardIcon = active.cardIcon;
 
@@ -168,20 +157,17 @@ export function AudienceJourney() {
 
         <div className="m-audience-intro">
           <div className="m-audience-copy">
-            <p className="m-eyebrow">Two audiences, one platform</p>
+            <p className="m-eyebrow">{a.eyebrow}</p>
             <h2 className="m-audience-title m-display">
-              Built for hospitals and the professionals{' '}
-              <span className="m-audience-title-accent">who staff them</span>
+              {a.title}{' '}
+              <span className="m-audience-title-accent">{a.titleAccent}</span>
             </h2>
-            <p className="m-audience-lede">
-              Bridge Hive keeps organization workflows and worker journeys distinct — so
-              sign-in, verification, and payments stay clear.
-            </p>
+            <p className="m-audience-lede">{a.lede}</p>
 
             <div
               className={`m-audience-tabs m-audience-tabs--${audience}`}
               role="tablist"
-              aria-label="Audience journey"
+              aria-label={a.tabsAria}
             >
               <span className="m-audience-tabs-indicator" aria-hidden="true" />
               <button
@@ -196,7 +182,7 @@ export function AudienceJourney() {
                 <span className="m-audience-tab-icon" aria-hidden="true">
                   <Building2 size={15} strokeWidth={2.35} />
                 </span>
-                Organizations
+                {a.tabOrg}
               </button>
               <button
                 type="button"
@@ -210,7 +196,7 @@ export function AudienceJourney() {
                 <span className="m-audience-tab-icon" aria-hidden="true">
                   <UserRound size={15} strokeWidth={2.35} />
                 </span>
-                Professionals
+                {a.tabPro}
               </button>
             </div>
           </div>
@@ -219,7 +205,7 @@ export function AudienceJourney() {
             <AudienceHexVisual audience={audience} />
 
             <aside className="m-audience-float">
-              <p>Staffing made simple</p>
+              <p>{a.floatTitle}</p>
               <ul>
                 {active.floatChecks.map((item, index) => (
                   <li key={item}>
@@ -276,7 +262,7 @@ export function AudienceJourney() {
           </article>
 
           <article className="m-audience-card m-audience-card--workflow">
-            <p className="m-eyebrow m-eyebrow--honey">Workflow</p>
+            <p className="m-eyebrow m-eyebrow--honey">{a.workflowEyebrow}</p>
             <h3>{active.workflowTitle}</h3>
             <ol className="m-audience-steps">
               {active.steps.map((step, index) => {
@@ -304,9 +290,15 @@ export function AudienceJourney() {
         </div>
 
         <p className="m-audience-footnote">
-          Prefer a full page? Read the{' '}
-          <Link href="/organizations">organization journey</Link> or the{' '}
-          <Link href="/professionals">professional journey</Link>.
+          {a.footnotePrefix}
+          <Link href={localizePath('/organizations', locale)}>
+            {a.footnoteOrgLink}
+          </Link>
+          {a.footnoteConnector}
+          <Link href={localizePath('/professionals', locale)}>
+            {a.footnoteProLink}
+          </Link>
+          {a.footnoteSuffix}
         </p>
       </div>
     </Reveal>

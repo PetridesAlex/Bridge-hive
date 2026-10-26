@@ -8,6 +8,8 @@ import {
   rememberStorageNoticeAck,
   STORAGE_NOTICE_OPEN_EVENT,
 } from '@/components/marketing/storage-notice';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import type { MarketingLocale } from '@/lib/marketing-i18n/locales';
 
 function waitForIntroDone(onDone: () => void): () => void {
   if (typeof document === 'undefined') return () => {};
@@ -30,11 +32,19 @@ function waitForIntroDone(onDone: () => void): () => void {
   return () => observer.disconnect();
 }
 
+type MarketingStorageNoticeProps = {
+  storageNotice: MarketingDictionary['storageNotice'];
+  locale: MarketingLocale;
+};
+
 /**
  * Informational storage notice for public marketing pages only.
  * Appears after the logo intro finishes; no optional Accept/Reject (no analytics).
  */
-export function MarketingStorageNotice() {
+export function MarketingStorageNotice({
+  storageNotice,
+  locale,
+}: MarketingStorageNoticeProps) {
   const titleId = useId();
   const detailsId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -122,13 +132,9 @@ export function MarketingStorageNotice() {
           />
           <div className="m-storage-notice-copy">
             <h2 id={titleId} className="m-storage-notice-title">
-              How we use storage on this site
+              {storageNotice.title}
             </h2>
-            <p className="m-storage-notice-lede">
-              Bridge Hive uses essential cookies and browser storage to run the public
-              website and keep signed-in sessions working. We do not use advertising or
-              optional analytics cookies on this site today.
-            </p>
+            <p className="m-storage-notice-lede">{storageNotice.lede}</p>
           </div>
         </div>
 
@@ -140,7 +146,7 @@ export function MarketingStorageNotice() {
             aria-controls={detailsId}
             onClick={() => setDetailsOpen((open) => !open)}
           >
-            What we store
+            {storageNotice.whatWeStore}
           </button>
           <button
             ref={gotItRef}
@@ -148,7 +154,7 @@ export function MarketingStorageNotice() {
             className="m-storage-notice-got-it"
             onClick={dismiss}
           >
-            Got it
+            {storageNotice.gotIt}
           </button>
           {openedFromFooter ? (
             <button
@@ -156,13 +162,23 @@ export function MarketingStorageNotice() {
               className="m-storage-notice-close"
               onClick={closeManual}
             >
-              Close
+              {storageNotice.close}
             </button>
           ) : null}
         </div>
 
         {detailsOpen ? (
-          <div id={detailsId} className="m-storage-notice-panel">
+          /*
+           * Technical/legal details stay in English pending translation review —
+           * the surrounding chrome (title, lede, buttons) switches with the user
+           * locale, but exact storage keys and cookie behaviour must stay stable.
+           */
+          <div
+            id={detailsId}
+            className="m-storage-notice-panel"
+            lang="en"
+            data-bh-storage-details-locale={locale}
+          >
             <ul className="m-storage-notice-list">
               <li>
                 <strong>Site intro memory</strong>
@@ -176,22 +192,22 @@ export function MarketingStorageNotice() {
                 <strong>This notice</strong>
                 <span>
                   A <code>localStorage</code> preference (
-                  <code>bh:m-storage-notice</code>) so we do not show this card on every
-                  visit after you acknowledge it.
+                  <code>bh:m-storage-notice</code>) so we do not show this card on
+                  every visit after you acknowledge it.
                 </span>
               </li>
               <li>
                 <strong>Sign-in cookies (essential)</strong>
                 <span>
-                  Supabase authentication cookies are set only when you sign in. They keep
-                  organization and worker account sessions working and are required for
-                  those services.
+                  Supabase authentication cookies are set only when you sign in. They
+                  keep organization and worker account sessions working and are
+                  required for those services.
                 </span>
               </li>
             </ul>
             <p className="m-storage-notice-note">
-              There is no separate Cookie Policy page yet. For privacy or terms questions,
-              contact support from the site footer.
+              There is no separate Cookie Policy page yet. For privacy or terms
+              questions, contact support from the site footer.
             </p>
           </div>
         ) : null}

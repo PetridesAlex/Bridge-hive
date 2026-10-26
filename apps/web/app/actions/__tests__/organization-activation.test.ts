@@ -72,7 +72,7 @@ describe('organization activation helpers', () => {
 
   it('describes redirectTo without secrets and flags loopback', () => {
     const preview =
-      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/auth/confirm?next=%2Factivate-organization-account';
+      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/(app)/auth/confirm?next=%2Factivate-organization-account';
     expect(describeActivationRedirectTo(preview)).toEqual({
       redirectTo: preview,
       origin: 'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app',
@@ -90,7 +90,7 @@ describe('organization activation helpers', () => {
 
   it('byte-matches the Preview allowlist confirm URL', () => {
     const expected =
-      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/auth/confirm?next=%2Factivate-organization-account';
+      'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app/(app)/auth/confirm?next=%2Factivate-organization-account';
     expect(
       buildActivationRedirectTo(
         'https://bridge-hive-git-phase-7-professional-ui-lynnz-projects.vercel.app',
@@ -208,7 +208,7 @@ describe('organization activation helpers', () => {
 
 describe('auth confirm route contracts', () => {
   it('GET page never calls verifyOtp or exchangeCodeForSession', async () => {
-    const src = await readWeb('app/auth/confirm/page.tsx');
+    const src = await readWeb('app/(app)/auth/confirm/page.tsx');
     expect(src).not.toMatch(/\.verifyOtp\s*\(/);
     expect(src).not.toMatch(/exchangeCodeForSession/);
     expect(src).toMatch(/Continue activation/);
@@ -219,7 +219,7 @@ describe('auth confirm route contracts', () => {
   });
 
   it('POST action calls verifyOtp exactly once with allow-listed types', async () => {
-    const src = await readWeb('app/auth/confirm/actions.ts');
+    const src = await readWeb('app/(app)/auth/confirm/actions.ts');
     const matches = src.match(/\.verifyOtp\s*\(/g) ?? [];
     expect(matches.length).toBe(1);
     expect(src).toMatch(/isAuthConfirmEmailOtpType/);
@@ -246,7 +246,7 @@ describe('auth confirm route contracts', () => {
   });
 
   it('auth error page maps otp_expired without dumping query secrets', async () => {
-    const src = await readWeb('app/auth/error/page.tsx');
+    const src = await readWeb('app/(app)/auth/error/page.tsx');
     expect(src).toMatch(/friendlyAuthLinkError/);
     expect(src).toMatch(/Back to sign in/);
     expect(src).not.toMatch(/error_description/);
@@ -298,7 +298,7 @@ describe('sign-up invitation gate', () => {
   });
 
   it('sign-up page shows invitation-required messaging', async () => {
-    const src = await readWeb('app/sign-up/page.tsx');
+    const src = await readWeb('app/(app)/sign-up/page.tsx');
     expect(src).toMatch(/invitation required|Organization invitation/i);
   });
 });

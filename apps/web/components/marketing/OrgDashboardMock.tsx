@@ -3,14 +3,31 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Image from 'next/image';
 
-const KPIS = [
-  { label: 'Total shifts', value: 128 },
-  { label: 'Workers', value: 42 },
-  { label: 'Open positions', value: 17 },
-] as const;
-
 const BARS = [42, 68, 54, 86, 62, 74] as const;
 
+export type OrgDashboardMockLabels = {
+  kpiTotalShifts: string;
+  kpiWorkers: string;
+  kpiOpenPositions: string;
+  shiftActivity: string;
+  live: string;
+  upcomingShifts: string;
+  verifiedWorkers: string;
+  caption: string;
+};
+
+const DEFAULT_LABELS: OrgDashboardMockLabels = {
+  kpiTotalShifts: 'Total shifts',
+  kpiWorkers: 'Workers',
+  kpiOpenPositions: 'Open positions',
+  shiftActivity: 'Shift activity',
+  live: 'Live',
+  upcomingShifts: 'Upcoming shifts',
+  verifiedWorkers: 'Verified workers',
+  caption: 'Illustrative workspace motif · not live data',
+};
+
+/** Role/ward labels are kept locale-neutral abbreviations in the illustrative mock. */
 const SHIFTS = [
   { role: 'RN · Night', ward: 'Ward A' },
   { role: 'WA · Day', ward: 'Ward B' },
@@ -64,9 +81,19 @@ function FloatValue({ active }: { active: boolean }) {
   return <strong>{value}</strong>;
 }
 
-export function OrgDashboardMock() {
+export function OrgDashboardMock({
+  labels = DEFAULT_LABELS,
+}: {
+  labels?: OrgDashboardMockLabels;
+} = {}) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [live, setLive] = useState(false);
+
+  const kpis = [
+    { label: labels.kpiTotalShifts, value: 128 },
+    { label: labels.kpiWorkers, value: 42 },
+    { label: labels.kpiOpenPositions, value: 17 },
+  ] as const;
 
   useEffect(() => {
     const node = rootRef.current;
@@ -119,7 +146,7 @@ export function OrgDashboardMock() {
           </aside>
           <div className="m-org-mock-main">
             <div className="m-org-mock-kpis">
-              {KPIS.map((kpi, index) => (
+              {kpis.map((kpi, index) => (
                 <article
                   key={kpi.label}
                   style={{ '--m-kpi-i': index } as CSSProperties}
@@ -132,9 +159,9 @@ export function OrgDashboardMock() {
             <div className="m-org-mock-body">
               <div className="m-org-mock-chart">
                 <p>
-                  Shift activity
+                  {labels.shiftActivity}
                   <span className="m-org-mock-live-dot" />
-                  <span className="m-org-mock-live-label">Live</span>
+                  <span className="m-org-mock-live-label">{labels.live}</span>
                 </p>
                 <div className="m-org-mock-bars">
                   {BARS.map((height, index) => (
@@ -151,7 +178,7 @@ export function OrgDashboardMock() {
                 </div>
               </div>
               <div className="m-org-mock-list">
-                <p>Upcoming shifts</p>
+                <p>{labels.upcomingShifts}</p>
                 <ul>
                   {SHIFTS.map((shift, index) => (
                     <li
@@ -169,7 +196,7 @@ export function OrgDashboardMock() {
         </div>
 
         <div className="m-org-mock-float">
-          <p>Verified workers</p>
+          <p>{labels.verifiedWorkers}</p>
           <FloatValue active={live} />
           <div className="m-org-mock-avatars">
             <span />
@@ -180,7 +207,7 @@ export function OrgDashboardMock() {
         </div>
       </div>
 
-      <p className="m-org-mock-caption">Illustrative workspace motif · not live data</p>
+      <p className="m-org-mock-caption">{labels.caption}</p>
     </div>
   );
 }

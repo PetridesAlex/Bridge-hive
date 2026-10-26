@@ -278,14 +278,14 @@ describe('recruitment route contracts', () => {
   });
 
   it('org portal uses /org/[slug]/recruitment with organisation alias', async () => {
-    const orgPage = await readWeb('app/org/[slug]/recruitment/page.tsx');
-    const alias = await readWeb('app/organisation/recruitment/page.tsx');
+    const orgPage = await readWeb('app/(app)/org/[slug]/recruitment/page.tsx');
+    const alias = await readWeb('app/(app)/organisation/recruitment/page.tsx');
     expect(orgPage).toMatch(/canAccessRecruitment/);
     expect(alias).toMatch(/\/org\/\$\{.*\}\/recruitment/);
   });
 
   it('admin recruitment is capability gated', async () => {
-    const admin = await readWeb('app/admin/(console)/recruitment/page.tsx');
+    const admin = await readWeb('app/(app)/admin/(console)/recruitment/page.tsx');
     const sidebar = await readWeb('components/admin/admin-sidebar.tsx');
     expect(admin).toMatch(/canReviewRecruitment/);
     expect(sidebar).toMatch(/\/admin\/recruitment/);
@@ -639,9 +639,9 @@ describe('public recruitment submission reaches admin review', () => {
   });
 
   it('keeps the admin queue wired to stored submissions', async () => {
-    const queue = await readWeb('app/admin/(console)/recruitment/page.tsx');
+    const queue = await readWeb('app/(app)/admin/(console)/recruitment/page.tsx');
     const detail = await readWeb(
-      'app/admin/(console)/recruitment/[candidateId]/page.tsx',
+      'app/(app)/admin/(console)/recruitment/[candidateId]/page.tsx',
     );
     const migration = await fs.readFile(
       path.join(repoRoot, 'supabase/migrations/033_recruitment_optional_role.sql'),

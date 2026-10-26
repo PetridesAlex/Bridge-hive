@@ -64,8 +64,8 @@ describe('worker Google OAuth mobile contracts', () => {
   });
 
   it('exposes Continue with Google on login and register', async () => {
-    const login = await readMobile('app/auth/worker/login.tsx');
-    const register = await readMobile('app/auth/worker/register.tsx');
+    const login = await readMobile('app/(app)/auth/worker/login.tsx');
+    const register = await readMobile('app/(app)/auth/worker/register.tsx');
     expect(login).toMatch(/GoogleSignInButton/);
     expect(register).toMatch(/GoogleSignInButton/);
   });

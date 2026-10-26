@@ -1,14 +1,10 @@
 import type { Metadata } from 'next';
 
-import { HowItWorksClient } from '@/components/marketing/HowItWorksClient';
+import { HowItWorksPage } from '@/components/marketing/pages/HowItWorksPage';
+import { buildMarketingMetadata } from '@/lib/marketing-i18n/metadata';
 
-export const metadata: Metadata = {
-  title: 'How it works',
-  description:
-    'Role-specific journeys for healthcare organizations and professionals on Bridge Hive.',
-  alternates: { canonical: 'https://bridgehive.app/how-it-works' },
-};
+export const metadata: Metadata = buildMarketingMetadata('howItWorks', 'en');
 
-export default function HowItWorksPage() {
-  return <HowItWorksClient />;
+export default function Page() {
+  return <HowItWorksPage locale="en" />;
 }

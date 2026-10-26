@@ -11,6 +11,13 @@ import {
 import { type ReactNode } from 'react';
 
 import { Reveal } from '@/components/marketing/Reveal';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import { localizePath, type MarketingLocale } from '@/lib/marketing-i18n';
+
+type HomeFaqProps = {
+  locale: MarketingLocale;
+  faq: MarketingDictionary['home']['faq'];
+};
 
 type FaqItem = {
   q: string;
@@ -18,45 +25,6 @@ type FaqItem = {
   Icon: LucideIcon;
   tone: 'blue' | 'honey' | 'teal' | 'navy';
 };
-
-const ITEMS: readonly FaqItem[] = [
-  {
-    q: 'Can my hospital create an account online?',
-    Icon: Building2,
-    tone: 'blue',
-    a: (
-      <>
-        Not via open self-registration. Organization accounts are provisioned by Bridge
-        Hive. Existing admins use Organization sign in; new partners should{' '}
-        <a href="/contact#partnerships">prepare a partnership inquiry</a>.
-      </>
-    ),
-  },
-  {
-    q: 'Does confirming my email make me eligible for shifts?',
-    Icon: ShieldCheck,
-    tone: 'honey',
-    a: 'No. Email confirmation proves the address works. Document and bank-detail review by a platform admin is required before shifts become available.',
-  },
-  {
-    q: 'Who pays my wages — and what about commission?',
-    Icon: CreditCard,
-    tone: 'teal',
-    a: 'The healthcare organization pays approved wages by bank transfer. Bridge Hive does not hold or disburse hospital wages. Separately, workers settle a Bridge Hive platform commission invoice on its own schedule. Bank details support wage transfer; they are not used to collect commission.',
-  },
-  {
-    q: 'What does “Worker app continuation” open?',
-    Icon: Smartphone,
-    tone: 'navy',
-    a: (
-      <>
-        A web page that helps you return to the Bridge Hive worker app after email
-        confirmation, including deep-link guidance. It is not a full browser version of the app.
-        For account help, contact <a href="/contact#support">platform support</a>.
-      </>
-    ),
-  },
-];
 
 function FaqMotif() {
   return (
@@ -84,7 +52,49 @@ function FaqMotif() {
   );
 }
 
-export function HomeFaq() {
+export function HomeFaq({ locale, faq }: HomeFaqProps) {
+  const partnershipsHref = localizePath('/contact#partnerships', locale);
+  const supportHref = localizePath('/contact#support', locale);
+
+  const ITEMS: readonly FaqItem[] = [
+    {
+      q: faq.q1,
+      Icon: Building2,
+      tone: 'blue',
+      a: (
+        <>
+          {faq.a1Prefix}
+          <a href={partnershipsHref}>{faq.a1LinkText}</a>
+          {faq.a1Suffix}
+        </>
+      ),
+    },
+    {
+      q: faq.q2,
+      Icon: ShieldCheck,
+      tone: 'honey',
+      a: faq.a2,
+    },
+    {
+      q: faq.q3,
+      Icon: CreditCard,
+      tone: 'teal',
+      a: faq.a3,
+    },
+    {
+      q: faq.q4,
+      Icon: Smartphone,
+      tone: 'navy',
+      a: (
+        <>
+          {faq.a4Prefix}
+          <a href={supportHref}>{faq.a4LinkText}</a>
+          {faq.a4Suffix}
+        </>
+      ),
+    },
+  ];
+
   return (
     <Reveal>
       <div className="m-faq-premium">
@@ -98,15 +108,12 @@ export function HomeFaq() {
 
         <div className="m-faq-intro">
           <div className="m-faq-copy">
-            <p className="m-eyebrow">Common questions</p>
+            <p className="m-eyebrow">{faq.eyebrow}</p>
             <h2 className="m-faq-title m-display">
-              Clear answers before you{' '}
-              <span className="m-faq-title-accent">sign in</span>
+              {faq.title}{' '}
+              <span className="m-faq-title-accent">{faq.titleAccent}</span>
             </h2>
-            <p className="m-faq-lede">
-              Everything you need to know about getting started, eligibility, payments,
-              and how the worker app continuation works — all in one place.
-            </p>
+            <p className="m-faq-lede">{faq.lede}</p>
           </div>
           <FaqMotif />
         </div>

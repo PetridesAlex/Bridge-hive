@@ -8,7 +8,7 @@ import { useActionState, useEffect, useMemo, useState } from 'react';
 import {
   updateWorkerRecoveryPasswordAction,
   type UpdateWorkerRecoveryPasswordState,
-} from '@/app/auth/worker/reset-password/actions';
+} from '@/app/(app)/auth/worker/reset-password/actions';
 import { AuthPasswordField } from '@/components/auth/AuthPasswordField';
 import { AuthFooterLink, AuthShell } from '@/components/auth/AuthShell';
 

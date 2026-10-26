@@ -6,73 +6,94 @@ import {
   ClipboardList,
   MapPin,
   ShieldCheck,
+  type LucideIcon,
 } from 'lucide-react';
 
 import { OrgDashboardMock } from '@/components/marketing/OrgDashboardMock';
 import { Reveal } from '@/components/marketing/Reveal';
+import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
 
-const FEATURES = [
-  {
-    icon: MapPin,
-    tone: 'teal' as const,
-    title: 'Locations and wards',
-    body: 'Model where care is delivered so openings map to the right clinical context.',
-  },
-  {
-    icon: CalendarDays,
-    tone: 'honey' as const,
-    title: 'Role-specific shifts',
-    body: 'Publish openings for registered nurses, ward assistants, or physiotherapists with schedule and acceptance windows.',
-  },
-  {
-    icon: ShieldCheck,
-    tone: 'teal' as const,
-    title: 'Verified eligibility',
-    body: 'Only workers who complete platform verification and activation can see and accept matching shifts.',
-  },
-  {
-    icon: BarChart3,
-    tone: 'honey' as const,
-    title: 'Scheduling visibility',
-    body: 'Track published openings and assignments as work progresses through the organization workspace.',
-  },
-  {
-    icon: ClipboardList,
-    tone: 'teal' as const,
-    title: 'Timesheet review',
-    body: 'Review completed shifts before closing the operational loop on each assignment.',
-  },
-  {
-    icon: CheckCircle2,
-    tone: 'honey' as const,
-    title: 'Admin approval first',
-    body: 'A platform administrator approves your organization before shift publishing is available.',
-  },
-];
+type OrgWorkspaceSectionProps = {
+  organizations: MarketingDictionary['organizations'];
+};
 
-export function OrgWorkspaceSection() {
+export function OrgWorkspaceSection({ organizations }: OrgWorkspaceSectionProps) {
+  const features: Array<{
+    icon: LucideIcon;
+    tone: 'teal' | 'honey';
+    title: string;
+    body: string;
+  }> = [
+    {
+      icon: MapPin,
+      tone: 'teal',
+      title: organizations.feat1Title,
+      body: organizations.feat1Body,
+    },
+    {
+      icon: CalendarDays,
+      tone: 'honey',
+      title: organizations.feat2Title,
+      body: organizations.feat2Body,
+    },
+    {
+      icon: ShieldCheck,
+      tone: 'teal',
+      title: organizations.feat3Title,
+      body: organizations.feat3Body,
+    },
+    {
+      icon: BarChart3,
+      tone: 'honey',
+      title: organizations.feat4Title,
+      body: organizations.feat4Body,
+    },
+    {
+      icon: ClipboardList,
+      tone: 'teal',
+      title: organizations.feat5Title,
+      body: organizations.feat5Body,
+    },
+    {
+      icon: CheckCircle2,
+      tone: 'honey',
+      title: organizations.feat6Title,
+      body: organizations.feat6Body,
+    },
+  ];
+
   return (
     <div className="m-org-workspace">
       <div className="m-org-workspace-intro">
         <Reveal>
-          <p className="m-eyebrow">Organization workspace</p>
+          <p className="m-eyebrow">{organizations.workspaceEyebrow}</p>
           <h2 className="m-org-workspace-title">
-            What you can operate in the{' '}
-            <span className="m-org-workspace-accent">dashboard</span>
+            {organizations.workspaceTitlePrefix}{' '}
+            <span className="m-org-workspace-accent">
+              {organizations.workspaceTitleAccent}
+            </span>
           </h2>
-          <p className="m-lede m-org-workspace-lede">
-            The organization workspace covers the staffing workflow from locations
-            through timesheet review — with organization isolation after admin approval.
-          </p>
+          <p className="m-lede m-org-workspace-lede">{organizations.workspaceLede}</p>
         </Reveal>
 
         <Reveal delay={80}>
-          <OrgDashboardMock />
+          <OrgDashboardMock
+            labels={{
+              kpiTotalShifts: organizations.workspaceKpiTotalShifts,
+              kpiWorkers: organizations.workspaceKpiWorkers,
+              kpiOpenPositions: organizations.workspaceKpiOpenPositions,
+              shiftActivity: organizations.workspaceShiftActivity,
+              live: organizations.workspaceLive,
+              upcomingShifts: organizations.workspaceUpcomingShifts,
+              verifiedWorkers: organizations.workspaceVerifiedWorkers,
+              caption: organizations.workspaceDashboardCaption,
+            }}
+          />
         </Reveal>
       </div>
 
       <ul className="m-org-card-grid">
-        {FEATURES.map((feature, index) => {
+        {features.map((feature, index) => {
           const Icon = feature.icon;
           return (
             <Reveal key={feature.title} delay={index * 50}>

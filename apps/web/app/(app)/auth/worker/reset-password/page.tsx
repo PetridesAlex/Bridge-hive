@@ -2,7 +2,7 @@ import { WORKER_RECOVERY_SESSION_COOKIE } from '@bridge-hive/domain';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 
-import { WorkerResetPasswordClient } from '@/app/auth/worker/reset-password/worker-reset-password-client';
+import { WorkerResetPasswordClient } from '@/app/(app)/auth/worker/reset-password/worker-reset-password-client';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';

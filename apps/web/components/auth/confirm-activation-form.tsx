@@ -5,7 +5,7 @@ import { useActionState, useEffect, useRef } from 'react';
 import {
   confirmActivationAction,
   type ConfirmActivationState,
-} from '@/app/auth/confirm/actions';
+} from '@/app/(app)/auth/confirm/actions';
 import { Button } from '@/components/ui/button';
 
 const initial: ConfirmActivationState = {};

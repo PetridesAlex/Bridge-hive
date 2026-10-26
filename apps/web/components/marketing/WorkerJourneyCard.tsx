@@ -1,19 +1,32 @@
 'use client';
 
-import { WORKER_JOURNEY_STEPS } from '@/components/marketing/worker-journey-data';
+import type { WorkerJourneyStep } from '@/components/marketing/worker-journey-data';
+
+type WorkerJourneyCardProps = {
+  activeStep: number | null;
+  onStepChange: (index: number | null) => void;
+  steps: WorkerJourneyStep[];
+  cardTitle: string;
+  /** Template with `{n}` and `{label}` placeholders. */
+  stepAriaTemplate: string;
+};
+
+function renderAriaLabel(template: string, index: number, label: string): string {
+  return template.replace('{n}', String(index + 1)).replace('{label}', label);
+}
 
 export function WorkerJourneyCard({
   activeStep,
   onStepChange,
-}: {
-  activeStep: number | null;
-  onStepChange: (index: number | null) => void;
-}) {
+  steps,
+  cardTitle,
+  stepAriaTemplate,
+}: WorkerJourneyCardProps) {
   return (
     <div className="m-wj-card">
-      <h3 className="m-wj-card-title">Worker journey</h3>
+      <h3 className="m-wj-card-title">{cardTitle}</h3>
       <ol className="m-wj-list">
-        {WORKER_JOURNEY_STEPS.map((step, index) => {
+        {steps.map((step, index) => {
           const active = activeStep === index;
           return (
             <li key={step.id} className={`m-wj-item${active ? ' is-active' : ''}`}>
@@ -21,7 +34,7 @@ export function WorkerJourneyCard({
                 type="button"
                 className="m-wj-item-btn"
                 aria-current={active ? 'step' : undefined}
-                aria-label={`Step ${index + 1}: ${step.label}`}
+                aria-label={renderAriaLabel(stepAriaTemplate, index, step.label)}
                 onMouseEnter={() => onStepChange(index)}
                 onMouseLeave={() => onStepChange(null)}
                 onFocus={() => onStepChange(index)}

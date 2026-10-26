@@ -11,7 +11,7 @@ describe('professionals payments visual', () => {
   it('ships a three-stage explainer with official mark and truthful commission copy', async () => {
     const section = await read('components/marketing/ProfessionalsPaymentsSection.tsx');
     const page = await read('app/(marketing)/professionals/page.tsx');
-    const css = await read('app/(marketing)/marketing.css');
+    const css = await read('app/marketing.css');
 
     expect(page).toMatch(/ProfessionalsPaymentsSection/);
     expect(page).not.toMatch(/FeatureRow/);

@@ -39,9 +39,9 @@ describe('marketing storage notice', () => {
     const shell = await read('components/marketing/MarketingShell.tsx');
     const footer = await read('components/marketing/MarketingFooter.tsx');
     const cookieBtn = await read('components/marketing/CookieSettingsButton.tsx');
-    const adminLayout = await read('app/admin/(console)/layout.tsx');
-    const orgLayout = await read('app/org/[slug]/layout.tsx');
-    const workerLogin = await read('app/auth/worker/login/page.tsx');
+    const adminLayout = await read('app/(app)/admin/(console)/layout.tsx');
+    const orgLayout = await read('app/(app)/org/[slug]/layout.tsx');
+    const workerLogin = await read('app/(app)/auth/worker/login/page.tsx');
 
     expect(shell).toMatch(/MarketingStorageNotice/);
     expect(shell).toMatch(/MarketingLogoIntro/);
@@ -54,7 +54,7 @@ describe('marketing storage notice', () => {
 
   it('is an informational notice with Got it and real storage copy — no fake accept/reject', async () => {
     const notice = await read('components/marketing/MarketingStorageNotice.tsx');
-    const css = await read('app/(marketing)/marketing.css');
+    const css = await read('app/marketing.css');
 
     expect(notice).toMatch(/Got it/);
     expect(notice).toMatch(/What we store/);

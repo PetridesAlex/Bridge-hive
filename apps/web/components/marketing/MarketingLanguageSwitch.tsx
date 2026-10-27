@@ -1,6 +1,5 @@
 'use client';
 
-import { Globe } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -24,9 +23,46 @@ const LOCALE_HREF_LANG: Record<MarketingLocale, string> = {
   el: 'el',
 };
 
+/** Inline SVG flags (emoji flags don't render on Windows). Cropped to a circle via CSS. */
+function FlagUK() {
+  return (
+    <svg
+      viewBox="0 0 60 30"
+      preserveAspectRatio="xMidYMid slice"
+      focusable="false"
+    >
+      <rect width="60" height="30" fill="#012169" />
+      <path d="M0 0L60 30M60 0L0 30" stroke="#fff" strokeWidth="6" />
+      <path d="M0 0L60 30M60 0L0 30" stroke="#C8102E" strokeWidth="2" />
+      <path d="M30 0V30M0 15H60" stroke="#fff" strokeWidth="10" />
+      <path d="M30 0V30M0 15H60" stroke="#C8102E" strokeWidth="6" />
+    </svg>
+  );
+}
+
+function FlagGR() {
+  return (
+    <svg
+      viewBox="0 0 27 18"
+      preserveAspectRatio="xMinYMid slice"
+      focusable="false"
+    >
+      <rect width="27" height="18" fill="#0D5EAF" />
+      <path
+        d="M0 3H27M0 7H27M0 11H27M0 15H27"
+        stroke="#fff"
+        strokeWidth="2"
+      />
+      <rect width="10" height="10" fill="#0D5EAF" />
+      <path d="M5 0V10M0 5H10" stroke="#fff" strokeWidth="2" />
+    </svg>
+  );
+}
+
 /**
- * Compact pill with a Globe icon and two inline language links (EN / ΕΛ).
+ * Compact pill with two circular flag buttons (EN / ΕΛ).
  * Not a dropdown — both choices stay visible and reachable with one tap.
+ * Language names stay available to assistive tech (and visible on mobile).
  */
 export function MarketingLanguageSwitch({
   locale,
@@ -62,9 +98,6 @@ export function MarketingLanguageSwitch({
       aria-label={switchAriaLabel}
       data-bh-lang-switch=""
     >
-      <span className="m-lang-switch-icon" aria-hidden="true">
-        <Globe size={14} strokeWidth={2.1} />
-      </span>
       {MARKETING_LOCALES.map((target) => {
         const href = switchLocaleHref(pathname, hash, target);
         const active = target === locale;
@@ -78,8 +111,10 @@ export function MarketingLanguageSwitch({
             aria-current={active ? 'true' : undefined}
             data-bh-lang-switch-link={target}
           >
-            {target === 'en' ? 'EN' : 'ΕΛ'}
-            <span className="sr-only">{labels[target]}</span>
+            <span className="m-lang-switch-flag" aria-hidden="true">
+              {target === 'en' ? <FlagUK /> : <FlagGR />}
+            </span>
+            <span className="m-lang-switch-label">{labels[target]}</span>
           </Link>
         );
       })}

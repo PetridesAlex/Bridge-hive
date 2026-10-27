@@ -197,6 +197,14 @@ export function MarketingStorageNotice({
                 </span>
               </li>
               <li>
+                <strong>Recruitment announcement</strong>
+                <span>
+                  A short-lived <code>sessionStorage</code> flag (
+                  <code>bh:m-recruit-promo</code>) so a dismissed recruitment
+                  announcement does not reappear during your visit.
+                </span>
+              </li>
+              <li>
                 <strong>Sign-in cookies (essential)</strong>
                 <span>
                   Supabase authentication cookies are set only when you sign in. They

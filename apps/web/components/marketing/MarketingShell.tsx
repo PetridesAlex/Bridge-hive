@@ -1,6 +1,7 @@
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { MarketingLogoIntro } from '@/components/marketing/MarketingLogoIntro';
 import { MarketingNav } from '@/components/marketing/MarketingNav';
+import { RecruitmentPromo } from '@/components/marketing/RecruitmentPromo';
 import { MarketingStorageNotice } from '@/components/marketing/MarketingStorageNotice';
 import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
 import type { MarketingLocale } from '@/lib/marketing-i18n/locales';
@@ -24,6 +25,7 @@ export function MarketingShell({
         {children}
       </main>
       <MarketingFooter locale={locale} dictionary={dictionary} />
+      <RecruitmentPromo promo={dictionary.recruitmentPromo} locale={locale} />
       <MarketingStorageNotice
         storageNotice={dictionary.storageNotice}
         locale={locale}

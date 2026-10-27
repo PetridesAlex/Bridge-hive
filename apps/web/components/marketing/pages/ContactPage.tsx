@@ -1,6 +1,14 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Building2, Check, Headset, Info, Lightbulb } from 'lucide-react';
+import {
+  ArrowRight,
+  Building2,
+  Check,
+  Headset,
+  Info,
+  Lightbulb,
+  Smartphone,
+} from 'lucide-react';
 
 import { ContactEmail } from '@/components/marketing/ContactEmail';
 import { Reveal } from '@/components/marketing/Reveal';
@@ -297,13 +305,37 @@ export function ContactPage({ locale }: { locale: MarketingLocale }) {
 
         <div className="m-contact-footer-ctas">
           <MarketingButton href={localizePath('/sign-in', locale)}>
-            {c.ctaOrgSignIn}
+            <Building2
+              className="m-btn-lead"
+              size={17}
+              strokeWidth={2.1}
+              aria-hidden="true"
+            />
+            <span>{c.ctaOrgSignIn}</span>
+            <ArrowRight
+              className="m-btn-arrow"
+              size={17}
+              strokeWidth={2.4}
+              aria-hidden="true"
+            />
           </MarketingButton>
           <MarketingButton
             href={localizePath('/auth/worker/login', locale)}
             variant="secondary"
           >
-            {c.ctaWorkerAppContinuation}
+            <Smartphone
+              className="m-btn-lead"
+              size={17}
+              strokeWidth={2.1}
+              aria-hidden="true"
+            />
+            <span>{c.ctaWorkerAppContinuation}</span>
+            <ArrowRight
+              className="m-btn-arrow"
+              size={17}
+              strokeWidth={2.4}
+              aria-hidden="true"
+            />
           </MarketingButton>
         </div>
       </div>

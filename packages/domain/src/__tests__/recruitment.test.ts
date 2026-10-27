@@ -8,6 +8,8 @@ import {
   isSafeRecruitmentDocumentType,
   recruitmentDocumentRequirementsForRole,
   resolveRecruitmentDocumentExpiresAt,
+  resolveRecruitmentUploadMime,
+  recruitmentUploadExtensionForMime,
   validateRecruitmentConsentStep,
   validateRecruitmentDocumentBatch,
   validateRecruitmentPersonalStep,
@@ -78,6 +80,49 @@ describe('recruitment domain', () => {
     expect(
       validateRecruitmentUpload({ type: 'Application/PDF', size: 1024 }).ok,
     ).toBe(true);
+  });
+
+  it('accepts phone photos and word documents, rejects unsafe types', () => {
+    for (const type of [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'image/heif',
+      'image/jpg',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ]) {
+      expect(validateRecruitmentUpload({ type, size: 1024 }).ok).toBe(true);
+    }
+    for (const type of [
+      'text/html',
+      'image/svg+xml',
+      'application/x-msdownload',
+      'application/javascript',
+      '',
+    ]) {
+      expect(validateRecruitmentUpload({ type, size: 1024 }).ok).toBe(false);
+    }
+    expect(recruitmentUploadExtensionForMime('image/heic')).toBe('heic');
+  });
+
+  it('resolves mime from the file extension when the browser sends none', () => {
+    expect(resolveRecruitmentUploadMime({ name: 'IMG_0001.HEIC', type: '' })).toBe(
+      'image/heic',
+    );
+    expect(
+      resolveRecruitmentUploadMime({
+        name: 'cv.docx',
+        type: 'application/octet-stream',
+      }),
+    ).toBe(
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    );
+    expect(
+      resolveRecruitmentUploadMime({ name: 'scan.pdf', type: 'application/pdf' }),
+    ).toBe('application/pdf');
+    expect(resolveRecruitmentUploadMime({ name: 'run.exe', type: '' })).toBe('');
   });
 
   it('rejects unsafe document types and path segments', () => {

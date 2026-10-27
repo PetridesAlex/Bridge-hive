@@ -93,6 +93,20 @@ export const el: MarketingDictionary = {
     noteBody:
       'Δεν υπάρχει ακόμη ξεχωριστή σελίδα Πολιτικής Cookies. Για ερωτήσεις απορρήτου ή όρων, επικοινωνήστε με την υποστήριξη από το υποσέλιδο του ιστότοπου.',
   },
+  recruitmentPromo: {
+    ariaLabel: 'Ανακοίνωση προσλήψεων',
+    badge: 'Ανοιχτές προσλήψεις',
+    title: 'Γίνε μέλος του δικτύου ταλέντων του Bridge Hive',
+    body:
+      'Εγγεγραμμένοι νοσηλευτές, βοηθοί θαλάμου και φυσικοθεραπευτές: υποβάλετε το προφίλ σας μία φορά και αφήστε επαληθευμένες ομάδες φροντίδας να σας βρουν.',
+    roles: 'Νοσηλευτές · Βοηθοί θαλάμου · Φυσικοθεραπευτές',
+    point1: 'Διαρκεί περίπου 5 λεπτά',
+    point2: 'Τα έγγραφα παραμένουν ιδιωτικά',
+    cta: 'Κάντε αίτηση',
+    secondary: 'Μάθετε περισσότερα',
+    close: 'Κλείσιμο ανακοίνωσης προσλήψεων',
+    note: 'Η υποβολή προφίλ δεν εγγυάται απασχόληση ή επικοινωνία.',
+  },
   home: {
     meta: {
       title: 'BridgeHive Medical Recruitment Limited | Στελέχωση & Προσλήψεις Υγείας',
@@ -643,11 +657,35 @@ export const el: MarketingDictionary = {
     btnSubmit: 'Υποβολή προφίλ',
     btnSubmitting: 'Υποβολή…',
     successMessage: 'Το προφίλ ταλέντου Bridge Hive σας έχει ληφθεί.',
+    successBadge: 'Υποβλήθηκε',
+    successTitle: 'Η αίτησή σας υποβλήθηκε με επιτυχία',
+    successReference: 'Κωδικός αναφοράς',
+    successNextTitle: 'Τι ακολουθεί',
+    successNext1: 'Η ομάδα μας εξετάζει ιδιωτικά το προφίλ και τα έγγραφά σας.',
+    successNext2: 'Αν υπάρξει κατάλληλη ευκαιρία που ταιριάζει στο προφίλ σας, ενδέχεται να επικοινωνήσουμε μαζί σας.',
+    successNext3: 'Δεν χρειάζεται να κάνετε κάτι άλλο προς το παρόν.',
+    successNote: 'Η υποβολή προφίλ δεν εγγυάται απασχόληση ή επικοινωνία.',
+    successBackCta: 'Επιστροφή στις Προσλήψεις',
+    successHomeCta: 'Μετάβαση στην αρχική',
     documentUploadLabel: 'Ανέβασμα εγγράφων',
-    documentUploadHint: 'PDF, JPEG ή PNG — έως 10 MB ανά αρχείο',
+    documentUploadHint:
+      'PDF, φωτογραφία (JPEG, PNG, WebP, HEIC) ή έγγραφο Word — έως 10 MB ανά αρχείο',
     documentRequired: '(απαιτείται)',
     documentOptional: '(προαιρετικό)',
-    documentExpiryLabel: 'Ημερομηνία λήξης (YYYY-MM-DD)',
+    documentDatePlaceholder: 'Επιλέξτε ημερομηνία',
+    documentDateToday: 'Σήμερα',
+    documentDateClear: 'Εκκαθάριση',
+    documentDatePrevious: 'Προηγούμενος μήνας',
+    documentDateNext: 'Επόμενος μήνας',
+    documentDateChooseYear: 'Επιλογή μήνα και έτους',
+    documentUploadCta: 'Ανέβασμα αρχείου',
+    documentDropHint: 'ή σύρετε και αφήστε εδώ',
+    documentUploaded: 'Ανέβηκε',
+    documentReplace: 'Αντικατάσταση',
+    documentRemove: 'Αφαίρεση',
+    documentExpiryLabel: 'Ημερομηνία λήξης',
+    documentExpiryHint:
+      'Επιλέξτε την ημερομηνία λήξης που αναγράφεται στο έγγραφό σας. Πρέπει να είναι μελλοντική.',
     messageMap: {
       'Enter your full name.': 'Συμπληρώστε το ονοματεπώνυμό σας.',
       'Enter a valid email address.': 'Συμπληρώστε έγκυρη διεύθυνση email.',
@@ -661,7 +699,8 @@ export const el: MarketingDictionary = {
       'You must accept the privacy notice to submit.':
         'Πρέπει να αποδεχθείτε τη σημείωση απορρήτου για να υποβάλετε.',
       'Upload at least one supporting document.': 'Ανεβάστε τουλάχιστον ένα υποστηρικτικό έγγραφο.',
-      'Upload a PDF, JPEG, or PNG file.': 'Ανεβάστε αρχείο PDF, JPEG ή PNG.',
+      'Upload a PDF, photo (JPEG, PNG, WebP, HEIC), or Word document.':
+        'Ανεβάστε PDF, φωτογραφία (JPEG, PNG, WebP, HEIC) ή έγγραφο Word.',
       'Each file must be under 10 MB.': 'Κάθε αρχείο πρέπει να είναι κάτω από 10 MB.',
       'Too many documents uploaded.': 'Ανεβάστηκαν πάρα πολλά έγγραφα.',
       'Invalid document type for the selected role.':

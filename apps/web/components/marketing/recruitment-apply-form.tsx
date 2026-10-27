@@ -6,21 +6,47 @@ import {
   RECRUITMENT_EMPLOYMENT_TYPE_LABELS,
   RECRUITMENT_SUCCESS_MESSAGE,
   emptyRecruitmentApplicationDraft,
+  RECRUITMENT_FILE_ACCEPT,
   recruitmentApplicationDocumentRequirements,
+  resolveRecruitmentDocumentExpiresAt,
+  resolveRecruitmentUploadMime,
   validateRecruitmentConsentStep,
   validateRecruitmentPersonalStep,
   validateRecruitmentPreferencesStep,
+  validateRecruitmentUpload,
   type RecruitmentApplicationDraft,
   type RecruitmentStepId,
 } from '@bridge-hive/domain';
-import { useActionState, useMemo, useState, useTransition } from 'react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  FileText,
+  Loader2,
+  RefreshCw,
+  Send,
+  Upload,
+  X,
+} from 'lucide-react';
+import Link from 'next/link';
+import {
+  useActionState,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import {
   submitRecruitmentApplicationAction,
   type RecruitmentSubmitState,
 } from '@/app/actions/recruitment-application';
+import { PremiumDatePicker } from '@/components/marketing/premium-date-picker';
 import { ResidenceFlag } from '@/components/marketing/residence-flags';
 import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
+import { localizePath } from '@/lib/marketing-i18n';
 import type { MarketingLocale } from '@/lib/marketing-i18n/locales';
 
 const initial: RecruitmentSubmitState = {};
@@ -33,8 +59,17 @@ const RESIDENCE_COUNTRIES = [
 type PendingFile = {
   credentialType: string;
   file: File;
-  expiresAt: string;
 };
+
+/** Today as YYYY-MM-DD in Cyprus time (the zone the server validates expiry in). */
+function todayYmdCyprus(): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Nicosia',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+}
 
 type RecruitmentApplyFormProps = {
   locale: MarketingLocale;
@@ -72,6 +107,175 @@ function translateMessage(
   return message;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+type DocumentFieldProps = {
+  label: string;
+  required: boolean;
+  requiresExpiry: boolean;
+  file: File | null;
+  expiresAt: string;
+  expiryError: string | null;
+  locale: MarketingLocale;
+  strings: MarketingDictionary['recruitmentApply'];
+  onFile: (file: File) => void;
+  onRemove: () => void;
+  onExpiry: (value: string) => void;
+};
+
+/** One document row: clear upload button, drag-and-drop, and a filled "uploaded" state. */
+function DocumentField({
+  label,
+  required,
+  requiresExpiry,
+  file,
+  expiresAt,
+  expiryError,
+  locale,
+  strings,
+  onFile,
+  onRemove,
+  onExpiry,
+}: DocumentFieldProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const expiryId = useId();
+  const minDate = useMemo(() => todayYmdCyprus(), []);
+  const [dragging, setDragging] = useState(false);
+  const badge = (required ? strings.documentRequired : strings.documentOptional)
+    .replace(/[()]/g, '')
+    .trim();
+
+  function pick(list: FileList | null) {
+    const picked = list?.[0];
+    if (picked) onFile(picked);
+    // Reset so choosing the same file again (after Remove) still fires.
+    if (inputRef.current) inputRef.current.value = '';
+  }
+
+  return (
+    <div
+      className={[
+        'm-doc',
+        required ? 'is-required' : '',
+        file ? 'is-filled' : '',
+        dragging ? 'is-dragging' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        pick(e.dataTransfer.files);
+      }}
+    >
+      <div className="m-doc-head">
+        <span className="m-doc-icon" aria-hidden="true">
+          {file ? (
+            <CheckCircle2 size={20} strokeWidth={2.2} />
+          ) : (
+            <FileText size={20} strokeWidth={2} />
+          )}
+        </span>
+        <span className="m-doc-title">{label}</span>
+        <span
+          className={`m-doc-badge${required ? ' m-doc-badge--required' : ''}`}
+        >
+          {file ? strings.documentUploaded : badge}
+        </span>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept={RECRUITMENT_FILE_ACCEPT}
+        className="m-doc-input"
+        tabIndex={-1}
+        aria-label={label}
+        onChange={(e) => pick(e.target.files)}
+      />
+
+      {file ? (
+        <div className="m-doc-file">
+          <span className="m-doc-file-name" title={file.name}>
+            {file.name}
+          </span>
+          <span className="m-doc-file-size">{formatFileSize(file.size)}</span>
+          <button
+            type="button"
+            className="m-doc-action"
+            onClick={() => inputRef.current?.click()}
+          >
+            <RefreshCw size={14} strokeWidth={2.2} aria-hidden="true" />
+            {strings.documentReplace}
+          </button>
+          <button
+            type="button"
+            className="m-doc-action m-doc-action--danger"
+            onClick={onRemove}
+            aria-label={`${strings.documentRemove}: ${label}`}
+          >
+            <X size={14} strokeWidth={2.4} aria-hidden="true" />
+            {strings.documentRemove}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="m-doc-upload"
+          onClick={() => inputRef.current?.click()}
+        >
+          <span className="m-doc-upload-btn">
+            <Upload size={16} strokeWidth={2.4} aria-hidden="true" />
+            {strings.documentUploadCta}
+          </span>
+          <span className="m-doc-upload-hint">{strings.documentDropHint}</span>
+        </button>
+      )}
+
+      {requiresExpiry ? (
+        <div className={`m-doc-expiry${expiryError ? ' has-error' : ''}`}>
+          <label htmlFor={expiryId}>{strings.documentExpiryLabel}</label>
+          <PremiumDatePicker
+            id={expiryId}
+            value={expiresAt}
+            onChange={onExpiry}
+            locale={locale}
+            min={minDate}
+            max="2099-12-31"
+            invalid={Boolean(expiryError)}
+            describedBy={`${expiryId}-hint`}
+            labels={{
+              placeholder: strings.documentDatePlaceholder,
+              today: strings.documentDateToday,
+              clear: strings.documentDateClear,
+              previousMonth: strings.documentDatePrevious,
+              nextMonth: strings.documentDateNext,
+              chooseYear: strings.documentDateChooseYear,
+              dialog: strings.documentExpiryLabel,
+            }}
+          />
+          <p
+            id={`${expiryId}-hint`}
+            className={expiryError ? 'm-doc-expiry-error' : 'm-doc-expiry-hint'}
+            role={expiryError ? 'alert' : undefined}
+          >
+            {expiryError ?? strings.documentExpiryHint}
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function RecruitmentApplyForm({
   locale,
   recruitmentApply,
@@ -81,6 +285,8 @@ export function RecruitmentApplyForm({
     emptyRecruitmentApplicationDraft,
   );
   const [files, setFiles] = useState<PendingFile[]>([]);
+  // Kept apart from files so a date picked before (or after) choosing a file is never lost.
+  const [expiries, setExpiries] = useState<Record<string, string>>({});
   const [localError, setLocalError] = useState<string | null>(null);
   const [state, formAction, pending] = useActionState(
     submitRecruitmentApplicationAction,
@@ -129,6 +335,17 @@ export function RecruitmentApplyForm({
     setLocalError(null);
   }
 
+  /** Same rules as the server: required for licence types, must be a valid future date. */
+  function expiryErrorFor(credentialType: string, hasFile: boolean): string | null {
+    const value = expiries[credentialType] ?? '';
+    if (!value && !hasFile) return null;
+    const result = resolveRecruitmentDocumentExpiresAt({
+      documentType: credentialType,
+      expiresAtYmd: value,
+    });
+    return 'error' in result ? result.error : null;
+  }
+
   function validateCurrent(): string | null {
     switch (step.id as RecruitmentStepId) {
       case 'personal':
@@ -146,12 +363,15 @@ export function RecruitmentApplyForm({
         }
         for (const req of docReqs) {
           if (!req.requiresExpiry) continue;
-          const match = files.find(
+          const hasFile = files.some(
             (f) => f.credentialType === req.credentialType,
           );
-          if (match && !match.expiresAt) {
+          if (!hasFile) continue;
+          if (!(expiries[req.credentialType] ?? '')) {
             return `Enter an expiry date for ${req.label}.`;
           }
+          const error = expiryErrorFor(req.credentialType, true);
+          if (error) return error;
         }
         return null;
       }
@@ -160,6 +380,26 @@ export function RecruitmentApplyForm({
       default:
         return null;
     }
+  }
+
+  /** Validate immediately so the applicant fixes it here, not after submit. */
+  function acceptFile(credentialType: string, file: File) {
+    const check = validateRecruitmentUpload({
+      type: resolveRecruitmentUploadMime(file),
+      size: file.size,
+    });
+    if (!check.ok) {
+      setLocalError(check.error);
+      return;
+    }
+    setFiles((prev) => [
+      ...prev.filter((f) => f.credentialType !== credentialType),
+      {
+        credentialType,
+        file,
+      },
+    ]);
+    setLocalError(null);
   }
 
   function goNext() {
@@ -195,8 +435,9 @@ export function RecruitmentApplyForm({
     for (const item of files) {
       fd.append('documents', item.file);
       fd.append('documentTypes', item.credentialType);
-      if (item.expiresAt) {
-        fd.set(`expiresAt:${item.credentialType}`, item.expiresAt);
+      const expiry = expiries[item.credentialType];
+      if (expiry) {
+        fd.set(`expiresAt:${item.credentialType}`, expiry);
       }
     }
     startTransition(() => {
@@ -205,16 +446,20 @@ export function RecruitmentApplyForm({
   }
 
   if (state.success) {
+    const reference = state.candidateId
+      ? state.candidateId.slice(0, 8).toUpperCase()
+      : null;
     return (
-      <div className="rounded-[1.35rem] border border-[color:var(--m-line)] bg-white p-6 shadow-[0_12px_40px_rgba(11,32,50,0.06)] sm:p-8">
-        <p className="m-eyebrow">{recruitmentApply.eyebrow}</p>
-        <h2 className="mt-3 text-2xl font-bold tracking-tight text-[color:var(--m-navy)]">
-          {state.message
+      <SubmissionSuccess
+        locale={locale}
+        strings={recruitmentApply}
+        message={
+          state.message
             ? translateMessage(state.message, recruitmentApply.messageMap)
-            : recruitmentApply.successMessage ?? RECRUITMENT_SUCCESS_MESSAGE}
-        </h2>
-        <p className="m-lede mt-3">{recruitmentApply.lede}</p>
-      </div>
+            : (recruitmentApply.successMessage ?? RECRUITMENT_SUCCESS_MESSAGE)
+        }
+        reference={reference}
+      />
     );
   }
 
@@ -385,70 +630,41 @@ export function RecruitmentApplyForm({
               const current = files.find(
                 (f) => f.credentialType === req.credentialType,
               );
-              const localizedLabel = translateMessage(
-                req.label,
-                recruitmentApply.messageMap,
-              );
               return (
-                <div
+                <DocumentField
                   key={req.credentialType}
-                  className="rounded-xl border border-[color:var(--m-line)] bg-[color:var(--m-porcelain)] p-4"
-                >
-                  <label className="block text-sm font-medium text-[color:var(--m-navy)]">
-                    {localizedLabel}
-                    {req.isRequired
-                      ? ` ${recruitmentApply.documentRequired}`
-                      : ` ${recruitmentApply.documentOptional}`}
-                    <input
-                      type="file"
-                      accept=".pdf,image/jpeg,image/png"
-                      className="mt-2 block w-full text-sm"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        setFiles((prev) => [
-                          ...prev.filter(
-                            (f) => f.credentialType !== req.credentialType,
-                          ),
-                          {
-                            credentialType: req.credentialType,
-                            file,
-                            expiresAt: current?.expiresAt ?? '',
-                          },
-                        ]);
-                        setLocalError(null);
-                      }}
-                    />
-                  </label>
-                  {current ? (
-                    <p className="mt-2 text-xs text-[color:var(--m-muted)]">
-                      {current.file.name}
-                    </p>
-                  ) : null}
-                  {req.requiresExpiry ? (
-                    <label className="mt-3 block text-sm font-medium text-[color:var(--m-navy)]">
-                      {recruitmentApply.documentExpiryLabel}
-                      <input
-                        type="date"
-                        className="mt-1.5 w-full rounded-xl border border-[color:var(--m-line)] bg-white px-3 py-2 text-sm"
-                        value={current?.expiresAt ?? ''}
-                        onChange={(e) => {
-                          setFiles((prev) => {
-                            const existing = prev.find(
-                              (f) => f.credentialType === req.credentialType,
-                            );
-                            if (!existing) return prev;
-                            return prev.map((f) =>
-                              f.credentialType === req.credentialType
-                                ? { ...f, expiresAt: e.target.value }
-                                : f,
-                            );
-                          });
-                        }}
-                      />
-                    </label>
-                  ) : null}
-                </div>
+                  label={translateMessage(req.label, recruitmentApply.messageMap)}
+                  required={req.isRequired}
+                  requiresExpiry={req.requiresExpiry}
+                  file={current?.file ?? null}
+                  expiresAt={expiries[req.credentialType] ?? ''}
+                  expiryError={(() => {
+                    const err = expiryErrorFor(
+                      req.credentialType,
+                      Boolean(current),
+                    );
+                    // Don't nag before a date is typed; the Next button explains what's missing.
+                    return err && (expiries[req.credentialType] ?? '')
+                      ? translateMessage(err, recruitmentApply.messageMap)
+                      : null;
+                  })()}
+                  locale={locale}
+                  strings={recruitmentApply}
+                  onFile={(file) => acceptFile(req.credentialType, file)}
+                  onRemove={() => {
+                    setFiles((prev) =>
+                      prev.filter((f) => f.credentialType !== req.credentialType),
+                    );
+                    setLocalError(null);
+                  }}
+                  onExpiry={(value) => {
+                    setExpiries((prev) => ({
+                      ...prev,
+                      [req.credentialType]: value,
+                    }));
+                    setLocalError(null);
+                  }}
+                />
               );
             })}
           </div>
@@ -520,7 +736,7 @@ export function RecruitmentApplyForm({
           </p>
         ) : null}
 
-        <div className="flex flex-wrap gap-3 pt-2">
+        <div className="m-apply-actions flex flex-wrap gap-3 pt-2">
           {stepIndex > 0 ? (
             <button
               type="button"
@@ -528,7 +744,8 @@ export function RecruitmentApplyForm({
               onClick={goBack}
               disabled={busy}
             >
-              {recruitmentApply.btnBack}
+              <ArrowLeft className="m-btn-back" size={16} aria-hidden />
+              <span>{recruitmentApply.btnBack}</span>
             </button>
           ) : null}
           {step.id !== 'consent' ? (
@@ -538,7 +755,8 @@ export function RecruitmentApplyForm({
               onClick={goNext}
               disabled={busy}
             >
-              {recruitmentApply.btnNext}
+              <span>{recruitmentApply.btnNext}</span>
+              <ArrowRight className="m-btn-arrow" size={16} aria-hidden />
             </button>
           ) : (
             <button
@@ -547,11 +765,109 @@ export function RecruitmentApplyForm({
               disabled={busy}
               aria-busy={busy}
             >
-              {busy ? recruitmentApply.btnSubmitting : recruitmentApply.btnSubmit}
+              <span>
+                {busy ? recruitmentApply.btnSubmitting : recruitmentApply.btnSubmit}
+              </span>
+              {busy ? (
+                <Loader2 className="m-btn-spin" size={16} aria-hidden />
+              ) : (
+                <Send className="m-btn-send" size={16} aria-hidden />
+              )}
             </button>
           )}
         </div>
       </form>
+    </div>
+  );
+}
+
+function SubmissionSuccess({
+  locale,
+  strings,
+  message,
+  reference,
+}: {
+  locale: MarketingLocale;
+  strings: MarketingDictionary['recruitmentApply'];
+  message: string;
+  reference: string | null;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    node.focus({ preventScroll: true });
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      tabIndex={-1}
+      role="status"
+      aria-live="polite"
+      className="m-apply-success"
+    >
+      <div className="m-apply-success-hero">
+        <span className="m-apply-success-check" aria-hidden="true">
+          <span className="m-apply-success-ring" />
+          <svg viewBox="0 0 52 52" width="52" height="52" fill="none">
+            <circle
+              className="m-apply-success-circle"
+              cx="26"
+              cy="26"
+              r="23"
+              strokeWidth="3"
+            />
+            <path
+              className="m-apply-success-tick"
+              d="M15 27.5l7.5 7.5L37.5 19"
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <span className="m-apply-success-badge">
+          <CheckCircle2 size={14} aria-hidden />
+          {strings.successBadge}
+        </span>
+        <h2 className="m-apply-success-title">{strings.successTitle}</h2>
+        <p className="m-apply-success-lead">{message}</p>
+        {reference ? (
+          <p className="m-apply-success-ref">
+            <span>{strings.successReference}</span>
+            <code>{reference}</code>
+          </p>
+        ) : null}
+      </div>
+
+      <div className="m-apply-success-next">
+        <h3>{strings.successNextTitle}</h3>
+        <ol>
+          <li>{strings.successNext1}</li>
+          <li>{strings.successNext2}</li>
+          <li>{strings.successNext3}</li>
+        </ol>
+      </div>
+
+      <p className="m-apply-success-note">{strings.successNote}</p>
+
+      <div className="m-apply-success-actions">
+        <Link
+          href={localizePath('/recruitment', locale)}
+          className="m-btn m-btn--secondary"
+        >
+          {strings.successBackCta}
+        </Link>
+        <Link
+          href={localizePath('/', locale)}
+          className="m-btn m-btn--primary"
+        >
+          {strings.successHomeCta}
+        </Link>
+      </div>
     </div>
   );
 }

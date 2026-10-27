@@ -481,6 +481,14 @@ function mimeLabel(mime: string) {
   if (mime.includes('pdf')) return 'PDF';
   if (mime.includes('jpeg') || mime.includes('jpg')) return 'JPEG';
   if (mime.includes('png')) return 'PNG';
+  if (mime.includes('webp')) return 'WebP';
+  if (mime.includes('heic') || mime.includes('heif')) return 'HEIC';
+  if (mime.includes('gif')) return 'GIF';
+  if (mime.includes('tiff')) return 'TIFF';
+  if (mime.includes('bmp')) return 'BMP';
+  if (mime.includes('wordprocessingml') || mime.includes('msword')) return 'Word';
+  if (mime.includes('opendocument.text')) return 'ODT';
+  if (mime.includes('rtf')) return 'RTF';
   return mime;
 }
 

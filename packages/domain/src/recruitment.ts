@@ -77,11 +77,100 @@ export const RECRUITMENT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export const RECRUITMENT_MAX_TOTAL_UPLOAD_BYTES = 32 * 1024 * 1024;
 /** Absolute max files per submission (public checklist is 9; a role checklist is smaller). */
 export const RECRUITMENT_MAX_UPLOAD_FILES = 9;
-export const RECRUITMENT_ALLOWED_MIME = [
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-] as const;
+/**
+ * Canonical MIME type -> storage extension. Covers what applicants realistically
+ * hold: scans/PDFs, phone photos (JPEG, HEIC/HEIF from iPhones, WebP, PNG) and
+ * word-processor files for CVs. Executables, scripts, HTML and SVG are
+ * deliberately not allowed — these files are opened by staff.
+ */
+const RECRUITMENT_MIME_TO_EXTENSION = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+  'image/gif': 'gif',
+  'image/tiff': 'tiff',
+  'image/bmp': 'bmp',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+    'docx',
+  'application/vnd.oasis.opendocument.text': 'odt',
+  'application/rtf': 'rtf',
+} as const;
+
+export type RecruitmentUploadExtension =
+  (typeof RECRUITMENT_MIME_TO_EXTENSION)[keyof typeof RECRUITMENT_MIME_TO_EXTENSION];
+
+export const RECRUITMENT_ALLOWED_MIME = Object.keys(
+  RECRUITMENT_MIME_TO_EXTENSION,
+) as Array<keyof typeof RECRUITMENT_MIME_TO_EXTENSION>;
+
+/** Browser-reported aliases mapped to the canonical type above. */
+const RECRUITMENT_MIME_ALIASES: Record<string, string> = {
+  'image/jpg': 'image/jpeg',
+  'image/pjpeg': 'image/jpeg',
+  'image/x-png': 'image/png',
+  'image/heic-sequence': 'image/heic',
+  'image/heif-sequence': 'image/heif',
+  'image/tif': 'image/tiff',
+  'image/x-ms-bmp': 'image/bmp',
+  'image/x-bmp': 'image/bmp',
+  'application/x-pdf': 'application/pdf',
+  'application/x-rtf': 'application/rtf',
+  'text/rtf': 'application/rtf',
+};
+
+/** File extension (lowercase, no dot) -> canonical MIME, used when the browser reports no/generic type. */
+const RECRUITMENT_EXTENSION_TO_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  jpe: 'image/jpeg',
+  jfif: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  gif: 'image/gif',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  bmp: 'image/bmp',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  odt: 'application/vnd.oasis.opendocument.text',
+  rtf: 'application/rtf',
+};
+
+/** `accept` attribute for the file picker. */
+export const RECRUITMENT_FILE_ACCEPT = [
+  ...Object.keys(RECRUITMENT_EXTENSION_TO_MIME).map((ext) => `.${ext}`),
+  ...RECRUITMENT_ALLOWED_MIME,
+].join(',');
+
+function normalizeRecruitmentMime(mime: string): string {
+  const base = (mime.split(';')[0] ?? '').trim().toLowerCase();
+  return RECRUITMENT_MIME_ALIASES[base] ?? base;
+}
+
+/**
+ * Resolve the canonical MIME for an upload. Browsers (notably on Windows and
+ * for HEIC/DOCX) often report an empty or `application/octet-stream` type, so
+ * fall back to the file extension. Returns the normalized reported type when
+ * nothing matches, so validation can reject it.
+ */
+export function resolveRecruitmentUploadMime(file: {
+  name: string;
+  type: string;
+}): string {
+  const reported = normalizeRecruitmentMime(file.type ?? '');
+  if (reported in RECRUITMENT_MIME_TO_EXTENSION) return reported;
+  const dot = file.name.lastIndexOf('.');
+  const ext = dot >= 0 ? file.name.slice(dot + 1).trim().toLowerCase() : '';
+  return RECRUITMENT_EXTENSION_TO_MIME[ext] ?? reported;
+}
+
 export const RECRUITMENT_DOCUMENT_TYPE_PATTERN = /^[a-z0-9_]+$/;
 
 export function isRecruitmentWorkerRole(value: unknown): value is WorkerRole {
@@ -172,12 +261,13 @@ export function isSafeRecruitmentDocumentType(value: string): boolean {
 
 export function recruitmentUploadExtensionForMime(
   mimeType: string,
-): 'pdf' | 'png' | 'jpg' | null {
-  const mime = mimeType.toLowerCase();
-  if (mime === 'application/pdf') return 'pdf';
-  if (mime === 'image/png') return 'png';
-  if (mime === 'image/jpeg') return 'jpg';
-  return null;
+): RecruitmentUploadExtension | null {
+  const mime = normalizeRecruitmentMime(mimeType);
+  return (
+    (RECRUITMENT_MIME_TO_EXTENSION as Record<string, RecruitmentUploadExtension>)[
+      mime
+    ] ?? null
+  );
 }
 
 export function sanitizeRecruitmentOriginalFilename(name: string): string {
@@ -192,7 +282,7 @@ export function sanitizeRecruitmentOriginalFilename(name: string): string {
 export function buildRecruitmentStoragePath(params: {
   candidateId: string;
   documentType: string;
-  extension: 'pdf' | 'png' | 'jpg';
+  extension: RecruitmentUploadExtension;
   objectId?: string;
 }): string | null {
   if (
@@ -257,13 +347,15 @@ export function resolveRecruitmentDocumentExpiresAt(params: {
   return { expiresAt: raw };
 }
 
+export const RECRUITMENT_UNSUPPORTED_TYPE_ERROR =
+  'Upload a PDF, photo (JPEG, PNG, WebP, HEIC), or Word document.';
+
 export function validateRecruitmentUpload(file: {
   type: string;
   size: number;
 }): { ok: true } | { ok: false; error: string } {
-  const mime = file.type.toLowerCase();
-  if (!(RECRUITMENT_ALLOWED_MIME as readonly string[]).includes(mime)) {
-    return { ok: false, error: 'Upload a PDF, JPEG, or PNG file.' };
+  if (recruitmentUploadExtensionForMime(file.type) === null) {
+    return { ok: false, error: RECRUITMENT_UNSUPPORTED_TYPE_ERROR };
   }
   if (file.size <= 0 || file.size > RECRUITMENT_MAX_UPLOAD_BYTES) {
     return { ok: false, error: 'Each file must be under 10 MB.' };
@@ -293,7 +385,7 @@ export function validateRecruitmentDocumentBatch(params: {
         documentType: CredentialType;
         mimeType: string;
         sizeBytes: number;
-        extension: 'pdf' | 'png' | 'jpg';
+        extension: RecruitmentUploadExtension;
         expiresAt: string | null;
       }>;
     }
@@ -331,7 +423,7 @@ export function validateRecruitmentDocumentBatch(params: {
     documentType: CredentialType;
     mimeType: string;
     sizeBytes: number;
-    extension: 'pdf' | 'png' | 'jpg';
+    extension: RecruitmentUploadExtension;
     expiresAt: string | null;
   }> = [];
 
@@ -355,7 +447,7 @@ export function validateRecruitmentDocumentBatch(params: {
 
     const extension = recruitmentUploadExtensionForMime(doc.mimeType);
     if (!extension) {
-      return { ok: false, error: 'Upload a PDF, JPEG, or PNG file.' };
+      return { ok: false, error: RECRUITMENT_UNSUPPORTED_TYPE_ERROR };
     }
 
     totalBytes += doc.sizeBytes;
@@ -375,7 +467,7 @@ export function validateRecruitmentDocumentBatch(params: {
 
     normalized.push({
       documentType: doc.documentType as CredentialType,
-      mimeType: doc.mimeType.toLowerCase(),
+      mimeType: normalizeRecruitmentMime(doc.mimeType),
       sizeBytes: doc.sizeBytes,
       extension,
       expiresAt: expiry.expiresAt,

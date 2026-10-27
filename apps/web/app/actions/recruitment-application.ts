@@ -5,6 +5,7 @@ import {
   RECRUITMENT_SUCCESS_MESSAGE,
   buildRecruitmentStoragePath,
   isRecruitmentWorkerRole,
+  resolveRecruitmentUploadMime,
   sanitizeRecruitmentOriginalFilename,
   validateRecruitmentConsentStep,
   validateRecruitmentDocumentBatch,
@@ -114,7 +115,8 @@ export async function submitRecruitmentApplicationAction(
       role,
       documents: files.map((file, index) => ({
         documentType: docTypes[index] ?? '',
-        mimeType: file.type,
+        // Browsers often send an empty/generic type for HEIC and DOCX; resolve by extension.
+        mimeType: resolveRecruitmentUploadMime(file),
         sizeBytes: file.size,
         expiresAtYmd: (() => {
           const raw = formData.get(`expiresAt:${docTypes[index] ?? ''}`);

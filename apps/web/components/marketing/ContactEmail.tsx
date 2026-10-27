@@ -1,7 +1,7 @@
 'use client';
 
-import { Copy, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { Check, Copy, Mail } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 type ContactEmailProps = {
   address: string;
@@ -26,25 +26,47 @@ export function ContactEmail({
   hint = 'Opens your email app with a short subject line. You can also copy the address if mail is not configured on this device.',
 }: ContactEmailProps) {
   const [copied, setCopied] = useState(false);
+  const [burst, setBurst] = useState(0);
+  const timer = useRef<number | undefined>(undefined);
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
   const mailto = `mailto:${address}?subject=${encodeURIComponent(mailtoSubject)}`;
 
-  async function copyAddress() {
+  function legacyCopy(): boolean {
+    const input = document.createElement('input');
+    input.value = address;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.appendChild(input);
+    input.select();
+    let ok = false;
     try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(address);
-      } else {
-        const input = document.createElement('input');
-        input.value = address;
-        document.body.appendChild(input);
-        input.select();
-        document.execCommand('copy');
-        document.body.removeChild(input);
-      }
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      ok = document.execCommand('copy');
     } catch {
-      setCopied(false);
+      ok = false;
     }
+    document.body.removeChild(input);
+    return ok;
+  }
+
+  async function copyAddress() {
+    let ok = false;
+    try {
+      await navigator.clipboard.writeText(address);
+      ok = true;
+    } catch {
+      // Clipboard API unavailable or blocked — fall back to execCommand.
+      ok = legacyCopy();
+    }
+    if (!ok) {
+      setCopied(false);
+      return;
+    }
+    setCopied(true);
+    setBurst((n) => n + 1);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setCopied(false), 2200);
   }
 
   return (
@@ -58,11 +80,33 @@ export function ContactEmail({
         <button
           type="button"
           onClick={copyAddress}
-          className="m-contact-email-copy"
-          aria-live="polite"
+          className={`m-contact-email-copy${copied ? ' is-copied' : ''}`}
         >
-          <Copy size={14} strokeWidth={2} aria-hidden="true" />
-          {copied ? copiedLabel : copyLabel}
+          <span className="m-contact-email-copy-icon" aria-hidden="true">
+            <Copy size={14} strokeWidth={2} className="m-copy-ico-idle" />
+            <Check size={16} strokeWidth={3} className="m-copy-ico-done" />
+          </span>
+          <span className="m-contact-email-copy-label">
+            <span className="m-copy-label-idle" aria-hidden={copied}>
+              {copyLabel}
+            </span>
+            <span className="m-copy-label-done" aria-hidden={!copied}>
+              {copiedLabel}
+            </span>
+          </span>
+          {copied ? (
+            <span key={burst} className="m-copy-burst" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+          ) : null}
+          <span className="sr-only" role="status" aria-live="polite">
+            {copied ? copiedLabel : ''}
+          </span>
         </button>
       </div>
       <p className="m-contact-email-hint">{hint}</p>

@@ -91,6 +91,20 @@ export const en = {
     noteBody:
       'There is no separate Cookie Policy page yet. For privacy or terms questions, contact support from the site footer.',
   },
+  recruitmentPromo: {
+    ariaLabel: 'Recruitment announcement',
+    badge: 'Now recruiting',
+    title: 'Join the Bridge Hive talent network',
+    body:
+      'Registered nurses, ward assistants and physiotherapists: submit your profile once and let verified care teams find you.',
+    roles: 'Nurses · Ward assistants · Physiotherapists',
+    point1: 'Takes about 5 minutes',
+    point2: 'Documents stay private',
+    cta: 'Apply now',
+    secondary: 'Learn more',
+    close: 'Dismiss recruitment announcement',
+    note: 'Submitting a profile does not guarantee employment or contact.',
+  },
   home: {
     meta: {
       title: 'BridgeHive Medical Recruitment Limited | Healthcare Staffing & Recruitment',
@@ -636,11 +650,35 @@ export const en = {
     btnSubmit: 'Submit talent profile',
     btnSubmitting: 'Submitting…',
     successMessage: 'Your Bridge Hive talent profile has been received.',
+    successBadge: 'Submitted',
+    successTitle: 'Application submitted successfully',
+    successReference: 'Reference',
+    successNextTitle: 'What happens next',
+    successNext1: 'Our team reviews your profile and documents privately.',
+    successNext2: 'If a suitable opportunity matches your profile, we may get in touch.',
+    successNext3: 'You do not need to do anything else for now.',
+    successNote: 'Submitting a profile does not guarantee employment or contact.',
+    successBackCta: 'Back to Recruitment',
+    successHomeCta: 'Go to home',
     documentUploadLabel: 'Upload documents',
-    documentUploadHint: 'PDF, JPEG, or PNG — max 10 MB per file',
+    documentUploadHint:
+      'PDF, photo (JPEG, PNG, WebP, HEIC) or Word document — max 10 MB per file',
     documentRequired: '(required)',
     documentOptional: '(optional)',
-    documentExpiryLabel: 'Expiry date (YYYY-MM-DD)',
+    documentDatePlaceholder: 'Select a date',
+    documentDateToday: 'Today',
+    documentDateClear: 'Clear',
+    documentDatePrevious: 'Previous month',
+    documentDateNext: 'Next month',
+    documentDateChooseYear: 'Choose month and year',
+    documentUploadCta: 'Upload file',
+    documentDropHint: 'or drag and drop here',
+    documentUploaded: 'Uploaded',
+    documentReplace: 'Replace',
+    documentRemove: 'Remove',
+    documentExpiryLabel: 'Expiry date',
+    documentExpiryHint:
+      'Pick the expiry date shown on your document. It must be in the future.',
     messageMap: {
       'Enter your full name.': 'Enter your full name.',
       'Enter a valid email address.': 'Enter a valid email address.',
@@ -654,7 +692,8 @@ export const en = {
       'You must accept the privacy notice to submit.':
         'You must accept the privacy notice to submit.',
       'Upload at least one supporting document.': 'Upload at least one supporting document.',
-      'Upload a PDF, JPEG, or PNG file.': 'Upload a PDF, JPEG, or PNG file.',
+      'Upload a PDF, photo (JPEG, PNG, WebP, HEIC), or Word document.':
+        'Upload a PDF, photo (JPEG, PNG, WebP, HEIC), or Word document.',
       'Each file must be under 10 MB.': 'Each file must be under 10 MB.',
       'Too many documents uploaded.': 'Too many documents uploaded.',
       'Invalid document type for the selected role.':

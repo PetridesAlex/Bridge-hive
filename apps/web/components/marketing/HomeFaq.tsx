@@ -26,19 +26,35 @@ type FaqItem = {
   tone: 'blue' | 'honey' | 'teal' | 'navy';
 };
 
-function FaqMotif() {
+function FaqMotif({ faq }: { faq: HomeFaqProps['faq'] }) {
   return (
     <div className="m-faq-motif" aria-hidden="true">
       <span className="m-faq-motif-ring m-faq-motif-ring--outer" />
       <span className="m-faq-motif-ring m-faq-motif-ring--inner" />
 
       <div className="m-faq-motif-card m-faq-motif-card--main">
-        <span className="m-faq-motif-q">
-          <HelpCircle size={22} strokeWidth={2.1} />
-        </span>
-        <span className="m-faq-motif-line" />
-        <span className="m-faq-motif-line m-faq-motif-line--short" />
-        <span className="m-faq-motif-line" />
+        <div className="m-faq-motif-head">
+          <span className="m-faq-motif-q">
+            <HelpCircle size={18} strokeWidth={2.1} />
+          </span>
+          <span className="m-faq-motif-tag">{faq.eyebrow}</span>
+        </div>
+        <p className="m-faq-motif-question">{faq.q2}</p>
+        <p className="m-faq-motif-answer">{faq.a2}</p>
+        <div className="m-faq-motif-topics">
+          <span className="m-faq-motif-topic m-faq-motif-topic--blue">
+            <Building2 size={13} strokeWidth={2.1} />
+          </span>
+          <span className="m-faq-motif-topic m-faq-motif-topic--honey">
+            <ShieldCheck size={13} strokeWidth={2.1} />
+          </span>
+          <span className="m-faq-motif-topic m-faq-motif-topic--teal">
+            <CreditCard size={13} strokeWidth={2.1} />
+          </span>
+          <span className="m-faq-motif-topic m-faq-motif-topic--navy">
+            <Smartphone size={13} strokeWidth={2.1} />
+          </span>
+        </div>
       </div>
 
       <div className="m-faq-motif-card m-faq-motif-card--chat">
@@ -115,7 +131,7 @@ export function HomeFaq({ locale, faq }: HomeFaqProps) {
             </h2>
             <p className="m-faq-lede">{faq.lede}</p>
           </div>
-          <FaqMotif />
+          <FaqMotif faq={faq} />
         </div>
 
         <div className="m-faq m-faq--premium">

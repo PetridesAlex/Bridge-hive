@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
 import {
@@ -42,6 +43,14 @@ type Props = {
   /** Tighter mark/copy/card rhythm for the auth landing. */
   compact?: boolean;
 };
+
+function goBackSafely() {
+  if (router.canGoBack()) {
+    router.back();
+    return;
+  }
+  router.replace('/auth/worker');
+}
 
 /** Light premium auth chrome — keep opacity animation non-essential. */
 export function AuthShell({
@@ -121,6 +130,14 @@ export function AuthShell({
   return (
     <View style={styles.root}>
       <HiveFlowBackground />
+      {isLanding ? (
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#071A2F', '#0A2438', 'rgba(238, 245, 251, 0)']}
+          locations={[0, 0.42, 1]}
+          style={styles.navyBand}
+        />
+      ) : null}
       <View pointerEvents="none" style={styles.ambientTeal} />
       <View pointerEvents="none" style={styles.ambientHoney} />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
@@ -130,7 +147,7 @@ export function AuthShell({
         >
           {showBack ? (
             <Pressable
-              onPress={() => router.back()}
+              onPress={goBackSafely}
               style={[styles.back, { marginLeft: gutter }]}
               hitSlop={12}
               accessibilityRole="button"
@@ -180,8 +197,13 @@ export function AuthShell({
                   />
                 </Animated.View>
               </View>
-              <Text style={[styles.brand, isLanding && styles.brandLanding]}>
-                Bridge Hive
+              <Text
+                style={[
+                  styles.brand,
+                  isLanding && styles.brandLanding,
+                ]}
+              >
+                BridgeHive App
               </Text>
               {isLanding ? <View style={styles.brandRule} /> : null}
               <Text
@@ -190,6 +212,7 @@ export function AuthShell({
                   compact && styles.titleCompact,
                   isLanding && styles.titleLanding,
                 ]}
+                accessibilityRole="header"
               >
                 {title}
               </Text>
@@ -235,7 +258,7 @@ export function AuthShell({
 
 export function AuthStepBar({ current, total }: { current: number; total: number }) {
   return (
-    <View style={styles.stepBar}>
+    <View style={styles.stepBar} accessibilityRole="progressbar">
       {Array.from({ length: total }).map((_, i) => (
         <View
           key={i}
@@ -252,6 +275,13 @@ export function AuthStepBar({ current, total }: { current: number; total: number
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  navyBand: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '48%',
+  },
   ambientTeal: {
     position: 'absolute',
     width: 280,
@@ -343,7 +373,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     fontSize: 12,
-    color: colors.textSecondary,
+    color: 'rgba(247, 251, 253, 0.78)',
   },
   brandRule: {
     width: 28,
@@ -371,6 +401,7 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     letterSpacing: -0.5,
     maxWidth: 320,
+    color: colors.white,
   },
   subtitle: {
     fontFamily: typography.fonts.regular,
@@ -388,6 +419,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 300,
     lineHeight: 21,
+    color: 'rgba(247, 251, 253, 0.82)',
   },
   card: {
     backgroundColor: colors.card,

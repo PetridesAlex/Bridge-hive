@@ -6,8 +6,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -23,6 +25,21 @@ import {
 import { useAuth } from '@/providers/AuthProvider';
 
 const WELCOME_NAVY = '#071A2F';
+
+const TRUST_CUES = [
+  {
+    icon: 'shield-checkmark-outline' as const,
+    label: 'Verified professional roles',
+  },
+  {
+    icon: 'document-text-outline' as const,
+    label: 'Credentials checked before shifts',
+  },
+  {
+    icon: 'wallet-outline' as const,
+    label: 'Shifts and payment records together',
+  },
+];
 
 function WelcomeAction({
   label,
@@ -61,7 +78,7 @@ function WelcomeAction({
         {tone === 'primary' ? (
           <LinearGradient
             pointerEvents="none"
-            colors={['#14A9B5', colors.tealStrong, '#0A6C78']}
+            colors={[colors.navy, '#0C3E56', colors.tealStrong]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
@@ -79,7 +96,7 @@ function WelcomeAction({
           <Ionicons
             name="arrow-forward"
             size={18}
-            color={colors.white}
+            color={colors.yellow}
             style={styles.actionIcon}
           />
         ) : null}
@@ -110,13 +127,24 @@ export default function WelcomeScreen() {
   }, [session]);
 
   useEffect(() => {
-    if (checking || reduced) return;
-    enter.value = withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) });
+    if (checking || reduced) {
+      if (!checking && reduced) enter.value = 1;
+      return;
+    }
+    enter.value = withDelay(
+      40,
+      withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) }),
+    );
   }, [checking, enter, reduced]);
 
   const heroMotion = useAnimatedStyle(() => ({
     opacity: enter.value,
-    transform: [{ translateY: (1 - enter.value) * 14 }],
+    transform: [{ translateY: (1 - enter.value) * 16 }],
+  }));
+
+  const cuesMotion = useAnimatedStyle(() => ({
+    opacity: interpolate(enter.value, [0.35, 1], [0, 1]),
+    transform: [{ translateY: (1 - enter.value) * 10 }],
   }));
 
   if (!loading && session) {
@@ -142,21 +170,32 @@ export default function WelcomeScreen() {
       <View pointerEvents="none" style={styles.textureA} />
       <View pointerEvents="none" style={styles.textureB} />
       <View pointerEvents="none" style={styles.honeyCell} />
+      <View pointerEvents="none" style={styles.honeyCellSoft} />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
         <Animated.View style={[styles.hero, heroMotion]}>
-          <BridgeHiveMark size={88} style={styles.mark} />
+          <BridgeHiveMark size={96} style={styles.mark} />
           <Text style={styles.eyebrow}>BRIDGEHIVE FOR PROFESSIONALS</Text>
-          <Text style={styles.title}>
+          <Text style={styles.title} accessibilityRole="header">
             Healthcare shifts,{'\n'}structured around you.
           </Text>
           <Text style={styles.subtitle}>
             Discover verified opportunities for nurses, ward assistants and
             physiotherapists.
           </Text>
+          <Animated.View style={[styles.cues, cuesMotion]}>
+            {TRUST_CUES.map((cue) => (
+              <View key={cue.label} style={styles.cueRow}>
+                <View style={styles.cueIcon}>
+                  <Ionicons name={cue.icon} size={16} color={colors.yellow} />
+                </View>
+                <Text style={styles.cueLabel}>{cue.label}</Text>
+              </View>
+            ))}
+          </Animated.View>
         </Animated.View>
 
         <Animated.View
-          entering={reduced ? undefined : FadeInDown.delay(180).duration(420)}
+          entering={reduced ? undefined : FadeInDown.delay(220).duration(420)}
           style={styles.actions}
         >
           <WelcomeAction label="Get started" tone="primary" onPress={() => void goStarted()} />
@@ -178,32 +217,43 @@ const styles = StyleSheet.create({
   },
   textureA: {
     position: 'absolute',
-    width: 340,
-    height: 340,
-    borderRadius: 170,
-    backgroundColor: 'rgba(20, 169, 181, 0.12)',
-    top: -40,
-    right: -80,
+    width: 360,
+    height: 360,
+    borderRadius: 180,
+    backgroundColor: 'rgba(20, 169, 181, 0.1)',
+    top: -60,
+    right: -100,
   },
   textureB: {
     position: 'absolute',
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(228, 179, 52, 0.08)',
-    bottom: '18%',
-    left: -90,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: 'rgba(228, 179, 52, 0.07)',
+    bottom: '16%',
+    left: -110,
   },
   honeyCell: {
     position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 28,
+    width: 110,
+    height: 110,
+    borderRadius: 26,
     borderWidth: 1,
-    borderColor: 'rgba(228, 179, 52, 0.18)',
+    borderColor: 'rgba(228, 179, 52, 0.16)',
     transform: [{ rotate: '30deg' }],
-    top: '42%',
-    right: 28,
+    top: '38%',
+    right: 24,
+  },
+  honeyCellSoft: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(20, 169, 181, 0.14)',
+    transform: [{ rotate: '18deg' }],
+    top: '48%',
+    right: 86,
   },
   safe: {
     flex: 1,
@@ -239,6 +289,32 @@ const styles = StyleSheet.create({
     lineHeight: 26,
     color: 'rgba(247, 251, 253, 0.92)',
     maxWidth: 360,
+  },
+  cues: {
+    gap: 12,
+    marginTop: spacing.md,
+  },
+  cueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cueIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(228, 179, 52, 0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(228, 179, 52, 0.28)',
+  },
+  cueLabel: {
+    flex: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(247, 251, 253, 0.88)',
   },
   actions: {
     gap: spacing.md,

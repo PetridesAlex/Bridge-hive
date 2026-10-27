@@ -95,13 +95,13 @@ export default function WorkerLoginScreen() {
       subtitle="Sign in to manage shifts, timesheets, and commission invoices for healthcare professionals."
       footer={
         <View style={styles.footer}>
-          <Text style={styles.footerText}>New to Bridge Hive?</Text>
+          <Text style={styles.footerText}>New to BridgeHive?</Text>
           <DynamicPressable
             onPress={() => router.push('/auth/worker/register')}
             accessibilityRole="link"
-            accessibilityLabel="Create worker account"
+            accessibilityLabel="Create professional account"
           >
-            <Text style={styles.footerLink}>Create worker account</Text>
+            <Text style={styles.footerLink}>Create professional account</Text>
           </DynamicPressable>
         </View>
       }

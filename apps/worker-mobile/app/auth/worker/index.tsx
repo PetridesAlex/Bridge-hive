@@ -17,22 +17,22 @@ export default function WorkerAuthLandingScreen() {
 
   return (
     <AuthShell
-      title="Your BridgeHive workspace"
-      subtitle="Sign in to manage shifts, documents, timesheets and payment records."
+      title="How would you like to continue?"
+      subtitle="Create a professional account or sign in to manage shifts, documents and payment records."
       showBack={false}
       centered
       compact
       footer={
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already registered?</Text>
+          <Text style={styles.footerText}>Prefer email later?</Text>
           <Pressable
             onPress={() => router.push('/auth/worker/login')}
             accessibilityRole="link"
-            accessibilityLabel="Sign in"
+            accessibilityLabel="Sign in with email"
             hitSlop={8}
             style={styles.footerLinkHit}
           >
-            <Text style={styles.footerLink}>Sign in</Text>
+            <Text style={styles.footerLink}>Sign in with email</Text>
           </Pressable>
         </View>
       }
@@ -41,11 +41,13 @@ export default function WorkerAuthLandingScreen() {
         <Button
           label="Create professional account"
           variant="primary"
+          size="lg"
           onPress={() => router.push('/auth/worker/register')}
         />
         <Button
           label="Sign in"
           variant="secondary"
+          size="lg"
           onPress={() => router.push('/auth/worker/login')}
         />
         <View style={styles.googleWrap}>

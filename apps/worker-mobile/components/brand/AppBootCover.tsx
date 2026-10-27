@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withTiming,
@@ -18,6 +19,12 @@ export const APP_BOOT_BG = '#071A2F';
 
 /** @deprecated Prefer APP_BOOT_BG — kept for leftover imports. */
 export const APP_BOOT_NAVY = APP_BOOT_BG;
+
+/**
+ * Mark width matching app.json expo-splash-screen imageWidth so the
+ * native splash → JS cover handoff does not shrink the icon.
+ */
+export const APP_BOOT_MARK_SIZE = 220;
 
 /** Short minimum so the cover does not flash without holding the user artificially. */
 export const APP_BOOT_MIN_MS = 800;
@@ -47,9 +54,11 @@ type AppBootCoverProps = {
 /**
  * Navy launch cover — official mark + preparing copy, subtle breathing.
  * System fonts keep every glyph visible even before custom fonts load.
+ * Mark size matches the native splash imageWidth for a seamless handoff.
  */
 export function AppBootCover({ showSlowIndicator = false }: AppBootCoverProps) {
   const reducedMotion = useReducedMotion();
+  const settle = useSharedValue(reducedMotion ? 1 : 0);
   const breath = useSharedValue(0);
   const [slow, setSlow] = useState(false);
 
@@ -64,27 +73,34 @@ export function AppBootCover({ showSlowIndicator = false }: AppBootCoverProps) {
 
   useEffect(() => {
     if (reducedMotion) {
+      settle.value = 1;
       breath.value = 1;
       return;
     }
-    breath.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
+    // Soft settle from splash scale → calm rest, then breathe.
+    settle.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
+    breath.value = withDelay(
+      720,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
       ),
-      -1,
-      false,
     );
-  }, [breath, reducedMotion]);
+  }, [breath, reducedMotion, settle]);
 
   const logoMotion = useAnimatedStyle(() => {
     if (reducedMotion) {
       return { transform: [{ scale: 1 }], opacity: 1 };
     }
-    const t = breath.value;
+    const settledScale = interpolate(settle.value, [0, 1], [1, 0.82]);
+    const breathScale = interpolate(breath.value, [0, 1], [1, 1.035]);
     return {
-      transform: [{ scale: interpolate(t, [0, 1], [1, 1.06]) }],
-      opacity: interpolate(t, [0, 1], [0.92, 1]),
+      transform: [{ scale: settledScale * breathScale }],
+      opacity: interpolate(settle.value, [0, 1], [0.96, 1]),
     };
   });
 
@@ -92,10 +108,20 @@ export function AppBootCover({ showSlowIndicator = false }: AppBootCoverProps) {
     if (reducedMotion) {
       return { opacity: 0.22 };
     }
-    const t = breath.value;
+    const t = Math.max(settle.value * 0.5, breath.value);
     return {
-      opacity: interpolate(t, [0, 1], [0.16, 0.32]),
-      transform: [{ scale: interpolate(t, [0, 1], [0.92, 1.08]) }],
+      opacity: interpolate(t, [0, 1], [0.14, 0.3]),
+      transform: [{ scale: interpolate(t, [0, 1], [0.92, 1.06]) }],
+    };
+  });
+
+  const copyMotion = useAnimatedStyle(() => {
+    if (reducedMotion) {
+      return { opacity: 1 };
+    }
+    return {
+      opacity: interpolate(settle.value, [0, 1], [0, 1]),
+      transform: [{ translateY: interpolate(settle.value, [0, 1], [8, 0]) }],
     };
   });
 
@@ -109,12 +135,12 @@ export function AppBootCover({ showSlowIndicator = false }: AppBootCoverProps) {
       <Animated.View pointerEvents="none" style={[styles.glowGold, glowMotion]} />
 
       <Animated.View style={[styles.logoWrap, logoMotion]}>
-        <BridgeHiveMark size={128} />
+        <BridgeHiveMark size={APP_BOOT_MARK_SIZE} />
       </Animated.View>
 
-      <Text style={styles.copy} allowFontScaling={false}>
+      <Animated.Text style={[styles.copy, copyMotion]} allowFontScaling={false}>
         Preparing your workspace
-      </Text>
+      </Animated.Text>
 
       {slow ? (
         <ActivityIndicator
@@ -138,24 +164,24 @@ const styles = StyleSheet.create({
   },
   glowBlue: {
     position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(20, 169, 181, 0.22)',
-    top: '28%',
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(20, 169, 181, 0.2)',
+    top: '26%',
   },
   glowGold: {
     position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(228, 179, 52, 0.14)',
-    top: '36%',
-    left: '18%',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(228, 179, 52, 0.12)',
+    top: '34%',
+    left: '16%',
   },
   logoWrap: {
     marginBottom: 28,
-    padding: 12,
+    padding: 4,
     overflow: 'visible',
   },
   copy: {

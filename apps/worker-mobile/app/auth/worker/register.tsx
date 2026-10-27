@@ -3,17 +3,40 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AuthField } from '@/components/auth/AuthField';
 import { AuthShell, AuthStepBar } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { Button } from '@/components/ui/Button';
-import { TextInput } from '@/components/ui/TextInput';
-import { APP_CONFIG, WORKER_ROLE_LABELS } from '@/constants/config';
+import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { WORKER_ROLE_OPTIONS } from '@/constants/workerRoleOptions';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { setPendingConfirmEmail } from '@/lib/pending-confirm-email';
 import { useAuth } from '@/providers/AuthProvider';
 
 const STEPS = ['Account', 'Role', 'Review'] as const;
+
+const STEP_COPY: Record<(typeof STEPS)[number], { title: string; body: string }> = {
+  Account: {
+    title: 'Your account details',
+    body: 'We will use this email for sign-in and important account messages.',
+  },
+  Role: {
+    title: 'Your professional role',
+    body: 'Choose the role that matches how you work. You can update details later in your profile.',
+  },
+  Review: {
+    title: 'Confirm and create',
+    body: 'After signup you upload credentials. Marketplace access requires platform verification.',
+  },
+};
+
+function goBackSafely() {
+  if (router.canGoBack()) {
+    router.back();
+    return;
+  }
+  router.replace('/auth/worker');
+}
 
 export default function WorkerRegisterScreen() {
   const { signUpWorker, session, loading, homeRoute } = useAuth();
@@ -38,6 +61,9 @@ export default function WorkerRegisterScreen() {
   if (!loading && session) {
     return <Redirect href={homeRoute as never} />;
   }
+
+  const stepKey = STEPS[step - 1];
+  const stepCopy = STEP_COPY[stepKey];
 
   const validateStep = (): boolean => {
     setError(undefined);
@@ -66,7 +92,7 @@ export default function WorkerRegisterScreen() {
 
   const back = () => {
     if (step === 1) {
-      router.back();
+      goBackSafely();
       return;
     }
     setStep((s) => Math.max(s - 1, 1));
@@ -109,49 +135,83 @@ export default function WorkerRegisterScreen() {
 
   return (
     <AuthShell
-      title="Join Bridge Hive"
+      title="Join BridgeHive"
       subtitle="Create a worker account for nurses, ward assistants, and physiotherapists across Cyprus."
       centered={false}
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account?</Text>
-          <Pressable onPress={() => router.push('/auth/worker/login')}>
+          <Pressable
+            onPress={() => router.push('/auth/worker/login')}
+            accessibilityRole="link"
+            accessibilityLabel="Sign in"
+            hitSlop={8}
+            style={styles.footerLinkHit}
+          >
             <Text style={styles.footerLink}>Sign in</Text>
           </Pressable>
         </View>
       }
     >
       <AuthStepBar current={step} total={STEPS.length} />
-      <Text style={styles.stepLabel}>{STEPS[step - 1]}</Text>
+      <View style={styles.stepHeader}>
+        <Text style={styles.stepLabel}>
+          Step {step} of {STEPS.length} · {stepKey}
+        </Text>
+        <Text style={styles.stepTitle} accessibilityRole="header">
+          {stepCopy.title}
+        </Text>
+        <Text style={styles.stepBody}>{stepCopy.body}</Text>
+      </View>
 
       {step === 1 ? (
         <View style={styles.fields}>
-          <TextInput label="Full name" value={fullName} onChangeText={setFullName} />
-          <TextInput
+          <AuthField
+            label="Full name"
+            icon="person-outline"
+            value={fullName}
+            onChangeText={setFullName}
+            autoComplete="name"
+            textContentType="name"
+            placeholder="Your full name"
+          />
+          <AuthField
             label="Email"
+            icon="mail-outline"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
+            autoComplete="email"
+            textContentType="emailAddress"
+            placeholder="name@email.com"
           />
-          <TextInput label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
-          <TextInput
+          <AuthField
+            label="Phone"
+            icon="call-outline"
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+            placeholder="+357 ..."
+          />
+          <AuthField
             label="Password"
+            icon="lock-closed-outline"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
+            autoComplete="new-password"
+            textContentType="newPassword"
+            placeholder="At least 6 characters"
           />
-          <Text style={styles.hint}>Market: {APP_CONFIG.countryCode} · {APP_CONFIG.timezone}</Text>
+          <Text style={styles.hint}>Use at least 6 characters for your password.</Text>
         </View>
       ) : null}
 
       {step === 2 ? (
         <View style={styles.fields}>
-          <Text style={styles.section}>Choose your professional role</Text>
-          <Text style={styles.hint}>
-            Selection uses a clear label and description — not color alone. This value is sent to
-            the server unchanged.
-          </Text>
           {WORKER_ROLE_OPTIONS.map((option) => {
             const selected = workerRole === option.role;
             return (
@@ -174,21 +234,31 @@ export default function WorkerRegisterScreen() {
               </Pressable>
             );
           })}
-          <TextInput
+          <AuthField
             label="Short bio (optional)"
+            icon="create-outline"
             value={bio}
             onChangeText={setBio}
             multiline
-            helpText="Optional context for organizations reviewing your profile."
+            placeholder="Optional context for organizations reviewing your profile"
           />
         </View>
       ) : null}
 
       {step === 3 ? (
         <View style={styles.fields}>
-          <Text style={styles.review}>Name: {fullName}</Text>
-          <Text style={styles.review}>Email: {email}</Text>
-          <Text style={styles.review}>Role: {WORKER_ROLE_LABELS[workerRole]}</Text>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewLabel}>Name</Text>
+            <Text style={styles.reviewValue}>{fullName}</Text>
+          </View>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewLabel}>Email</Text>
+            <Text style={styles.reviewValue}>{email}</Text>
+          </View>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewLabel}>Role</Text>
+            <Text style={styles.reviewValue}>{WORKER_ROLE_LABELS[workerRole]}</Text>
+          </View>
           <Text style={styles.hint}>
             After signup you will upload credentials. Marketplace access requires platform
             verification — you cannot self-verify.
@@ -196,7 +266,11 @@ export default function WorkerRegisterScreen() {
         </View>
       ) : null}
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : null}
 
       <View style={styles.actions}>
         <Button label="Back" variant="secondary" onPress={back} disabled={submitting} />
@@ -210,28 +284,38 @@ export default function WorkerRegisterScreen() {
             onPress={() => void onSubmit()}
           />
         )}
-        {step === 1 ? (
-          <GoogleSignInButton />
-        ) : null}
+        {step === 1 ? <GoogleSignInButton /> : null}
       </View>
     </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
+  stepHeader: {
+    gap: 6,
+    marginBottom: spacing.sm,
+  },
   stepLabel: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
-  fields: { gap: spacing.md },
-  section: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 15,
+  stepTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 18,
+    lineHeight: 24,
     color: colors.text,
+    letterSpacing: -0.2,
   },
+  stepBody: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  fields: { gap: spacing.md },
   roleCard: {
     flexDirection: 'row',
     gap: spacing.md,
@@ -284,9 +368,25 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     lineHeight: 18,
   },
-  review: {
+  reviewCard: {
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSubdued,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: 2,
+  },
+  reviewLabel: {
     fontFamily: typography.fonts.medium,
-    fontSize: 15,
+    fontSize: 12,
+    color: colors.textMuted,
+    letterSpacing: 0.2,
+  },
+  reviewValue: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 16,
+    lineHeight: 22,
     color: colors.text,
   },
   error: {
@@ -304,6 +404,11 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.regular,
     fontSize: 14,
     color: colors.textMuted,
+  },
+  footerLinkHit: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
   footerLink: {
     fontFamily: typography.fonts.semibold,

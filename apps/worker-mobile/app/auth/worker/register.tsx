@@ -6,7 +6,6 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthShell, AuthStepBar } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
-import { Button } from '@/components/ui/Button';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { WORKER_ROLE_OPTIONS } from '@/constants/workerRoleOptions';
 import { colors, radii, spacing, typography } from '@/constants/theme';
@@ -138,6 +137,7 @@ export default function WorkerRegisterScreen() {
       title="Join BridgeHive"
       subtitle="Create a worker account for nurses, ward assistants, and physiotherapists across Cyprus."
       centered={false}
+      tone="navy"
       footer={
         <View style={styles.footer}>
           <Text style={styles.footerText}>Already have an account?</Text>
@@ -153,7 +153,7 @@ export default function WorkerRegisterScreen() {
         </View>
       }
     >
-      <AuthStepBar current={step} total={STEPS.length} />
+      <AuthStepBar current={step} total={STEPS.length} tone="navy" />
       <View style={styles.stepHeader}>
         <Text style={styles.stepLabel}>
           Step {step} of {STEPS.length} · {stepKey}
@@ -167,6 +167,7 @@ export default function WorkerRegisterScreen() {
       {step === 1 ? (
         <View style={styles.fields}>
           <AuthField
+            tone="navy"
             label="Full name"
             icon="person-outline"
             value={fullName}
@@ -176,6 +177,7 @@ export default function WorkerRegisterScreen() {
             placeholder="Your full name"
           />
           <AuthField
+            tone="navy"
             label="Email"
             icon="mail-outline"
             value={email}
@@ -187,6 +189,7 @@ export default function WorkerRegisterScreen() {
             placeholder="name@email.com"
           />
           <AuthField
+            tone="navy"
             label="Phone"
             icon="call-outline"
             value={phone}
@@ -197,6 +200,7 @@ export default function WorkerRegisterScreen() {
             placeholder="+357 ..."
           />
           <AuthField
+            tone="navy"
             label="Password"
             icon="lock-closed-outline"
             value={password}
@@ -235,6 +239,7 @@ export default function WorkerRegisterScreen() {
             );
           })}
           <AuthField
+            tone="navy"
             label="Short bio (optional)"
             icon="create-outline"
             value={bio}
@@ -273,18 +278,39 @@ export default function WorkerRegisterScreen() {
       ) : null}
 
       <View style={styles.actions}>
-        <Button label="Back" variant="secondary" onPress={back} disabled={submitting} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          onPress={back}
+          disabled={submitting}
+          style={[styles.glassBtn, styles.glassSecondary, submitting && styles.btnDisabled]}
+        >
+          <Text style={styles.glassSecondaryLabel}>Back</Text>
+        </Pressable>
         {step < STEPS.length ? (
-          <Button label="Continue" variant="primary" onPress={next} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Continue"
+            onPress={next}
+            style={[styles.glassBtn, styles.glassPrimary]}
+          >
+            <Text style={styles.glassPrimaryLabel}>Continue</Text>
+          </Pressable>
         ) : (
-          <Button
-            label="Create account"
-            variant="primary"
-            loading={submitting}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Create account"
+            accessibilityState={{ busy: submitting, disabled: submitting }}
             onPress={() => void onSubmit()}
-          />
+            disabled={submitting}
+            style={[styles.glassBtn, styles.glassPrimary, submitting && styles.btnDisabled]}
+          >
+            <Text style={styles.glassPrimaryLabel}>
+              {submitting ? 'Creating…' : 'Create account'}
+            </Text>
+          </Pressable>
         )}
-        {step === 1 ? <GoogleSignInButton /> : null}
+        {step === 1 ? <GoogleSignInButton glass /> : null}
       </View>
     </AuthShell>
   );
@@ -298,7 +324,7 @@ const styles = StyleSheet.create({
   stepLabel: {
     fontFamily: typography.fonts.semibold,
     fontSize: 12,
-    color: colors.textMuted,
+    color: 'rgba(20, 169, 181, 0.72)',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
@@ -306,37 +332,37 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.displaySemibold,
     fontSize: 18,
     lineHeight: 24,
-    color: colors.text,
+    color: '#D7EEF2',
     letterSpacing: -0.2,
   },
   stepBody: {
     fontFamily: typography.fonts.regular,
     fontSize: 14,
     lineHeight: 20,
-    color: colors.textSecondary,
+    color: 'rgba(184, 228, 234, 0.78)',
   },
   fields: { gap: spacing.md },
   roleCard: {
     flexDirection: 'row',
     gap: spacing.md,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: 'rgba(20, 169, 181, 0.28)',
     borderRadius: radii.lg,
     padding: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: 'rgba(20, 169, 181, 0.08)',
     minHeight: 88,
     alignItems: 'flex-start',
   },
   roleCardSelected: {
-    borderColor: colors.tealStrong,
-    backgroundColor: colors.tealSoft,
+    borderColor: 'rgba(228, 179, 52, 0.55)',
+    backgroundColor: 'rgba(20, 169, 181, 0.18)',
   },
   roleIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: colors.borderStrong,
+    borderColor: 'rgba(20, 169, 181, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
@@ -354,25 +380,25 @@ const styles = StyleSheet.create({
   roleTitle: {
     fontFamily: typography.fonts.semibold,
     fontSize: 16,
-    color: colors.text,
+    color: '#D7EEF2',
   },
   roleBody: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
     lineHeight: 18,
-    color: colors.textSecondary,
+    color: 'rgba(184, 228, 234, 0.78)',
   },
   hint: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: 'rgba(184, 228, 234, 0.72)',
     lineHeight: 18,
   },
   reviewCard: {
     borderRadius: radii.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceSubdued,
+    borderColor: 'rgba(20, 169, 181, 0.28)',
+    backgroundColor: 'rgba(20, 169, 181, 0.1)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: 2,
@@ -380,21 +406,50 @@ const styles = StyleSheet.create({
   reviewLabel: {
     fontFamily: typography.fonts.medium,
     fontSize: 12,
-    color: colors.textMuted,
+    color: 'rgba(20, 169, 181, 0.72)',
     letterSpacing: 0.2,
   },
   reviewValue: {
     fontFamily: typography.fonts.semibold,
     fontSize: 16,
     lineHeight: 22,
-    color: colors.text,
+    color: '#D7EEF2',
   },
   error: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    color: colors.error,
+    color: '#FF8A80',
   },
   actions: { gap: spacing.sm, marginTop: spacing.sm },
+  glassBtn: {
+    minHeight: 48,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  glassSecondary: {
+    backgroundColor: 'rgba(20, 169, 181, 0.12)',
+    borderColor: 'rgba(20, 169, 181, 0.35)',
+  },
+  glassPrimary: {
+    backgroundColor: 'rgba(11, 42, 67, 0.55)',
+    borderColor: 'rgba(20, 169, 181, 0.45)',
+  },
+  glassSecondaryLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 16,
+    color: '#B8E4EA',
+  },
+  glassPrimaryLabel: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 16,
+    color: '#D7EEF2',
+  },
+  btnDisabled: {
+    opacity: 0.55,
+  },
   footer: {
     marginTop: spacing.xxl,
     alignItems: 'center',
@@ -403,7 +458,7 @@ const styles = StyleSheet.create({
   footerText: {
     fontFamily: typography.fonts.regular,
     fontSize: 14,
-    color: colors.textMuted,
+    color: 'rgba(184, 228, 234, 0.72)',
   },
   footerLinkHit: {
     minHeight: 44,
@@ -413,6 +468,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontFamily: typography.fonts.semibold,
     fontSize: 16,
-    color: colors.tealStrong,
+    color: '#B8E4EA',
   },
 });

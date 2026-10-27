@@ -58,12 +58,12 @@ const VARIANT: Record<
     iconBg: [colors.navy, colors.warning],
   },
   danger: {
-    bg: colors.errorLight,
-    border: colors.error,
-    fg: colors.navy,
-    body: colors.textSecondary,
+    bg: '#B42318',
+    border: '#8F1A12',
+    fg: colors.white,
+    body: 'rgba(255, 255, 255, 0.88)',
     icon: 'alert-circle',
-    iconBg: [colors.navySoft, colors.error],
+    iconBg: ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.12)'],
   },
 };
 
@@ -105,7 +105,6 @@ export function Banner({
           style={StyleSheet.absoluteFill}
         />
       ) : null}
-      <View style={[styles.accent, { backgroundColor: palette.border }]} />
       <View style={styles.row}>
         <LinearGradient
           colors={palette.iconBg}
@@ -113,7 +112,7 @@ export function Banner({
           end={{ x: 1, y: 1 }}
           style={styles.iconWrap}
         >
-          <Ionicons name={icon ?? palette.icon} size={20} color={colors.white} />
+          <Ionicons name={icon ?? palette.icon} size={16} color={colors.white} />
         </LinearGradient>
         <View style={styles.copy}>
           <Text style={[styles.title, { color: palette.fg }]}>{title}</Text>
@@ -141,55 +140,51 @@ export function Banner({
 
 const styles = StyleSheet.create({
   banner: {
-    borderRadius: radii.lg,
+    borderRadius: radii.xl,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: spacing.lg,
-    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
     overflow: 'hidden',
     position: 'relative',
   },
   bannerSuccess: {
     ...shadows.md,
-    borderWidth: 1.5,
-  },
-  accent: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
+    borderWidth: 1,
   },
   row: {
     flexDirection: 'row',
-    gap: spacing.md,
+    gap: spacing.sm,
     alignItems: 'flex-start',
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 1,
   },
   copy: {
     flex: 1,
-    gap: 6,
+    gap: 4,
     minWidth: 0,
-    paddingTop: 2,
   },
   title: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 17,
-    lineHeight: 22,
-    letterSpacing: -0.2,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    lineHeight: 20,
+    letterSpacing: -0.1,
   },
   body: {
     fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
-    paddingLeft: 52,
+    paddingLeft: 40,
   },
 });

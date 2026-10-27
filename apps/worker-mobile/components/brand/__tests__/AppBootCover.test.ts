@@ -81,9 +81,14 @@ describe('Auth journey source contracts', () => {
     const google = read('components/auth/GoogleSignInButton.tsx');
     expect(landing).toMatch(/GoogleSignInButton/);
     expect(landing).toMatch(/How would you like to continue/);
+    expect(landing).toMatch(/Create account/);
+    expect(landing).toMatch(/maxWidth:\s*280/);
+    expect(landing).toMatch(/\/welcome\?revisit=1/);
+    expect(read('app/welcome.tsx')).toMatch(/revisit/);
     expect(login).toMatch(/GoogleSignInButton/);
     expect(login).toMatch(/peekPendingShiftRoute/);
     expect(google).toMatch(/signInWithGoogle/);
+    expect(google).toMatch(/compact/);
   });
 
   it('uses a safe back fallback in AuthShell', () => {

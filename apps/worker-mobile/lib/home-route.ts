@@ -30,10 +30,11 @@ export function homeRouteForWorker(params: {
   const status = params.workerProfile.verification_status;
   if (status === 'verified') return '/(tabs)';
   if (RESTRICTED_STATUSES.has(status)) return '/auth/worker/restricted';
-  if (PENDING_REVIEW_STATUSES.has(status)) return '/auth/worker/pending';
-
-  // draft (and any other incomplete package state): documents when role is set
-  if (params.workerProfile.worker_role) return '/documents';
+  // Incomplete, submitted, or under-review workers stay on Account Setup —
+  // Credentials is a step inside that hub, not the post-auth home.
+  if (PENDING_REVIEW_STATUSES.has(status) || params.workerProfile.worker_role) {
+    return '/auth/worker/pending';
+  }
   return '/auth/worker/choose-role';
 }
 

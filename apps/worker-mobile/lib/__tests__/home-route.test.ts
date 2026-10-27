@@ -52,7 +52,7 @@ describe('homeRouteForWorker', () => {
     expect(isPendingReviewVerificationStatus('under_review')).toBe(true);
   });
 
-  it('routes draft workers with a role to documents', () => {
+  it('routes draft workers with a role to Account Setup (not Credentials alone)', () => {
     expect(
       homeRouteForWorker({
         hasSession: true,
@@ -62,7 +62,7 @@ describe('homeRouteForWorker', () => {
         },
         accountRejectionReason: null,
       }),
-    ).toBe('/documents');
+    ).toBe('/auth/worker/pending');
   });
 
   it('routes restricted verification statuses away from the marketplace', () => {

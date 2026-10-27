@@ -194,21 +194,23 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
 
   return (
     <Animated.View style={[styles.card, cardMotion]}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroBand}
-      >
+      <View style={styles.heroBand}>
+        <LinearGradient
+          pointerEvents="none"
+          colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Previous week"
             onPress={() => moveWeek(-1)}
-            style={styles.nav}
+            hitSlop={10}
+            style={({ pressed }) => [styles.nav, pressed && styles.navPressed]}
           >
-            <Ionicons name="chevron-back" size={18} color={colors.white} />
+            <Ionicons name="chevron-back" size={22} color={colors.white} />
           </Pressable>
           <View style={styles.heading}>
             <Text style={styles.kicker}>Schedule</Text>
@@ -218,9 +220,10 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
             accessibilityRole="button"
             accessibilityLabel="Next week"
             onPress={() => moveWeek(1)}
-            style={styles.nav}
+            hitSlop={10}
+            style={({ pressed }) => [styles.nav, pressed && styles.navPressed]}
           >
-            <Ionicons name="chevron-forward" size={18} color={colors.white} />
+            <Ionicons name="chevron-forward" size={22} color={colors.white} />
           </Pressable>
         </View>
 
@@ -236,7 +239,7 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
             <Text style={styles.statLabel}>open</Text>
           </View>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.body}>
         <View style={styles.tools}>
@@ -330,6 +333,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
     gap: spacing.md,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -337,14 +341,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   nav: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.22)',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+  },
+  navPressed: {
+    backgroundColor: 'rgba(255, 255, 255, 0.32)',
+    transform: [{ scale: 0.96 }],
   },
   heading: {
     flex: 1,

@@ -263,6 +263,19 @@ export default function ShiftDetailScreen() {
     openPositions > 0;
   const canComplete =
     canSubmitCompletedHours(assignment?.status) && ended;
+  const scheduledMinutes = scheduledWorkingMinutes(
+    shift.starts_at,
+    shift.ends_at,
+    shift.break_minutes,
+  );
+  const enteredMinutes = parseCompletedMinutes(hoursText, minutesText);
+  const hoursDiff =
+    enteredMinutes == null ? 0 : enteredMinutes - scheduledMinutes;
+  const applyCompletedMinutes = (total: number) => {
+    const next = minutesToHoursMinutes(Math.min(1440, Math.max(1, total)));
+    setHoursText(next.hours);
+    setMinutesText(next.minutes);
+  };
   const claimBlockedReason = !isVerified
     ? 'Complete account verification before claiming shifts.'
     : assignment
@@ -510,29 +523,124 @@ export default function ShiftDetailScreen() {
         {canComplete ? (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Completed hours</Text>
-            <Surface variant="subtle">
-              <View style={styles.hoursRow}>
-                <TextInput
-                  label="Hours"
-                  value={hoursText}
-                  onChangeText={setHoursText}
-                  keyboardType="number-pad"
-                  containerStyle={styles.hoursField}
-                />
-                <TextInput
-                  label="Minutes"
-                  value={minutesText}
-                  onChangeText={setMinutesText}
-                  keyboardType="number-pad"
-                  helpText="0–59"
-                  containerStyle={styles.hoursField}
-                />
+            <View style={styles.hoursCard}>
+              <LinearGradient
+                pointerEvents="none"
+                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.hoursHero}
+              >
+                <View style={styles.hoursHeroTop}>
+                  <View style={styles.hoursHeroIcon}>
+                    <Ionicons name="time" size={16} color={colors.white} />
+                  </View>
+                  <View style={styles.hoursHeroCopy}>
+                    <Text style={styles.hoursKicker}>Timesheet entry</Text>
+                    <Text style={styles.hoursHeroTitle}>
+                      {enteredMinutes != null
+                        ? formatDurationMinutes(enteredMinutes)
+                        : 'Enter time'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.hoursStatRow}>
+                  <View style={styles.hoursStat}>
+                    <Text style={styles.hoursStatLabel}>Scheduled</Text>
+                    <Text style={styles.hoursStatValue}>
+                      {formatDurationMinutes(scheduledMinutes)}
+                    </Text>
+                  </View>
+                  <View style={styles.hoursStatDivider} />
+                  <View style={styles.hoursStat}>
+                    <Text style={styles.hoursStatLabel}>Break</Text>
+                    <Text style={styles.hoursStatValue}>
+                      {shift.break_minutes} min
+                    </Text>
+                  </View>
+                  <View style={styles.hoursStatDivider} />
+                  <View style={styles.hoursStat}>
+                    <Text style={styles.hoursStatLabel}>Change</Text>
+                    <Text style={styles.hoursStatValue}>
+                      {hoursDiff === 0
+                        ? 'Matches'
+                        : `${hoursDiff > 0 ? '+' : ''}${hoursDiff} min`}
+                    </Text>
+                  </View>
+                </View>
+              </LinearGradient>
+
+              <View style={styles.hoursBody}>
+                <View style={styles.hoursRow}>
+                  <TextInput
+                    label="Hours"
+                    value={hoursText}
+                    onChangeText={setHoursText}
+                    keyboardType="number-pad"
+                    containerStyle={styles.hoursField}
+                  />
+                  <TextInput
+                    label="Minutes"
+                    value={minutesText}
+                    onChangeText={setMinutesText}
+                    keyboardType="number-pad"
+                    helpText="0–59"
+                    containerStyle={styles.hoursField}
+                  />
+                </View>
+
+                <View style={styles.hoursTools}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Subtract 15 minutes"
+                    onPress={() =>
+                      applyCompletedMinutes((enteredMinutes ?? scheduledMinutes) - 15)
+                    }
+                    style={({ pressed }) => [
+                      styles.hoursTool,
+                      pressed && styles.hoursToolPressed,
+                    ]}
+                  >
+                    <Ionicons name="remove" size={16} color={colors.navy} />
+                    <Text style={styles.hoursToolText}>15 min</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Reset to scheduled hours"
+                    onPress={() => applyCompletedMinutes(scheduledMinutes)}
+                    style={({ pressed }) => [
+                      styles.hoursTool,
+                      styles.hoursToolAccent,
+                      pressed && styles.hoursToolPressed,
+                    ]}
+                  >
+                    <Ionicons name="refresh" size={15} color={colors.tealStrong} />
+                    <Text style={[styles.hoursToolText, styles.hoursToolTextAccent]}>
+                      Reset
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Add 15 minutes"
+                    onPress={() =>
+                      applyCompletedMinutes((enteredMinutes ?? scheduledMinutes) + 15)
+                    }
+                    style={({ pressed }) => [
+                      styles.hoursTool,
+                      pressed && styles.hoursToolPressed,
+                    ]}
+                  >
+                    <Ionicons name="add" size={16} color={colors.navy} />
+                    <Text style={styles.hoursToolText}>15 min</Text>
+                  </Pressable>
+                </View>
+
+                <Text style={styles.hoursHint}>
+                  Prefills from scheduled length minus break. Adjust only if your
+                  completed time differs before submitting for organization review.
+                </Text>
               </View>
-              <Text style={styles.hint}>
-                Prefill uses the scheduled length minus break. Adjust if your completed
-                time differs before submitting.
-              </Text>
-            </Surface>
+            </View>
           </View>
         ) : null}
 
@@ -892,11 +1000,130 @@ const styles = StyleSheet.create({
     fontSize: typography.size.sm,
     color: colors.tealStrong,
   },
+  hoursCard: {
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: 'rgba(20, 169, 181, 0.2)',
+    ...shadows.md,
+  },
+  hoursHero: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  hoursHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  hoursHeroIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  hoursHeroCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  hoursKicker: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: colors.yellow,
+  },
+  hoursHeroTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 22,
+    letterSpacing: -0.3,
+    color: colors.white,
+  },
+  hoursStatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: radii.lg,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  hoursStat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  hoursStatDivider: {
+    width: StyleSheet.hairlineWidth,
+    alignSelf: 'stretch',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  hoursStatLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.7)',
+  },
+  hoursStatValue: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.white,
+  },
+  hoursBody: {
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
   hoursRow: {
     flexDirection: 'row',
     gap: spacing.md,
   },
   hoursField: {
     flex: 1,
+  },
+  hoursTools: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  hoursTool: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: radii.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceSubdued,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+  },
+  hoursToolAccent: {
+    backgroundColor: colors.tealSoft,
+    borderColor: 'rgba(20, 169, 181, 0.35)',
+  },
+  hoursToolPressed: {
+    opacity: 0.88,
+  },
+  hoursToolText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12,
+    color: colors.navy,
+  },
+  hoursToolTextAccent: {
+    color: colors.tealStrong,
+  },
+  hoursHint: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
   },
 });

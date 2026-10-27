@@ -79,7 +79,7 @@ export function GreetingHeader({
       <View style={styles.topRow}>
         <View style={styles.brandBlock}>
           <View style={styles.markChip}>
-            <BridgeHiveMark size={28} />
+            <BridgeHiveMark size={40} />
           </View>
           <View style={styles.brandCopy}>
             <Text style={styles.brandName}>Bridge Hive</Text>
@@ -216,14 +216,14 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   markChip: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 52,
+    height: 52,
+    borderRadius: 15,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.28)',
   },
   brandCopy: {
     flex: 1,

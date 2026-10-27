@@ -1,9 +1,5 @@
 import {
-  accountSetupNextStep,
-  canSubmitWorkerVerificationPackage,
   documentProgressCounts,
-  documentsSummaryLabel,
-  finalApprovalSummaryLabel,
   payoutAccountActionLabel,
   payoutSummaryLabel,
   WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE,
@@ -32,6 +28,10 @@ import { ProgressStep, type ProgressStepState } from '@/components/ui/ProgressSt
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { supabase } from '@/lib/supabase';
+import {
+  buildWorkerJourneySnapshot,
+  type WorkerJourneyAccountStatus,
+} from '@/lib/worker-journey';
 import { useAuth } from '@/providers/AuthProvider';
 
 type PayoutStatus =
@@ -170,47 +170,140 @@ function SetupAction({
   );
 }
 
-function NextStepCard({ body }: { body: string }) {
+function accountStatusTone(status: WorkerJourneyAccountStatus): {
+  icon: keyof typeof Ionicons.glyphMap;
+  accent: string;
+} {
+  switch (status) {
+    case 'fully_activated':
+      return { icon: 'checkmark-circle', accent: colors.success };
+    case 'action_required':
+    case 'restricted':
+      return { icon: 'alert-circle', accent: colors.error };
+    case 'ready_to_submit':
+      return { icon: 'send', accent: colors.yellow };
+    case 'submitted':
+    case 'under_review':
+      return { icon: 'time', accent: colors.tealStrong };
+    default:
+      return { icon: 'compass', accent: colors.yellow };
+  }
+}
+
+function AccountStatusCard({
+  status,
+  label,
+  summary,
+}: {
+  status: WorkerJourneyAccountStatus;
+  label: string;
+  summary: string;
+}) {
+  const tone = accountStatusTone(status);
+  return (
+    <View accessibilityRole="summary" style={styles.accountCard}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.accountTop}>
+        <View style={styles.accountIcon}>
+          <Ionicons name={tone.icon} size={18} color={tone.accent} />
+        </View>
+        <View style={styles.accountCopy}>
+          <Text style={styles.accountEyebrow}>Account status</Text>
+          <Text style={styles.accountLabel}>{label}</Text>
+          <Text style={styles.accountSummary}>{summary}</Text>
+        </View>
+      </View>
+      <View style={styles.accountFoot}>
+        <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.8)" />
+        <Text style={styles.accountFootText}>
+          Document “Accepted” is not marketplace access. Shifts unlock only after
+          administrator activation.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function NextStepCard({
+  body,
+  actionLabel,
+  onAction,
+}: {
+  body: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
   const reduced = useReducedMotion();
   const pulse = useSharedValue(1);
+  const sheen = useSharedValue(0);
 
   useEffect(() => {
     if (reduced) return;
     pulse.value = withRepeat(
-      withTiming(1.08, { duration: 1400, easing: Easing.inOut(Easing.ease) }),
+      withTiming(1.06, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
       -1,
       true,
     );
-  }, [pulse, reduced]);
+    sheen.value = withRepeat(
+      withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+  }, [pulse, reduced, sheen]);
 
   const iconStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
+  }));
+  const sheenStyle = useAnimatedStyle(() => ({
+    opacity: 0.08 + sheen.value * 0.14,
+    transform: [{ translateX: sheen.value * 40 }],
   }));
 
   return (
     <View accessibilityRole="alert" style={styles.nextCard}>
       <LinearGradient
         pointerEvents="none"
-        colors={['#F7FBFE', '#E7F3FB']}
+        colors={[colors.navy, '#0C3E56', colors.tealStrong]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.nextRail} />
-      <Animated.View style={iconStyle}>
+      <Animated.View pointerEvents="none" style={[styles.nextSheen, sheenStyle]}>
         <LinearGradient
-          colors={[colors.navy, colors.tealStrong]}
+          colors={['transparent', 'rgba(255,255,255,0.35)', 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.nextMark}
-        >
-          <Ionicons name="compass" size={16} color={colors.yellow} />
-        </LinearGradient>
+          style={StyleSheet.absoluteFill}
+        />
       </Animated.View>
-      <View style={styles.nextCopy}>
-        <Text style={styles.nextEyebrow}>Next step</Text>
-        <Text style={styles.nextBody}>{body}</Text>
+      <View style={styles.nextInner}>
+        <Animated.View style={iconStyle}>
+          <View style={styles.nextMark}>
+            <Ionicons name="sparkles" size={18} color={colors.yellow} />
+          </View>
+        </Animated.View>
+        <View style={styles.nextCopy}>
+          <Text style={styles.nextEyebrow}>Next step</Text>
+          <Text style={styles.nextBody}>{body}</Text>
+        </View>
       </View>
+      {actionLabel && onAction ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+          onPress={onAction}
+          style={({ pressed }) => [styles.nextCta, pressed && styles.nextCtaPressed]}
+        >
+          <Text style={styles.nextCtaText}>{actionLabel}</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.navy} />
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -437,12 +530,38 @@ function credentialsProgressDescription(progress: DocumentProgressCounts): strin
 
 function finalState(label: string): ProgressStepState {
   const lower = label.toLowerCase();
-  if (lower.includes('approved') || lower.includes('verified')) return 'approved';
-  if (lower.includes('reject')) return 'rejected';
-  if (lower.includes('review') || lower.includes('submitted') || lower.includes('administrative')) {
+  if (lower.includes('approved') || lower.includes('verified') || lower.includes('marketplace ready')) {
+    return 'approved';
+  }
+  if (lower.includes('reject') || lower.includes('suspended')) return 'rejected';
+  if (
+    lower.includes('review') ||
+    lower.includes('submitted') ||
+    lower.includes('administrative') ||
+    lower.includes('awaiting') ||
+    lower.includes('waiting')
+  ) {
     return 'under_review';
   }
   return 'not_started';
+}
+
+/** Shorter badge copy for the final-review step. */
+function finalStatusDisplay(label: string): string {
+  switch (label) {
+    case 'Waiting for document review':
+      return 'Awaiting documents';
+    case 'Waiting for payout approval':
+      return 'Awaiting payout';
+    case 'Ready for final administrative approval':
+      return 'Ready for admin';
+    case 'Approved for marketplace access':
+      return 'Marketplace ready';
+    case 'Suspended':
+      return 'Suspended';
+    default:
+      return 'Not ready';
+  }
 }
 
 export default function WorkerAccountSetupScreen() {
@@ -534,27 +653,18 @@ export default function WorkerAccountSetupScreen() {
   const verificationStatus = workerProfile?.verification_status ?? 'draft';
   const packageSubmitted =
     verificationStatus === 'submitted' || verificationStatus === 'under_review';
-  const canSubmitPackage = canSubmitWorkerVerificationPackage({
+  const journey = buildWorkerJourneySnapshot({
     role,
-    credentials,
     verificationStatus,
+    credentials,
+    payoutStatus,
   });
-  const docsLabel = documentsSummaryLabel({ role, credentials });
+  const canSubmitPackage = journey.canSubmitPackage;
+  const docsLabel = journey.documentsLabel;
   const progress = documentProgressCounts({ role, credentials });
   const payoutLabel = payoutStepLabel(payoutStatus);
-  const finalLabel = finalApprovalSummaryLabel({
-    verificationStatus,
-    accountStatus: undefined,
-    documentsLabel: docsLabel,
-    payoutStatus,
-  });
-  const nextStep = accountSetupNextStep({
-    documentsLabel: docsLabel,
-    payoutStatus,
-    finalLabel,
-    canSubmitPackage,
-    verificationStatus,
-  });
+  const finalLabel = journey.finalLabel;
+  const nextStep = journey.nextStep;
   const payoutButtonLabel = payoutAccountActionLabel(payoutStatus);
   const profileDone = Boolean(workerProfile?.worker_role);
 
@@ -590,11 +700,36 @@ export default function WorkerAccountSetupScreen() {
   };
 
   const shellTitle = packageSubmitted
-    ? 'Your profile is under review'
+    ? 'Your application is with BridgeHive'
     : 'Account Setup';
   const shellSubtitle = packageSubmitted
-    ? 'Our team is reviewing your credentials. We will notify you when your BridgeHive account is ready.'
-    : 'Complete each step before marketplace access. Final approval is an administrator action.';
+    ? 'Review is in progress. You can sign out and sign back in any time — shifts stay locked until activation.'
+    : 'Follow each step below. Marketplace access requires a separate administrator activation.';
+
+  const nextActionLabel = canSubmitPackage
+    ? 'Submit application for review'
+    : docsLabel === 'Complete' &&
+        (payoutStatus == null ||
+          payoutStatus === 'rejected' ||
+          payoutStatus === 'failed')
+      ? payoutButtonLabel
+      : docsLabel === 'Missing' || docsLabel === 'Partially uploaded'
+        ? 'Upload documents'
+        : journey.accountStatus === 'action_required'
+          ? 'Fix required items'
+          : undefined;
+  const nextActionHandler = canSubmitPackage
+    ? () => void onSubmitPackage()
+    : docsLabel === 'Complete' &&
+        (payoutStatus == null ||
+          payoutStatus === 'rejected' ||
+          payoutStatus === 'failed')
+      ? () => router.push(WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE)
+      : docsLabel === 'Missing' ||
+          docsLabel === 'Partially uploaded' ||
+          journey.accountStatus === 'action_required'
+        ? () => router.push('/documents')
+        : undefined;
 
   return (
     <AuthShell
@@ -603,7 +738,17 @@ export default function WorkerAccountSetupScreen() {
       showBack={false}
       centered={false}
     >
-      <NextStepCard body={nextStep} />
+      <AccountStatusCard
+        status={journey.accountStatus}
+        label={journey.accountLabel}
+        summary={journey.accountSummary}
+      />
+
+      <NextStepCard
+        body={nextStep}
+        actionLabel={nextActionLabel}
+        onAction={nextActionHandler}
+      />
 
       {(() => {
         const doneCount = [
@@ -655,9 +800,9 @@ export default function WorkerAccountSetupScreen() {
         />
         <ProgressStep
           step={4}
-          title="Final platform review"
-          description="Marketplace access requires approved documents, an approved payout account, and a separate administrator action."
-          statusLabel={finalLabel}
+          title="Final review"
+          description="After documents and payout are approved, an administrator unlocks marketplace access."
+          statusLabel={finalStatusDisplay(finalLabel)}
           state={finalState(finalLabel)}
           isCurrent={packageSubmitted || finalState(finalLabel) === 'under_review'}
           isLast
@@ -669,6 +814,14 @@ export default function WorkerAccountSetupScreen() {
           {error}
         </Text>
       ) : null}
+
+      <View style={styles.laterBox}>
+        <Ionicons name="log-out-outline" size={16} color={colors.tealStrong} />
+        <Text style={styles.laterText}>
+          Need to leave? Sign out safely and sign in later with the same email. Your
+          progress is saved — you will return to Account Setup until activation.
+        </Text>
+      </View>
 
       <View style={styles.actions}>
         {canSubmitPackage ? (
@@ -710,6 +863,87 @@ export default function WorkerAccountSetupScreen() {
 }
 
 const styles = StyleSheet.create({
+  accountCard: {
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    padding: spacing.lg,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(20, 169, 181, 0.35)',
+    ...shadows.lg,
+  },
+  accountTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  accountIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  accountCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  accountEyebrow: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: colors.yellow,
+  },
+  accountLabel: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 18,
+    letterSpacing: -0.3,
+    color: colors.white,
+  },
+  accountSummary: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.88)',
+  },
+  accountFoot: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderRadius: radii.lg,
+    padding: 10,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  accountFootText: {
+    flex: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    lineHeight: 17,
+    color: 'rgba(255,255,255,0.86)',
+  },
+  laterBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginTop: spacing.sm,
+    borderRadius: radii.lg,
+    padding: spacing.md,
+    backgroundColor: colors.tealSoft,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.28)',
+  },
+  laterText: {
+    flex: 1,
+    fontFamily: typography.fonts.regular,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.navy,
+  },
   steps: {
     gap: spacing.sm,
     marginTop: spacing.sm,
@@ -781,8 +1015,7 @@ const styles = StyleSheet.create({
   setupAction: {
     minHeight: 52,
     borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: '#D5E2EE',
+    borderWidth: 0,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
@@ -809,51 +1042,73 @@ const styles = StyleSheet.create({
     color: colors.navy,
   },
   nextCard: {
-    minHeight: 72,
     borderRadius: radii.xl,
     borderWidth: 1,
-    borderColor: '#D3E4F2',
+    borderColor: 'rgba(20, 169, 181, 0.35)',
     overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingRight: spacing.md,
-    paddingLeft: spacing.md,
-    backgroundColor: '#F7FBFE',
-    ...shadows.sm,
+    gap: spacing.md,
+    padding: spacing.lg,
+    backgroundColor: colors.navy,
+    ...shadows.lg,
   },
-  nextRail: {
+  nextSheen: {
     position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-    backgroundColor: colors.tealStrong,
+    top: -20,
+    left: -40,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+  },
+  nextInner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   nextMark: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   nextCopy: {
     flex: 1,
-    gap: 2,
+    gap: 4,
     minWidth: 0,
   },
   nextEyebrow: {
-    fontFamily: typography.fonts.displaySemibold,
+    fontFamily: typography.fonts.semibold,
     fontSize: 11,
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: colors.tealStrong,
+    color: colors.yellow,
   },
   nextBody: {
-    fontFamily: typography.fonts.medium,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    lineHeight: 22,
+    letterSpacing: -0.2,
+    color: colors.white,
+  },
+  nextCta: {
+    minHeight: 44,
+    borderRadius: radii.full,
+    backgroundColor: colors.white,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  nextCtaPressed: {
+    opacity: 0.9,
+  },
+  nextCtaText: {
+    fontFamily: typography.fonts.semibold,
     fontSize: 14,
-    lineHeight: 20,
     color: colors.navy,
   },
   reviewAction: {

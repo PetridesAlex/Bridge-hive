@@ -1,5 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { WORKER_ROLE_LABELS } from '@bridge-hive/domain';
 
@@ -9,13 +11,12 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { IconButton } from '@/components/ui/IconButton';
 import { ListGroupSeparator } from '@/components/ui/Card';
 import { OfflineState } from '@/components/ui/OfflineState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useShifts } from '@/hooks/useShifts';
 import type { MarketplaceShift } from '@/lib/queries';
@@ -72,13 +73,22 @@ export default function ShiftsScreen() {
         subtitle="Find flexible shifts that match your role."
         right={
           isVerified ? (
-            <IconButton
-              icon="calendar-outline"
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel="Open shift calendar"
               onPress={() => router.push('/shifts/calendar')}
-              color={colors.tealStrong}
-              backgroundColor={colors.tealSoft}
-            />
+              style={({ pressed }) => [styles.calCta, pressed && styles.calCtaPressed]}
+            >
+              <LinearGradient
+                pointerEvents="none"
+                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Ionicons name="calendar" size={16} color={colors.white} />
+              <Text style={styles.calCtaText}>Calendar</Text>
+            </Pressable>
           ) : undefined
         }
       />
@@ -178,6 +188,26 @@ export default function ShiftsScreen() {
 const styles = StyleSheet.create({
   banner: {
     marginBottom: spacing.md,
+  },
+  calCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: radii.full,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(20, 169, 181, 0.35)',
+  },
+  calCtaPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  calCtaText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.white,
   },
   loading: {
     gap: spacing.md,

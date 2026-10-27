@@ -250,11 +250,15 @@ export default function AccountHubScreen() {
           <StatusBadge
             label={verificationLabel(workerProfile?.verification_status)}
             tone={verificationTone(workerProfile?.verification_status)}
+            solid={workerProfile?.verification_status === 'verified'}
             icon="shield-checkmark-outline"
           />
           <StatusBadge
             label={billingStandingLabel(billing?.standing)}
             tone={billing?.standing === 'restricted' ? 'danger' : 'success'}
+            solid={
+              billing?.standing === 'restricted' || billing?.standing === 'good_standing'
+            }
             icon="card-outline"
           />
         </View>

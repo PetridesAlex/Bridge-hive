@@ -50,6 +50,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3e5c5adc-d6a0-4877-ab04-2e3eb8cf3802"
+      }
+    },
+    "owner": "webrunner-agency"
   }
 }

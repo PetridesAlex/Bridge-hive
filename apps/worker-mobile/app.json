@@ -10,7 +10,8 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bridgehive.worker"
+      "bundleIdentifier": "com.bridgehive.worker",
+      "buildNumber": "1"
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +21,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.bridgehive.worker"
+      "package": "com.bridgehive.worker",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",

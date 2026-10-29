@@ -101,6 +101,7 @@ export default function WorkerLoginScreen() {
             onPress={() => router.push('/auth/worker/register')}
             accessibilityRole="link"
             accessibilityLabel="Create professional account"
+            style={styles.footerLinkHit}
           >
             <Text style={styles.footerLink}>Create professional account</Text>
           </DynamicPressable>
@@ -158,8 +159,7 @@ export default function WorkerLoginScreen() {
 
 const styles = StyleSheet.create({
   actions: {
-    gap: spacing.md,
-    marginTop: spacing.sm,
+    gap: spacing.sm,
   },
   error: {
     fontFamily: typography.fonts.regular,
@@ -178,10 +178,17 @@ const styles = StyleSheet.create({
     color: '#B8E4EA',
     textAlign: 'center',
   },
+  /** One line on standard phones; wraps gracefully with large text. */
   footer: {
-    marginTop: spacing.lg,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    columnGap: 6,
+  },
+  footerLinkHit: {
+    minHeight: 44,
+    justifyContent: 'center',
   },
   footerText: {
     fontFamily: typography.fonts.medium,

@@ -20,6 +20,7 @@ import Animated, {
 import { AuthShell } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useAuthDensity } from '@/hooks/useAuthDensity';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -201,6 +202,7 @@ function FooterEmailLink({ onPress }: { onPress: () => void }) {
 export default function WorkerAuthLandingScreen() {
   const { session, loading, homeRoute } = useAuth();
   const reduced = useReducedMotion();
+  const density = useAuthDensity();
 
   if (!loading && session) {
     return <Redirect href={homeRoute as never} />;
@@ -224,7 +226,7 @@ export default function WorkerAuthLandingScreen() {
         </Animated.View>
       }
     >
-      <View style={styles.actions}>
+      <View style={[styles.actions, density === 'compact' && styles.actionsTight]}>
         <Animated.View entering={enter(80)} style={styles.actionSlot}>
           <ChoicePrimary
             label="Create account"
@@ -250,6 +252,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     width: '100%',
     alignItems: 'center',
+  },
+  actionsTight: {
+    gap: spacing.sm + 2,
   },
   actionSlot: {
     width: '100%',
@@ -323,7 +328,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    minHeight: 48,
+    minHeight: 44,
     justifyContent: 'center',
   },
   footerChip: {

@@ -1,13 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { radii, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import type { BillingRestrictionSummary } from '@/lib/invoices';
 import { formatMoney, formatShortDate } from '@/utils/format';
+
+/** Website console palette: sidebar ink, muted slate text, honey accent. */
+const SIDEBAR = '#0B2A43';
+const SIDEBAR_TEXT = '#DCE8EE';
+const SIDEBAR_MUTED = '#91A8B5';
 
 type Props = {
   summary: BillingRestrictionSummary;
@@ -34,6 +40,13 @@ export function BillingRestrictionBanner({ summary }: Props) {
       style={styles.wrap}
       accessibilityRole="alert"
     >
+      <LinearGradient
+        pointerEvents="none"
+        colors={[colors.teal, colors.yellow, colors.teal]}
+        start={{ x: 0, y: 0.5 }}
+        end={{ x: 1, y: 0.5 }}
+        style={styles.accentBar}
+      />
       <Pressable
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
@@ -47,7 +60,7 @@ export function BillingRestrictionBanner({ summary }: Props) {
         style={({ pressed }) => [styles.bar, pressed && styles.barPressed]}
       >
         <View style={styles.iconWrap}>
-          <Ionicons name="alert-circle" size={18} color="#B42318" />
+          <Ionicons name="alert-circle" size={20} color={colors.yellow} />
         </View>
         <View style={styles.barCopy}>
           <Text style={styles.title}>Marketplace access paused</Text>
@@ -58,7 +71,7 @@ export function BillingRestrictionBanner({ summary }: Props) {
         <Ionicons
           name={open ? 'chevron-up' : 'chevron-down'}
           size={18}
-          color="rgba(180, 35, 24, 0.72)"
+          color={SIDEBAR_MUTED}
         />
       </Pressable>
 
@@ -75,7 +88,7 @@ export function BillingRestrictionBanner({ summary }: Props) {
               onPress={goInvoices}
               style={({ pressed }) => [styles.actionPrimary, pressed && styles.actionPressed]}
             >
-              <Ionicons name="document-text-outline" size={15} color="#9B1C14" />
+              <Ionicons name="document-text-outline" size={15} color={colors.navy} />
               <Text style={styles.actionPrimaryText}>View invoices</Text>
             </Pressable>
             <Pressable
@@ -84,7 +97,7 @@ export function BillingRestrictionBanner({ summary }: Props) {
               onPress={goInvoices}
               style={({ pressed }) => [styles.actionSecondary, pressed && styles.actionPressed]}
             >
-              <Ionicons name="card-outline" size={15} color="#9B1C14" />
+              <Ionicons name="card-outline" size={15} color={colors.white} />
               <Text style={styles.actionSecondaryText}>Pay now</Text>
             </Pressable>
           </View>
@@ -99,9 +112,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderRadius: radii.xl,
     overflow: 'hidden',
-    backgroundColor: 'rgba(180, 35, 24, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(180, 35, 24, 0.28)',
+    backgroundColor: SIDEBAR,
+  },
+  accentBar: {
+    height: 4,
   },
   bar: {
     flexDirection: 'row',
@@ -109,18 +123,17 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    backgroundColor: 'rgba(180, 35, 24, 0.08)',
   },
   barPressed: {
-    backgroundColor: 'rgba(180, 35, 24, 0.16)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(180, 35, 24, 0.14)',
+    backgroundColor: 'rgba(224, 170, 24, 0.16)',
   },
   barCopy: {
     flex: 1,
@@ -131,69 +144,63 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.semibold,
     fontSize: 15,
     lineHeight: 20,
-    color: '#9B1C14',
+    color: colors.white,
   },
   amountLine: {
     fontFamily: typography.fonts.medium,
     fontSize: 13,
     lineHeight: 18,
-    color: 'rgba(155, 28, 20, 0.78)',
+    color: colors.yellow,
   },
   panel: {
     paddingHorizontal: 14,
     paddingBottom: 14,
     paddingTop: 12,
     gap: 12,
-    backgroundColor: 'rgba(180, 35, 24, 0.06)',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(180, 35, 24, 0.22)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
   },
   body: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
     lineHeight: 18,
-    color: 'rgba(122, 20, 16, 0.88)',
-    paddingLeft: 46,
+    color: SIDEBAR_TEXT,
+    paddingLeft: 48,
   },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    paddingLeft: 46,
+    paddingLeft: 48,
   },
   actionPrimary: {
     minHeight: 40,
     borderRadius: radii.full,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(180, 35, 24, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(180, 35, 24, 0.28)',
+    backgroundColor: colors.yellow,
   },
   actionPrimaryText: {
     fontFamily: typography.fonts.semibold,
     fontSize: 13,
-    color: '#9B1C14',
+    color: colors.navy,
   },
   actionSecondary: {
     minHeight: 40,
     borderRadius: radii.full,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(180, 35, 24, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(180, 35, 24, 0.22)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   actionSecondaryText: {
     fontFamily: typography.fonts.semibold,
     fontSize: 13,
-    color: '#9B1C14',
+    color: colors.white,
   },
   actionPressed: {
     opacity: 0.88,

@@ -202,30 +202,19 @@ function AccountStatusCard({
   const tone = accountStatusTone(status);
   return (
     <View accessibilityRole="summary" style={styles.accountCard}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
       <View style={styles.accountTop}>
-        <View style={styles.accountIcon}>
-          <Ionicons name={tone.icon} size={18} color={tone.accent} />
-        </View>
+        <Ionicons name={tone.icon} size={22} color={tone.accent} style={styles.accountIcon} />
         <View style={styles.accountCopy}>
           <Text style={styles.accountEyebrow}>Account status</Text>
           <Text style={styles.accountLabel}>{label}</Text>
           <Text style={styles.accountSummary}>{summary}</Text>
         </View>
       </View>
-      <View style={styles.accountFoot}>
-        <Ionicons name="information-circle-outline" size={14} color="rgba(255,255,255,0.8)" />
-        <Text style={styles.accountFootText}>
-          Document “Accepted” is not marketplace access. Shifts unlock only after
-          administrator activation.
-        </Text>
-      </View>
+      <View style={styles.accountDivider} />
+      <Text style={styles.accountFootText}>
+        Document “Accepted” is not marketplace access. Shifts unlock only after
+        administrator activation.
+      </Text>
     </View>
   );
 }
@@ -239,55 +228,12 @@ function NextStepCard({
   actionLabel?: string;
   onAction?: () => void;
 }) {
-  const reduced = useReducedMotion();
-  const pulse = useSharedValue(1);
-  const sheen = useSharedValue(0);
-
-  useEffect(() => {
-    if (reduced) return;
-    pulse.value = withRepeat(
-      withTiming(1.06, { duration: 1600, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-    sheen.value = withRepeat(
-      withTiming(1, { duration: 2800, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
-    );
-  }, [pulse, reduced, sheen]);
-
-  const iconStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-  }));
-  const sheenStyle = useAnimatedStyle(() => ({
-    opacity: 0.08 + sheen.value * 0.14,
-    transform: [{ translateX: sheen.value * 40 }],
-  }));
-
   return (
     <View accessibilityRole="alert" style={styles.nextCard}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <Animated.View pointerEvents="none" style={[styles.nextSheen, sheenStyle]}>
-        <LinearGradient
-          colors={['transparent', 'rgba(255,255,255,0.35)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
       <View style={styles.nextInner}>
-        <Animated.View style={iconStyle}>
-          <View style={styles.nextMark}>
-            <Ionicons name="sparkles" size={18} color={colors.yellow} />
-          </View>
-        </Animated.View>
+        <View style={styles.nextMark}>
+          <Ionicons name="arrow-forward-circle" size={22} color={colors.tealStrong} />
+        </View>
         <View style={styles.nextCopy}>
           <Text style={styles.nextEyebrow}>Next step</Text>
           <Text style={styles.nextBody}>{body}</Text>
@@ -301,7 +247,7 @@ function NextStepCard({
           style={({ pressed }) => [styles.nextCta, pressed && styles.nextCtaPressed]}
         >
           <Text style={styles.nextCtaText}>{actionLabel}</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.navy} />
+          <Ionicons name="arrow-forward" size={16} color={colors.white} />
         </Pressable>
       ) : null}
     </View>
@@ -863,14 +809,13 @@ export default function WorkerAccountSetupScreen() {
 }
 
 const styles = StyleSheet.create({
+  /** Flat navy surface — no border or gradient; hierarchy comes from type and one hairline. */
   accountCard: {
     borderRadius: radii.xl,
-    overflow: 'hidden',
     padding: spacing.lg,
     gap: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(20, 169, 181, 0.35)',
-    ...shadows.lg,
+    backgroundColor: colors.navy,
+    ...shadows.md,
   },
   accountTop: {
     flexDirection: 'row',
@@ -878,14 +823,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   accountIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    marginTop: 2,
+  },
+  accountDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   accountCopy: {
     flex: 1,
@@ -911,26 +853,16 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: 'rgba(255,255,255,0.88)',
   },
-  accountFoot: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    borderRadius: radii.lg,
-    padding: 10,
-    backgroundColor: 'rgba(0,0,0,0.18)',
-  },
   accountFootText: {
-    flex: 1,
-    fontFamily: typography.fonts.medium,
+    fontFamily: typography.fonts.regular,
     fontSize: 12,
     lineHeight: 17,
-    color: 'rgba(255,255,255,0.86)',
+    color: 'rgba(255,255,255,0.68)',
   },
   laterBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    marginTop: spacing.sm,
     borderRadius: radii.lg,
     padding: spacing.md,
     backgroundColor: colors.tealSoft,
@@ -946,13 +878,11 @@ const styles = StyleSheet.create({
   },
   steps: {
     gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   error: {
     fontFamily: typography.fonts.medium,
     fontSize: 14,
     color: colors.error,
-    marginTop: spacing.sm,
   },
   noticeOverlay: {
     flex: 1,
@@ -1011,7 +941,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.white,
   },
-  actions: { gap: spacing.sm, marginTop: spacing.md },
+  actions: { gap: spacing.sm },
   setupAction: {
     minHeight: 52,
     borderRadius: radii.xl,
@@ -1041,23 +971,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.navy,
   },
+  /** Flat soft-teal surface — no border, gradient or shadow. */
   nextCard: {
     borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(20, 169, 181, 0.35)',
-    overflow: 'hidden',
     gap: spacing.md,
     padding: spacing.lg,
-    backgroundColor: colors.navy,
-    ...shadows.lg,
-  },
-  nextSheen: {
-    position: 'absolute',
-    top: -20,
-    left: -40,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
+    backgroundColor: colors.tealSoft,
   },
   nextInner: {
     flexDirection: 'row',
@@ -1065,14 +984,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   nextMark: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.22)',
+    marginTop: 1,
   },
   nextCopy: {
     flex: 1,
@@ -1084,19 +996,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: colors.yellow,
+    color: colors.tealStrong,
   },
   nextBody: {
     fontFamily: typography.fonts.displaySemibold,
     fontSize: 16,
     lineHeight: 22,
     letterSpacing: -0.2,
-    color: colors.white,
+    color: colors.navy,
   },
   nextCta: {
     minHeight: 44,
     borderRadius: radii.full,
-    backgroundColor: colors.white,
+    backgroundColor: colors.navy,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1109,7 +1021,7 @@ const styles = StyleSheet.create({
   nextCtaText: {
     fontFamily: typography.fonts.semibold,
     fontSize: 14,
-    color: colors.navy,
+    color: colors.white,
   },
   reviewAction: {
     minHeight: 52,
@@ -1158,7 +1070,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: spacing.md,
+    minHeight: 44,
     paddingVertical: 8,
     paddingHorizontal: spacing.md,
     borderRadius: 999,

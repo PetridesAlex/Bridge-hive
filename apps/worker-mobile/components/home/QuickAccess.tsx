@@ -5,6 +5,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   FadeInDown,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -64,8 +65,15 @@ const ITEMS: AccessItem[] = [
 function AccessCard({ item, index }: { item: AccessItem; index: number }) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
+  const nudge = useSharedValue(0);
   const motionStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
+  }));
+  const arrowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(nudge.value, [0, 1], [0, 3]) }],
+  }));
+  const iconStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(nudge.value, [0, 1], [1, 1.08]) }],
   }));
 
   return (
@@ -76,10 +84,14 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
       <Pressable
         onPress={() => router.push(item.href as never)}
         onPressIn={() => {
-          if (!reduced) scale.value = withSpring(0.975, { damping: 16, stiffness: 340 });
+          if (reduced) return;
+          scale.value = withSpring(0.975, { damping: 16, stiffness: 340 });
+          nudge.value = withSpring(1, { damping: 14, stiffness: 300 });
         }}
         onPressOut={() => {
-          if (!reduced) scale.value = withSpring(1, { damping: 14, stiffness: 280 });
+          if (reduced) return;
+          scale.value = withSpring(1, { damping: 14, stiffness: 280 });
+          nudge.value = withSpring(0, { damping: 12, stiffness: 240 });
         }}
         accessibilityRole="button"
         accessibilityLabel={item.title}
@@ -87,7 +99,7 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
           styles.card,
           {
             backgroundColor: item.soft,
-            borderColor: item.border,
+            shadowColor: item.gradient[1],
           },
           pressed && styles.cardPressed,
         ]}
@@ -99,16 +111,16 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.rail, { backgroundColor: item.gradient[1] }]} />
-
-        <LinearGradient
-          colors={item.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.icon}
-        >
-          <Ionicons name={item.icon} size={20} color={colors.white} />
-        </LinearGradient>
+        <Animated.View style={iconStyle}>
+          <LinearGradient
+            colors={item.gradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.icon}
+          >
+            <Ionicons name={item.icon} size={20} color={colors.white} />
+          </LinearGradient>
+        </Animated.View>
 
         <View style={styles.copy}>
           <View style={styles.titleRow}>
@@ -125,7 +137,9 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
         </View>
 
         <View style={[styles.chevron, { backgroundColor: `${item.gradient[1]}22` }]}>
-          <Ionicons name="arrow-forward" size={16} color={item.gradient[0]} />
+          <Animated.View style={arrowStyle}>
+            <Ionicons name="arrow-forward" size={16} color={item.gradient[0]} />
+          </Animated.View>
         </View>
       </Pressable>
     </Animated.View>
@@ -204,24 +218,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     minHeight: 84,
-    borderRadius: radii.lg,
-    borderWidth: 1.5,
+    borderRadius: radii.xl,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingLeft: spacing.lg + 4,
     overflow: 'hidden',
     position: 'relative',
     ...shadows.sm,
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
   },
   cardPressed: {
     opacity: 0.92,
-  },
-  rail: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 5,
   },
   icon: {
     width: 44,

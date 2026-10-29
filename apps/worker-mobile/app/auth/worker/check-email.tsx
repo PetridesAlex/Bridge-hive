@@ -213,21 +213,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.success,
     textAlign: 'center',
-    marginTop: spacing.sm,
   },
   error: {
     fontFamily: typography.fonts.medium,
     fontSize: 14,
     color: colors.error,
     textAlign: 'center',
-    marginTop: spacing.sm,
   },
-  actions: { gap: spacing.sm, marginTop: spacing.lg, width: '100%' },
+  actions: { gap: spacing.sm, width: '100%' },
   support: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,
     color: colors.textMuted,
     textAlign: 'center',
-    marginTop: spacing.md,
   },
 });

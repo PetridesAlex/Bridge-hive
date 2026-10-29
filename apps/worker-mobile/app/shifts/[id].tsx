@@ -289,19 +289,7 @@ export default function ShiftDetailScreen() {
     canPerformLiveMarketplaceActions &&
     canSubmitCompletedHours(assignment?.status) &&
     ended;
-  const scheduledMinutes = scheduledWorkingMinutes(
-    shift.starts_at,
-    shift.ends_at,
-    shift.break_minutes,
-  );
   const enteredMinutes = parseCompletedMinutes(hoursText, minutesText);
-  const hoursDiff =
-    enteredMinutes == null ? 0 : enteredMinutes - scheduledMinutes;
-  const applyCompletedMinutes = (total: number) => {
-    const next = minutesToHoursMinutes(Math.min(1440, Math.max(1, total)));
-    setHoursText(next.hours);
-    setMinutesText(next.minutes);
-  };
   const claimBlockedReason = demoShift
     ? 'Demonstration shifts cannot be claimed.'
     : !isVerified
@@ -565,35 +553,11 @@ export default function ShiftDetailScreen() {
                     <Ionicons name="time" size={16} color={colors.white} />
                   </View>
                   <View style={styles.hoursHeroCopy}>
-                    <Text style={styles.hoursKicker}>Timesheet entry</Text>
+                    <Text style={styles.hoursKicker}>Completed hours</Text>
                     <Text style={styles.hoursHeroTitle}>
                       {enteredMinutes != null
                         ? formatDurationMinutes(enteredMinutes)
                         : 'Enter time'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.hoursStatRow}>
-                  <View style={styles.hoursStat}>
-                    <Text style={styles.hoursStatLabel}>Scheduled</Text>
-                    <Text style={styles.hoursStatValue}>
-                      {formatDurationMinutes(scheduledMinutes)}
-                    </Text>
-                  </View>
-                  <View style={styles.hoursStatDivider} />
-                  <View style={styles.hoursStat}>
-                    <Text style={styles.hoursStatLabel}>Break</Text>
-                    <Text style={styles.hoursStatValue}>
-                      {shift.break_minutes} min
-                    </Text>
-                  </View>
-                  <View style={styles.hoursStatDivider} />
-                  <View style={styles.hoursStat}>
-                    <Text style={styles.hoursStatLabel}>Change</Text>
-                    <Text style={styles.hoursStatValue}>
-                      {hoursDiff === 0
-                        ? 'Matches'
-                        : `${hoursDiff > 0 ? '+' : ''}${hoursDiff} min`}
                     </Text>
                   </View>
                 </View>
@@ -617,57 +581,6 @@ export default function ShiftDetailScreen() {
                     containerStyle={styles.hoursField}
                   />
                 </View>
-
-                <View style={styles.hoursTools}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Subtract 15 minutes"
-                    onPress={() =>
-                      applyCompletedMinutes((enteredMinutes ?? scheduledMinutes) - 15)
-                    }
-                    style={({ pressed }) => [
-                      styles.hoursTool,
-                      pressed && styles.hoursToolPressed,
-                    ]}
-                  >
-                    <Ionicons name="remove" size={16} color={colors.navy} />
-                    <Text style={styles.hoursToolText}>15 min</Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Reset to scheduled hours"
-                    onPress={() => applyCompletedMinutes(scheduledMinutes)}
-                    style={({ pressed }) => [
-                      styles.hoursTool,
-                      styles.hoursToolAccent,
-                      pressed && styles.hoursToolPressed,
-                    ]}
-                  >
-                    <Ionicons name="refresh" size={15} color={colors.tealStrong} />
-                    <Text style={[styles.hoursToolText, styles.hoursToolTextAccent]}>
-                      Reset
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel="Add 15 minutes"
-                    onPress={() =>
-                      applyCompletedMinutes((enteredMinutes ?? scheduledMinutes) + 15)
-                    }
-                    style={({ pressed }) => [
-                      styles.hoursTool,
-                      pressed && styles.hoursToolPressed,
-                    ]}
-                  >
-                    <Ionicons name="add" size={16} color={colors.navy} />
-                    <Text style={styles.hoursToolText}>15 min</Text>
-                  </Pressable>
-                </View>
-
-                <Text style={styles.hoursHint}>
-                  Prefills from scheduled length minus break. Adjust only if your
-                  completed time differs before submitting for organization review.
-                </Text>
               </View>
             </View>
           </View>

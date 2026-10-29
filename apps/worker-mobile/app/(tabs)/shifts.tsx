@@ -12,7 +12,6 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { ListGroupSeparator } from '@/components/ui/Card';
 import { OfflineState } from '@/components/ui/OfflineState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
@@ -96,10 +95,10 @@ export default function ShiftsScreen() {
                 colors={[colors.navy, '#0C3E56', colors.tealStrong]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
+                style={[StyleSheet.absoluteFill, styles.calCtaFill]}
               />
-              <Ionicons name="calendar" size={16} color={colors.white} />
-              <Text style={styles.calCtaText}>Calendar</Text>
+              <Ionicons name="calendar" size={22} color={colors.white} />
+              <View pointerEvents="none" style={styles.calCtaDot} />
             </Pressable>
           ) : undefined
         }
@@ -173,16 +172,8 @@ export default function ShiftsScreen() {
             if (item.type === 'header') {
               return <Text style={[styles.groupTitle, index > 0 && styles.groupTitleSpaced]}>{item.title}</Text>;
             }
-            const showTopRadius = item.first;
-            const showBottomRadius = item.last;
             return (
-              <View
-                style={[
-                  styles.groupItem,
-                  showTopRadius && styles.groupTop,
-                  showBottomRadius && styles.groupBottom,
-                ]}
-              >
+              <View style={[styles.groupItem, item.last && styles.groupItemLast]}>
                 <ShiftCard
                   shift={item.shift}
                   organizationName={item.shift.organization_name ?? undefined}
@@ -193,7 +184,6 @@ export default function ShiftsScreen() {
                   }
                   onPress={() => router.push(`/shifts/${item.shift.id}`)}
                 />
-                {!item.last ? <ListGroupSeparator /> : null}
               </View>
             );
           }}
@@ -208,24 +198,31 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   calCta: {
-    flexDirection: 'row',
+    width: 48,
+    height: 48,
     alignItems: 'center',
-    gap: 6,
-    minHeight: 40,
-    paddingHorizontal: 14,
+    justifyContent: 'center',
     borderRadius: radii.full,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(20, 169, 181, 0.35)',
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.28,
+    shadowRadius: 12,
   },
   calCtaPressed: {
     opacity: 0.9,
     transform: [{ scale: 0.98 }],
   },
-  calCtaText: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 13,
-    color: colors.white,
+  calCtaFill: {
+    borderRadius: 24,
+  },
+  calCtaDot: {
+    position: 'absolute',
+    top: 11,
+    right: 11,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.yellow,
   },
   loading: {
     gap: spacing.md,
@@ -248,21 +245,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   groupItem: {
-    backgroundColor: colors.card,
-    borderColor: 'rgba(20, 169, 181, 0.14)',
-    borderLeftWidth: StyleSheet.hairlineWidth,
-    borderRightWidth: StyleSheet.hairlineWidth,
-    overflow: 'hidden',
-  },
-  groupTop: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-  },
-  groupBottom: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
     marginBottom: spacing.md,
+  },
+  groupItemLast: {
+    marginBottom: spacing.lg,
   },
 });

@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -16,11 +17,13 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useAuthDensity } from '@/hooks/useAuthDensity';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { welcomeMetrics } from '@/lib/auth-density';
 import {
   hasCompletedOnboarding,
   markOnboardingSeen,
@@ -228,6 +231,13 @@ export default function WelcomeScreen() {
   const params = useLocalSearchParams<{ revisit?: string }>();
   const revisit = params.revisit === '1';
   const reduced = useReducedMotion();
+  const insets = useSafeAreaInsets();
+  const density = useAuthDensity();
+  const w = welcomeMetrics(density);
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  /** Scroll only when content genuinely overflows (very small phones / large text). */
+  const overflowing = viewportHeight > 0 && contentHeight > viewportHeight + 1;
   const [checking, setChecking] = useState(true);
   const enter = useSharedValue(reduced ? 1 : 0);
 
@@ -288,47 +298,103 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.root}>
+      <StatusBar style="light" />
       <View pointerEvents="none" style={styles.textureA} />
       <View pointerEvents="none" style={styles.textureB} />
       <View pointerEvents="none" style={styles.honeyCell} />
       <View pointerEvents="none" style={styles.honeyCellSoft} />
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
-        <Animated.View style={[styles.hero, heroMotion]}>
-          <BridgeHiveMark size={108} style={styles.mark} />
-          <Text style={styles.eyebrow}>BRIDGEHIVE FOR PROFESSIONALS</Text>
-          <Text style={styles.title} accessibilityRole="header">
-            Healthcare shifts,{'\n'}structured around you.
-          </Text>
-          <Text style={styles.subtitle}>
-            Discover verified opportunities for nurses, ward assistants and
-            physiotherapists.
-          </Text>
-          <Animated.View style={[styles.cues, cuesMotion]}>
-            {TRUST_CUES.map((cue) => (
-              <View key={cue.label} style={styles.cueRow}>
-                <View style={styles.cueIcon}>
-                  <Ionicons name={cue.icon} size={17} color={colors.yellow} />
-                </View>
-                <Text style={styles.cueLabel}>{cue.label}</Text>
-              </View>
-            ))}
-          </Animated.View>
-        </Animated.View>
+      {/* Bottom inset is applied inside the scroll content so actions clear the home indicator. */}
+      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <ScrollView
+          style={styles.safe}
+          onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
+          onContentSizeChange={(_w, h) => setContentHeight(h)}
+          contentContainerStyle={[
+            styles.content,
+            {
+              paddingTop: w.top,
+              paddingBottom: Math.max(insets.bottom, spacing.md) + w.bottom,
+            },
+          ]}
+          scrollEnabled={overflowing}
+          bounces={overflowing}
+          alwaysBounceVertical={false}
+          alwaysBounceHorizontal={false}
+          overScrollMode={overflowing ? 'auto' : 'never'}
+          showsVerticalScrollIndicator={false}
+          showsHorizontalScrollIndicator={false}
+        >
+          <View style={styles.heroSlot}>
+            <Animated.View style={[styles.hero, { gap: w.heroGap }, heroMotion]}>
+              <BridgeHiveMark size={w.mark} />
+              <Text style={styles.eyebrow}>BRIDGEHIVE FOR PROFESSIONALS</Text>
+              <Text
+                style={[
+                  styles.title,
+                  {
+                    fontSize: w.title.size,
+                    lineHeight: w.title.line,
+                    letterSpacing: w.title.tracking,
+                  },
+                ]}
+                accessibilityRole="header"
+              >
+                Healthcare shifts,{'\n'}structured around you.
+              </Text>
+              <Text
+                style={[
+                  styles.subtitle,
+                  { fontSize: w.subtitle.size, lineHeight: w.subtitle.line },
+                ]}
+              >
+                Discover verified opportunities for nurses, ward assistants and
+                physiotherapists.
+              </Text>
+              <Animated.View
+                style={[styles.cues, { gap: w.cueGap, marginTop: w.cuesTop }, cuesMotion]}
+              >
+                {TRUST_CUES.map((cue) => (
+                  <View
+                    key={cue.label}
+                    style={[styles.cueRow, { paddingVertical: w.cuePadV }]}
+                  >
+                    <View
+                      style={[
+                        styles.cueIcon,
+                        { width: w.cueIcon, height: w.cueIcon },
+                      ]}
+                    >
+                      <Ionicons name={cue.icon} size={17} color={colors.yellow} />
+                    </View>
+                    <Text
+                      style={[
+                        styles.cueLabel,
+                        { fontSize: w.cueLabel.size, lineHeight: w.cueLabel.line },
+                      ]}
+                    >
+                      {cue.label}
+                    </Text>
+                  </View>
+                ))}
+              </Animated.View>
+            </Animated.View>
+          </View>
 
-        <View style={styles.actions}>
-          <WelcomeAction
-            label="Get started"
-            tone="primary"
-            enterDelay={220}
-            onPress={() => void goStarted()}
-          />
-          <WelcomeAction
-            label="I already have an account"
-            tone="secondary"
-            enterDelay={340}
-            onPress={() => void goSignIn()}
-          />
-        </View>
+          <View style={[styles.actions, { gap: w.actionGap, paddingTop: w.actionsTop }]}>
+            <WelcomeAction
+              label="Get started"
+              tone="primary"
+              enterDelay={220}
+              onPress={() => void goStarted()}
+            />
+            <WelcomeAction
+              label="I already have an account"
+              tone="secondary"
+              enterDelay={340}
+              onPress={() => void goSignIn()}
+            />
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </View>
   );
@@ -381,17 +447,21 @@ const styles = StyleSheet.create({
   },
   safe: {
     flex: 1,
+  },
+  /** Hero floats centered in free space; CTAs stay anchored to the bottom. */
+  content: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    justifyContent: 'space-between',
-    paddingBottom: spacing.xxl,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
+  },
+  heroSlot: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   hero: {
-    marginTop: spacing.xxxl,
-    gap: spacing.lg,
     maxWidth: 420,
-  },
-  mark: {
-    marginBottom: spacing.sm,
   },
   eyebrow: {
     fontFamily: typography.fonts.bold,
@@ -402,28 +472,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: typography.fonts.displayExtra,
-    fontSize: 36,
-    lineHeight: 42,
-    letterSpacing: -1,
     color: '#D7EEF2',
   },
   subtitle: {
     fontFamily: typography.fonts.medium,
-    fontSize: 18,
-    lineHeight: 28,
     letterSpacing: -0.2,
     color: 'rgba(20, 169, 181, 0.92)',
     maxWidth: 360,
   },
-  cues: {
-    gap: 10,
-    marginTop: spacing.md,
-  },
+  cues: {},
   cueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    paddingVertical: 10,
+    minHeight: 44,
     paddingHorizontal: 12,
     borderRadius: radii.lg,
     borderWidth: 1,
@@ -431,8 +493,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20, 169, 181, 0.1)',
   },
   cueIcon: {
-    width: 34,
-    height: 34,
     borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
@@ -443,15 +503,11 @@ const styles = StyleSheet.create({
   cueLabel: {
     flex: 1,
     fontFamily: typography.fonts.semibold,
-    fontSize: 15,
-    lineHeight: 20,
     letterSpacing: -0.1,
     color: '#D7EEF2',
   },
   actions: {
-    gap: spacing.md,
     alignItems: 'center',
-    paddingBottom: spacing.md,
   },
   actionWrap: {
     width: '100%',

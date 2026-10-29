@@ -1,9 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -30,6 +32,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAuth } from '@/providers/AuthProvider';
 
 type MenuItem = {
   key: string;
@@ -260,6 +263,8 @@ function MenuRow({
 export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props) {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
+  const { signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
   const { width } = useWindowDimensions();
   const panelWidth = Math.min(348, Math.max(288, width * 0.88));
   const progress = useSharedValue(0);
@@ -352,6 +357,40 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
         if (finished) runOnJS(navigate)();
       },
     );
+  };
+
+  const performSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+      router.replace('/auth/worker/login');
+    } finally {
+      setSigningOut(false);
+    }
+  };
+
+  const confirmSignOut = () => {
+    if (signingOut) return;
+    if (Platform.OS === 'web') {
+      const confirmed =
+        typeof window !== 'undefined' && window.confirm('End your Bridge Hive session?');
+      if (confirmed) {
+        onClose();
+        void performSignOut();
+      }
+      return;
+    }
+    Alert.alert('Sign out', 'End your Bridge Hive session?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign out',
+        style: 'destructive',
+        onPress: () => {
+          onClose();
+          void performSignOut();
+        },
+      },
+    ]);
   };
 
   return (
@@ -458,6 +497,49 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
                   </Animated.View>
                 ))
               : null}
+
+            {visible ? (
+              <Animated.View
+                entering={
+                  reduced
+                    ? undefined
+                    : FadeInDown.delay(60 + MENU_SECTIONS.length * 70).duration(360)
+                }
+              >
+                <Pressable
+                  onPress={confirmSignOut}
+                  disabled={signingOut}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign out"
+                  style={({ pressed }) => [
+                    styles.signOut,
+                    pressed && styles.signOutPressed,
+                    signingOut && styles.signOutDisabled,
+                  ]}
+                >
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(18, 58, 92, 0.96)', 'rgba(11, 42, 67, 0.98)', 'rgba(7, 29, 48, 1)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFill}
+                  />
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={['rgba(255,255,255,0.22)', 'rgba(255,255,255,0)']}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={styles.signOutGloss}
+                  />
+                  <View style={styles.signOutIcon}>
+                    <Ionicons name="log-out-outline" size={18} color={colors.white} />
+                  </View>
+                  <Text style={styles.signOutLabel}>
+                    {signingOut ? 'Signing out…' : 'Sign out'}
+                  </Text>
+                </Pressable>
+              </Animated.View>
+            ) : null}
           </ScrollView>
         </Animated.View>
       </View>
@@ -626,5 +708,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.tealSoft,
+  },
+  signOut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    minHeight: 52,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    backgroundColor: colors.navy,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.28)',
+  },
+  signOutGloss: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: '55%',
+  },
+  signOutPressed: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+  signOutDisabled: {
+    opacity: 0.6,
+  },
+  signOutIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  signOutLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    color: colors.white,
   },
 });

@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { shiftRouteFromPushData } from '@bridge-hive/domain';
 
+import { BillingRestrictionAlert } from '@/components/notifications/BillingRestrictionAlert';
 import { ShiftNotificationCard } from '@/components/notifications/ShiftNotificationCard';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -19,12 +20,14 @@ import { ErrorState } from '@/components/ui/ErrorState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useInvoices } from '@/hooks/useInvoices';
 import {
   getMyNotifications,
   markNotificationRead,
   type Notification,
 } from '@/lib/queries';
+import type { BillingRestrictionSummary } from '@/lib/invoices';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/lib/supabase';
 
@@ -61,8 +64,13 @@ type BillingAlert = {
 };
 
 export default function NotificationsScreen() {
-  const { user } = useAuth();
+  const { user, isVerified, isAppReviewDemo } = useAuth();
   const { allInvoices, refresh: refreshInvoices } = useInvoices(user?.id);
+  const {
+    summary: restrictionSummary,
+    isRestricted,
+    refresh: refreshRestriction,
+  } = useBillingRestriction(isVerified && !isAppReviewDemo);
   const [items, setItems] = useState<Notification[]>([]);
   const [availability, setAvailability] = useState<Map<string, boolean>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -101,6 +109,7 @@ export default function NotificationsScreen() {
     setError(undefined);
     const result = await getMyNotifications(user.id);
     void refreshInvoices();
+    void refreshRestriction();
     if (result.error) setError(result.error);
     else {
       setItems(result.data);
@@ -110,7 +119,7 @@ export default function NotificationsScreen() {
       setAvailability(await loadShiftAvailability(shiftIds));
     }
     setLoading(false);
-  }, [refreshInvoices, user?.id]);
+  }, [refreshInvoices, refreshRestriction, user?.id]);
 
   useEffect(() => {
     void refresh();
@@ -142,11 +151,14 @@ export default function NotificationsScreen() {
   const flat = useMemo(() => {
     const rows: (
       | { type: 'header'; title: string }
+      | { type: 'restriction'; summary: BillingRestrictionSummary }
       | { type: 'billing'; alert: BillingAlert }
       | { type: 'item'; item: Notification }
     )[] = [];
-    if (billingAlerts.length > 0) {
+    const showRestriction = isRestricted && restrictionSummary;
+    if (billingAlerts.length > 0 || showRestriction) {
       rows.push({ type: 'header', title: 'Action needed' });
+      if (showRestriction) rows.push({ type: 'restriction', summary: restrictionSummary });
       for (const alert of billingAlerts) rows.push({ type: 'billing', alert });
     }
     for (const section of sections) {
@@ -154,9 +166,9 @@ export default function NotificationsScreen() {
       for (const item of section.data) rows.push({ type: 'item', item });
     }
     return rows;
-  }, [billingAlerts, sections]);
+  }, [billingAlerts, isRestricted, restrictionSummary, sections]);
 
-  const listEmpty = items.length === 0 && billingAlerts.length === 0;
+  const listEmpty = items.length === 0 && billingAlerts.length === 0 && !isRestricted;
 
   return (
     <AppScreen scroll={false} edges={['top']}>
@@ -173,6 +185,7 @@ export default function NotificationsScreen() {
           data={flat}
           keyExtractor={(row, index) => {
             if (row.type === 'header') return `h-${row.title}`;
+            if (row.type === 'restriction') return 'billing-restriction';
             if (row.type === 'billing') return row.alert.id;
             return row.item.id + String(index);
           }}
@@ -192,6 +205,9 @@ export default function NotificationsScreen() {
                   <Text style={styles.section}>{row.title}</Text>
                 </View>
               );
+            }
+            if (row.type === 'restriction') {
+              return <BillingRestrictionAlert summary={row.summary} />;
             }
             if (row.type === 'billing') {
               const alert = row.alert;

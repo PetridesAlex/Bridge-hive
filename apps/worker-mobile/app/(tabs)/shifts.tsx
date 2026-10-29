@@ -1,21 +1,23 @@
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
-import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { WORKER_ROLE_LABELS } from '@bridge-hive/domain';
 
 import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { ShiftCard } from '@/components/shifts/ShiftCard';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { IconButton } from '@/components/ui/IconButton';
 import { ListGroupSeparator } from '@/components/ui/Card';
 import { OfflineState } from '@/components/ui/OfflineState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useShifts } from '@/hooks/useShifts';
 import type { MarketplaceShift } from '@/lib/queries';
@@ -26,8 +28,19 @@ type Row =
   | { type: 'shift'; key: string; shift: MarketplaceShift; first: boolean; last: boolean };
 
 export default function ShiftsScreen() {
-  const { shifts, loading, error, offline, refresh, workerRole, isVerified } = useShifts();
-  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(isVerified);
+  const {
+    shifts,
+    loading,
+    error,
+    offline,
+    refresh,
+    workerRole,
+    isVerified,
+    isAppReviewDemo,
+  } = useShifts();
+  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(
+    isVerified && !isAppReviewDemo,
+  );
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
 
   const roleLabel =
@@ -71,17 +84,32 @@ export default function ShiftsScreen() {
         title="Open shifts"
         subtitle="Find flexible shifts that match your role."
         right={
-          isVerified ? (
-            <IconButton
-              icon="calendar-outline"
+          isVerified && !isAppReviewDemo ? (
+            <Pressable
+              accessibilityRole="button"
               accessibilityLabel="Open shift calendar"
               onPress={() => router.push('/shifts/calendar')}
-              color={colors.tealStrong}
-              backgroundColor={colors.tealSoft}
-            />
+              style={({ pressed }) => [styles.calCta, pressed && styles.calCtaPressed]}
+            >
+              <LinearGradient
+                pointerEvents="none"
+                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Ionicons name="calendar" size={16} color={colors.white} />
+              <Text style={styles.calCtaText}>Calendar</Text>
+            </Pressable>
           ) : undefined
         }
       />
+
+      {isAppReviewDemo ? (
+        <View style={styles.banner}>
+          <AppReviewDemoBanner />
+        </View>
+      ) : null}
 
       {offline ? (
         <Banner
@@ -111,7 +139,7 @@ export default function ShiftsScreen() {
           description="This is a connection or server problem — not an empty marketplace."
           onRetry={onRefresh}
         />
-      ) : !isVerified ? (
+      ) : !isVerified && !isAppReviewDemo ? (
         <EmptyState
           title="Marketplace access pending"
           description="Complete verification, required credentials, and payout approval before open shifts appear."
@@ -178,6 +206,26 @@ export default function ShiftsScreen() {
 const styles = StyleSheet.create({
   banner: {
     marginBottom: spacing.md,
+  },
+  calCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 40,
+    paddingHorizontal: 14,
+    borderRadius: radii.full,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(20, 169, 181, 0.35)',
+  },
+  calCtaPressed: {
+    opacity: 0.9,
+    transform: [{ scale: 0.98 }],
+  },
+  calCtaText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.white,
   },
   loading: {
     gap: spacing.md,

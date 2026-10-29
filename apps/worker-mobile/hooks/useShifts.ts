@@ -1,11 +1,15 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import {
+  fetchAppReviewDemoCatalog,
+  marketplaceShiftFromDemoCatalog,
+} from '@/lib/app-review-demo';
 import { getPublishedShifts, type MarketplaceShift } from '@/lib/queries';
 import { useAuth } from '@/providers/AuthProvider';
 
 export function useShifts() {
-  const { user, workerProfile, isVerified } = useAuth();
+  const { user, workerProfile, isVerified, isAppReviewDemo } = useAuth();
   const [shifts, setShifts] = useState<MarketplaceShift[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -19,6 +23,21 @@ export function useShifts() {
 
     if (!user?.id) {
       setShifts([]);
+      setLoading(false);
+      return;
+    }
+
+    if (isAppReviewDemo) {
+      const result = await fetchAppReviewDemoCatalog();
+      if (currentRequest !== requestId.current) return;
+      if (result.error || !result.data) {
+        setShifts([]);
+        setError(result.error ?? 'Could not load demonstration catalog.');
+        setOffline(false);
+      } else {
+        setShifts([marketplaceShiftFromDemoCatalog(result.data)]);
+        setOffline(false);
+      }
       setLoading(false);
       return;
     }
@@ -55,14 +74,14 @@ export function useShifts() {
         setLoading(false);
       }
     }
-  }, [user?.id, workerProfile?.worker_role]);
+  }, [user?.id, workerProfile?.worker_role, isAppReviewDemo]);
 
   // Clear worker-scoped marketplace state on auth/role change.
   useEffect(() => {
     setShifts([]);
     setError(undefined);
     void refresh();
-  }, [user?.id, workerProfile?.worker_role, isVerified, refresh]);
+  }, [user?.id, workerProfile?.worker_role, isVerified, isAppReviewDemo, refresh]);
 
   useFocusEffect(
     useCallback(() => {
@@ -78,5 +97,6 @@ export function useShifts() {
     refresh,
     workerRole: workerProfile?.worker_role ?? null,
     isVerified,
+    isAppReviewDemo,
   };
 }

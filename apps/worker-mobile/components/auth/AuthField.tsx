@@ -22,12 +22,15 @@ type Props = RNTextInputProps & {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
   error?: string;
+  /** Navy glass journey fields use light text for contrast. */
+  tone?: 'light' | 'navy';
 };
 
 export function AuthField({
   label,
   icon,
   error,
+  tone = 'light',
   secureTextEntry,
   style,
   onFocus,
@@ -39,31 +42,76 @@ export function AuthField({
   const [hidden, setHidden] = useState(Boolean(secureTextEntry));
   const focus = useSharedValue(0);
   const press = useSharedValue(1);
+  const navy = tone === 'navy';
 
-  const shellStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(
-      focus.value,
-      [0, 1],
-      ['rgba(120,120,128,0.12)', 'rgba(255,255,255,1)'],
-    ),
-    borderColor: interpolateColor(
-      focus.value,
-      [0, 1],
-      ['rgba(120,120,128,0.12)', colors.navy],
-    ),
-    transform: [{ scale: press.value }],
-  }));
+  const shellStyle = useAnimatedStyle(() => {
+    if (navy) {
+      return {
+        backgroundColor: interpolateColor(
+          focus.value,
+          [0, 1],
+          ['rgba(20, 169, 181, 0.1)', 'rgba(20, 169, 181, 0.18)'],
+        ),
+        borderColor: interpolateColor(
+          focus.value,
+          [0, 1],
+          ['rgba(20, 169, 181, 0.28)', 'rgba(228, 179, 52, 0.55)'],
+        ),
+        transform: [{ scale: press.value }],
+      };
+    }
+    return {
+      backgroundColor: interpolateColor(
+        focus.value,
+        [0, 1],
+        ['rgba(120,120,128,0.12)', 'rgba(255,255,255,1)'],
+      ),
+      borderColor: interpolateColor(
+        focus.value,
+        [0, 1],
+        ['rgba(120,120,128,0.12)', colors.navy],
+      ),
+      transform: [{ scale: press.value }],
+    };
+  });
 
-  const labelStyle = useAnimatedStyle(() => ({
-    color: interpolateColor(focus.value, [0, 1], [colors.textMuted, colors.navyLift]),
-  }));
+  const labelStyle = useAnimatedStyle(() => {
+    if (navy) {
+      return {
+        color: interpolateColor(
+          focus.value,
+          [0, 1],
+          ['rgba(184, 228, 234, 0.72)', '#E4B334'],
+        ),
+      };
+    }
+    return {
+      color: interpolateColor(focus.value, [0, 1], [colors.textMuted, colors.navyLift]),
+    };
+  });
+
+  const iconColor = navy
+    ? focused
+      ? colors.yellow
+      : 'rgba(184, 228, 234, 0.75)'
+    : focused
+      ? colors.navy
+      : colors.textMuted;
+
+  const eyeColor = navy ? 'rgba(184, 228, 234, 0.8)' : colors.textMuted;
 
   return (
     <View style={styles.wrap}>
-      <Animated.View style={[styles.field, shellStyle, error ? styles.fieldError : null]}>
+      <Animated.View
+        style={[
+          styles.field,
+          shellStyle,
+          error ? (navy ? styles.fieldErrorNavy : styles.fieldError) : null,
+        ]}
+      >
         {icon ? (
           <View style={styles.iconWrap}>
-            <Ionicons name={icon} size={18} color={focused ? colors.navy : colors.textMuted} />
+            <Ionicons name={icon} size={18} color={iconColor} />
           </View>
         ) : null}
         <View style={styles.copy}>
@@ -72,8 +120,10 @@ export function AuthField({
             {...props}
             value={value}
             secureTextEntry={secureTextEntry ? hidden : false}
-            placeholderTextColor="rgba(60,60,67,0.35)"
-            style={[styles.input, style]}
+            placeholderTextColor={
+              navy ? 'rgba(184, 228, 234, 0.45)' : 'rgba(60,60,67,0.35)'
+            }
+            style={[styles.input, navy && styles.inputNavy, style]}
             onFocus={(e) => {
               setFocused(true);
               focus.value = withTiming(1, { duration: 200 });
@@ -99,12 +149,14 @@ export function AuthField({
             <Ionicons
               name={hidden ? 'eye-outline' : 'eye-off-outline'}
               size={20}
-              color={colors.textMuted}
+              color={eyeColor}
             />
           </Pressable>
         ) : null}
       </Animated.View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text style={[styles.error, navy && styles.errorNavy]}>{error}</Text>
+      ) : null}
     </View>
   );
 }
@@ -126,6 +178,10 @@ const styles = StyleSheet.create({
   fieldError: {
     borderColor: colors.error,
     backgroundColor: colors.errorLight,
+  },
+  fieldErrorNavy: {
+    borderColor: 'rgba(255, 138, 128, 0.7)',
+    backgroundColor: 'rgba(255, 138, 128, 0.12)',
   },
   iconWrap: {
     width: 28,
@@ -150,6 +206,9 @@ const styles = StyleSheet.create({
     margin: 0,
     minHeight: 24,
   },
+  inputNavy: {
+    color: '#F7FBFD',
+  },
   eye: {
     minWidth: 44,
     minHeight: 44,
@@ -161,5 +220,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.error,
     paddingHorizontal: 4,
+  },
+  errorNavy: {
+    color: '#FF8A80',
   },
 });

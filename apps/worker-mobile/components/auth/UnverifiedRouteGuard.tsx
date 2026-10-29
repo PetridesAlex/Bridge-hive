@@ -16,8 +16,13 @@ export function UnverifiedRouteGuard({
 }: {
   children: React.ReactNode;
 }) {
-  const { loading, session, isVerified, accountRejectionReason, homeRoute } =
-    useAuth();
+  const {
+    loading,
+    session,
+    canAccessWorkerShell,
+    accountRejectionReason,
+    homeRoute,
+  } = useAuth();
   const pathname = usePathname();
 
   if (loading || !session) {
@@ -31,7 +36,7 @@ export function UnverifiedRouteGuard({
     return <Redirect href="/auth/worker/rejected" />;
   }
 
-  if (isVerified) {
+  if (canAccessWorkerShell) {
     return <>{children}</>;
   }
 

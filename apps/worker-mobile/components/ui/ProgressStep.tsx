@@ -129,16 +129,19 @@ export function ProgressStep({
           />
         ) : null}
       </View>
-      <View style={[styles.body, isLast && styles.bodyLast]}>
+      <View style={[styles.body, isLast && styles.bodyLast, isCurrent && styles.bodyCurrent]}>
         <View style={styles.top}>
-          <View style={styles.copy}>
-            <Text style={[styles.title, (done || active) && styles.titleActive]}>{title}</Text>
-            {description ? <Text style={styles.description}>{description}</Text> : null}
-          </View>
+          <Text style={[styles.title, (done || active) && styles.titleActive]}>{title}</Text>
           {statusLabel ? (
-            <StatusBadge label={statusLabel} tone={tone} icon={iconForState(state)} />
+            <StatusBadge
+              label={statusLabel}
+              tone={tone}
+              icon={iconForState(state)}
+              solid={done || rejected}
+            />
           ) : null}
         </View>
+        {description ? <Text style={styles.description}>{description}</Text> : null}
         {actionLabel && onAction ? (
           <Pressable
             onPress={onAction}
@@ -215,7 +218,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingBottom: spacing.md,
     paddingTop: 4,
-    gap: spacing.sm,
+    gap: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
@@ -223,17 +226,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
     paddingBottom: spacing.xs,
   },
+  bodyCurrent: {
+    backgroundColor: 'transparent',
+  },
   top: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
-  },
-  copy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 3,
+    flexWrap: 'wrap',
   },
   title: {
+    flexShrink: 1,
     fontFamily: typography.fonts.displaySemibold,
     fontSize: 15,
     lineHeight: 20,
@@ -246,18 +250,20 @@ const styles = StyleSheet.create({
   description: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     color: colors.textSecondary,
   },
   action: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surfaceSubdued,
-    borderRadius: 10,
+    backgroundColor: colors.tealSoft,
+    borderRadius: radii.full,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.28)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 44,
+    minHeight: 40,
   },
   actionPressed: {
     opacity: 0.88,

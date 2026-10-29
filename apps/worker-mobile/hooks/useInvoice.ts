@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
+  fetchAppReviewDemoCatalog,
+  invoiceListItemFromDemoCatalog,
+  isAppReviewDemoInvoiceId,
+} from '@/lib/app-review-demo';
+import {
   getMyCommissionInvoice,
   type WorkerInvoiceListItem,
 } from '@/lib/invoices';
+import { useAuth } from '@/providers/AuthProvider';
 
 export function useInvoice(
   invoiceId?: string | null,
@@ -11,6 +17,7 @@ export function useInvoice(
   options?: { authLoading?: boolean },
 ) {
   const authLoading = options?.authLoading ?? false;
+  const { isAppReviewDemo } = useAuth();
   const [invoice, setInvoice] = useState<WorkerInvoiceListItem | null>(null);
   const [loading, setLoading] = useState(Boolean(invoiceId) && (authLoading || Boolean(workerId)));
   const [refreshing, setRefreshing] = useState(false);
@@ -48,6 +55,18 @@ export function useInvoice(
     setError(undefined);
 
     try {
+      if (isAppReviewDemo && isAppReviewDemoInvoiceId(invoiceId)) {
+        const result = await fetchAppReviewDemoCatalog();
+        if (result.error || !result.data) {
+          setError(result.error ?? 'Could not load demonstration catalog.');
+          if (!soft) setInvoice(null);
+        } else {
+          setInvoice(invoiceListItemFromDemoCatalog(result.data, workerId));
+          setError(undefined);
+        }
+        return;
+      }
+
       const result = await getMyCommissionInvoice(invoiceId, workerId);
       if (result.error) {
         setError(result.error);
@@ -66,7 +85,7 @@ export function useInvoice(
       setLoading(false);
       setRefreshing(false);
     }
-  }, [invoiceId, workerId, authLoading]);
+  }, [invoiceId, workerId, authLoading, isAppReviewDemo]);
 
   useEffect(() => {
     void refresh();

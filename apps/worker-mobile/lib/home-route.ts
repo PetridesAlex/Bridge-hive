@@ -2,7 +2,7 @@ import type { Tables } from '@bridge-hive/supabase-types';
 
 export type WorkerProfileRow = Pick<
   Tables<'worker_profiles'>,
-  'verification_status' | 'worker_role'
+  'verification_status' | 'worker_role' | 'is_app_review_demo'
 >;
 
 const RESTRICTED_STATUSES = new Set([
@@ -27,13 +27,19 @@ export function homeRouteForWorker(params: {
   if (params.accountRejectionReason) return '/auth/worker/rejected';
   if (!params.workerProfile) return '/auth/worker/choose-role';
 
+  // Server-authorized App Review demo: isolated dashboard shell only.
+  if (params.workerProfile.is_app_review_demo) {
+    return '/(tabs)';
+  }
+
   const status = params.workerProfile.verification_status;
   if (status === 'verified') return '/(tabs)';
   if (RESTRICTED_STATUSES.has(status)) return '/auth/worker/restricted';
-  if (PENDING_REVIEW_STATUSES.has(status)) return '/auth/worker/pending';
-
-  // draft (and any other incomplete package state): documents when role is set
-  if (params.workerProfile.worker_role) return '/documents';
+  // Incomplete, submitted, or under-review workers stay on Account Setup —
+  // Credentials is a step inside that hub, not the post-auth home.
+  if (PENDING_REVIEW_STATUSES.has(status) || params.workerProfile.worker_role) {
+    return '/auth/worker/pending';
+  }
   return '/auth/worker/choose-role';
 }
 

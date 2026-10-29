@@ -22,10 +22,39 @@ describe('homeRouteForWorker', () => {
         workerProfile: {
           verification_status: 'verified',
           worker_role: 'registered_nurse',
+          is_app_review_demo: false,
         },
         accountRejectionReason: null,
       }),
     ).toBe('/(tabs)');
+  });
+
+  it('routes App Review demo workers to the dashboard without requiring verified', () => {
+    expect(
+      homeRouteForWorker({
+        hasSession: true,
+        workerProfile: {
+          verification_status: 'draft',
+          worker_role: 'registered_nurse',
+          is_app_review_demo: true,
+        },
+        accountRejectionReason: null,
+      }),
+    ).toBe('/(tabs)');
+  });
+
+  it('does not treat a client-only missing flag as demo access', () => {
+    expect(
+      homeRouteForWorker({
+        hasSession: true,
+        workerProfile: {
+          verification_status: 'draft',
+          worker_role: 'registered_nurse',
+          is_app_review_demo: false,
+        },
+        accountRejectionReason: null,
+      }),
+    ).toBe('/auth/worker/pending');
   });
 
   it('routes submitted and under_review workers to pending review', () => {
@@ -35,6 +64,7 @@ describe('homeRouteForWorker', () => {
         workerProfile: {
           verification_status: 'submitted',
           worker_role: 'ward_assistant',
+          is_app_review_demo: false,
         },
         accountRejectionReason: null,
       }),
@@ -45,6 +75,7 @@ describe('homeRouteForWorker', () => {
         workerProfile: {
           verification_status: 'under_review',
           worker_role: 'physiotherapist',
+          is_app_review_demo: false,
         },
         accountRejectionReason: null,
       }),
@@ -52,17 +83,18 @@ describe('homeRouteForWorker', () => {
     expect(isPendingReviewVerificationStatus('under_review')).toBe(true);
   });
 
-  it('routes draft workers with a role to documents', () => {
+  it('routes draft workers with a role to Account Setup (not Credentials alone)', () => {
     expect(
       homeRouteForWorker({
         hasSession: true,
         workerProfile: {
           verification_status: 'draft',
           worker_role: 'registered_nurse',
+          is_app_review_demo: false,
         },
         accountRejectionReason: null,
       }),
-    ).toBe('/documents');
+    ).toBe('/auth/worker/pending');
   });
 
   it('routes restricted verification statuses away from the marketplace', () => {
@@ -73,6 +105,7 @@ describe('homeRouteForWorker', () => {
           workerProfile: {
             verification_status: status,
             worker_role: 'registered_nurse',
+            is_app_review_demo: false,
           },
           accountRejectionReason: null,
         }),

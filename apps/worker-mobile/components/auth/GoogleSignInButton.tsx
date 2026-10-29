@@ -1,19 +1,100 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  Easing,
+  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAuth } from '@/providers/AuthProvider';
 
+/** Official Google brand colors (Identity guidelines). */
+const GOOGLE = {
+  blue: '#4285F4',
+  red: '#EA4335',
+  yellow: '#FBBC05',
+  green: '#34A853',
+  text: '#1F1F1F',
+  border: '#747775',
+  surface: '#FFFFFF',
+  divider: '#DADCE0',
+} as const;
+
+/**
+ * Compact official-style Google "G" mark using brand blues/reds/yellows/greens.
+ * Pure Views — no SVG dependency.
+ */
+function GoogleMark({
+  size = 18,
+  cutoutColor = GOOGLE.surface,
+}: {
+  size?: number;
+  cutoutColor?: string;
+}) {
+  const stroke = Math.max(2.5, size * 0.195);
+  const armHeight = stroke;
+  const armWidth = size * 0.52;
+  const cut = size * 0.38;
+
+  return (
+    <View
+      style={{ width: size, height: size }}
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+    >
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: stroke,
+          borderTopColor: GOOGLE.red,
+          borderRightColor: GOOGLE.blue,
+          borderBottomColor: GOOGLE.green,
+          borderLeftColor: GOOGLE.yellow,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: size * 0.22,
+          right: -1,
+          width: cut,
+          height: size * 0.56,
+          backgroundColor: cutoutColor,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: (size - armHeight) / 2,
+          right: 0,
+          width: armWidth,
+          height: armHeight,
+          backgroundColor: GOOGLE.blue,
+          borderTopRightRadius: 1,
+          borderBottomRightRadius: 1,
+        }}
+      />
+    </View>
+  );
+}
+
 export function GoogleSignInButton({
   onSuccess,
+  compact = false,
+  glass = false,
 }: {
   onSuccess?: () => void;
+  /** Narrower centered pill for the auth choice landing. */
+  compact?: boolean;
+  /** Frosted transparent treatment for navy/glass auth landing. */
+  glass?: boolean;
 }) {
   const { signInWithGoogle } = useAuth();
   const reduced = useReducedMotion();
@@ -21,9 +102,19 @@ export function GoogleSignInButton({
   const [error, setError] = useState<string>();
   const lock = useRef(false);
   const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduced || !compact) return;
+    lift.value = withTiming(1, { duration: 480, easing: Easing.out(Easing.cubic) });
+  }, [compact, lift, reduced]);
 
   const motion = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [
+      { scale: scale.value },
+      { translateY: compact && !reduced ? (1 - lift.value) * 6 : 0 },
+    ],
+    opacity: compact && !reduced ? 0.55 + lift.value * 0.45 : 1,
   }));
 
   const onPress = async () => {
@@ -44,16 +135,25 @@ export function GoogleSignInButton({
     }
   };
 
+  const cutout = glass ? 'rgba(12, 48, 68, 0.55)' : GOOGLE.surface;
+
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, compact && styles.wrapCompact]}>
       <View style={styles.dividerRow} accessibilityElementsHidden>
-        <View style={styles.line} />
-        <Text style={styles.or}>or continue with</Text>
-        <View style={styles.line} />
+        <View style={[styles.line, glass && styles.lineGlass]} />
+        <Text style={[styles.or, glass && styles.orGlass]}>
+          {compact ? 'or' : 'or continue with'}
+        </Text>
+        <View style={[styles.line, glass && styles.lineGlass]} />
       </View>
-      <Animated.View style={motion}>
+      <Animated.View style={[motion, compact && styles.btnFrame]}>
         <Pressable
-          style={[styles.button, loading ? styles.buttonDisabled : null]}
+          style={[
+            styles.button,
+            compact && styles.buttonCompact,
+            glass ? styles.buttonGlass : null,
+            loading ? styles.buttonDisabled : null,
+          ]}
           onPress={() => void onPress()}
           disabled={loading}
           accessibilityRole="button"
@@ -62,28 +162,41 @@ export function GoogleSignInButton({
           accessibilityState={{ busy: loading, disabled: loading }}
           onPressIn={() => {
             if (reduced || loading) return;
-            scale.value = withSpring(0.975, { damping: 18, stiffness: 420 });
+            scale.value = withSpring(0.97, { damping: 18, stiffness: 420 });
           }}
           onPressOut={() => {
             scale.value = withSpring(1, { damping: 14, stiffness: 260 });
           }}
         >
+          {glass ? (
+            <View pointerEvents="none" style={styles.glassSheen} />
+          ) : null}
           {loading ? (
-            <ActivityIndicator color={colors.text} />
+            <ActivityIndicator color={glass ? '#14A9B5' : GOOGLE.blue} />
           ) : (
             <>
-              <View style={styles.gMark} accessibilityElementsHidden>
-                <Text style={styles.gLetter}>G</Text>
-              </View>
-              <Text style={styles.label}>Continue with Google</Text>
+              <GoogleMark size={compact ? 18 : 20} cutoutColor={cutout} />
+              <Text
+                style={[
+                  styles.label,
+                  compact && styles.labelCompact,
+                  glass && styles.labelGlass,
+                ]}
+              >
+                {compact ? 'Google' : 'Continue with Google'}
+              </Text>
             </>
           )}
         </Pressable>
       </Animated.View>
       {error ? (
-        <Text style={styles.error} accessibilityLiveRegion="polite">
+        <Animated.Text
+          entering={reduced ? undefined : FadeIn.duration(220)}
+          style={styles.error}
+          accessibilityLiveRegion="polite"
+        >
           {error}
-        </Text>
+        </Animated.Text>
       ) : null}
     </View>
   );
@@ -91,59 +204,88 @@ export function GoogleSignInButton({
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.md },
+  wrapCompact: {
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    width: '100%',
   },
-  line: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  line: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: GOOGLE.divider,
+  },
+  lineGlass: {
+    backgroundColor: 'rgba(20, 169, 181, 0.28)',
+  },
   or: {
     fontFamily: typography.fonts.medium,
     fontSize: 12,
-    color: colors.textMuted,
+    color: GOOGLE.border,
     letterSpacing: 0.3,
+  },
+  orGlass: {
+    color: 'rgba(20, 169, 181, 0.72)',
+  },
+  btnFrame: {
+    width: '100%',
+    maxWidth: 280,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.sm,
+    gap: 12,
     minHeight: 50,
     borderRadius: radii.full,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(11, 32, 50, 0.1)',
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    paddingHorizontal: spacing.md,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: GOOGLE.border,
+    backgroundColor: GOOGLE.surface,
+    paddingHorizontal: spacing.lg,
+    overflow: 'hidden',
+  },
+  buttonCompact: {
+    minHeight: 48,
+    paddingHorizontal: spacing.lg,
+  },
+  buttonGlass: {
+    backgroundColor: 'rgba(20, 169, 181, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(20, 169, 181, 0.4)',
+  },
+  glassSheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '48%',
+    backgroundColor: 'rgba(20, 169, 181, 0.12)',
   },
   buttonDisabled: {
     opacity: 0.7,
   },
-  gMark: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  gLetter: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 13,
-    color: colors.text,
-    marginTop: -1,
-  },
   label: {
     fontFamily: typography.fonts.semibold,
     fontSize: 15,
-    color: colors.text,
+    color: GOOGLE.text,
+    letterSpacing: 0.15,
+  },
+  labelCompact: {
+    fontSize: 15,
+    letterSpacing: 0,
+  },
+  labelGlass: {
+    color: '#B8E4EA',
+    letterSpacing: -0.1,
   },
   error: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    color: colors.error,
+    color: GOOGLE.red,
     textAlign: 'center',
     lineHeight: 18,
   },

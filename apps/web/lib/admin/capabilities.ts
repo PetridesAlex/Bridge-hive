@@ -19,6 +19,7 @@ export type PlatformCapabilities = {
   canManageOrganizations: boolean;
   canReviewRecruitment: boolean;
   canManageRecruitmentAccess: boolean;
+  canManageAppReviewDemo: boolean;
 };
 
 /**
@@ -52,6 +53,7 @@ export function capabilitiesForPlatformRole(
     canManageOrganizations: isSuper,
     canReviewRecruitment: isVerifier || isSuper,
     canManageRecruitmentAccess: isSuper,
+    canManageAppReviewDemo: isSuper,
   };
 }
 
@@ -83,6 +85,10 @@ export function rpcErrorMessage(error: { message?: string } | null): string {
     ACCOUNT_DELETED: 'This account has been deleted and cannot be changed.',
     ACCOUNT_NOT_ACTIVE: 'The worker account is not active.',
     CANNOT_SELF_VERIFY: 'You cannot verify your own profile or credentials.',
+    CANNOT_SELF_TARGET: 'You cannot change App Review demo access on your own account.',
+    APP_REVIEW_DEMO_FORBIDDEN:
+      'App Review demonstration accounts cannot perform this live action.',
+    APP_REVIEW_DEMO_LOCKED: 'App Review demonstration access cannot be changed that way.',
     CANNOT_SUSPEND_SELF: 'You cannot suspend your own account.',
     CANNOT_REACTIVATE_SELF: 'You cannot reactivate your own account.',
     CREDENTIAL_NOT_FOUND: 'Credential not found.',

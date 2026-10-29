@@ -11,7 +11,7 @@ import { AuthField } from '@/components/auth/AuthField';
 import { AuthPrimaryButton } from '@/components/auth/AuthPrimaryButton';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
-import { colors, spacing, typography } from '@/constants/theme';
+import { spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { peekPendingShiftRoute } from '@/lib/push/pending-shift';
 import { useAuth } from '@/providers/AuthProvider';
@@ -93,20 +93,22 @@ export default function WorkerLoginScreen() {
     <AuthShell
       title="Welcome back"
       subtitle="Sign in to manage shifts, timesheets, and commission invoices for healthcare professionals."
+      tone="navy"
       footer={
         <View style={styles.footer}>
-          <Text style={styles.footerText}>New to Bridge Hive?</Text>
+          <Text style={styles.footerText}>New to BridgeHive?</Text>
           <DynamicPressable
             onPress={() => router.push('/auth/worker/register')}
             accessibilityRole="link"
-            accessibilityLabel="Create worker account"
+            accessibilityLabel="Create professional account"
           >
-            <Text style={styles.footerLink}>Create worker account</Text>
+            <Text style={styles.footerLink}>Create professional account</Text>
           </DynamicPressable>
         </View>
       }
     >
       <AuthField
+        tone="navy"
         label="Email"
         icon="mail-outline"
         value={email}
@@ -118,6 +120,7 @@ export default function WorkerLoginScreen() {
         placeholder="name@email.com"
       />
       <AuthField
+        tone="navy"
         label="Password"
         icon="lock-closed-outline"
         value={password}
@@ -147,7 +150,7 @@ export default function WorkerLoginScreen() {
         >
           <Text style={styles.forgot}>Forgot password?</Text>
         </DynamicPressable>
-        <GoogleSignInButton />
+        <GoogleSignInButton glass />
       </View>
     </AuthShell>
   );
@@ -161,7 +164,7 @@ const styles = StyleSheet.create({
   error: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    color: colors.error,
+    color: '#FF8A80',
   },
   forgotBtn: {
     alignSelf: 'center',
@@ -172,7 +175,7 @@ const styles = StyleSheet.create({
   forgot: {
     fontFamily: typography.fonts.semibold,
     fontSize: 15,
-    color: colors.navyLift,
+    color: '#B8E4EA',
     textAlign: 'center',
   },
   footer: {
@@ -184,12 +187,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.medium,
     fontSize: 15,
     lineHeight: 20,
-    color: colors.text,
+    color: 'rgba(184, 228, 234, 0.78)',
   },
   footerLink: {
     fontFamily: typography.fonts.semibold,
     fontSize: 16,
     lineHeight: 22,
-    color: colors.tealStrong,
+    color: '#D7EEF2',
   },
 });

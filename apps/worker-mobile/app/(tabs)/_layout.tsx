@@ -15,7 +15,13 @@ import { colors } from '@/constants/theme';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabsLayout() {
-  const { loading, session, isVerified, accountRejectionReason, homeRoute } = useAuth();
+  const {
+    loading,
+    session,
+    canAccessWorkerShell,
+    accountRejectionReason,
+    homeRoute,
+  } = useAuth();
   const tabBarStyle = useAdaptiveTabBarStyle();
 
   if (loading) {
@@ -35,7 +41,7 @@ export default function TabsLayout() {
     return <Redirect href="/auth/worker/rejected" />;
   }
 
-  if (!isVerified) {
+  if (!canAccessWorkerShell) {
     return <Redirect href={homeRoute as never} />;
   }
 

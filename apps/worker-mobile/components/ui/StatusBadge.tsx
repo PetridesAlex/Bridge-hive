@@ -28,9 +28,9 @@ type Props = {
 const TONE: Record<StatusTone, { fg: string; bg: string }> = {
   neutral: { fg: colors.textSecondary, bg: colors.surfaceSubdued },
   info: { fg: colors.info, bg: colors.infoLight },
-  success: { fg: colors.success, bg: colors.successLight },
+  success: { fg: colors.success, bg: '#B7E4C7' },
   warning: { fg: colors.warning, bg: colors.warningLight },
-  danger: { fg: colors.error, bg: colors.errorLight },
+  danger: { fg: colors.error, bg: '#F5C2BC' },
   accent: { fg: colors.tealStrong, bg: colors.tealSoft },
 };
 

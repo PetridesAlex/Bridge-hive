@@ -3,13 +3,20 @@ import React, { useEffect, useState } from 'react';
 
 import { AppBootCover, useLaunchGate } from '@/components/brand/AppBootCover';
 import { hasCompletedOnboarding } from '@/lib/onboarding-preference';
+import {
+  hasWorkspacePreparationBeenConsumed,
+  markWorkspacePreparationConsumed,
+  workspacePreparationMinMs,
+} from '@/lib/workspace-preparation';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function IndexScreen() {
-  const { loading, session, homeRoute } = useAuth();
+  const { loading, session, homeRoute, bootstrapError, retryBootstrap } = useAuth();
   const [onboardingReady, setOnboardingReady] = useState(false);
   const [seenWelcome, setSeenWelcome] = useState(false);
-  const canEnter = useLaunchGate(!loading && onboardingReady);
+  const [consumed] = useState(() => hasWorkspacePreparationBeenConsumed());
+  const ready = !loading && onboardingReady && !bootstrapError;
+  const canEnter = useLaunchGate(ready, workspacePreparationMinMs(consumed));
 
   useEffect(() => {
     let alive = true;
@@ -23,8 +30,22 @@ export default function IndexScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (canEnter) {
+      markWorkspacePreparationConsumed();
+    }
+  }, [canEnter]);
+
   if (!canEnter) {
-    return <AppBootCover showSlowIndicator={loading || !onboardingReady} />;
+    return (
+      <AppBootCover
+        showSlowIndicator={loading || !onboardingReady}
+        bootstrapError={bootstrapError}
+        onRetryBootstrap={() => {
+          void retryBootstrap();
+        }}
+      />
+    );
   }
 
   if (session) {

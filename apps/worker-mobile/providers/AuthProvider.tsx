@@ -71,11 +71,20 @@ type AuthContextValue = {
   workerProfile: WorkerProfile | null;
   loading: boolean;
   isVerified: boolean;
+  /** Server flag only — never set from client storage or deep links. */
+  isAppReviewDemo: boolean;
+  /** Verified worker OR App Review demo — may enter dashboard shell. */
+  canAccessWorkerShell: boolean;
+  /** Verified and not demo — may claim shifts / pay invoices. */
+  canPerformLiveMarketplaceActions: boolean;
   isWorker: boolean;
   accountRejectionReason: string | null;
   homeRoute: string;
   firstName: string;
   roleLabel: string;
+  /** True when cold-start session/profile hydrate failed (no sensitive details). */
+  bootstrapError: boolean;
+  retryBootstrap: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string; cancelled?: boolean }>;
   signUpWorker: (input: WorkerSignUpInput) => Promise<WorkerSignUpResult>;
@@ -321,6 +330,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [workerProfile, setWorkerProfile] = useState<WorkerProfile | null>(null);
   const [accountRejectionReason, setAccountRejectionReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bootstrapError, setBootstrapError] = useState(false);
   /** User id whose profile bundle is fully loaded — prevents choose-role flash after login. */
   const [bundleUserId, setBundleUserId] = useState<string | null>(null);
 
@@ -343,19 +353,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBundleUserId(next.user.id);
   }, []);
 
+  const retryBootstrap = useCallback(async () => {
+    setBootstrapError(false);
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        setBootstrapError(true);
+        return;
+      }
+      await hydrate(data.session);
+    } catch {
+      // Never log session tokens or profile details.
+      setBootstrapError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [hydrate]);
+
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return;
-      await hydrate(data.session);
-      if (mounted) setLoading(false);
-    });
+    void (async () => {
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (!mounted) return;
+        if (error) {
+          setBootstrapError(true);
+          return;
+        }
+        await hydrate(data.session);
+      } catch {
+        if (mounted) setBootstrapError(true);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void hydrate(nextSession).finally(() => {
-        if (mounted) setLoading(false);
-      });
+      void (async () => {
+        try {
+          await hydrate(nextSession);
+          if (mounted) setBootstrapError(false);
+        } catch {
+          if (mounted) setBootstrapError(true);
+        } finally {
+          if (mounted) setLoading(false);
+        }
+      })();
     });
 
     // Cold/warm deep links on native only.
@@ -651,6 +696,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [session, hydrate]);
 
   const isVerified = workerProfile?.verification_status === 'verified';
+  const isAppReviewDemo = Boolean(workerProfile?.is_app_review_demo);
+  const canAccessWorkerShell = isVerified || isAppReviewDemo;
+  const canPerformLiveMarketplaceActions = isVerified && !isAppReviewDemo;
   const isWorker = Boolean(workerProfile);
   const homeRoute = homeRouteForWorker({
     hasSession: Boolean(session),
@@ -675,11 +723,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       workerProfile,
       loading: authLoading,
       isVerified,
+      isAppReviewDemo,
+      canAccessWorkerShell,
+      canPerformLiveMarketplaceActions,
       isWorker,
       accountRejectionReason,
       homeRoute,
       firstName,
       roleLabel,
+      bootstrapError,
+      retryBootstrap,
       signIn,
       signInWithGoogle,
       signUpWorker,
@@ -699,11 +752,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       workerProfile,
       authLoading,
       isVerified,
+      isAppReviewDemo,
+      canAccessWorkerShell,
+      canPerformLiveMarketplaceActions,
       isWorker,
       accountRejectionReason,
       homeRoute,
       firstName,
       roleLabel,
+      bootstrapError,
+      retryBootstrap,
       signIn,
       signInWithGoogle,
       signUpWorker,

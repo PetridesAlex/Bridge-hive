@@ -8,6 +8,7 @@ import {
   reactivateWorkerAccountSchema,
   reviewCredentialSchema,
   reviewPayoutAccountSchema,
+  setWorkerAppReviewDemoSchema,
   setWorkerVerificationSchema,
   submitCredentialForReviewSchema,
   suspendWorkerAccountSchema,
@@ -141,6 +142,39 @@ export async function reactivateWorkerAction(
   const { error } = await supabase.rpc('reactivate_worker_account', {
     p_worker_id: parsed.data.workerId,
     p_reason: parsed.data.reason,
+  });
+
+  if (error) {
+    return { error: rpcErrorMessage(error) };
+  }
+
+  revalidateWorkerApplication(parsed.data.workerId);
+  return { success: true };
+}
+
+export async function setWorkerAppReviewDemoAction(
+  _prev: AdminActionResult,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  const ctx = await getPlatformAdminContext();
+  if (!ctx?.capabilities.canManageAppReviewDemo) {
+    return { error: 'You do not have permission to manage App Review demo access.' };
+  }
+
+  const parsed = setWorkerAppReviewDemoSchema.safeParse({
+    workerId: String(formData.get('workerId') ?? ''),
+    enabled: String(formData.get('enabled') ?? ''),
+    reason: String(formData.get('reason') ?? '') || undefined,
+  });
+  if (!parsed.success) {
+    return { error: zodErrorMessage(parsed.error) };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc('set_worker_app_review_demo', {
+    p_worker_id: parsed.data.workerId,
+    p_enabled: parsed.data.enabled === 'true',
+    p_reason: parsed.data.reason ?? 'Apple App Review',
   });
 
   if (error) {

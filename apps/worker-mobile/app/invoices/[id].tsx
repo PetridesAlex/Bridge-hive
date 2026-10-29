@@ -27,6 +27,7 @@ import {
   View,
 } from 'react-native';
 
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -41,6 +42,7 @@ import { type StatusTone } from '@/components/ui/StatusBadge';
 import { APP_CONFIG } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
 import { useInvoice } from '@/hooks/useInvoice';
+import { isAppReviewDemoInvoiceId } from '@/lib/app-review-demo';
 import { startWorkerInvoiceCheckout } from '@/lib/invoices';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatDate, formatMoney, formatShortDate } from '@/utils/format';
@@ -89,10 +91,16 @@ export default function InvoiceDetailScreen() {
   }>();
   const id = normalizeRouteParam(params.id);
   const paymentStatus = normalizeRouteParam(params.payment_status);
-  const { user, loading: authLoading } = useAuth();
+  const {
+    user,
+    loading: authLoading,
+    isAppReviewDemo,
+    canPerformLiveMarketplaceActions,
+  } = useAuth();
   const { invoice, loading, error, refresh } = useInvoice(id, user?.id, {
     authLoading,
   });
+  const demoInvoice = isAppReviewDemo || isAppReviewDemoInvoiceId(id);
   const [paying, setPaying] = useState(false);
   const [payError, setPayError] = useState<string>();
   const [pendingHint, setPendingHint] = useState(paymentStatus === 'pending');
@@ -188,7 +196,7 @@ export default function InvoiceDetailScreen() {
   );
 
   const onPay = async () => {
-    if (!invoice) return;
+    if (!invoice || !canPerformLiveMarketplaceActions) return;
     setPaying(true);
     setPayError(undefined);
     const result = await startWorkerInvoiceCheckout(invoice.id);
@@ -268,7 +276,8 @@ export default function InvoiceDetailScreen() {
     invoice.organizations?.legal_name ??
     'Organization';
   const shift = invoice.shift_assignments?.shifts;
-  const payable = isWorkerInvoicePayable(status);
+  const payable =
+    canPerformLiveMarketplaceActions && isWorkerInvoicePayable(status);
   const showPendingBanner =
     (uiState === 'payment_confirmation_pending' ||
       (pendingHint && status !== 'paid' && pollTimedOut)) &&
@@ -296,6 +305,14 @@ export default function InvoiceDetailScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {demoInvoice ? <AppReviewDemoBanner /> : null}
+        {demoInvoice ? (
+          <Banner
+            variant="info"
+            title="APP REVIEW DEMO — NOT A REAL INVOICE"
+            body="Checkout and payment are disabled on demonstration accounts."
+          />
+        ) : null}
         {showPendingBanner ? (
           <Banner
             variant="warning"

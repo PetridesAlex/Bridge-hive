@@ -106,6 +106,22 @@ Deno.serve(async (req) => {
       return json({ error: 'unauthorized' }, 401);
     }
 
+    const { data: demoProfile } = await supabase
+      .from('worker_profiles')
+      .select('is_app_review_demo')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (demoProfile?.is_app_review_demo === true) {
+      return json(
+        {
+          error: 'app_review_demo_forbidden',
+          message: 'Demonstration accounts cannot start live payments.',
+        },
+        403,
+      );
+    }
+
     const body = await req.json().catch(() => ({}));
 
     if (body?.amount !== undefined || body?.currency !== undefined) {

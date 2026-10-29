@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { WORKER_ROLE_LABELS } from '@bridge-hive/domain';
 
 import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { ShiftCard } from '@/components/shifts/ShiftCard';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
@@ -27,8 +28,19 @@ type Row =
   | { type: 'shift'; key: string; shift: MarketplaceShift; first: boolean; last: boolean };
 
 export default function ShiftsScreen() {
-  const { shifts, loading, error, offline, refresh, workerRole, isVerified } = useShifts();
-  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(isVerified);
+  const {
+    shifts,
+    loading,
+    error,
+    offline,
+    refresh,
+    workerRole,
+    isVerified,
+    isAppReviewDemo,
+  } = useShifts();
+  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(
+    isVerified && !isAppReviewDemo,
+  );
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
 
   const roleLabel =
@@ -72,7 +84,7 @@ export default function ShiftsScreen() {
         title="Open shifts"
         subtitle="Find flexible shifts that match your role."
         right={
-          isVerified ? (
+          isVerified && !isAppReviewDemo ? (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Open shift calendar"
@@ -92,6 +104,12 @@ export default function ShiftsScreen() {
           ) : undefined
         }
       />
+
+      {isAppReviewDemo ? (
+        <View style={styles.banner}>
+          <AppReviewDemoBanner />
+        </View>
+      ) : null}
 
       {offline ? (
         <Banner
@@ -121,7 +139,7 @@ export default function ShiftsScreen() {
           description="This is a connection or server problem — not an empty marketplace."
           onRetry={onRefresh}
         />
-      ) : !isVerified ? (
+      ) : !isVerified && !isAppReviewDemo ? (
         <EmptyState
           title="Marketplace access pending"
           description="Complete verification, required credentials, and payout approval before open shifts appear."

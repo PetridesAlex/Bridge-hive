@@ -25,6 +25,12 @@ import { TextInput } from '@/components/ui/TextInput';
 
 import { WORKER_ROLE_LABELS } from '@/constants/config';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
+import {
+  fetchAppReviewDemoCatalog,
+  isAppReviewDemoShiftId,
+  workerShiftDetailsFromDemoCatalog,
+} from '@/lib/app-review-demo';
 import { getMyAssignments, type ShiftAssignment } from '@/lib/queries';
 import {
   assignmentActionErrorMessage,
@@ -90,7 +96,8 @@ function parseCompletedMinutes(hoursText: string, minutesText: string): number |
 
 export default function ShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user, isVerified } = useAuth();
+  const { user, isVerified, isAppReviewDemo, canPerformLiveMarketplaceActions } =
+    useAuth();
   const [shift, setShift] = useState<WorkerShiftDetails | null>(null);
   const [assignment, setAssignment] = useState<ShiftAssignment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,11 +111,28 @@ export default function ShiftDetailScreen() {
   const [hoursText, setHoursText] = useState('0');
   const [minutesText, setMinutesText] = useState('0');
   const [hoursPrefillKey, setHoursPrefillKey] = useState<string | null>(null);
+  const demoShift = isAppReviewDemo || isAppReviewDemoShiftId(id);
 
   const refresh = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     setError(undefined);
+
+    if (isAppReviewDemo || isAppReviewDemoShiftId(id)) {
+      const catalog = await fetchAppReviewDemoCatalog();
+      if (catalog.error || !catalog.data) {
+        setError(catalog.error ?? 'Demonstration shift unavailable');
+        setShift(null);
+        setAssignment(null);
+        setLoading(false);
+        return;
+      }
+      setShift(workerShiftDetailsFromDemoCatalog(catalog.data));
+      setAssignment(null);
+      setLoading(false);
+      return;
+    }
+
     const detail = await getWorkerShiftDetails(id);
     if (detail.error || !detail.data) {
       setError(detail.error ?? 'Shift not found');
@@ -124,7 +148,7 @@ export default function ShiftDetailScreen() {
       setAssignment(match);
     }
     setLoading(false);
-  }, [id, user?.id]);
+  }, [id, user?.id, isAppReviewDemo]);
 
   useEffect(() => {
     void refresh();
@@ -161,7 +185,7 @@ export default function ShiftDetailScreen() {
   }, [shift, nowTick]);
 
   const onClaim = async () => {
-    if (!id || !isVerified || claiming) return;
+    if (!id || !canPerformLiveMarketplaceActions || claiming) return;
     setClaiming(true);
     setActionError(undefined);
     setActionSuccess(undefined);
@@ -179,7 +203,7 @@ export default function ShiftDetailScreen() {
   };
 
   const onSubmitHours = async () => {
-    if (!assignment) return;
+    if (!assignment || !canPerformLiveMarketplaceActions) return;
     const total = parseCompletedMinutes(hoursText, minutesText);
     if (total == null) {
       const message = 'Enter completed time between 1 minute and 24 hours.';
@@ -257,12 +281,14 @@ export default function ShiftDetailScreen() {
     shift.required_role;
   const openPositions = shift.open_positions ?? 0;
   const canClaim =
-    isVerified &&
+    canPerformLiveMarketplaceActions &&
     shift.status === 'published' &&
     !assignment &&
     openPositions > 0;
   const canComplete =
-    canSubmitCompletedHours(assignment?.status) && ended;
+    canPerformLiveMarketplaceActions &&
+    canSubmitCompletedHours(assignment?.status) &&
+    ended;
   const scheduledMinutes = scheduledWorkingMinutes(
     shift.starts_at,
     shift.ends_at,
@@ -276,15 +302,17 @@ export default function ShiftDetailScreen() {
     setHoursText(next.hours);
     setMinutesText(next.minutes);
   };
-  const claimBlockedReason = !isVerified
-    ? 'Complete account verification before claiming shifts.'
-    : assignment
-      ? undefined
-      : shift.status !== 'published'
-        ? 'This shift is no longer open for claims.'
-        : openPositions < 1
-          ? 'All positions on this shift are filled.'
-          : undefined;
+  const claimBlockedReason = demoShift
+    ? 'Demonstration shifts cannot be claimed.'
+    : !isVerified
+      ? 'Complete account verification before claiming shifts.'
+      : assignment
+        ? undefined
+        : shift.status !== 'published'
+          ? 'This shift is no longer open for claims.'
+          : openPositions < 1
+            ? 'All positions on this shift are filled.'
+            : undefined;
 
   const start = new Date(shift.starts_at);
   const end = new Date(shift.ends_at);
@@ -341,6 +369,7 @@ export default function ShiftDetailScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {demoShift ? <AppReviewDemoBanner /> : null}
         <View style={styles.titleBlock}>
           <Text style={styles.orgEyebrow}>{shift.organization_name}</Text>
           <Text style={styles.shiftTitle}>{shift.title || roleLabel}</Text>

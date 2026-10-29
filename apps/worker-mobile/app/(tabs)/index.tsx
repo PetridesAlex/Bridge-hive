@@ -24,6 +24,7 @@ import { ShiftNotificationPrompt } from '@/components/push/ShiftNotificationProm
 import { NextShiftCard } from '@/components/home/NextShiftCard';
 import { ShiftCalendar } from '@/components/home/ShiftCalendar';
 import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { ContextualActionCard } from '@/components/ui/ContextualActionCard';
@@ -59,9 +60,12 @@ function assignmentStatusLabel(status: string): string {
 }
 
 export default function HomeScreen() {
-  const { user, firstName, roleLabel, profile, isVerified } = useAuth();
+  const { user, firstName, roleLabel, profile, isVerified, isAppReviewDemo } =
+    useAuth();
   const { assignments, loading, error, refresh } = useAssignments(user?.id);
-  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(isVerified);
+  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(
+    isVerified && !isAppReviewDemo,
+  );
   const { allInvoices, refresh: refreshInvoices } = useInvoices(user?.id);
   const { shifts: openShifts, refresh: refreshOpenShifts } = useShifts();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
@@ -292,9 +296,11 @@ export default function HomeScreen() {
           alertTone={pastDueCount > 0 ? 'danger' : dueSoon ? 'money' : 'default'}
         />
 
+        {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
+
         {isRestricted && summary ? <BillingRestrictionBanner summary={summary} /> : null}
 
-        {!isVerified ? (
+        {isAppReviewDemo ? null : !isVerified ? (
           <Banner
             variant="warning"
             title="Account setup required"

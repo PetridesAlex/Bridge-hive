@@ -8,15 +8,18 @@ function read(rel: string) {
 }
 
 describe('AppBootCover contracts', () => {
-  it('uses navy boot background, splash-matched mark size, and short minimum duration', () => {
+  it('uses navy boot background, splash-matched mark size, and 5s workspace minimum', () => {
     const src = read('components/brand/AppBootCover.tsx');
+    const prep = read('lib/workspace-preparation.ts');
     expect(src).toMatch(/APP_BOOT_BG\s*=\s*'#071A2F'/);
     expect(src).toMatch(/APP_BOOT_MARK_SIZE\s*=\s*220/);
-    expect(src).toMatch(/APP_BOOT_MIN_MS\s*=\s*800/);
+    expect(prep).toMatch(/WORKSPACE_PREPARATION_MINIMUM_MS\s*=\s*5000/);
     expect(src).toMatch(/Preparing your workspace/);
+    expect(src).toMatch(/Setting up your secure BridgeHive experience/);
     expect(src).not.toMatch(/APP_BOOT_BG\s*=\s*'#FFFFFF'/);
-    expect(src).not.toMatch(/APP_BOOT_MIN_MS\s*=\s*3800/);
+    expect(src).not.toMatch(/75%/);
     expect(src).toMatch(/reducedMotion/);
+    expect(src).toMatch(/PreparationProgress/);
   });
 
   it('keeps native splash navy and hides after JS cover is ready', () => {
@@ -37,6 +40,10 @@ describe('AppBootCover contracts', () => {
     expect(index).toMatch(/\/welcome/);
     expect(index).toMatch(/\/auth\/worker\/login/);
     expect(index).toMatch(/homeRoute/);
+    expect(index).toMatch(/workspacePreparationMinMs/);
+    expect(index).toMatch(/markWorkspacePreparationConsumed/);
+    expect(index).toMatch(/bootstrapError/);
+    expect(index).toMatch(/retryBootstrap/);
     expect(welcome).toMatch(/markOnboardingSeen/);
     expect(welcome).toMatch(/Get started/);
     expect(welcome).toMatch(/I already have an account/);

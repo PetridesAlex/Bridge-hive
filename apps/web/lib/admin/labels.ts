@@ -56,6 +56,8 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   publish_shift: 'Published shift',
   review_timesheet: 'Reviewed timesheet',
   submit_credential_for_review: 'Marked credential under review',
+  enable_app_review_demo: 'Enabled App Review demo access',
+  revoke_app_review_demo: 'Revoked App Review demo access',
 };
 
 export function platformRoleLabel(role: string): string {

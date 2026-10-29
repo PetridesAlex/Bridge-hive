@@ -19,6 +19,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { TextInput } from '@/components/ui/TextInput';
@@ -167,7 +168,14 @@ function SubmitPayoutButton({
 }
 
 export default function PayoutSetupScreen() {
-  const { session, user, loading, isVerified, accountRejectionReason } = useAuth();
+  const {
+    session,
+    user,
+    loading,
+    isVerified,
+    accountRejectionReason,
+    isAppReviewDemo,
+  } = useAuth();
   const { account, refresh } = usePayouts(user?.id);
   const [holderName, setHolderName] = useState('');
   const [ibanInput, setIbanInput] = useState('');
@@ -299,6 +307,7 @@ export default function PayoutSetupScreen() {
         showBack
         onBack={goBack}
       />
+      {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
 
       <View style={styles.hero}>
         <LinearGradient

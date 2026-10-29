@@ -15,6 +15,7 @@ import {
 import { InvoiceCard } from '@/components/invoices/InvoiceCard';
 import { MoneySummaryTile } from '@/components/payments/MoneySummaryTile';
 import { PayoutCard } from '@/components/payments/PayoutCard';
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -30,7 +31,7 @@ import { useAuth } from '@/providers/AuthProvider';
 type MoneySegment = 'earnings' | 'invoices';
 
 export default function MoneyScreen() {
-  const { user } = useAuth();
+  const { user, isAppReviewDemo } = useAuth();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { payouts, account, loading: payoutLoading, error: payoutError, refresh: refreshPayouts } =
     usePayouts(user?.id);  const {
@@ -79,6 +80,11 @@ export default function MoneyScreen() {
         title="Money"
         subtitle="Track earnings and commission in one place"
       />
+      {isAppReviewDemo ? (
+        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+          <AppReviewDemoBanner />
+        </View>
+      ) : null}
 
       <View style={styles.intro}>
         <LinearGradient

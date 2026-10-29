@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
@@ -38,7 +39,7 @@ function segmentFor(assignment: AssignmentWithShift, now = new Date()): WorkSegm
 }
 
 export default function WorkScreen() {
-  const { user } = useAuth();
+  const { user, isAppReviewDemo } = useAuth();
   const { assignments, loading, error, refresh } = useAssignments(user?.id);
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const [segment, setSegment] = useState<WorkSegment>('upcoming');
@@ -107,6 +108,11 @@ export default function WorkScreen() {
           title="My shifts"
           subtitle="Accepted shifts — submit hours after each scheduled end"
         />
+        {isAppReviewDemo ? (
+          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+            <AppReviewDemoBanner />
+          </View>
+        ) : null}
         <SegmentedTabs
           tabs={[
             {

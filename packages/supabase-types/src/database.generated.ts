@@ -2008,6 +2008,7 @@ export type Database = {
         Row: {
           bio: string | null
           created_at: string
+          is_app_review_demo: boolean
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           updated_at: string
           user_id: string
@@ -2017,6 +2018,7 @@ export type Database = {
         Insert: {
           bio?: string | null
           created_at?: string
+          is_app_review_demo?: boolean
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           updated_at?: string
           user_id: string
@@ -2026,6 +2028,7 @@ export type Database = {
         Update: {
           bio?: string | null
           created_at?: string
+          is_app_review_demo?: boolean
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           updated_at?: string
           user_id?: string
@@ -2614,11 +2617,24 @@ export type Database = {
       }
       hash_invitation_token: { Args: { p_raw_token: string }; Returns: string }
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean }
+      is_app_review_demo_worker: {
+        Args: { p_worker_id?: string }
+        Returns: boolean
+      }
       is_platform_admin: {
         Args: {
           p_required_role?: Database["public"]["Enums"]["platform_admin_role"]
         }
         Returns: boolean
+      }
+      get_app_review_demo_catalog: { Args: Record<string, never>; Returns: Json }
+      set_worker_app_review_demo: {
+        Args: {
+          p_worker_id: string
+          p_enabled: boolean
+          p_reason?: string
+        }
+        Returns: Database["public"]["Tables"]["worker_profiles"]["Row"]
       }
       is_valid_iban: { Args: { p_iban: string }; Returns: boolean }
       list_admin_organizations: {

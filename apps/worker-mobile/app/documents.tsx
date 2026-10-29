@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -158,7 +159,7 @@ function accountStatusIcon(
 }
 
 export default function DocumentsScreen() {
-  const { user, workerProfile, isVerified } = useAuth();
+  const { user, workerProfile, isVerified, isAppReviewDemo } = useAuth();
   const { credentials, loading, error, refresh } = useCredentials(user?.id);
   const {
     account: payoutAccount,
@@ -383,6 +384,11 @@ export default function DocumentsScreen() {
           />
         }
       />
+      {isAppReviewDemo ? (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <AppReviewDemoBanner />
+        </View>
+      ) : null}
 
       {loading && credentials.length === 0 ? (
         <ActivityIndicator color={colors.navy} style={{ marginTop: spacing.xl }} />

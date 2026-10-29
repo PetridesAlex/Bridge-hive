@@ -28,6 +28,7 @@ import {
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { ProfileMenuRow, type MenuTone } from '@/components/profile/ProfileMenuRow';
 import { SignOutButton } from '@/components/profile/SignOutButton';
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Avatar } from '@/components/ui/Avatar';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -99,6 +100,7 @@ export default function AccountHubScreen() {
     signOut,
     user,
     isVerified,
+    isAppReviewDemo,
   } = useAuth();
   const reducedMotion = useReducedMotion();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
@@ -211,6 +213,7 @@ export default function AccountHubScreen() {
         title="Account"
         subtitle="Manage your profile, verification, and preferences."
       />
+      {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
 
       <LinearGradient
         colors={['#0B2A43', '#0E4A5C', '#0F6B6B']}

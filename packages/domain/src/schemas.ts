@@ -215,6 +215,12 @@ export const reactivateWorkerAccountSchema = z.object({
   reason: z.string().min(1).max(2000),
 });
 
+export const setWorkerAppReviewDemoSchema = z.object({
+  workerId: z.string().uuid(),
+  enabled: z.enum(['true', 'false']),
+  reason: z.string().max(200).optional(),
+});
+
 export const submitCredentialForReviewSchema = z.object({
   credentialId: z.string().uuid(),
 });
@@ -261,6 +267,7 @@ export type SuspendWorkerAccountInput = z.infer<typeof suspendWorkerAccountSchem
 export type ReactivateWorkerAccountInput = z.infer<
   typeof reactivateWorkerAccountSchema
 >;
+export type SetWorkerAppReviewDemoInput = z.infer<typeof setWorkerAppReviewDemoSchema>;
 export type ApproveReviewedCredentialsInput = z.infer<
   typeof approveReviewedCredentialsSchema
 >;

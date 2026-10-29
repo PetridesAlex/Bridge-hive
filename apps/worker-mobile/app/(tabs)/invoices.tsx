@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { InvoiceCard } from '@/components/invoices/InvoiceCard';
+import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -30,7 +31,7 @@ const FILTERS: { key: InvoiceFilter; label: string }[] = [
 ];
 
 export default function InvoicesScreen() {
-  const { user } = useAuth();
+  const { user, isAppReviewDemo } = useAuth();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { invoices, allInvoices, loading, error, refresh, filter, setFilter } = useInvoices(user?.id);
 
@@ -54,6 +55,7 @@ export default function InvoicesScreen() {
         title="Invoices"
         subtitle="Bridge Hive commission invoices"
       />
+      {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
       <Banner
         variant="info"
         title="Separate from your shift pay"

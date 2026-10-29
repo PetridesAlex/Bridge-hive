@@ -61,6 +61,19 @@ describe('capabilitiesForPlatformRole', () => {
     expect(caps.canViewFinance).toBe(true);
     expect(caps.canReviewRecruitment).toBe(true);
     expect(caps.canManageRecruitmentAccess).toBe(true);
+    expect(caps.canManageAppReviewDemo).toBe(true);
+  });
+
+  it('restricts App Review demo management to super admin', () => {
+    expect(capabilitiesForPlatformRole('platform_verifier').canManageAppReviewDemo).toBe(
+      false,
+    );
+    expect(capabilitiesForPlatformRole('platform_support').canManageAppReviewDemo).toBe(
+      false,
+    );
+    expect(capabilitiesForPlatformRole('platform_finance').canManageAppReviewDemo).toBe(
+      false,
+    );
   });
 
   it('covers every platform role', () => {

@@ -1,6 +1,7 @@
 import {
   reviewCredentialSchema,
   reviewPayoutAccountSchema,
+  setWorkerAppReviewDemoSchema,
   suspendWorkerAccountSchema,
 } from '@bridge-hive/domain';
 
@@ -17,6 +18,30 @@ describe('admin action schemas', () => {
       reason: 'Policy violation',
     });
     expect(ok.success).toBe(true);
+  });
+
+  it('accepts App Review demo enable/revoke payloads', () => {
+    expect(
+      setWorkerAppReviewDemoSchema.safeParse({
+        workerId: 'a1000001-0000-4000-8000-000000000005',
+        enabled: 'true',
+        reason: 'Apple App Review',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      setWorkerAppReviewDemoSchema.safeParse({
+        workerId: 'a1000001-0000-4000-8000-000000000005',
+        enabled: 'false',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      setWorkerAppReviewDemoSchema.safeParse({
+        workerId: 'not-a-uuid',
+        enabled: 'true',
+      }).success,
+    ).toBe(false);
   });
 
   it('accepts approve and reject credential decisions', () => {

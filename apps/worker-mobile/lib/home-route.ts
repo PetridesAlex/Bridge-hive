@@ -2,7 +2,7 @@ import type { Tables } from '@bridge-hive/supabase-types';
 
 export type WorkerProfileRow = Pick<
   Tables<'worker_profiles'>,
-  'verification_status' | 'worker_role'
+  'verification_status' | 'worker_role' | 'is_app_review_demo'
 >;
 
 const RESTRICTED_STATUSES = new Set([
@@ -26,6 +26,11 @@ export function homeRouteForWorker(params: {
   if (!params.hasSession) return '/auth/worker/login';
   if (params.accountRejectionReason) return '/auth/worker/rejected';
   if (!params.workerProfile) return '/auth/worker/choose-role';
+
+  // Server-authorized App Review demo: isolated dashboard shell only.
+  if (params.workerProfile.is_app_review_demo) {
+    return '/(tabs)';
+  }
 
   const status = params.workerProfile.verification_status;
   if (status === 'verified') return '/(tabs)';

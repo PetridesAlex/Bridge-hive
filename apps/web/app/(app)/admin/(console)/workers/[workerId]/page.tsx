@@ -12,6 +12,7 @@ import {
 import {
   reactivateWorkerAction,
   reviewPayoutAccountAction,
+  setWorkerAppReviewDemoAction,
   setWorkerVerificationAction,
   suspendWorkerAction,
 } from '@/app/actions/admin';
@@ -55,7 +56,7 @@ export default async function AdminWorkerDetailPage({
   const { data: worker } = await supabase
     .from('worker_profiles')
     .select(
-      'user_id, worker_role, bio, onboarding_status, verification_status, created_at, updated_at, profile:profiles!worker_profiles_user_id_fkey(full_name, phone, account_status, created_at)',
+      'user_id, worker_role, bio, onboarding_status, verification_status, is_app_review_demo, created_at, updated_at, profile:profiles!worker_profiles_user_id_fkey(full_name, phone, account_status, created_at)',
     )
     .eq('user_id', workerId)
     .maybeSingle();
@@ -269,6 +270,11 @@ export default async function AdminWorkerDetailPage({
               <span className="text-slate-500">Verification:</span>
               <VerificationStatusBadge status={worker.verification_status} />
             </p>
+            {worker.is_app_review_demo ? (
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-amber-900">
+                App Review demonstration access is enabled
+              </p>
+            ) : null}
             <p>
               <span className="text-slate-500">Documents:</span> {packageLabel}
             </p>
@@ -334,6 +340,58 @@ export default async function AdminWorkerDetailPage({
           </Card>
         ) : null}
       </div>
+
+      {ctx.capabilities.canManageAppReviewDemo ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>App Review demonstration access</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-slate-600">
+              Use only for Apple App Review. Grants isolated sample data and blocks
+              live claims, invoices, and payments. Does not change ordinary worker
+              activation rules for other accounts.
+            </p>
+            <p className="text-sm text-slate-700">
+              Status:{' '}
+              <span className="font-medium">
+                {worker.is_app_review_demo ? 'Enabled' : 'Disabled'}
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {!worker.is_app_review_demo ? (
+                <ConfirmDialog
+                  title="Enable App Review demonstration access"
+                  description="Use only for Apple App Review. This worker will receive isolated demonstration access. The account cannot access live shifts, real organizations, real worker data, documents, payouts, wages, invoices, or payments. Enable this only for the dedicated Apple review account."
+                  confirmLabel="Enable App Review demonstration access"
+                  triggerLabel="Enable App Review demonstration access"
+                  hiddenFields={{
+                    workerId,
+                    enabled: 'true',
+                    reason: 'Apple App Review',
+                  }}
+                  action={setWorkerAppReviewDemoAction}
+                />
+              ) : (
+                <ConfirmDialog
+                  title="Revoke App Review demonstration access"
+                  description="Removes demonstration access and restores ordinary account-setup routing for this worker. Real production data is not deleted."
+                  confirmLabel="Revoke App Review demonstration access"
+                  destructive
+                  triggerLabel="Revoke App Review demonstration access"
+                  triggerVariant="destructive"
+                  hiddenFields={{
+                    workerId,
+                    enabled: 'false',
+                    reason: 'Apple App Review',
+                  }}
+                  action={setWorkerAppReviewDemoAction}
+                />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {ctx.capabilities.canApprovePayoutAccounts ||
       ctx.capabilities.canViewPayoutProof ? (

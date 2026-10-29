@@ -4,7 +4,7 @@ import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useMemo } from 'react';
-import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
@@ -12,13 +12,16 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withRepeat,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg';
 
-import { colors, shadows, spacing, typography } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 export type TabAccent = {
@@ -28,67 +31,61 @@ export type TabAccent = {
   indicator: string;
 };
 
+const ACTIVE = colors.white;
+const INACTIVE = '#8FA9C4';
+const INDICATOR = '#F5B21A';
+const FAB_GRADIENT: [string, string] = ['#FFCB45', '#F59E0B'];
+const HIGHLIGHT_GRADIENT: [string, string] = ['rgba(255, 255, 255, 0.2)', 'rgba(255, 255, 255, 0.09)'];
+
+/** Bar-wide accent: the active tab always reads navy with a honey indicator. */
+const BAR_ACCENT: TabAccent = {
+  solid: ACTIVE,
+  soft: 'rgba(11, 42, 67, 0.08)',
+  gradient: [colors.navy, '#0C3E56', colors.tealStrong],
+  indicator: INDICATOR,
+};
+
 export const TAB_ACCENTS = {
-  home: {
-    solid: colors.navy,
-    soft: 'rgba(11, 42, 67, 0.08)',
-    gradient: [colors.navy, '#0C3E56', colors.tealStrong] as [string, string, string],
-    indicator: colors.yellow,
-  },
-  shifts: {
-    solid: colors.tealStrong,
-    soft: 'rgba(20, 169, 181, 0.12)',
-    gradient: ['#0E6670', colors.tealStrong, '#14A9B5'] as [string, string, string],
-    indicator: colors.tealStrong,
-  },
-  work: {
-    solid: colors.honeyStrong,
-    soft: 'rgba(212, 148, 36, 0.14)',
-    gradient: ['#A86B10', colors.honeyStrong, '#E0B24A'] as [string, string, string],
-    indicator: colors.honeyStrong,
-  },
-  finances: {
-    solid: colors.success,
-    soft: 'rgba(25, 135, 84, 0.12)',
-    gradient: ['#0F5132', '#146C43', colors.success] as [string, string, string],
-    indicator: colors.success,
-  },
-  more: {
-    solid: colors.navyLift,
-    soft: 'rgba(18, 58, 92, 0.1)',
-    gradient: [colors.navyLift, '#1B4F72', colors.teal] as [string, string, string],
-    indicator: colors.navy,
-  },
+  home: BAR_ACCENT,
+  shifts: BAR_ACCENT,
+  work: BAR_ACCENT,
+  finances: BAR_ACCENT,
+  more: BAR_ACCENT,
 } as const;
 
-const INACTIVE = '#455A6A';
 const SPRING = { damping: 18, stiffness: 280, mass: 0.75 };
 const TAB_COUNT = 5;
+const GLYPH_BOX = 26;
+const HIGHLIGHT_PAD = 9;
+const TOP_RADIUS = 30;
+const SHADOW_BLEED = 6;
+const CAPTION_WIDTH = 80;
 
 type Density = 'narrow' | 'regular' | 'wide';
 
 type TabMetrics = {
   density: Density;
-  sideInset: number;
-  radius: number;
-  barHeight: number;
+  width: number;
+  slotWidth: number;
   topPad: number;
   bottomPad: number;
-  marginBottom: number;
-  slotWidth: number;
-  iconSize: number;
+  contentHeight: number;
+  barHeight: number;
+  buttonMinHeight: number;
   iconGlyph: number;
-  iconGlyphFocus: number;
-  iconRadius: number;
-  lift: number;
   labelSize: number;
   labelLine: number;
   gap: number;
-  /** Prefer short labels when slots are tight. */
+  highlightWidth: number;
+  highlightHeight: number;
+  fabSize: number;
+  /** Center of the floating action button, measured from the top of the bar. */
+  fabCenterY: number;
+  /** translateY that moves the FAB from the slot's center to fabCenterY. */
+  fabLift: number;
+  notchRadius: number;
   useShortLabels: boolean;
-  /** Hide inactive labels; show label only on the focused tab. */
   focusedLabelOnly: boolean;
-  buttonMinHeight: number;
 };
 
 function useTabMetrics(): TabMetrics {
@@ -96,38 +93,40 @@ function useTabMetrics(): TabMetrics {
   const insets = useSafeAreaInsets();
 
   return useMemo(() => {
-    const sideInset = width < 360 ? 6 : width < 400 ? 8 : width < 440 ? 10 : 14;
-    const slotWidth = (width - sideInset * 2) / TAB_COUNT;
+    const slotWidth = width / TAB_COUNT;
     const density: Density =
       slotWidth < 70 ? 'narrow' : slotWidth < 84 ? 'regular' : 'wide';
 
-    const bottomPad = Math.max(insets.bottom, density === 'narrow' ? 6 : 8);
-    const topPad = density === 'wide' ? 10 : density === 'regular' ? 8 : 6;
-    const contentHeight = density === 'narrow' ? 58 : density === 'regular' ? 64 : 72;
-
-    const iconSize = density === 'narrow' ? 30 : density === 'regular' ? 34 : 40;
-    const labelSize = density === 'narrow' ? 10 : density === 'regular' ? 11 : 12;
+    const topPad = 8;
+    const contentHeight = density === 'narrow' ? 58 : 64;
+    const bottomPad = Math.max(insets.bottom, 10);
+    const labelSize = density === 'narrow' ? 11 : 12;
+    const labelLine = labelSize + 3;
+    const gap = 3;
+    const fabSize = density === 'narrow' ? 46 : density === 'regular' ? 50 : 52;
+    const fabCenterY = fabSize / 2 + 3;
 
     return {
       density,
-      sideInset,
-      radius: density === 'narrow' ? 18 : density === 'regular' ? 22 : 26,
-      barHeight: contentHeight + topPad + bottomPad,
+      width,
+      slotWidth,
       topPad,
       bottomPad,
-      marginBottom: insets.bottom > 0 ? 0 : density === 'wide' ? 10 : 8,
-      slotWidth,
-      iconSize,
-      iconGlyph: density === 'narrow' ? 16 : density === 'regular' ? 17 : 20,
-      iconGlyphFocus: density === 'narrow' ? 17 : density === 'regular' ? 18 : 21,
-      iconRadius: Math.round(iconSize * 0.3),
-      lift: density === 'narrow' ? -2 : density === 'regular' ? -3 : -4,
+      contentHeight,
+      barHeight: topPad + contentHeight + bottomPad,
+      buttonMinHeight: contentHeight,
+      iconGlyph: density === 'narrow' ? 21 : 24,
       labelSize,
-      labelLine: labelSize + 2,
-      gap: density === 'narrow' ? 2 : 3,
+      labelLine,
+      gap,
+      highlightWidth: Math.min(slotWidth - 6, 70),
+      highlightHeight: GLYPH_BOX + gap + labelLine + HIGHLIGHT_PAD * 2,
+      fabSize,
+      fabCenterY,
+      fabLift: -(topPad + contentHeight / 2 - fabCenterY),
+      notchRadius: fabSize / 2 + 5,
       useShortLabels: slotWidth < 82,
-      focusedLabelOnly: slotWidth < 68,
-      buttonMinHeight: contentHeight - 2,
+      focusedLabelOnly: slotWidth < 62,
     };
   }, [insets.bottom, width]);
 }
@@ -138,7 +137,7 @@ export function useAdaptiveTabBarStyle() {
 
   return useMemo(
     () => ({
-      backgroundColor: colors.white,
+      backgroundColor: 'transparent',
       borderTopWidth: 0,
       borderTopColor: 'transparent',
       borderColor: 'transparent',
@@ -148,14 +147,11 @@ export function useAdaptiveTabBarStyle() {
       height: metrics.barHeight,
       paddingBottom: metrics.bottomPad,
       paddingTop: metrics.topPad,
-      marginHorizontal: metrics.sideInset,
-      marginBottom: metrics.marginBottom,
-      borderRadius: metrics.radius,
       position: 'absolute' as const,
       left: 0,
       right: 0,
       bottom: 0,
-      overflow: 'hidden' as const,
+      overflow: 'visible' as const,
     }),
     [metrics],
   );
@@ -165,72 +161,60 @@ export function useAdaptiveTabBarStyle() {
 export function useTabBarScrollInset(extra: number = spacing.lg): number {
   const tabBarStyle = useAdaptiveTabBarStyle();
   const height = typeof tabBarStyle.height === 'number' ? tabBarStyle.height : 88;
-  const marginBottom =
-    typeof tabBarStyle.marginBottom === 'number' ? tabBarStyle.marginBottom : 0;
-  return height + marginBottom + extra;
+  return height + extra;
+}
+
+/** Bar outline with a rounded U-shaped notch that cradles the center button. */
+function barPath(
+  w: number,
+  h: number,
+  cx: number,
+  cy: number,
+  nr: number,
+  dy: number,
+): string {
+  const r = TOP_RADIUS;
+  const shoulder = 26;
+  const rise = 20;
+  const top = dy;
+  return [
+    `M0 ${h + dy}`,
+    `L0 ${r + top}`,
+    `Q0 ${top} ${r} ${top}`,
+    `L${cx - nr - shoulder} ${top}`,
+    `C${cx - nr - shoulder * 0.5} ${top} ${cx - nr} ${cy - rise + top} ${cx - nr} ${cy + top}`,
+    `A${nr} ${nr} 0 0 0 ${cx + nr} ${cy + top}`,
+    `C${cx + nr} ${cy - rise + top} ${cx + nr + shoulder * 0.5} ${top} ${cx + nr + shoulder} ${top}`,
+    `L${w - r} ${top}`,
+    `Q${w} ${top} ${w} ${r + top}`,
+    `L${w} ${h + dy}`,
+    'Z',
+  ].join(' ');
 }
 
 export function TabBarBackground() {
-  const reduced = useReducedMotion();
-  const metrics = useTabMetrics();
-  const sheen = useSharedValue(0);
-  const glow = useSharedValue(0);
+  const m = useTabMetrics();
+  const cx = m.width / 2;
 
-  useEffect(() => {
-    if (reduced) {
-      sheen.value = 0.4;
-      glow.value = 0.5;
-      return;
-    }
-    sheen.value = withRepeat(
-      withTiming(1, { duration: 5600, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
-    );
-    glow.value = withRepeat(
-      withTiming(1, { duration: 4200, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-  }, [glow, reduced, sheen]);
-
-  const sheenStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(sheen.value, [0, 1], [-140, 300]) }],
-    opacity: 0.4,
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(glow.value, [0, 1], [0.18, 0.4]),
-  }));
-
+  const fill = useMemo(
+    () => barPath(m.width, m.barHeight, cx, m.fabCenterY, m.notchRadius, SHADOW_BLEED),
+    [cx, m.barHeight, m.fabCenterY, m.notchRadius, m.width],
+  );
   return (
     <View
-      style={[styles.bgRoot, { borderRadius: metrics.radius }, shadows.md]}
       pointerEvents="none"
+      style={[styles.bgRoot, { top: -SHADOW_BLEED, height: m.barHeight + SHADOW_BLEED }]}
     >
-      <View style={[StyleSheet.absoluteFill, styles.solidFill]} />
-      <LinearGradient
-        colors={['#FFFFFF', '#F7FBFD']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      <Animated.View style={[styles.ambientGlow, glowStyle]}>
-        <LinearGradient
-          colors={['rgba(20, 169, 181, 0.1)', 'transparent']}
-          start={{ x: 0.15, y: 0 }}
-          end={{ x: 0.9, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      <Animated.View style={[styles.sheen, sheenStyle]}>
-        <LinearGradient
-          colors={['transparent', 'rgba(255,255,255,0.65)', 'transparent']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
+      <Svg width={m.width} height={m.barHeight + SHADOW_BLEED}>
+        <Defs>
+          <SvgGradient id="tabBarFill" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#123A5C" />
+            <Stop offset="1" stopColor="#0B2A43" />
+          </SvgGradient>
+        </Defs>
+        <Path d={fill} fill="url(#tabBarFill)" />
+        <Path d={fill} fill="none" stroke="rgba(255, 255, 255, 0.12)" strokeWidth={1} />
+      </Svg>
     </View>
   );
 }
@@ -239,18 +223,22 @@ type AnimatedTabIconProps = {
   focused: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   iconFocused: keyof typeof Ionicons.glyphMap;
-  accent: TabAccent;
+  accent?: TabAccent;
+  /** `fab` renders the raised honey button that sits in the bar notch. */
+  variant?: 'default' | 'fab';
 };
 
 export function AnimatedTabIcon({
   focused,
   icon,
   iconFocused,
-  accent,
+  variant = 'default',
 }: AnimatedTabIconProps) {
   const reduced = useReducedMotion();
-  const metrics = useTabMetrics();
+  const m = useTabMetrics();
   const progress = useSharedValue(focused ? 1 : 0);
+  const glow = useSharedValue(0);
+  const shine = useSharedValue(0);
 
   useEffect(() => {
     progress.value = reduced
@@ -260,60 +248,175 @@ export function AnimatedTabIcon({
       : withSpring(focused ? 1 : 0, SPRING);
   }, [focused, progress, reduced]);
 
-  const shellStyle = useAnimatedStyle(() => ({
+  useEffect(() => {
+    if (variant !== 'fab' || reduced || !focused) {
+      glow.value = 0;
+      return;
+    }
+    glow.value = withRepeat(
+      withTiming(1, { duration: 1900, easing: Easing.out(Easing.quad) }),
+      -1,
+      false,
+    );
+    shine.value = withRepeat(
+      withSequence(
+        withDelay(1800, withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) })),
+        withTiming(0, { duration: 0 }),
+      ),
+      -1,
+      false,
+    );
+  }, [focused, glow, reduced, shine, variant]);
+
+  const highlightStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: interpolate(progress.value, [0, 1], [0.92, 1], Extrapolation.CLAMP) }],
+  }));
+  const indicatorStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scaleX: interpolate(progress.value, [0, 1], [0.3, 1], Extrapolation.CLAMP) }],
+  }));
+  const glyphStyle = useAnimatedStyle(() => ({
     transform: [
-      {
-        scale: interpolate(progress.value, [0, 1], [1, 1.06], Extrapolation.CLAMP),
-      },
-      {
-        translateY: interpolate(progress.value, [0, 1], [0, metrics.lift], Extrapolation.CLAMP),
-      },
+      { translateY: interpolate(progress.value, [0, 1], [0, -1], Extrapolation.CLAMP) },
+      { scale: interpolate(progress.value, [0, 1], [1, 1.04], Extrapolation.CLAMP) },
     ],
   }));
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ scale: interpolate(progress.value, [0, 1], [0.55, 1], Extrapolation.CLAMP) }],
+  }));
+  const fabScaleStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: interpolate(progress.value, [0, 1], [1, 1.08], Extrapolation.CLAMP) },
+    ],
+    shadowOpacity: interpolate(progress.value, [0, 1], [0.4, 0.62], Extrapolation.CLAMP),
+  }));
+  const shineStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(shine.value, [0, 0.2, 0.8, 1], [0, 0.85, 0.85, 0]),
+    transform: [
+      { translateX: interpolate(shine.value, [0, 1], [-34, 60]) },
+      { rotate: '20deg' },
+    ],
+  }));
+  const captionStyle = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateY: interpolate(progress.value, [0, 1], [-4, 0], Extrapolation.CLAMP) }],
+  }));
+  const ringStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(glow.value, [0, 1], [0.35, 0]),
+    transform: [{ scale: interpolate(glow.value, [0, 1], [1, 1.5]) }],
+  }));
+
+  if (variant === 'fab') {
+    const disc = m.notchRadius * 2;
+    return (
+      <View
+        style={{ width: m.fabSize, height: m.fabSize, transform: [{ translateY: m.fabLift }] }}
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.fabBackdrop,
+            {
+              width: disc,
+              height: disc,
+              borderRadius: disc / 2,
+              left: (m.fabSize - disc) / 2,
+              top: (m.fabSize - disc) / 2,
+            },
+            backdropStyle,
+          ]}
+        >
+          <LinearGradient
+            colors={['#FFF4D6', '#FFE2A0']}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.8, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        {focused && !reduced ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.fabRing,
+              { width: m.fabSize, height: m.fabSize, borderRadius: m.fabSize / 2 },
+              ringStyle,
+            ]}
+          />
+        ) : null}
+        <Animated.View
+          style={[styles.fabShadow, { borderRadius: m.fabSize / 2 }, glyphStyle, fabScaleStyle]}
+        >
+          <LinearGradient
+            colors={focused ? ['#FFD25A', '#F08C00'] : FAB_GRADIENT}
+            start={{ x: 0.2, y: 0 }}
+            end={{ x: 0.8, y: 1 }}
+            style={[
+              styles.fab,
+              { width: m.fabSize, height: m.fabSize, borderRadius: m.fabSize / 2 },
+            ]}
+          >
+            <Ionicons name={focused ? iconFocused : icon} size={24} color={colors.white} />
+            {!reduced ? (
+              <Animated.View pointerEvents="none" style={[styles.fabShine, shineStyle]} />
+            ) : null}
+          </LinearGradient>
+        </Animated.View>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.fabCaptionWrap,
+            { top: m.fabSize + 8, left: -(CAPTION_WIDTH - m.fabSize) / 2 },
+            captionStyle,
+          ]}
+        >
+          <Text
+            allowFontScaling={false}
+            style={[styles.fabCaption, { fontSize: m.labelSize }]}
+          >
+            My shifts
+          </Text>
+        </Animated.View>
+      </View>
+    );
+  }
 
   return (
     <View
-      style={[styles.tabItem, { gap: metrics.gap }]}
+      style={styles.iconBox}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Animated.View style={shellStyle}>
-        {focused ? (
-          <LinearGradient
-            colors={accent.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[
-              styles.iconShell,
-              styles.iconShellFocused,
-              {
-                width: metrics.iconSize,
-                height: metrics.iconSize,
-                borderRadius: metrics.iconRadius,
-              },
-            ]}
-          >
-            <Ionicons
-              name={iconFocused}
-              size={metrics.iconGlyphFocus}
-              color={colors.white}
-            />
-          </LinearGradient>
-        ) : (
-          <View
-            style={[
-              styles.iconShell,
-              {
-                width: metrics.iconSize,
-                height: metrics.iconSize,
-                borderRadius: metrics.iconRadius,
-                backgroundColor: accent.soft,
-              },
-            ]}
-          >
-            <Ionicons name={icon} size={metrics.iconGlyph} color={accent.solid} />
-          </View>
-        )}
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.highlight,
+          {
+            width: m.highlightWidth,
+            height: m.highlightHeight,
+            left: (GLYPH_BOX - m.highlightWidth) / 2,
+            top: -HIGHLIGHT_PAD,
+          },
+          highlightStyle,
+        ]}
+      >
+        <LinearGradient
+          colors={HIGHLIGHT_GRADIENT}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Animated.View style={[styles.indicator, indicatorStyle]} />
+      </Animated.View>
+      <Animated.View style={glyphStyle}>
+        <Ionicons
+          name={focused ? iconFocused : icon}
+          size={m.iconGlyph}
+          color={focused ? ACTIVE : INACTIVE}
+        />
       </Animated.View>
     </View>
   );
@@ -322,53 +425,31 @@ export function AnimatedTabIcon({
 export function AnimatedTabLabel({
   focused,
   children,
-  accent,
   compactLabel,
 }: {
   focused: boolean;
   children: string;
-  accent: TabAccent;
+  accent?: TabAccent;
   /** Shorter label used when tab slots are tight. */
   compactLabel?: string;
 }) {
-  const metrics = useTabMetrics();
-  const reduced = useReducedMotion();
-  const progress = useSharedValue(focused ? 1 : 0);
-
-  const label =
-    metrics.useShortLabels && compactLabel ? compactLabel : children;
-  const hidden = metrics.focusedLabelOnly && !focused;
-
-  useEffect(() => {
-    progress.value = reduced
-      ? focused
-        ? 1
-        : 0
-      : withSpring(focused ? 1 : 0, SPRING);
-  }, [focused, progress, reduced]);
-
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: hidden ? 0 : 1,
-    height: hidden ? 0 : metrics.labelLine,
-    transform: [
-      { translateY: interpolate(progress.value, [0, 1], [0.5, 0], Extrapolation.CLAMP) },
-    ],
-  }));
+  const m = useTabMetrics();
+  const label = m.useShortLabels && compactLabel ? compactLabel : children;
+  const hidden = m.focusedLabelOnly && !focused;
 
   if (hidden) {
-    return <Animated.View style={labelStyle} />;
+    return <View style={{ height: 0 }} />;
   }
 
   return (
     <Animated.Text
       style={[
         styles.label,
-        labelStyle,
         {
-          color: focused ? accent.solid : INACTIVE,
-          fontSize: metrics.labelSize,
-          lineHeight: metrics.labelLine,
-          maxWidth: Math.max(metrics.slotWidth - 6, 48),
+          color: focused ? ACTIVE : INACTIVE,
+          fontSize: m.labelSize,
+          lineHeight: m.labelLine,
+          maxWidth: Math.max(m.slotWidth - 6, 48),
           fontFamily: focused ? typography.fonts.displaySemibold : typography.fonts.semibold,
         },
       ]}
@@ -394,14 +475,8 @@ export function AnimatedTabButton({
   ...rest
 }: BottomTabBarButtonProps) {
   const reduced = useReducedMotion();
-  const metrics = useTabMetrics();
-  const focused = Boolean(accessibilityState?.selected);
+  const m = useTabMetrics();
   const scale = useSharedValue(1);
-
-  useEffect(() => {
-    if (reduced) return;
-    scale.value = withSpring(focused ? 1.015 : 1, SPRING);
-  }, [focused, reduced, scale]);
 
   const pressStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -416,10 +491,10 @@ export function AnimatedTabButton({
       accessibilityState={accessibilityState}
       onPressIn={() => {
         if (reduced) return;
-        scale.value = withSpring(0.94, { damping: 16, stiffness: 420 });
+        scale.value = withSpring(0.93, { damping: 16, stiffness: 420 });
       }}
       onPressOut={() => {
-        scale.value = withSpring(focused ? 1.015 : 1, SPRING);
+        scale.value = withSpring(1, SPRING);
       }}
       onPress={(e) => {
         if (Platform.OS !== 'web') {
@@ -434,11 +509,7 @@ export function AnimatedTabButton({
     >
       <Animated.View
         entering={reduced ? undefined : FadeIn.duration(240)}
-        style={[
-          styles.tabButtonInner,
-          { minHeight: metrics.buttonMinHeight },
-          pressStyle,
-        ]}
+        style={[styles.tabButtonInner, { minHeight: m.buttonMinHeight }, pressStyle]}
       >
         {children}
       </Animated.View>
@@ -448,43 +519,77 @@ export function AnimatedTabButton({
 
 const styles = StyleSheet.create({
   bgRoot: {
-    ...StyleSheet.absoluteFillObject,
-    overflow: 'hidden',
-    backgroundColor: colors.white,
-    borderWidth: 0,
-  },
-  solidFill: {
-    backgroundColor: colors.white,
-  },
-  ambientGlow: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  sheen: {
     position: 'absolute',
-    top: -24,
-    width: 100,
-    height: 120,
+    left: 0,
+    right: 0,
   },
-  tabItem: {
+  iconBox: {
+    width: GLYPH_BOX,
+    height: GLYPH_BOX,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconShell: {
+  highlight: {
+    position: 'absolute',
+    borderRadius: 22,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  indicator: {
+    width: 26,
+    height: 3,
+    borderRadius: 2,
+    marginBottom: 5,
+    backgroundColor: INDICATOR,
+  },
+  fabShadow: {
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  fab: {
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconShellFocused: {
-    shadowColor: '#0B2A43',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 4,
-    elevation: 2,
+  fabBackdrop: {
+    position: 'absolute',
+    overflow: 'hidden',
+    shadowColor: '#F5B21A',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+  },
+  fabShine: {
+    position: 'absolute',
+    top: -10,
+    bottom: -10,
+    width: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+  },
+  fabCaptionWrap: {
+    position: 'absolute',
+    width: CAPTION_WIDTH,
+    alignItems: 'center',
+  },
+  fabCaption: {
+    textAlign: 'center',
+    fontFamily: typography.fonts.displaySemibold,
+    letterSpacing: 0.1,
+    color: ACTIVE,
+  },
+  fabRing: {
+    position: 'absolute',
+    backgroundColor: '#F59E0B',
   },
   label: {
     letterSpacing: 0.1,
     textAlign: 'center',
     alignSelf: 'center',
+    marginTop: 3,
   },
   tabButtonInner: {
     flex: 1,

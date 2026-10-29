@@ -23,7 +23,6 @@ import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { ShiftNotificationPrompt } from '@/components/push/ShiftNotificationPrompt';
 import { NextShiftCard } from '@/components/home/NextShiftCard';
 import { ShiftCalendar } from '@/components/home/ShiftCalendar';
-import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
@@ -63,7 +62,7 @@ export default function HomeScreen() {
   const { user, firstName, roleLabel, profile, isVerified, isAppReviewDemo } =
     useAuth();
   const { assignments, loading, error, refresh } = useAssignments(user?.id);
-  const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(
+  const { isRestricted, refresh: refreshBilling } = useBillingRestriction(
     isVerified && !isAppReviewDemo,
   );
   const { allInvoices, refresh: refreshInvoices } = useInvoices(user?.id);
@@ -180,18 +179,7 @@ export default function HomeScreen() {
         live: false,
       };
     }
-    if (isRestricted) {
-      return {
-        eyebrow: 'Billing',
-        title: 'Pay overdue invoice',
-        body: 'New shift claims are paused until past-due commission is paid.',
-        actionLabel: 'View invoices',
-        onAction: () => router.push('/(tabs)/invoices'),
-        icon: 'alert-circle-outline' as const,
-        variant: 'emphasis' as const,
-        live: false,
-      };
-    }
+    // Billing restriction ("Marketplace access paused") surfaces on the notifications bell.
     if (nextShift && canSubmitCompletedHours(nextStatus) && nextShiftEnded) {
       return {
         eyebrow: 'Timesheet',
@@ -260,7 +248,6 @@ export default function HomeScreen() {
     };
   }, [
     isVerified,
-    isRestricted,
     nextShift,
     nextStatus,
     nextShiftEnded,
@@ -272,8 +259,9 @@ export default function HomeScreen() {
     let count = 0;
     if (pastDueCount > 0) count += pastDueCount;
     else if (dueSoon) count += 1;
+    if (isRestricted) count += 1;
     return count;
-  }, [pastDueCount, dueSoon]);
+  }, [pastDueCount, dueSoon, isRestricted]);
 
   const onRefresh = () => {
     void refresh();
@@ -293,12 +281,11 @@ export default function HomeScreen() {
           roleLabel={roleLabel}
           initials={initials}
           unreadCount={notificationAlertCount}
-          alertTone={pastDueCount > 0 ? 'danger' : dueSoon ? 'money' : 'default'}
+          verified={isVerified}
+          alertTone={pastDueCount > 0 || isRestricted ? 'danger' : dueSoon ? 'money' : 'default'}
         />
 
         {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
-
-        {isRestricted && summary ? <BillingRestrictionBanner summary={summary} /> : null}
 
         {isAppReviewDemo ? null : !isVerified ? (
           <Banner
@@ -420,9 +407,8 @@ function InvoiceSummaryCard({
   const urgent = pastDueCount > 0;
   const gradient: [string, string] = urgent
     ? ['#9B1C1C', colors.error]
-    : ['#146C43', colors.success];
-  const soft = urgent ? colors.errorLight : colors.successLight;
-  const border = urgent ? 'rgba(220, 53, 69, 0.35)' : 'rgba(25, 135, 84, 0.28)';
+    : [colors.navy, colors.tealStrong];
+  const stubCount = urgent ? pastDueCount : openCount;
   const subtitle =
     pastDueCount > 0
       ? `${openCount} open · ${pastDueCount} past due`
@@ -447,48 +433,38 @@ function InvoiceSummaryCard({
         accessibilityLabel="View invoices"
         style={({ pressed }) => [
           styles.invoiceCard,
-          { backgroundColor: soft, borderColor: border },
+          { shadowColor: gradient[0] },
           pressed && styles.invoiceCardPressed,
         ]}
       >
         <LinearGradient
-          pointerEvents="none"
-          colors={[`${gradient[0]}18`, 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={[styles.invoiceRail, { backgroundColor: gradient[1] }]} />
-
-        <LinearGradient
           colors={gradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.invoiceIcon}
+          style={styles.invoiceStub}
         >
           <Ionicons
-            name={urgent ? 'alert-circle' : 'receipt'}
-            size={20}
-            color={colors.white}
+            name={urgent ? 'alert-circle' : 'receipt-outline'}
+            size={18}
+            color="rgba(255,255,255,0.85)"
           />
+          <Text style={styles.invoiceStubCount}>{stubCount}</Text>
+          <Text style={styles.invoiceStubLabel}>{urgent ? 'Past due' : 'Open'}</Text>
         </LinearGradient>
 
         <View style={styles.invoiceCopy}>
-          <View style={styles.invoiceTitleRow}>
-            <Text style={styles.invoiceTitle}>Invoices</Text>
-            <View style={[styles.invoiceBadge, { backgroundColor: gradient[0] }]}>
-              <Text style={styles.invoiceBadgeText}>
-                {urgent ? 'Past due' : `${openCount} open`}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.invoiceSubtitle} numberOfLines={1}>
+          <Text style={[styles.invoiceEyebrow, urgent && styles.invoiceEyebrowUrgent]}>
+            Commission
+          </Text>
+          <Text style={styles.invoiceTitle}>Invoices</Text>
+          <Text style={styles.invoiceSubtitle} numberOfLines={2}>
             {subtitle}
           </Text>
         </View>
 
-        <View style={[styles.invoiceChevron, { backgroundColor: `${gradient[1]}22` }]}>
-          <Ionicons name="arrow-forward" size={16} color={gradient[0]} />
+        <View style={styles.invoiceAction}>
+          <Text style={styles.invoiceActionText}>{urgent ? 'Pay' : 'Review'}</Text>
+          <Ionicons name="arrow-forward" size={14} color={colors.navy} />
         </View>
       </Pressable>
     </Animated.View>
@@ -512,75 +488,84 @@ const styles = StyleSheet.create({
   },
   invoiceCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 84,
+    alignItems: 'stretch',
+    minHeight: 92,
     marginTop: spacing.sm,
-    borderRadius: radii.lg,
-    borderWidth: 1.5,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingLeft: spacing.lg + 4,
+    borderRadius: radii.xl,
+    backgroundColor: colors.white,
     overflow: 'hidden',
-    position: 'relative',
     ...shadows.sm,
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
   },
   invoiceCardPressed: {
     opacity: 0.92,
   },
-  invoiceRail: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 5,
-  },
-  invoiceIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  invoiceStub: {
+    width: 78,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 2,
+    paddingVertical: spacing.md,
+  },
+  invoiceStubCount: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 28,
+    lineHeight: 32,
+    color: colors.white,
+  },
+  invoiceStubLabel: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 9.5,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.78)',
   },
   invoiceCopy: {
     flex: 1,
     minWidth: 0,
-    gap: 4,
+    justifyContent: 'center',
+    gap: 2,
+    paddingVertical: spacing.md,
+    paddingLeft: spacing.md,
+    paddingRight: spacing.sm,
   },
-  invoiceTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
+  invoiceEyebrow: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
+  },
+  invoiceEyebrowUrgent: {
+    color: colors.error,
   },
   invoiceTitle: {
     fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    letterSpacing: -0.2,
+    fontSize: 18,
+    letterSpacing: -0.25,
     color: colors.text,
-  },
-  invoiceBadge: {
-    borderRadius: radii.full,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  invoiceBadgeText: {
-    fontFamily: typography.fonts.bold,
-    fontSize: 10,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    color: colors.white,
   },
   invoiceSubtitle: {
     fontFamily: typography.fonts.regular,
-    fontSize: 13,
+    fontSize: 12.5,
     color: colors.textSecondary,
   },
-  invoiceChevron: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  invoiceAction: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: 5,
+    marginRight: spacing.md,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radii.full,
+    backgroundColor: colors.yellow,
+  },
+  invoiceActionText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12.5,
+    color: colors.navy,
   },
 });

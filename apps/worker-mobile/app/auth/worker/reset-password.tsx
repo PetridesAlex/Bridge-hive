@@ -238,7 +238,7 @@ export default function WorkerResetPasswordScreen() {
         title="Continue password reset"
         subtitle="Confirm once to verify your reset link, then choose a new password. This does not activate an organization account."
         showBack={false}
-        centered={false}
+        centered
       >
         <View style={styles.stateIconWrap}>
           <Ionicons name="lock-closed-outline" size={28} color={colors.tealStrong} />
@@ -328,7 +328,7 @@ export default function WorkerResetPasswordScreen() {
       title="Set a new password"
       subtitle={`Choose a new password for your Bridge Hive worker account. Use at least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters.`}
       showBack={false}
-      centered={false}
+      centered
     >
       <View style={styles.fields}>
         <AuthField
@@ -352,9 +352,6 @@ export default function WorkerResetPasswordScreen() {
           accessibilityLabel="Confirm new password"
         />
 
-        <Text style={styles.guidance}>
-          Use at least {WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters
-        </Text>
         <View style={styles.reqList} accessibilityLiveRegion="polite">
           <RequirementRow
             label={`At least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters`}
@@ -425,11 +422,6 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.semibold,
     fontSize: 13,
   },
-  guidance: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
   stateIconWrap: {
     width: 52,
     height: 52,
@@ -437,7 +429,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceSubdued,
-    marginBottom: spacing.sm,
   },
   stateIconSuccess: {
     backgroundColor: 'rgba(20, 169, 181, 0.14)',
@@ -447,19 +438,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.textSecondary,
-    marginBottom: spacing.sm,
   },
   success: {
     fontFamily: typography.fonts.medium,
     fontSize: 15,
     color: colors.textSecondary,
-    marginBottom: spacing.md,
   },
   error: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
     color: colors.error,
-    marginBottom: spacing.sm,
   },
   hint: {
     fontFamily: typography.fonts.regular,
@@ -476,7 +464,7 @@ const styles = StyleSheet.create({
   supportHit: {
     minHeight: 44,
     justifyContent: 'center',
-    marginTop: spacing.md,
+    alignSelf: 'center',
   },
   support: {
     fontFamily: typography.fonts.regular,

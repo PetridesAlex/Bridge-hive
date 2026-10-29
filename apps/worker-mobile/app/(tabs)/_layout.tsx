@@ -104,19 +104,13 @@ export default function TabsLayout() {
         options={{
           title: 'My shifts',
           tabBarAccessibilityLabel: 'My shifts',
-          tabBarLabel: ({ focused }) => (
-            <AnimatedTabLabel
-              focused={focused}
-              accent={TAB_ACCENTS.work}
-              compactLabel="Work"
-            >
-              My shifts
-            </AnimatedTabLabel>
-          ),
+          // Center action button: no text label, the raised honey button is the tab.
+          tabBarLabel: () => null,
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
+              variant="fab"
               focused={focused}
-              icon="briefcase-outline"
+              icon="briefcase"
               iconFocused="briefcase"
               accent={TAB_ACCENTS.work}
             />
@@ -126,11 +120,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="payments"
         options={{
-          title: 'Money',
-          tabBarAccessibilityLabel: 'Money',
+          title: 'Earnings',
+          tabBarAccessibilityLabel: 'Earnings',
           tabBarLabel: ({ focused }) => (
             <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.finances}>
-              Money
+              Earnings
             </AnimatedTabLabel>
           ),
           tabBarIcon: ({ focused }) => (
@@ -163,8 +157,8 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              icon="menu-outline"
-              iconFocused="menu"
+              icon="grid-outline"
+              iconFocused="grid"
               accent={TAB_ACCENTS.more}
             />
           ),

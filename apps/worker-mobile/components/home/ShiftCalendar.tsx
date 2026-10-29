@@ -323,8 +323,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radii.xl,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(20, 169, 181, 0.2)',
     backgroundColor: colors.card,
     ...shadows.lg,
   },
@@ -347,8 +345,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   navPressed: {
     backgroundColor: 'rgba(255, 255, 255, 0.32)',
@@ -385,8 +381,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radii.full,
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
   },
   statDot: {
     width: 7,
@@ -417,8 +411,6 @@ const styles = StyleSheet.create({
   tool: {
     minHeight: 34,
     borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(20, 169, 181, 0.28)',
     backgroundColor: colors.tealSoft,
     paddingHorizontal: spacing.md,
     flexDirection: 'row',
@@ -427,7 +419,6 @@ const styles = StyleSheet.create({
   },
   toolOn: {
     backgroundColor: colors.navy,
-    borderColor: colors.navy,
   },
   toolText: {
     fontFamily: typography.fonts.semibold,
@@ -450,23 +441,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surfaceSubdued,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
     paddingVertical: 8,
     overflow: 'hidden',
     gap: 2,
   },
   dayToday: {
-    borderColor: colors.tealStrong,
-    borderWidth: 1.5,
+    backgroundColor: '#CDEFF2',
   },
   dayBusy: {
     backgroundColor: colors.tealSoft,
-    borderColor: 'rgba(20, 169, 181, 0.35)',
   },
-  dayOn: {
-    borderColor: 'transparent',
-  },
+  dayOn: {},
   dayLabel: {
     fontFamily: typography.fonts.medium,
     fontSize: 10,

@@ -318,8 +318,7 @@ export default function WorkerRegisterScreen() {
 
 const styles = StyleSheet.create({
   stepHeader: {
-    gap: 6,
-    marginBottom: spacing.sm,
+    gap: 4,
   },
   stepLabel: {
     fontFamily: typography.fonts.semibold,
@@ -420,7 +419,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#FF8A80',
   },
-  actions: { gap: spacing.sm, marginTop: spacing.sm },
+  actions: { gap: spacing.sm },
   glassBtn: {
     minHeight: 48,
     borderRadius: radii.full,
@@ -451,9 +450,11 @@ const styles = StyleSheet.create({
     opacity: 0.55,
   },
   footer: {
-    marginTop: spacing.xxl,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    columnGap: 6,
   },
   footerText: {
     fontFamily: typography.fonts.regular,

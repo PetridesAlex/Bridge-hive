@@ -72,7 +72,7 @@ export default function WorkerForgotPasswordScreen() {
       title="Reset your password"
       subtitle="Enter the email for your Bridge Hive worker account. We will send reset instructions if an account exists."
       showBack
-      centered={false}
+      centered
       footer={
         <View style={styles.footer}>
           <Pressable
@@ -155,7 +155,6 @@ export default function WorkerForgotPasswordScreen() {
 const styles = StyleSheet.create({
   actions: {
     gap: spacing.md,
-    marginTop: spacing.sm,
   },
   cta: {
     borderRadius: radii.full,
@@ -194,14 +193,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   footer: {
-    marginTop: spacing.xxl,
     alignItems: 'center',
-    gap: 10,
+    gap: 2,
   },
   backLink: {
     minHeight: 44,
     justifyContent: 'center',
-    paddingVertical: 8,
   },
   backLinkText: {
     fontFamily: typography.fonts.semibold,

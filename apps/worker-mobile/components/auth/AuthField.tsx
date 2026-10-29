@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
-    minHeight: 64,
+    paddingVertical: 10,
+    minHeight: 60,
     borderRadius: radii.lg,
     borderWidth: 1.5,
   },
@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: 1,
   },
   label: {
     fontFamily: typography.fonts.medium,

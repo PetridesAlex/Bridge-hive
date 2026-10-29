@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { colors, motion, radii, shadows, spacing, typography } from '@/constants/theme';
+import { colors, motion, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Stat = {
@@ -28,6 +28,7 @@ type Props = {
   onAction: () => void;
   onPressCard?: () => void;
   icon?: keyof typeof Ionicons.glyphMap;
+  /** `emphasis` = action required (honey icon), `light` = informational (navy icon). */
   variant?: 'light' | 'emphasis';
   /** Live marketplace / workday indicator with subtle pulse. */
   live?: boolean;
@@ -36,8 +37,11 @@ type Props = {
   stats?: Stat[];
 };
 
+const HONEY_GRADIENT: [string, string] = ['#FFD25A', '#F08C00'];
+
 /**
- * Home “next action” — notification-style, minimal, with a living background.
+ * Home “next action” — background-free: no card fill, border or shadow.
+ * Icon tile, copy and a navy action pill sit directly on the screen.
  */
 export function ContextualActionCard({
   eyebrow,
@@ -55,10 +59,9 @@ export function ContextualActionCard({
   const emphasis = variant === 'emphasis';
   const reduced = useReducedMotion();
   const enter = useSharedValue(reduced ? 1 : 0);
-  const sheen = useSharedValue(0);
-  const glow = useSharedValue(0);
   const pulse = useSharedValue(1);
   const press = useSharedValue(1);
+  const nudge = useSharedValue(0);
 
   useEffect(() => {
     if (reduced) {
@@ -72,30 +75,12 @@ export function ContextualActionCard({
   }, [enter, reduced]);
 
   useEffect(() => {
-    if (reduced) {
-      sheen.value = 0.45;
-      glow.value = 0.5;
-      return;
-    }
-    sheen.value = withRepeat(
-      withTiming(1, { duration: 4800, easing: Easing.inOut(Easing.quad) }),
-      -1,
-      true,
-    );
-    glow.value = withRepeat(
-      withTiming(1, { duration: 3600, easing: Easing.inOut(Easing.sin) }),
-      -1,
-      true,
-    );
-  }, [glow, reduced, sheen]);
-
-  useEffect(() => {
     if (!live || reduced) {
       pulse.value = 1;
       return;
     }
     pulse.value = withRepeat(
-      withTiming(1.12, {
+      withTiming(1.18, {
         duration: motion.duration.slow * 4,
         easing: Easing.inOut(Easing.quad),
       }),
@@ -104,31 +89,37 @@ export function ContextualActionCard({
     );
   }, [live, pulse, reduced]);
 
+  useEffect(() => {
+    if (reduced) {
+      nudge.value = 0;
+      return;
+    }
+    nudge.value = withRepeat(
+      withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+  }, [nudge, reduced]);
+
   const cardAnim = useAnimatedStyle(() => ({
     opacity: enter.value,
-    transform: [
-      { translateY: (1 - enter.value) * 8 },
-      { scale: press.value },
-    ],
-  }));
-
-  const sheenStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(sheen.value, [0, 1], [-120, 280]) }],
-    opacity: emphasis ? 0.35 : 0.55,
-  }));
-
-  const glowStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(glow.value, [0, 1], [0.25, 0.55]),
+    transform: [{ translateY: (1 - enter.value) * 8 }, { scale: press.value }],
   }));
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
-    opacity: interpolate(pulse.value, [1, 1.12], [0.9, 0.45]),
+    opacity: interpolate(pulse.value, [1, 1.18], [0.8, 0]),
+  }));
+
+  const arrowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(nudge.value, [0, 1], [0, 3]) }],
   }));
 
   const handlePress = () => {
     (onPressCard ?? onAction)();
   };
+
+  const ringColor = emphasis ? colors.yellow : colors.tealStrong;
 
   return (
     <Animated.View style={cardAnim}>
@@ -142,100 +133,50 @@ export function ContextualActionCard({
         }}
         accessibilityRole="button"
         accessibilityLabel={`${eyebrow}. ${title}. ${actionLabel}`}
-        style={[styles.card, emphasis && styles.cardEmphasis]}
+        style={styles.card}
       >
-        {emphasis ? (
-          <LinearGradient
-            colors={['#08253C', '#0B3A4F', '#0E6670']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-        ) : (
-          <LinearGradient
-            colors={['#F2FBFC', '#FFFFFF', '#EEF6FA']}
-            locations={[0, 0.45, 1]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-        )}
-
-        <Animated.View style={[styles.glowBlob, glowStyle]} pointerEvents="none">
-          <LinearGradient
-            colors={
-              emphasis
-                ? ['rgba(245, 197, 66, 0.28)', 'transparent']
-                : ['rgba(20, 169, 181, 0.22)', 'rgba(11, 42, 67, 0.06)', 'transparent']
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-
-        <Animated.View style={[styles.sheen, sheenStyle]} pointerEvents="none">
-          <LinearGradient
-            colors={[
-              'transparent',
-              emphasis ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.9)',
-              'transparent',
-            ]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-
-        <View style={[styles.rail, emphasis && styles.railEmphasis]} />
-
         <View style={styles.row}>
           <View style={styles.iconStack}>
-            {live ? <Animated.View style={[styles.liveRing, pulseStyle]} /> : null}
+            {live ? (
+              <Animated.View
+                style={[styles.liveRing, { borderColor: ringColor }, pulseStyle]}
+              />
+            ) : null}
             <LinearGradient
-              colors={
-                emphasis
-                  ? ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.08)']
-                  : [colors.navy, colors.tealStrong]
-              }
+              colors={emphasis ? HONEY_GRADIENT : [colors.navy, colors.tealStrong]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.icon}
             >
               <Ionicons
                 name={icon}
-                size={18}
-                color={emphasis ? colors.yellow : colors.white}
+                size={22}
+                color={emphasis ? colors.navy : colors.white}
               />
             </LinearGradient>
           </View>
 
           <View style={styles.copy}>
             <View style={styles.metaRow}>
-              <Text
-                style={[styles.eyebrow, emphasis && styles.eyebrowOnDark]}
-                numberOfLines={1}
-              >
+              <Text style={styles.eyebrow} numberOfLines={1}>
                 {eyebrow}
               </Text>
               {live ? (
-                <View style={[styles.livePill, emphasis && styles.livePillOnDark]}>
-                  <View style={[styles.liveDot, emphasis && styles.liveDotOnDark]} />
-                  <Text style={[styles.liveText, emphasis && styles.liveTextOnDark]}>
+                <View style={[styles.livePill, emphasis && styles.livePillEmphasis]}>
+                  <View style={[styles.liveDot, emphasis && styles.liveDotEmphasis]} />
+                  <Text style={[styles.liveText, emphasis && styles.liveTextEmphasis]}>
                     {liveLabel}
                   </Text>
                 </View>
               ) : null}
             </View>
 
-            <Text style={[styles.title, emphasis && styles.titleOnDark]} numberOfLines={1}>
+            <Text style={styles.title} numberOfLines={2}>
               {title}
             </Text>
 
             {body ? (
-              <Text style={[styles.body, emphasis && styles.bodyOnDark]} numberOfLines={1}>
+              <Text style={styles.body} numberOfLines={2}>
                 {body}
               </Text>
             ) : null}
@@ -243,34 +184,24 @@ export function ContextualActionCard({
             {stats && stats.length > 0 ? (
               <View style={styles.statsRow}>
                 {stats.map((stat) => (
-                  <View
-                    key={stat.label}
-                    style={[styles.statChip, emphasis && styles.statChipOnDark]}
-                  >
-                    <Text style={[styles.statValue, emphasis && styles.statValueOnDark]}>
-                      {stat.value}
-                    </Text>
-                    <Text style={[styles.statLabel, emphasis && styles.statLabelOnDark]}>
-                      {stat.label}
-                    </Text>
+                  <View key={stat.label} style={styles.statChip}>
+                    <Text style={styles.statValue}>{stat.value}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
                   </View>
                 ))}
               </View>
             ) : null}
-          </View>
 
-          <View style={[styles.chevron, emphasis && styles.chevronOnDark]}>
-            <Ionicons
-              name="chevron-forward"
-              size={16}
-              color={emphasis ? colors.yellow : colors.navy}
-            />
+            <View style={styles.action}>
+              <Text style={styles.actionText} numberOfLines={1}>
+                {actionLabel}
+              </Text>
+              <Animated.View style={[styles.actionArrow, arrowStyle]}>
+                <Ionicons name="arrow-forward" size={13} color={colors.navy} />
+              </Animated.View>
+            </View>
           </View>
         </View>
-
-        <Text style={[styles.actionHint, emphasis && styles.actionHintOnDark]} numberOfLines={1}>
-          {actionLabel}
-        </Text>
       </Pressable>
     </Animated.View>
   );
@@ -278,69 +209,30 @@ export function ContextualActionCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radii.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(20, 169, 181, 0.22)',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingLeft: spacing.md + 4,
-    gap: spacing.xs,
-    overflow: 'hidden',
-    position: 'relative',
-    ...shadows.sm,
-  },
-  cardEmphasis: {
-    borderColor: 'rgba(245, 197, 66, 0.28)',
-  },
-  glowBlob: {
-    position: 'absolute',
-    top: -36,
-    right: -20,
-    width: 160,
-    height: 120,
-    borderRadius: 80,
-  },
-  sheen: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 72,
-  },
-  rail: {
-    position: 'absolute',
-    left: 0,
-    top: 10,
-    bottom: 10,
-    width: 3,
-    borderRadius: 2,
-    backgroundColor: colors.tealStrong,
-  },
-  railEmphasis: {
-    backgroundColor: colors.yellow,
+    paddingVertical: spacing.xs,
   },
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.md,
   },
   iconStack: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   liveRing: {
     position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.tealStrong,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
   },
   icon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -348,7 +240,7 @@ const styles = StyleSheet.create({
   copy: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: 3,
   },
   metaRow: {
     flexDirection: 'row',
@@ -357,26 +249,23 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   eyebrow: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 10,
-    letterSpacing: 0.7,
+    fontFamily: typography.fonts.bold,
+    fontSize: 10.5,
+    letterSpacing: 1,
     textTransform: 'uppercase',
     color: colors.tealStrong,
-  },
-  eyebrowOnDark: {
-    color: 'rgba(255,255,255,0.72)',
   },
   livePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radii.full,
-    backgroundColor: 'rgba(20, 169, 181, 0.12)',
+    backgroundColor: colors.tealSoft,
   },
-  livePillOnDark: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
+  livePillEmphasis: {
+    backgroundColor: '#FFF5D6',
   },
   liveDot: {
     width: 5,
@@ -384,35 +273,29 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     backgroundColor: colors.tealStrong,
   },
-  liveDotOnDark: {
-    backgroundColor: colors.yellow,
+  liveDotEmphasis: {
+    backgroundColor: colors.honeyStrong,
   },
   liveText: {
     fontFamily: typography.fonts.semibold,
     fontSize: 10,
     color: colors.tealStrong,
   },
-  liveTextOnDark: {
-    color: colors.white,
+  liveTextEmphasis: {
+    color: colors.honeyStrong,
   },
   title: {
     fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    lineHeight: 21,
-    letterSpacing: -0.2,
+    fontSize: 18,
+    lineHeight: 23,
+    letterSpacing: -0.3,
     color: colors.navy,
-  },
-  titleOnDark: {
-    color: colors.white,
   },
   body: {
     fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.textSecondary,
-  },
-  bodyOnDark: {
-    color: 'rgba(255,255,255,0.7)',
   },
   statsRow: {
     flexDirection: 'row',
@@ -429,16 +312,10 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
     backgroundColor: 'rgba(11, 42, 67, 0.06)',
   },
-  statChipOnDark: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
   statValue: {
     fontFamily: typography.fonts.semibold,
     fontSize: 11,
     color: colors.navy,
-  },
-  statValueOnDark: {
-    color: colors.white,
   },
   statLabel: {
     fontFamily: typography.fonts.medium,
@@ -447,28 +324,29 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.2,
   },
-  statLabelOnDark: {
-    color: 'rgba(255,255,255,0.65)',
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginTop: spacing.sm,
+    paddingVertical: 5,
+    paddingLeft: 14,
+    paddingRight: 5,
+    borderRadius: radii.full,
+    backgroundColor: colors.navy,
   },
-  chevron: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  actionText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.white,
+  },
+  actionArrow: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(11, 42, 67, 0.06)',
-  },
-  chevronOnDark: {
-    backgroundColor: 'rgba(255,255,255,0.12)',
-  },
-  actionHint: {
-    marginLeft: 52,
-    fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    letterSpacing: 0.2,
-    color: colors.tealStrong,
-  },
-  actionHintOnDark: {
-    color: colors.yellow,
+    backgroundColor: colors.yellow,
   },
 });

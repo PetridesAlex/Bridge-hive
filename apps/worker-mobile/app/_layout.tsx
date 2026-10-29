@@ -66,11 +66,27 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
               }}
             >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="welcome" />
-              <Stack.Screen name="auth/worker/index" />
-              <Stack.Screen name="auth/worker/login" />
-              <Stack.Screen name="auth/worker/register" />
+              {/* Navy first-launch journey: navy content + fade so no light flash between screens. */}
+              <Stack.Screen
+                name="index"
+                options={{ contentStyle: { backgroundColor: APP_BOOT_BG }, animation: 'fade' }}
+              />
+              <Stack.Screen
+                name="welcome"
+                options={{ contentStyle: { backgroundColor: APP_BOOT_BG }, animation: 'fade' }}
+              />
+              <Stack.Screen
+                name="auth/worker/index"
+                options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
+              />
+              <Stack.Screen
+                name="auth/worker/login"
+                options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
+              />
+              <Stack.Screen
+                name="auth/worker/register"
+                options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
+              />
               <Stack.Screen name="auth/worker/forgot-password" />
               <Stack.Screen name="auth/worker/check-email" />
               <Stack.Screen name="auth/worker/choose-role" />

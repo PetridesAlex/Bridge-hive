@@ -267,10 +267,9 @@ export default function ShiftCalendarScreen() {
               </Text>
 
               {selectedIso && selectedShifts.length > 0 ? (
-                <View style={styles.listCard}>
-                  {selectedShifts.map((shift, index) => (
+                <View style={styles.cardStack}>
+                  {selectedShifts.map((shift) => (
                     <React.Fragment key={shift.id}>
-                      {index > 0 ? <ListGroupSeparator /> : null}
                       <ShiftCard
                         shift={shift}
                         organizationName={shift.organization_name ?? undefined}
@@ -570,6 +569,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: colors.textSecondary,
+  },
+  cardStack: {
+    marginTop: spacing.xs,
+    gap: spacing.md,
   },
   listCard: {
     marginTop: spacing.xs,

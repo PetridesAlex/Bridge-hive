@@ -27,6 +27,7 @@ import { ProgressBar } from '@/components/ui/ProgressRing';
 import { ProgressStep, type ProgressStepState } from '@/components/ui/ProgressStep';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { supabase } from '@/lib/supabase';
 import {
   buildWorkerJourneySnapshot,
@@ -82,6 +83,7 @@ function SetupAction({
   busy?: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const [hovered, setHovered] = useState(false);
   const scale = useSharedValue(1);
@@ -161,7 +163,7 @@ function SetupAction({
             <Ionicons name={icon} size={16} color={colors.white} />
           </Animated.View>
         </LinearGradient>
-        <Text style={styles.setupLabel}>{busy ? 'Refreshing…' : label}</Text>
+        <Text style={styles.setupLabel}>{busy ? t('auth.refreshing') : label}</Text>
         <Animated.View style={chevronStyle}>
           <Ionicons name="chevron-forward" size={16} color={colors.navyLift} />
         </Animated.View>
@@ -199,22 +201,20 @@ function AccountStatusCard({
   label: string;
   summary: string;
 }) {
+  const { t } = useTranslation();
   const tone = accountStatusTone(status);
   return (
     <View accessibilityRole="summary" style={styles.accountCard}>
       <View style={styles.accountTop}>
         <Ionicons name={tone.icon} size={22} color={tone.accent} style={styles.accountIcon} />
         <View style={styles.accountCopy}>
-          <Text style={styles.accountEyebrow}>Account status</Text>
+          <Text style={styles.accountEyebrow}>{t('auth.accountStatus')}</Text>
           <Text style={styles.accountLabel}>{label}</Text>
           <Text style={styles.accountSummary}>{summary}</Text>
         </View>
       </View>
       <View style={styles.accountDivider} />
-      <Text style={styles.accountFootText}>
-        Document “Accepted” is not marketplace access. Shifts unlock only after
-        administrator activation.
-      </Text>
+      <Text style={styles.accountFootText}>{t('auth.accountStatusFoot')}</Text>
     </View>
   );
 }
@@ -228,6 +228,7 @@ function NextStepCard({
   actionLabel?: string;
   onAction?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <View accessibilityRole="alert" style={styles.nextCard}>
       <View style={styles.nextInner}>
@@ -235,7 +236,7 @@ function NextStepCard({
           <Ionicons name="arrow-forward-circle" size={22} color={colors.tealStrong} />
         </View>
         <View style={styles.nextCopy}>
-          <Text style={styles.nextEyebrow}>Next step</Text>
+          <Text style={styles.nextEyebrow}>{t('auth.nextStep')}</Text>
           <Text style={styles.nextBody}>{body}</Text>
         </View>
       </View>
@@ -261,6 +262,7 @@ function ReviewAction({
   busy: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const [hovered, setHovered] = useState(false);
   const scale = useSharedValue(1);
@@ -278,7 +280,7 @@ function ReviewAction({
     <Animated.View style={motionStyle}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Submit for review"
+        accessibilityLabel={t('auth.submitForReview')}
         accessibilityState={{ busy, disabled: busy }}
         disabled={busy}
         onPress={onPress}
@@ -313,7 +315,7 @@ function ReviewAction({
           <ActivityIndicator color={colors.white} />
         ) : (
           <>
-            <Text style={styles.reviewLabel}>Submit for review</Text>
+            <Text style={styles.reviewLabel}>{t('auth.submitForReview')}</Text>
             <Animated.View style={iconStyle}>
               <Ionicons name="arrow-forward" size={18} color={colors.yellow} />
             </Animated.View>
@@ -325,6 +327,7 @@ function ReviewAction({
 }
 
 function SignOutAction({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const [hovered, setHovered] = useState(false);
   const scale = useSharedValue(1);
@@ -342,7 +345,7 @@ function SignOutAction({ onPress }: { onPress: () => void }) {
     <Animated.View style={motionStyle}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Sign out"
+        accessibilityLabel={t('profile.signOut')}
         onPress={onPress}
         onHoverIn={() => {
           setHovered(true);
@@ -371,7 +374,7 @@ function SignOutAction({ onPress }: { onPress: () => void }) {
           style={StyleSheet.absoluteFill}
         />
         {hovered ? <View pointerEvents="none" style={styles.signOutWash} /> : null}
-        <Text style={styles.signOutLabel}>Sign out</Text>
+        <Text style={styles.signOutLabel}>{t('profile.signOut')}</Text>
         <Animated.View style={iconStyle}>
           <Ionicons name="log-out-outline" size={18} color={colors.white} />
         </Animated.View>
@@ -387,6 +390,7 @@ function SubmissionReadyNotice({
   visible: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const rise = useSharedValue(0);
@@ -422,14 +426,11 @@ function SubmissionReadyNotice({
           >
             <Ionicons name="checkmark" size={26} color={colors.yellow} />
           </LinearGradient>
-          <Text style={styles.noticeTitle}>Submissions are all set</Text>
-          <Text style={styles.noticeBody}>
-            Your package is with Bridge Hive for platform review. Final approval is an
-            administrator action. You can still update payout details while you wait.
-          </Text>
+          <Text style={styles.noticeTitle}>{t('auth.submissionsReadyTitle')}</Text>
+          <Text style={styles.noticeBody}>{t('auth.submissionsReadyBody')}</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Continue"
+            accessibilityLabel={t('common.continue')}
             onPress={onClose}
             style={styles.noticeButton}
           >
@@ -440,7 +441,7 @@ function SubmissionReadyNotice({
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
-            <Text style={styles.noticeButtonLabel}>Continue</Text>
+            <Text style={styles.noticeButtonLabel}>{t('common.continue')}</Text>
           </Pressable>
         </Animated.View>
       </View>
@@ -522,6 +523,7 @@ export default function WorkerAccountSetupScreen() {
     signOut,
     refreshProfile,
   } = useAuth();
+  const { t } = useTranslation();
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [readyNotice, setReadyNotice] = useState(false);
@@ -646,23 +648,23 @@ export default function WorkerAccountSetupScreen() {
   };
 
   const shellTitle = packageSubmitted
-    ? 'Your application is with BridgeHive'
-    : 'Account Setup';
+    ? t('auth.setupSubmittedTitle')
+    : t('auth.setupTitle');
   const shellSubtitle = packageSubmitted
-    ? 'Review is in progress. You can sign out and sign back in any time — shifts stay locked until activation.'
-    : 'Follow each step below. Marketplace access requires a separate administrator activation.';
+    ? t('auth.setupSubmittedSubtitle')
+    : t('auth.setupSubtitle');
 
   const nextActionLabel = canSubmitPackage
-    ? 'Submit application for review'
+    ? t('auth.submitApplication')
     : docsLabel === 'Complete' &&
         (payoutStatus == null ||
           payoutStatus === 'rejected' ||
           payoutStatus === 'failed')
       ? payoutButtonLabel
       : docsLabel === 'Missing' || docsLabel === 'Partially uploaded'
-        ? 'Upload documents'
+        ? t('auth.uploadDocuments')
         : journey.accountStatus === 'action_required'
-          ? 'Fix required items'
+          ? t('auth.fixRequiredItems')
           : undefined;
   const nextActionHandler = canSubmitPackage
     ? () => void onSubmitPackage()
@@ -706,7 +708,7 @@ export default function WorkerAccountSetupScreen() {
         return (
           <ProgressBar
             progress={doneCount / 4}
-            label={`${doneCount} of 4 steps complete`}
+            label={t('auth.stepsComplete', { done: doneCount, total: 4 })}
           />
         );
       })()}
@@ -714,25 +716,25 @@ export default function WorkerAccountSetupScreen() {
       <View style={styles.steps}>
         <ProgressStep
           step={1}
-          title="Personal profile"
-          description="Confirm your worker role and basic profile details."
-          statusLabel={profileDone ? 'Complete' : 'In progress'}
+          title={t('auth.personalProfile')}
+          description={t('auth.personalProfileDesc')}
+          statusLabel={profileDone ? t('auth.complete') : t('auth.inProgress')}
           state={profileDone ? 'complete' : 'in_progress'}
           isCurrent={!profileDone}
         />
         <ProgressStep
           step={2}
-          title="Required credentials"
+          title={t('auth.requiredCredentials')}
           description={credentialsProgressDescription(progress)}
           statusLabel={docsLabel}
           state={docsState(docsLabel)}
           isCurrent={profileDone && docsState(docsLabel) !== 'approved' && !packageSubmitted}
-          actionLabel="Manage credentials"
+          actionLabel={t('auth.manageCredentials')}
           onAction={() => router.push('/documents')}
         />
         <ProgressStep
           step={3}
-          title="Payout account"
+          title={t('auth.payoutAccount')}
           description={payoutStepDescription(payoutStatus)}
           statusLabel={payoutLabel}
           state={payoutState(payoutStatus)}
@@ -746,8 +748,8 @@ export default function WorkerAccountSetupScreen() {
         />
         <ProgressStep
           step={4}
-          title="Final review"
-          description="After documents and payout are approved, an administrator unlocks marketplace access."
+          title={t('auth.finalReview')}
+          description={t('auth.finalReviewDesc')}
           statusLabel={finalStatusDisplay(finalLabel)}
           state={finalState(finalLabel)}
           isCurrent={packageSubmitted || finalState(finalLabel) === 'under_review'}
@@ -763,10 +765,7 @@ export default function WorkerAccountSetupScreen() {
 
       <View style={styles.laterBox}>
         <Ionicons name="log-out-outline" size={16} color={colors.tealStrong} />
-        <Text style={styles.laterText}>
-          Need to leave? Sign out safely and sign in later with the same email. Your
-          progress is saved — you will return to Account Setup until activation.
-        </Text>
+        <Text style={styles.laterText}>{t('auth.leaveHint')}</Text>
       </View>
 
       <View style={styles.actions}>
@@ -774,13 +773,13 @@ export default function WorkerAccountSetupScreen() {
           <ReviewAction busy={submitting} onPress={() => void onSubmitPackage()} />
         ) : null}
         <SetupAction
-          label="View notifications"
+          label={t('auth.viewNotifications')}
           icon="notifications-outline"
           tone="navy"
           onPress={() => router.push('/notifications')}
         />
         <SetupAction
-          label="Refresh status"
+          label={t('auth.refreshStatus')}
           icon="refresh"
           tone="teal"
           busy={refreshing}

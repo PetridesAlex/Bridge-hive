@@ -6,28 +6,18 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthField } from '@/components/auth/AuthField';
 import { AuthShell, AuthStepBar } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
-import { WORKER_ROLE_LABELS } from '@/constants/config';
-import { WORKER_ROLE_OPTIONS } from '@/constants/workerRoleOptions';
+import { getWorkerRoleOptions } from '@/constants/workerRoleOptions';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
 import { setPendingConfirmEmail } from '@/lib/pending-confirm-email';
 import { useAuth } from '@/providers/AuthProvider';
 
-const STEPS = ['Account', 'Role', 'Review'] as const;
-
-const STEP_COPY: Record<(typeof STEPS)[number], { title: string; body: string }> = {
-  Account: {
-    title: 'Your account details',
-    body: 'We will use this email for sign-in and important account messages.',
-  },
-  Role: {
-    title: 'Your professional role',
-    body: 'Choose the role that matches how you work. You can update details later in your profile.',
-  },
-  Review: {
-    title: 'Confirm and create',
-    body: 'After signup you upload credentials. Marketplace access requires platform verification.',
-  },
-};
+const STEP_KEYS = ['stepAccount', 'stepRole', 'stepReview'] as const;
+const STEP_COPY_KEYS = {
+  stepAccount: { title: 'stepAccountTitle', body: 'stepAccountBody' },
+  stepRole: { title: 'stepRoleTitle', body: 'stepRoleBody' },
+  stepReview: { title: 'stepReviewTitle', body: 'stepReviewBody' },
+} as const;
 
 function goBackSafely() {
   if (router.canGoBack()) {
@@ -39,6 +29,8 @@ function goBackSafely() {
 
 export default function WorkerRegisterScreen() {
   const { signUpWorker, session, loading, homeRoute } = useAuth();
+  const { t } = useTranslation();
+  const roleOptions = getWorkerRoleOptions(t);
   const params = useLocalSearchParams<{ email?: string }>();
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -61,23 +53,28 @@ export default function WorkerRegisterScreen() {
     return <Redirect href={homeRoute as never} />;
   }
 
-  const stepKey = STEPS[step - 1];
-  const stepCopy = STEP_COPY[stepKey];
+  const stepKey = STEP_KEYS[step - 1];
+  const stepCopyKeys = STEP_COPY_KEYS[stepKey];
+  const stepName = t(`auth.${stepKey}`);
+  const stepCopy = {
+    title: t(`auth.${stepCopyKeys.title}`),
+    body: t(`auth.${stepCopyKeys.body}`),
+  };
 
   const validateStep = (): boolean => {
     setError(undefined);
     if (step === 1) {
       if (!fullName.trim() || !email.trim() || password.length < 6) {
-        setError('Enter your name, email, and a password of at least 6 characters.');
+        setError(t('auth.enterNameEmailPassword'));
         return false;
       }
       if (!email.includes('@')) {
-        setError('Enter a valid email address.');
+        setError(t('auth.enterValidEmail'));
         return false;
       }
       const digits = phone.replace(/\D/g, '');
       if (digits.length < 8) {
-        setError('Enter a valid phone number including country code.');
+        setError(t('auth.enterValidPhone'));
         return false;
       }
     }
@@ -86,7 +83,7 @@ export default function WorkerRegisterScreen() {
 
   const next = () => {
     if (!validateStep()) return;
-    setStep((s) => Math.min(s + 1, STEPS.length));
+    setStep((s) => Math.min(s + 1, STEP_KEYS.length));
   };
 
   const back = () => {
@@ -120,8 +117,8 @@ export default function WorkerRegisterScreen() {
         setPendingConfirmEmail(address);
         router.replace('/auth/worker/check-email');
         Alert.alert(
-          'Confirm your email',
-          `Your Bridge Hive account is created. An invitation was sent to ${address} so you can confirm your email address. Open that message, then sign in.`,
+          t('auth.confirmEmailAlertTitle'),
+          t('auth.confirmEmailAlertBody', { email: address }),
         );
         return;
       }
@@ -134,29 +131,29 @@ export default function WorkerRegisterScreen() {
 
   return (
     <AuthShell
-      title="Join BridgeHive"
-      subtitle="Create a worker account for nurses, ward assistants, and physiotherapists across Cyprus."
+      title={t('auth.joinTitle')}
+      subtitle={t('auth.registerSubtitle')}
       centered={false}
       tone="navy"
       footer={
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account?</Text>
+          <Text style={styles.footerText}>{t('auth.alreadyRegistered')}</Text>
           <Pressable
             onPress={() => router.push('/auth/worker/login')}
             accessibilityRole="link"
-            accessibilityLabel="Sign in"
+            accessibilityLabel={t('auth.signIn')}
             hitSlop={8}
             style={styles.footerLinkHit}
           >
-            <Text style={styles.footerLink}>Sign in</Text>
+            <Text style={styles.footerLink}>{t('auth.signIn')}</Text>
           </Pressable>
         </View>
       }
     >
-      <AuthStepBar current={step} total={STEPS.length} tone="navy" />
+      <AuthStepBar current={step} total={STEP_KEYS.length} tone="navy" />
       <View style={styles.stepHeader}>
         <Text style={styles.stepLabel}>
-          Step {step} of {STEPS.length} · {stepKey}
+          {t('auth.stepOf', { step, total: STEP_KEYS.length, name: stepName })}
         </Text>
         <Text style={styles.stepTitle} accessibilityRole="header">
           {stepCopy.title}
@@ -168,17 +165,17 @@ export default function WorkerRegisterScreen() {
         <View style={styles.fields}>
           <AuthField
             tone="navy"
-            label="Full name"
+            label={t('auth.fullName')}
             icon="person-outline"
             value={fullName}
             onChangeText={setFullName}
             autoComplete="name"
             textContentType="name"
-            placeholder="Your full name"
+            placeholder={t('auth.fullNamePlaceholder')}
           />
           <AuthField
             tone="navy"
-            label="Email"
+            label={t('common.email')}
             icon="mail-outline"
             value={email}
             onChangeText={setEmail}
@@ -186,11 +183,11 @@ export default function WorkerRegisterScreen() {
             keyboardType="email-address"
             autoComplete="email"
             textContentType="emailAddress"
-            placeholder="name@email.com"
+            placeholder={t('auth.emailPlaceholder')}
           />
           <AuthField
             tone="navy"
-            label="Phone"
+            label={t('common.phone')}
             icon="call-outline"
             value={phone}
             onChangeText={setPhone}
@@ -201,22 +198,22 @@ export default function WorkerRegisterScreen() {
           />
           <AuthField
             tone="navy"
-            label="Password"
+            label={t('common.password')}
             icon="lock-closed-outline"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
             autoComplete="new-password"
             textContentType="newPassword"
-            placeholder="At least 6 characters"
+            placeholder={t('auth.passwordMin')}
           />
-          <Text style={styles.hint}>Use at least 6 characters for your password.</Text>
+          <Text style={styles.hint}>{t('auth.passwordMinHint')}</Text>
         </View>
       ) : null}
 
       {step === 2 ? (
         <View style={styles.fields}>
-          {WORKER_ROLE_OPTIONS.map((option) => {
+          {roleOptions.map((option) => {
             const selected = workerRole === option.role;
             return (
               <Pressable
@@ -240,12 +237,12 @@ export default function WorkerRegisterScreen() {
           })}
           <AuthField
             tone="navy"
-            label="Short bio (optional)"
+            label={t('auth.shortBioOptional')}
             icon="create-outline"
             value={bio}
             onChangeText={setBio}
             multiline
-            placeholder="Optional context for organizations reviewing your profile"
+            placeholder={t('auth.shortBioPlaceholder')}
           />
         </View>
       ) : null}
@@ -253,21 +250,18 @@ export default function WorkerRegisterScreen() {
       {step === 3 ? (
         <View style={styles.fields}>
           <View style={styles.reviewCard}>
-            <Text style={styles.reviewLabel}>Name</Text>
+            <Text style={styles.reviewLabel}>{t('auth.name')}</Text>
             <Text style={styles.reviewValue}>{fullName}</Text>
           </View>
           <View style={styles.reviewCard}>
-            <Text style={styles.reviewLabel}>Email</Text>
+            <Text style={styles.reviewLabel}>{t('common.email')}</Text>
             <Text style={styles.reviewValue}>{email}</Text>
           </View>
           <View style={styles.reviewCard}>
-            <Text style={styles.reviewLabel}>Role</Text>
-            <Text style={styles.reviewValue}>{WORKER_ROLE_LABELS[workerRole]}</Text>
+            <Text style={styles.reviewLabel}>{t('auth.role')}</Text>
+            <Text style={styles.reviewValue}>{t(`roles.${workerRole}`)}</Text>
           </View>
-          <Text style={styles.hint}>
-            After signup you will upload credentials. Marketplace access requires platform
-            verification — you cannot self-verify.
-          </Text>
+          <Text style={styles.hint}>{t('auth.reviewHint')}</Text>
         </View>
       ) : null}
 
@@ -280,33 +274,33 @@ export default function WorkerRegisterScreen() {
       <View style={styles.actions}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Back"
+          accessibilityLabel={t('common.back')}
           onPress={back}
           disabled={submitting}
           style={[styles.glassBtn, styles.glassSecondary, submitting && styles.btnDisabled]}
         >
-          <Text style={styles.glassSecondaryLabel}>Back</Text>
+          <Text style={styles.glassSecondaryLabel}>{t('common.back')}</Text>
         </Pressable>
-        {step < STEPS.length ? (
+        {step < STEP_KEYS.length ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Continue"
+            accessibilityLabel={t('common.continue')}
             onPress={next}
             style={[styles.glassBtn, styles.glassPrimary]}
           >
-            <Text style={styles.glassPrimaryLabel}>Continue</Text>
+            <Text style={styles.glassPrimaryLabel}>{t('common.continue')}</Text>
           </Pressable>
         ) : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Create account"
+            accessibilityLabel={t('auth.createAccount')}
             accessibilityState={{ busy: submitting, disabled: submitting }}
             onPress={() => void onSubmit()}
             disabled={submitting}
             style={[styles.glassBtn, styles.glassPrimary, submitting && styles.btnDisabled]}
           >
             <Text style={styles.glassPrimaryLabel}>
-              {submitting ? 'Creating…' : 'Create account'}
+              {submitting ? t('auth.creating') : t('auth.createAccount')}
             </Text>
           </Pressable>
         )}

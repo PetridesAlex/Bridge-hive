@@ -135,13 +135,13 @@ export function AdminSidebar({
       )}
     >
       <div className="border-b border-white/10 px-5 py-6">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3.5">
           <BridgeHiveMark
-            size={36}
-            className="h-9 w-9 shrink-0 rounded-[0.65rem] shadow-sm ring-1 ring-white/10"
+            size={52}
+            className="h-[52px] w-[52px] shrink-0 rounded-[0.85rem] shadow-[0_8px_18px_rgba(0,0,0,0.28)] ring-1 ring-white/15"
           />
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey">
+            <p className="text-[12px] font-bold uppercase tracking-[0.14em] text-bh-honey">
               Bridge Hive
             </p>
             <p className="mt-0.5 truncate text-sm font-medium text-bh-sidebar-text/90">

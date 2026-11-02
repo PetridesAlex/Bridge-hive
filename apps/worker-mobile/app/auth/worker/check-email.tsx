@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/TextInput';
 import { APP_CONFIG } from '@/constants/config';
 import { colors, spacing, typography } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
 import {
   clearPendingConfirmEmail,
   getPendingConfirmEmail,
@@ -22,6 +23,7 @@ import { useAuth } from '@/providers/AuthProvider';
 export default function WorkerCheckEmailScreen() {
   const params = useLocalSearchParams<{ email?: string }>();
   const { resendSignupConfirmation } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState(() => getPendingConfirmEmail() ?? '');
   const [editing, setEditing] = useState(false);
   const [draftEmail, setDraftEmail] = useState(email);
@@ -61,14 +63,14 @@ export default function WorkerCheckEmailScreen() {
   const onSaveEmail = () => {
     const next = draftEmail.trim().toLowerCase();
     if (!next.includes('@')) {
-      setError('Enter a valid email address.');
+      setError(t('auth.enterValidEmail'));
       return;
     }
     setPendingConfirmEmail(next);
     setEmail(next);
     setEditing(false);
     setError(undefined);
-    setMessage('Address updated. You can resend confirmation to this address.');
+    setMessage(t('auth.addressUpdated'));
   };
 
   const onResend = async () => {
@@ -95,8 +97,8 @@ export default function WorkerCheckEmailScreen() {
 
   return (
     <AuthShell
-      title="Confirm your email"
-      subtitle="Your worker account is created. Confirm the invitation Bridge Hive sent before you sign in."
+      title={t('auth.confirmEmailTitle')}
+      subtitle={t('auth.confirmEmailSubtitle')}
       showBack={false}
       centered
     >
@@ -104,33 +106,31 @@ export default function WorkerCheckEmailScreen() {
         <Banner
           variant="info"
           icon="mail"
-          title="Invitation sent"
+          title={t('auth.invitationSent')}
           body={
             email
-              ? `Bridge Hive sent an invitation to ${email} to confirm your email address. Open that message and confirm the address.`
-              : 'Bridge Hive sent an invitation to confirm your email address. Open that message and confirm the address.'
+              ? t('auth.invitationBodyWithEmail', { email })
+              : t('auth.invitationBody')
           }
         />
         <Text style={styles.copy}>{workerConfirmRequestAcceptedCopy(false)}</Text>
         {email ? (
-          <Text style={styles.hint}>Request associated with: {email}</Text>
+          <Text style={styles.hint}>{t('auth.requestAssociatedWith', { email })}</Text>
         ) : (
-          <Text style={styles.hint}>
-            Enter the address you used to register if you need to resend confirmation.
-          </Text>
+          <Text style={styles.hint}>{t('auth.enterRegisterEmail')}</Text>
         )}
         {editing ? (
           <View style={styles.editBlock}>
             <TextInput
-              label="Email"
+              label={t('common.email')}
               value={draftEmail}
               onChangeText={setDraftEmail}
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            <Button label="Save address" variant="secondary" onPress={onSaveEmail} />
+            <Button label={t('auth.saveAddress')} variant="secondary" onPress={onSaveEmail} />
             <Button
-              label="Cancel"
+              label={t('common.cancel')}
               variant="ghost"
               onPress={() => {
                 setEditing(false);
@@ -149,8 +149,8 @@ export default function WorkerCheckEmailScreen() {
         <Button
           label={
             cooldownLeftSec > 0
-              ? `Resend available in ${cooldownLeftSec}s`
-              : 'Resend confirmation'
+              ? t('auth.resendAvailableIn', { seconds: cooldownLeftSec })
+              : t('auth.resendConfirmation')
           }
           variant="primary"
           loading={resending}
@@ -159,7 +159,7 @@ export default function WorkerCheckEmailScreen() {
         />
         {!editing ? (
           <Button
-            label="Wrong email? Edit address"
+            label={t('auth.wrongEmailEdit')}
             variant="secondary"
             onPress={() => {
               setEditing(true);
@@ -168,7 +168,7 @@ export default function WorkerCheckEmailScreen() {
           />
         ) : null}
         <Button
-          label="Continue to sign in"
+          label={t('auth.continueToSignIn')}
           variant="ghost"
           onPress={() => {
             clearPendingConfirmEmail();
@@ -176,7 +176,7 @@ export default function WorkerCheckEmailScreen() {
           }}
         />
         <Button
-          label="Back to registration"
+          label={t('auth.backToRegistration')}
           variant="ghost"
           onPress={() => {
             router.replace({
@@ -186,7 +186,9 @@ export default function WorkerCheckEmailScreen() {
           }}
         />
       </View>
-      <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+      <Text style={styles.support}>
+        {t('auth.supportLabel', { email: APP_CONFIG.supportEmail })}
+      </Text>
     </AuthShell>
   );
 }

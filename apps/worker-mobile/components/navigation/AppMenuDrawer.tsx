@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  ActionSheetIOS,
   Alert,
   Modal,
   Platform,
@@ -32,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAppLocale, useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 type MenuItem = {
@@ -39,139 +41,157 @@ type MenuItem = {
   label: string;
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
-  href: string;
+  href?: string;
+  onPress?: () => void;
+  trailing?: string;
   accent: [string, string];
 };
 
-const MENU_SECTIONS: { title: string; items: MenuItem[] }[] = [
-  {
-    title: 'Work',
-    items: [
-      {
-        key: 'home',
-        label: 'Home',
-        subtitle: 'Schedule and next actions',
-        icon: 'home',
-        href: '/(tabs)',
-        accent: [colors.navy, colors.tealStrong],
-      },
-      {
-        key: 'shifts',
-        label: 'Open shifts',
-        subtitle: 'Role-matched marketplace',
-        icon: 'search',
-        href: '/(tabs)/shifts',
-        accent: [colors.tealStrong, '#0E7490'],
-      },
-      {
-        key: 'calendar',
-        label: 'Shift calendar',
-        subtitle: 'Browse by month',
-        icon: 'calendar',
-        href: '/shifts/calendar',
-        accent: [colors.navyLift, colors.teal],
-      },
-      {
-        key: 'work',
-        label: 'My shifts',
-        subtitle: 'Accepted assignments',
-        icon: 'briefcase',
-        href: '/(tabs)/work',
-        accent: [colors.honeyStrong, '#C47A12'],
-      },
-      {
-        key: 'documents',
-        label: 'Credentials',
-        subtitle: 'Licenses and documents',
-        icon: 'document-text',
-        href: '/documents',
-        accent: [colors.navy, '#1B4F72'],
-      },
-    ],
-  },
-  {
-    title: 'Money',
-    items: [
-      {
-        key: 'payments',
-        label: 'Money',
-        subtitle: 'Earnings and payouts',
-        icon: 'wallet',
-        href: '/(tabs)/payments',
-        accent: ['#146C43', colors.success],
-      },
-      {
-        key: 'invoices',
-        label: 'Invoices',
-        subtitle: 'Commission invoices',
-        icon: 'receipt',
-        href: '/(tabs)/invoices',
-        accent: [colors.navy, colors.tealStrong],
-      },
-      {
-        key: 'payout',
-        label: 'Payout setup',
-        subtitle: 'Bank details for pay',
-        icon: 'card',
-        href: '/payout-setup',
-        accent: ['#0E7490', colors.tealStrong],
-      },
-    ],
-  },
-  {
-    title: 'Account',
-    items: [
-      {
-        key: 'profile',
-        label: 'Profile',
-        subtitle: 'Account overview',
-        icon: 'person',
-        href: '/(tabs)/profile',
-        accent: [colors.navy, colors.navyLift],
-      },
-      {
-        key: 'personal',
-        label: 'Personal information',
-        subtitle: 'Name, email, role',
-        icon: 'person-circle',
-        href: '/profile/personal-information',
-        accent: [colors.navyLift, colors.teal],
-      },
-      {
-        key: 'notifications',
-        label: 'Notifications',
-        subtitle: 'Alerts and updates',
-        icon: 'notifications',
-        href: '/notifications',
-        accent: [colors.honeyStrong, colors.yellow],
-      },
-      {
-        key: 'prefs',
-        label: 'Notification preferences',
-        subtitle: 'What you receive',
-        icon: 'settings',
-        href: '/profile/notification-preferences',
-        accent: [colors.navy, '#345C78'],
-      },
-      {
-        key: 'support',
-        label: 'Support',
-        subtitle: 'Get help',
-        icon: 'help-circle',
-        href: '/support',
-        accent: [colors.tealStrong, colors.navy],
-      },
-      {
-        key: 'app',
-        label: 'App information',
-        subtitle: 'Version and build',
-        icon: 'information-circle',
-        href: '/profile/app-information',
-        accent: [colors.navySoft, colors.navy],
-      },
-    ],
-  },
-];
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+function buildMenuSections(
+  t: TranslateFn,
+  extras: { languageTrailing: string; onLanguage: () => void },
+): { title: string; items: MenuItem[] }[] {
+  return [
+    {
+      title: t('profile.menuWork'),
+      items: [
+        {
+          key: 'home',
+          label: t('tabs.home'),
+          subtitle: t('profile.homeSubtitle'),
+          icon: 'home',
+          href: '/(tabs)',
+          accent: [colors.navy, colors.tealStrong],
+        },
+        {
+          key: 'shifts',
+          label: t('home.openShifts'),
+          subtitle: t('profile.openShiftsSubtitle'),
+          icon: 'search',
+          href: '/(tabs)/shifts',
+          accent: [colors.tealStrong, '#0E7490'],
+        },
+        {
+          key: 'calendar',
+          label: t('profile.calendarLabel'),
+          subtitle: t('profile.calendarSubtitle'),
+          icon: 'calendar',
+          href: '/shifts/calendar',
+          accent: [colors.navyLift, colors.teal],
+        },
+        {
+          key: 'work',
+          label: t('tabs.myShifts'),
+          subtitle: t('profile.myShiftsSubtitle'),
+          icon: 'briefcase',
+          href: '/(tabs)/work',
+          accent: [colors.honeyStrong, '#C47A12'],
+        },
+        {
+          key: 'documents',
+          label: t('profile.credentials'),
+          subtitle: t('profile.credentialsSubtitle'),
+          icon: 'document-text',
+          href: '/documents',
+          accent: [colors.navy, '#1B4F72'],
+        },
+      ],
+    },
+    {
+      title: t('profile.menuMoney'),
+      items: [
+        {
+          key: 'payments',
+          label: t('payments.moneyTitle'),
+          subtitle: t('profile.moneySubtitle'),
+          icon: 'wallet',
+          href: '/(tabs)/payments',
+          accent: ['#146C43', colors.success],
+        },
+        {
+          key: 'invoices',
+          label: t('tabs.invoices'),
+          subtitle: t('profile.invoicesSubtitle'),
+          icon: 'receipt',
+          href: '/(tabs)/invoices',
+          accent: [colors.navy, colors.tealStrong],
+        },
+        {
+          key: 'payout',
+          label: t('profile.payout'),
+          subtitle: t('profile.payoutSubtitle'),
+          icon: 'card',
+          href: '/payout-setup',
+          accent: ['#0E7490', colors.tealStrong],
+        },
+      ],
+    },
+    {
+      title: t('profile.account'),
+      items: [
+        {
+          key: 'profile',
+          label: t('tabs.profile'),
+          subtitle: t('profile.profileSubtitle'),
+          icon: 'person',
+          href: '/(tabs)/profile',
+          accent: [colors.navy, colors.navyLift],
+        },
+        {
+          key: 'personal',
+          label: t('profile.personalInformation'),
+          subtitle: t('profile.personalSubtitle'),
+          icon: 'person-circle',
+          href: '/profile/personal-information',
+          accent: [colors.navyLift, colors.teal],
+        },
+        {
+          key: 'notifications',
+          label: t('notifications.title'),
+          subtitle: t('profile.notificationsSubtitle'),
+          icon: 'notifications',
+          href: '/notifications',
+          accent: [colors.honeyStrong, colors.yellow],
+        },
+        {
+          key: 'prefs',
+          label: t('profile.notificationPreferences'),
+          subtitle: t('profile.prefsSubtitle'),
+          icon: 'settings',
+          href: '/profile/notification-preferences',
+          accent: [colors.navy, '#345C78'],
+        },
+        {
+          key: 'support',
+          label: t('profile.support'),
+          subtitle: t('profile.supportSubtitle'),
+          icon: 'help-circle',
+          href: '/support',
+          accent: [colors.tealStrong, colors.navy],
+        },
+        {
+          key: 'language',
+          label: t('profile.language'),
+          subtitle: extras.languageTrailing,
+          icon: 'language',
+          onPress: extras.onLanguage,
+          trailing: extras.languageTrailing,
+          accent: [colors.navyLift, colors.tealStrong],
+        },
+        {
+          key: 'app',
+          label: t('profile.appInformation'),
+          subtitle: t('profile.appInfoSubtitle'),
+          icon: 'information-circle',
+          href: '/profile/app-information',
+          accent: [colors.navySoft, colors.navy],
+        },
+      ],
+    },
+  ];
+}
 
 type Props = {
   visible: boolean;
@@ -252,6 +272,9 @@ function MenuRow({
             {item.subtitle}
           </Text>
         </View>
+        {item.trailing ? (
+          <Text style={styles.itemTrailing}>{item.trailing}</Text>
+        ) : null}
         <Animated.View style={[styles.chevronWrap, chevronStyle]}>
           <Ionicons name="chevron-forward" size={15} color={colors.tealStrong} />
         </Animated.View>
@@ -263,6 +286,8 @@ function MenuRow({
 export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props) {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
+  const { t } = useTranslation();
+  const { language, setLocale } = useAppLocale();
   const { signOut } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const { width } = useWindowDimensions();
@@ -369,21 +394,52 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
     }
   };
 
+  const languageTrailing =
+    language === 'el' ? t('profile.languageGreek') : t('profile.languageEnglish');
+
+  const openLanguageChooser = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [t('common.cancel'), t('common.english'), t('common.greek')],
+          cancelButtonIndex: 0,
+          title: t('common.selectLanguage'),
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) void setLocale('en');
+          if (buttonIndex === 2) void setLocale('el');
+        },
+      );
+      return;
+    }
+    Alert.alert(t('common.selectLanguage'), undefined, [
+      { text: t('common.english'), onPress: () => void setLocale('en') },
+      { text: t('common.greek'), onPress: () => void setLocale('el') },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
+  const menuSections = buildMenuSections(t, {
+    languageTrailing,
+    onLanguage: openLanguageChooser,
+  });
+
   const confirmSignOut = () => {
     if (signingOut) return;
     if (Platform.OS === 'web') {
       const confirmed =
-        typeof window !== 'undefined' && window.confirm('End your Bridge Hive session?');
+        typeof window !== 'undefined' &&
+        window.confirm(t('profile.signOutConfirmBody'));
       if (confirmed) {
         onClose();
         void performSignOut();
       }
       return;
     }
-    Alert.alert('Sign out', 'End your Bridge Hive session?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.signOutConfirmTitle'), t('profile.signOutConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign out',
+        text: t('profile.signOut'),
         style: 'destructive',
         onPress: () => {
           onClose();
@@ -406,7 +462,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
           style={StyleSheet.absoluteFill}
           onPress={closeAnimated}
           accessibilityRole="button"
-          accessibilityLabel="Close menu"
+          accessibilityLabel={t('profile.closeMenu')}
         >
           <Animated.View style={[styles.backdrop, backdropStyle]} />
         </Pressable>
@@ -444,18 +500,18 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
                 <BridgeHiveMark size={42} />
               </View>
               <View style={styles.brandText}>
-                <Text style={styles.brandName}>Bridge Hive</Text>
+                <Text style={styles.brandName}>{t('common.bridgeHive')}</Text>
                 <Text style={styles.brandMeta} numberOfLines={1}>
-                  {[firstName ? `Hi, ${firstName}` : null, roleLabel]
+                  {[firstName ? t('profile.hiName', { name: firstName }) : null, roleLabel]
                     .filter(Boolean)
-                    .join(' · ') || 'Worker app'}
+                    .join(' · ') || t('profile.workerApp')}
                 </Text>
               </View>
             </View>
             <Pressable
               onPress={closeAnimated}
               accessibilityRole="button"
-              accessibilityLabel="Close menu"
+              accessibilityLabel={t('profile.closeMenu')}
               style={styles.closeBtn}
               hitSlop={8}
             >
@@ -471,7 +527,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
           >
             {/* Remount on open so staggered enters replay each time. */}
             {visible
-              ? MENU_SECTIONS.map((section, sectionIndex) => (
+              ? menuSections.map((section, sectionIndex) => (
                   <Animated.View
                     key={`${section.title}-${visible}`}
                     entering={
@@ -491,7 +547,13 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
                         item={item}
                         delay={90 + sectionIndex * 80 + itemIndex * 42}
                         reduced={reduced}
-                        onPress={() => go(item.href)}
+                        onPress={() => {
+                          if (item.onPress) {
+                            item.onPress();
+                            return;
+                          }
+                          if (item.href) go(item.href);
+                        }}
                       />
                     ))}
                   </Animated.View>
@@ -503,14 +565,14 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
                 entering={
                   reduced
                     ? undefined
-                    : FadeInDown.delay(60 + MENU_SECTIONS.length * 70).duration(360)
+                    : FadeInDown.delay(60 + menuSections.length * 70).duration(360)
                 }
               >
                 <Pressable
                   onPress={confirmSignOut}
                   disabled={signingOut}
                   accessibilityRole="button"
-                  accessibilityLabel="Sign out"
+                  accessibilityLabel={t('profile.signOut')}
                   style={({ pressed }) => [
                     styles.signOut,
                     pressed && styles.signOutPressed,
@@ -535,7 +597,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
                     <Ionicons name="log-out-outline" size={18} color={colors.white} />
                   </View>
                   <Text style={styles.signOutLabel}>
-                    {signingOut ? 'Signing out…' : 'Sign out'}
+                    {signingOut ? t('profile.signingOut') : t('profile.signOut')}
                   </Text>
                 </Pressable>
               </Animated.View>
@@ -700,6 +762,12 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.regular,
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  itemTrailing: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    color: colors.tealStrong,
+    maxWidth: 72,
   },
   chevronWrap: {
     width: 28,

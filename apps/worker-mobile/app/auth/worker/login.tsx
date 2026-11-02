@@ -13,6 +13,7 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { peekPendingShiftRoute } from '@/lib/push/pending-shift';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -59,6 +60,7 @@ function DynamicPressable({
 
 export default function WorkerLoginScreen() {
   const { signIn, session, loading, homeRoute, isVerified } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
@@ -75,7 +77,7 @@ export default function WorkerLoginScreen() {
   const onSubmit = async () => {
     setError(undefined);
     if (!email.trim() || !password) {
-      setError('Enter your email and password.');
+      setError(t('auth.enterEmailPassword'));
       return;
     }
     setSubmitting(true);
@@ -91,26 +93,26 @@ export default function WorkerLoginScreen() {
 
   return (
     <AuthShell
-      title="Welcome back"
-      subtitle="Sign in to manage shifts, timesheets, and commission invoices for healthcare professionals."
+      title={t('auth.welcomeBack')}
+      subtitle={t('auth.signInSubtitle')}
       tone="navy"
       footer={
         <View style={styles.footer}>
-          <Text style={styles.footerText}>New to BridgeHive?</Text>
+          <Text style={styles.footerText}>{t('auth.newToBridgeHive')}</Text>
           <DynamicPressable
             onPress={() => router.push('/auth/worker/register')}
             accessibilityRole="link"
-            accessibilityLabel="Create professional account"
+            accessibilityLabel={t('auth.createProfessionalAccount')}
             style={styles.footerLinkHit}
           >
-            <Text style={styles.footerLink}>Create professional account</Text>
+            <Text style={styles.footerLink}>{t('auth.createProfessionalAccount')}</Text>
           </DynamicPressable>
         </View>
       }
     >
       <AuthField
         tone="navy"
-        label="Email"
+        label={t('common.email')}
         icon="mail-outline"
         value={email}
         onChangeText={setEmail}
@@ -118,18 +120,18 @@ export default function WorkerLoginScreen() {
         keyboardType="email-address"
         autoComplete="email"
         textContentType="emailAddress"
-        placeholder="name@email.com"
+        placeholder={t('auth.emailPlaceholder')}
       />
       <AuthField
         tone="navy"
-        label="Password"
+        label={t('common.password')}
         icon="lock-closed-outline"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         autoComplete="password"
         textContentType="password"
-        placeholder="Required"
+        placeholder={t('auth.passwordPlaceholder')}
       />
 
       {error ? (
@@ -140,16 +142,16 @@ export default function WorkerLoginScreen() {
 
       <View style={styles.actions}>
         <AuthPrimaryButton
-          label="Sign in"
+          label={t('auth.signIn')}
           loading={submitting}
           onPress={() => void onSubmit()}
         />
         <DynamicPressable
           onPress={() => router.push('/auth/worker/forgot-password')}
-          accessibilityLabel="Forgot password"
+          accessibilityLabel={t('auth.forgotPassword')}
           style={styles.forgotBtn}
         >
-          <Text style={styles.forgot}>Forgot password?</Text>
+          <Text style={styles.forgot}>{t('auth.forgotPassword')}</Text>
         </DynamicPressable>
         <GoogleSignInButton glass />
       </View>

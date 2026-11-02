@@ -20,9 +20,11 @@ import Animated, {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
+import { LanguageToggle } from '@/components/i18n/LanguageToggle';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAuthDensity } from '@/hooks/useAuthDensity';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { welcomeMetrics } from '@/lib/auth-density';
 import {
   hasCompletedOnboarding,
@@ -32,20 +34,17 @@ import { useAuth } from '@/providers/AuthProvider';
 
 const WELCOME_NAVY = '#071A2F';
 
-const TRUST_CUES = [
-  {
-    icon: 'shield-checkmark-outline' as const,
-    label: 'Verified professional roles',
-  },
-  {
-    icon: 'document-text-outline' as const,
-    label: 'Credentials checked before shifts',
-  },
-  {
-    icon: 'wallet-outline' as const,
-    label: 'Shifts and payment records together',
-  },
-];
+const TRUST_CUE_ICONS = [
+  'shield-checkmark-outline',
+  'document-text-outline',
+  'wallet-outline',
+] as const;
+
+const TRUST_CUE_KEYS = [
+  'welcome.trustRoles',
+  'welcome.trustCredentials',
+  'welcome.trustPayments',
+] as const;
 
 function WelcomeAction({
   label,
@@ -228,12 +227,17 @@ function WelcomeAction({
 
 export default function WelcomeScreen() {
   const { session, loading, homeRoute } = useAuth();
+  const { t } = useTranslation();
   const params = useLocalSearchParams<{ revisit?: string }>();
   const revisit = params.revisit === '1';
   const reduced = useReducedMotion();
   const insets = useSafeAreaInsets();
   const density = useAuthDensity();
   const w = welcomeMetrics(density);
+  const trustCues = TRUST_CUE_KEYS.map((key, i) => ({
+    icon: TRUST_CUE_ICONS[i],
+    label: t(key),
+  }));
   const [viewportHeight, setViewportHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   /** Scroll only when content genuinely overflows (very small phones / large text). */
@@ -305,6 +309,12 @@ export default function WelcomeScreen() {
       <View pointerEvents="none" style={styles.honeyCellSoft} />
       {/* Bottom inset is applied inside the scroll content so actions clear the home indicator. */}
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+        <View
+          pointerEvents="box-none"
+          style={[styles.langToggle, { top: spacing.sm, right: spacing.md }]}
+        >
+          <LanguageToggle tone="light" />
+        </View>
         <ScrollView
           style={styles.safe}
           onLayout={(e) => setViewportHeight(e.nativeEvent.layout.height)}
@@ -327,7 +337,7 @@ export default function WelcomeScreen() {
           <View style={styles.heroSlot}>
             <Animated.View style={[styles.hero, { gap: w.heroGap }, heroMotion]}>
               <BridgeHiveMark size={w.mark} />
-              <Text style={styles.eyebrow}>BRIDGEHIVE FOR PROFESSIONALS</Text>
+              <Text style={styles.eyebrow}>{t('welcome.eyebrow')}</Text>
               <Text
                 style={[
                   styles.title,
@@ -339,7 +349,7 @@ export default function WelcomeScreen() {
                 ]}
                 accessibilityRole="header"
               >
-                Healthcare shifts,{'\n'}structured around you.
+                {t('welcome.headline')}
               </Text>
               <Text
                 style={[
@@ -347,13 +357,12 @@ export default function WelcomeScreen() {
                   { fontSize: w.subtitle.size, lineHeight: w.subtitle.line },
                 ]}
               >
-                Discover verified opportunities for nurses, ward assistants and
-                physiotherapists.
+                {t('welcome.subtitle')}
               </Text>
               <Animated.View
                 style={[styles.cues, { gap: w.cueGap, marginTop: w.cuesTop }, cuesMotion]}
               >
-                {TRUST_CUES.map((cue) => (
+                {trustCues.map((cue) => (
                   <View
                     key={cue.label}
                     style={[styles.cueRow, { paddingVertical: w.cuePadV }]}
@@ -382,13 +391,13 @@ export default function WelcomeScreen() {
 
           <View style={[styles.actions, { gap: w.actionGap, paddingTop: w.actionsTop }]}>
             <WelcomeAction
-              label="Get started"
+              label={t('welcome.getStarted')}
               tone="primary"
               enterDelay={220}
               onPress={() => void goStarted()}
             />
             <WelcomeAction
-              label="I already have an account"
+              label={t('welcome.alreadyHaveAccount')}
               tone="secondary"
               enterDelay={340}
               onPress={() => void goSignIn()}
@@ -447,6 +456,10 @@ const styles = StyleSheet.create({
   },
   safe: {
     flex: 1,
+  },
+  langToggle: {
+    position: 'absolute',
+    zIndex: 2,
   },
   /** Hero floats centered in free space; CTAs stay anchored to the bottom. */
   content: {

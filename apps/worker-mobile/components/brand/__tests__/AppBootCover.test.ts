@@ -10,27 +10,41 @@ function read(rel: string) {
 describe('AppBootCover contracts', () => {
   it('uses navy boot background, splash-matched mark size, and 5s workspace minimum', () => {
     const src = read('components/brand/AppBootCover.tsx');
+    const mark = read('components/brand/BridgeHiveMark.tsx');
     const prep = read('lib/workspace-preparation.ts');
     expect(src).toMatch(/APP_BOOT_BG\s*=\s*'#071A2F'/);
     expect(src).toMatch(/APP_BOOT_MARK_SIZE\s*=\s*220/);
+    expect(src).toMatch(/APP_BOOT_BREATH_MS\s*=\s*3600/);
+    expect(src).toMatch(/BootAtmosphere/);
+    expect(src).toMatch(/variant="boot"/);
+    expect(mark).toMatch(/splash-icon\.png/);
+    expect(mark).toMatch(/variant\?\s*:\s*'app'\s*\|\s*'boot'/);
     expect(prep).toMatch(/WORKSPACE_PREPARATION_MINIMUM_MS\s*=\s*5000/);
-    expect(src).toMatch(/Preparing your workspace/);
-    expect(src).toMatch(/Setting up your secure BridgeHive experience/);
+    expect(src).toMatch(/t\('boot\.preparing'\)/);
+    expect(src).toMatch(/t\('boot\.preparingSub'\)/);
+    expect(src).toMatch(/useTranslation/);
     expect(src).not.toMatch(/APP_BOOT_BG\s*=\s*'#FFFFFF'/);
     expect(src).not.toMatch(/75%/);
     expect(src).toMatch(/reducedMotion/);
     expect(src).toMatch(/PreparationProgress/);
   });
 
-  it('keeps native splash navy and hides after JS cover is ready', () => {
+  it('keeps native splash navy-only (no square logo) and hides after JS cover is ready', () => {
     const appJson = read('app.json');
     const layout = read('app/_layout.tsx');
+    expect(appJson).toMatch(/"icon":\s*"\.\/assets\/images\/icon\.png"/);
     expect(appJson).toMatch(/"backgroundColor":\s*"#071A2F"/);
-    expect(appJson).toMatch(/"imageWidth":\s*220/);
+    expect(appJson).not.toMatch(/"image":\s*"\.\/assets\/images\/icon\.png"/);
+    expect(appJson).not.toMatch(/"imageWidth":\s*220/);
+    expect(appJson).toMatch(/empty-splash-logo\.xml/);
+    expect(appJson).toMatch(/withNavyOnlySplash/);
+    expect(appJson).toMatch(/expo-localization/);
+    expect(appJson).toMatch(/"supportsRTL":\s*false/);
     expect(appJson).not.toMatch(/"backgroundColor":\s*"#FFFFFF"/);
     expect(layout).toMatch(/AppBootCover/);
     expect(layout).toMatch(/SplashScreen\.hideAsync/);
     expect(layout).toMatch(/APP_BOOT_BG/);
+    expect(layout).toMatch(/LocaleProvider/);
   });
 
   it('routes first launch through Welcome then login after dismiss', () => {
@@ -45,13 +59,14 @@ describe('AppBootCover contracts', () => {
     expect(index).toMatch(/bootstrapError/);
     expect(index).toMatch(/retryBootstrap/);
     expect(welcome).toMatch(/markOnboardingSeen/);
-    expect(welcome).toMatch(/Get started/);
-    expect(welcome).toMatch(/I already have an account/);
+    expect(welcome).toMatch(/welcome\.getStarted|t\('welcome\.getStarted'\)/);
+    expect(welcome).toMatch(/welcome\.alreadyHaveAccount|t\('welcome\.alreadyHaveAccount'\)/);
     expect(welcome).toMatch(/\/auth\/worker/);
     expect(welcome).toMatch(/accessibilityRole="header"/);
-    expect(welcome).toMatch(/Verified professional roles/);
-    expect(welcome).toMatch(/Credentials checked before shifts/);
-    expect(welcome).toMatch(/Shifts and payment records together/);
+    expect(welcome).toMatch(/LanguageToggle/);
+    expect(welcome).toMatch(/welcome\.trustRoles|t\('welcome\.trustRoles'\)/);
+    expect(welcome).toMatch(/welcome\.trustCredentials|t\('welcome\.trustCredentials'\)/);
+    expect(welcome).toMatch(/welcome\.trustPayments|t\('welcome\.trustPayments'\)/);
   });
 
   it('keeps recovery and restricted routes registered', () => {
@@ -70,7 +85,7 @@ describe('Auth journey source contracts', () => {
     const register = read('app/auth/worker/register.tsx');
     const roles = read('constants/workerRoleOptions.ts');
     expect(register).toMatch(/password\.length\s*<\s*6/);
-    expect(register).toMatch(/at least 6 characters/);
+    expect(register).toMatch(/auth\.passwordMin|t\('auth\.passwordMin/);
     expect(register).toMatch(/signUpWorker/);
     expect(register).toMatch(/setPendingConfirmEmail/);
     expect(register).toMatch(/\/auth\/worker\/check-email/);
@@ -87,8 +102,8 @@ describe('Auth journey source contracts', () => {
     const login = read('app/auth/worker/login.tsx');
     const google = read('components/auth/GoogleSignInButton.tsx');
     expect(landing).toMatch(/GoogleSignInButton/);
-    expect(landing).toMatch(/How would you like to continue/);
-    expect(landing).toMatch(/Create account/);
+    expect(landing).toMatch(/auth\.howContinue|t\('auth\.howContinue'\)/);
+    expect(landing).toMatch(/auth\.createAccount|t\('auth\.createAccount'\)/);
     expect(landing).toMatch(/maxWidth:\s*280/);
     expect(landing).toMatch(/\/welcome\?revisit=1/);
     expect(read('app/welcome.tsx')).toMatch(/revisit/);

@@ -1,21 +1,25 @@
 import { formatMoneyMinor } from '@bridge-hive/domain';
 
 import { APP_CONFIG } from '@/constants/config';
+import { getActiveIntlLocale, t } from '@/i18n';
 
 const TZ = APP_CONFIG.timezone;
-const LOCALE = APP_CONFIG.locale;
+
+function localeTag() {
+  return getActiveIntlLocale();
+}
 
 function toDate(value: string | Date): Date {
   return typeof value === 'string' ? new Date(value) : value;
 }
 
-/** Format integer minor units (cents) using shared domain helper. */
+/** Format integer minor units (cents) using shared domain helper + active locale. */
 export function formatMoney(amountMinor: number, currency: string = APP_CONFIG.currency): string {
-  return formatMoneyMinor(amountMinor, currency);
+  return formatMoneyMinor(amountMinor, currency, localeTag());
 }
 
 export function formatDate(value: string | Date, options?: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(LOCALE, {
+  return new Intl.DateTimeFormat(localeTag(), {
     timeZone: TZ,
     weekday: 'long',
     day: 'numeric',
@@ -25,7 +29,7 @@ export function formatDate(value: string | Date, options?: Intl.DateTimeFormatOp
 }
 
 export function formatShortDate(value: string | Date): string {
-  return new Intl.DateTimeFormat(LOCALE, {
+  return new Intl.DateTimeFormat(localeTag(), {
     timeZone: TZ,
     day: '2-digit',
     month: 'short',
@@ -36,7 +40,7 @@ export function formatShortDate(value: string | Date): string {
 
 export function formatTime(value: string | Date): string {
   if (typeof value === 'string' && /^\d{2}:\d{2}$/.test(value)) return value;
-  return new Intl.DateTimeFormat(LOCALE, {
+  return new Intl.DateTimeFormat(localeTag(), {
     timeZone: TZ,
     hour: '2-digit',
     minute: '2-digit',
@@ -50,8 +54,8 @@ export function formatTimeRange(startsAt: string, endsAt: string): string {
 
 export function formatDurationMinutes(minutes: number): string {
   const hours = Math.round((minutes / 60) * 10) / 10;
-  if (hours === 1) return '1 Hour';
-  return `${hours} Hours`;
+  if (hours === 1) return t('common.hourOne');
+  return t('common.hours', { count: hours });
 }
 
 export function formatRelativeDate(value: string | Date): string {
@@ -59,7 +63,7 @@ export function formatRelativeDate(value: string | Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.round(diffMs / 60000);
-  if (diffMins < 1) return 'Just now';
+  if (diffMins < 1) return t('common.justNow');
   if (diffMins < 60) return `${diffMins}m`;
   const diffHours = Math.round(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h`;
@@ -84,10 +88,10 @@ export function formatDayLabel(dateStr: string, reference = new Date()): string 
   tomorrow.setDate(tomorrow.getDate() + 1);
   const target = startOfDay(date);
 
-  if (target.getTime() === today.getTime()) return 'Today';
-  if (target.getTime() === tomorrow.getTime()) return 'Tomorrow';
+  if (target.getTime() === today.getTime()) return t('common.today');
+  if (target.getTime() === tomorrow.getTime()) return t('common.tomorrow');
 
-  return new Intl.DateTimeFormat(LOCALE, {
+  return new Intl.DateTimeFormat(localeTag(), {
     timeZone: TZ,
     weekday: 'long',
   }).format(date);
@@ -101,9 +105,9 @@ export function greetingForNow(now = new Date()): string {
       hour12: false,
     }).format(now),
   );
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return t('common.goodMorning');
+  if (hour < 18) return t('common.goodAfternoon');
+  return t('common.goodEvening');
 }
 
 export function isNightShift(startsAt: string): boolean {

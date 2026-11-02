@@ -11,7 +11,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.bridgehive.worker",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,13 +34,16 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withNavyOnlySplash.js",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/icon.png",
-          "imageWidth": 220,
-          "resizeMode": "contain",
-          "backgroundColor": "#071A2F"
+          "backgroundColor": "#071A2F",
+          "android": {
+            "drawable": {
+              "icon": "./assets/splash/empty-splash-logo.xml"
+            }
+          }
         }
       ],
       [
@@ -45,6 +51,16 @@
         {
           "color": "#0B2A43",
           "defaultChannel": "new-shifts"
+        }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportsRTL": false,
+          "supportedLocales": {
+            "ios": ["en", "el"],
+            "android": ["en", "el"]
+          }
         }
       ]
     ],

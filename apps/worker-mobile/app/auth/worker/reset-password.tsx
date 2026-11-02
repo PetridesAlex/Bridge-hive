@@ -14,6 +14,7 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { APP_CONFIG } from '@/constants/config';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
 import {
   clearAllWorkerRecoveryState,
   clearPendingRecovery,
@@ -43,15 +44,18 @@ function RequirementRow({ label, state }: { label: string; state: ReqState }) {
 }
 
 function SupportLine() {
+  const { t } = useTranslation();
   return (
     <Pressable
       onPress={() => void Linking.openURL(`mailto:${APP_CONFIG.supportEmail}`)}
       accessibilityRole="link"
-      accessibilityLabel={`Email support at ${APP_CONFIG.supportEmail}`}
+      accessibilityLabel={`${t('auth.emailSupport')} ${APP_CONFIG.supportEmail}`}
       hitSlop={8}
       style={styles.supportHit}
     >
-      <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+      <Text style={styles.support}>
+        {t('auth.supportLabel', { email: APP_CONFIG.supportEmail })}
+      </Text>
     </Pressable>
   );
 }
@@ -65,6 +69,7 @@ export default function WorkerResetPasswordScreen() {
     confirmRecoveryOtp,
     consumePendingRecoveryLink,
   } = useAuth();
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('password');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -148,7 +153,7 @@ export default function WorkerResetPasswordScreen() {
       return;
     }
     if (!isWorkerRecoverySessionActive()) {
-      setError('This reset link is no longer valid. Request a new password reset email.');
+      setError(t('auth.resetLinkInvalid'));
       return;
     }
     setSubmitting(true);
@@ -188,12 +193,12 @@ export default function WorkerResetPasswordScreen() {
   if (loading && step !== 'confirm' && step !== 'done') {
     return (
       <AuthShell
-        title="Set a new password"
-        subtitle="Preparing your secure reset…"
+        title={t('auth.resetTitle')}
+        subtitle={t('auth.resetPreparing')}
         showBack={false}
         centered
       >
-        <Text style={styles.hint}>Please wait.</Text>
+        <Text style={styles.hint}>{t('auth.pleaseWait')}</Text>
       </AuthShell>
     );
   }
@@ -201,8 +206,8 @@ export default function WorkerResetPasswordScreen() {
   if (step === 'invalid') {
     return (
       <AuthShell
-        title="Reset link unavailable"
-        subtitle="Request a new password reset from the worker sign-in screen."
+        title={t('auth.resetLinkUnavailable')}
+        subtitle={t('auth.resetLinkUnavailableSubtitle')}
         showBack={false}
         centered
       >
@@ -210,18 +215,17 @@ export default function WorkerResetPasswordScreen() {
           <Ionicons name="shield-outline" size={28} color={colors.navy} />
         </View>
         <Text style={styles.stateCopy} accessibilityLiveRegion="polite">
-          This reset link is no longer available. Request a fresh email, then open it on this
-          device.
+          {t('auth.resetLinkUnavailableBody')}
         </Text>
         <Button
-          label="Request a new reset link"
+          label={t('auth.requestNewResetLink')}
           variant="primary"
           size="lg"
           onPress={goForgot}
           style={styles.cta}
         />
         <Button
-          label="Back to sign in"
+          label={t('auth.backToSignIn')}
           variant="ghost"
           size="lg"
           onPress={goSignIn}
@@ -235,8 +239,8 @@ export default function WorkerResetPasswordScreen() {
   if (step === 'confirm') {
     return (
       <AuthShell
-        title="Continue password reset"
-        subtitle="Confirm once to verify your reset link, then choose a new password. This does not activate an organization account."
+        title={t('auth.continuePasswordReset')}
+        subtitle={t('auth.continuePasswordResetSubtitle')}
         showBack={false}
         centered
       >
@@ -249,17 +253,17 @@ export default function WorkerResetPasswordScreen() {
           </Text>
         ) : null}
         <Button
-          label="Continue password reset"
+          label={t('auth.continuePasswordReset')}
           variant="primary"
           size="lg"
           loading={submitting}
           disabled={submitting}
           onPress={() => void onConfirmLink()}
           style={styles.cta}
-          accessibilityHint="Verifies your reset link once before you set a new password"
+          accessibilityHint={t('auth.continuePasswordResetHint')}
         />
         <Button
-          label="Cancel"
+          label={t('common.cancel')}
           variant="ghost"
           size="lg"
           onPress={() => void onCancel()}
@@ -273,8 +277,8 @@ export default function WorkerResetPasswordScreen() {
   if (step === 'done') {
     return (
       <AuthShell
-        title="Password updated"
-        subtitle="You can now sign in with your new password."
+        title={t('auth.resetSuccessTitle')}
+        subtitle={t('auth.resetSuccessSubtitle')}
         showBack={false}
         centered
       >
@@ -282,10 +286,10 @@ export default function WorkerResetPasswordScreen() {
           <Ionicons name="checkmark-circle" size={32} color={colors.tealStrong} />
         </View>
         <Text style={styles.success} accessibilityLiveRegion="polite">
-          Your password was updated successfully.
+          {t('auth.resetSuccessBody')}
         </Text>
         <Button
-          label="Continue to sign in"
+          label={t('auth.continueToSignIn')}
           variant="primary"
           size="lg"
           onPress={onDoneContinue}
@@ -300,20 +304,20 @@ export default function WorkerResetPasswordScreen() {
   if (!isWorkerRecoverySessionActive()) {
     return (
       <AuthShell
-        title="Reset link unavailable"
-        subtitle="Open the link from your Bridge Hive email, or request a new reset."
+        title={t('auth.resetLinkUnavailable')}
+        subtitle={t('auth.resetLinkUnavailableAltSubtitle')}
         showBack={false}
         centered
       >
         <Button
-          label="Request a new reset link"
+          label={t('auth.requestNewResetLink')}
           variant="primary"
           size="lg"
           onPress={goForgot}
           style={styles.cta}
         />
         <Button
-          label="Back to sign in"
+          label={t('auth.backToSignIn')}
           variant="ghost"
           size="lg"
           onPress={goSignIn}
@@ -325,39 +329,39 @@ export default function WorkerResetPasswordScreen() {
 
   return (
     <AuthShell
-      title="Set a new password"
-      subtitle={`Choose a new password for your Bridge Hive worker account. Use at least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters.`}
+      title={t('auth.resetTitle')}
+      subtitle={t('auth.resetSubtitle', { count: WORKER_RECOVERY_PASSWORD_MIN_LENGTH })}
       showBack={false}
       centered
     >
       <View style={styles.fields}>
         <AuthField
-          label="New password"
+          label={t('auth.newPassword')}
           icon="lock-closed-outline"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"
-          accessibilityLabel="New password"
+          accessibilityLabel={t('auth.newPassword')}
         />
         <AuthField
-          label="Confirm new password"
+          label={t('auth.confirmNewPassword')}
           icon="lock-closed-outline"
           value={confirm}
           onChangeText={setConfirm}
           secureTextEntry
           autoComplete="new-password"
           textContentType="newPassword"
-          accessibilityLabel="Confirm new password"
+          accessibilityLabel={t('auth.confirmNewPassword')}
         />
 
         <View style={styles.reqList} accessibilityLiveRegion="polite">
           <RequirementRow
-            label={`At least ${WORKER_RECOVERY_PASSWORD_MIN_LENGTH} characters`}
+            label={t('auth.passwordMinChars', { count: WORKER_RECOVERY_PASSWORD_MIN_LENGTH })}
             state={lengthState}
           />
-          <RequirementRow label="Passwords match" state={matchState} />
+          <RequirementRow label={t('auth.passwordsMatch')} state={matchState} />
         </View>
 
         {error ? (
@@ -366,7 +370,7 @@ export default function WorkerResetPasswordScreen() {
           </Text>
         ) : null}
         <Button
-          label="Update password"
+          label={t('auth.resetSubmit')}
           variant="primary"
           size="lg"
           loading={submitting}
@@ -375,7 +379,7 @@ export default function WorkerResetPasswordScreen() {
           style={styles.cta}
         />
         <Button
-          label="Back to sign in"
+          label={t('auth.backToSignIn')}
           variant="ghost"
           size="lg"
           onPress={() => void onCancel()}

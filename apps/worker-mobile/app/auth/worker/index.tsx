@@ -22,6 +22,7 @@ import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useAuthDensity } from '@/hooks/useAuthDensity';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 function ChoicePrimary({
@@ -153,6 +154,7 @@ function ChoiceSecondary({
 }
 
 function FooterEmailLink({ onPress }: { onPress: () => void }) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const press = useSharedValue(0);
@@ -176,7 +178,7 @@ function FooterEmailLink({ onPress }: { onPress: () => void }) {
       <Pressable
         onPress={onPress}
         accessibilityRole="link"
-        accessibilityLabel="Sign in with email"
+        accessibilityLabel={`${t('auth.preferEmail')} ${t('auth.signIn')}`}
         onPressIn={() => {
           if (reduced) return;
           scale.value = withSpring(0.97, { damping: 16, stiffness: 420 });
@@ -191,8 +193,8 @@ function FooterEmailLink({ onPress }: { onPress: () => void }) {
         <View style={styles.footerIcon}>
           <Ionicons name="mail-outline" size={14} color={colors.yellow} />
         </View>
-        <Text style={styles.footerMuted}>Prefer email?</Text>
-        <Text style={styles.footerLink}>Sign in</Text>
+        <Text style={styles.footerMuted}>{t('auth.preferEmail')}</Text>
+        <Text style={styles.footerLink}>{t('auth.signIn')}</Text>
         <Ionicons name="arrow-forward" size={13} color={colors.yellow} />
       </Pressable>
     </Animated.View>
@@ -201,6 +203,7 @@ function FooterEmailLink({ onPress }: { onPress: () => void }) {
 
 export default function WorkerAuthLandingScreen() {
   const { session, loading, homeRoute } = useAuth();
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const density = useAuthDensity();
 
@@ -213,8 +216,8 @@ export default function WorkerAuthLandingScreen() {
 
   return (
     <AuthShell
-      title="How would you like to continue?"
-      subtitle="Create a professional account or sign in to manage shifts, documents and payment records."
+      title={t('auth.howContinue')}
+      subtitle={t('auth.landingSubtitle')}
       showBack
       onBack={() => router.replace('/welcome?revisit=1')}
       centered
@@ -229,13 +232,13 @@ export default function WorkerAuthLandingScreen() {
       <View style={[styles.actions, density === 'compact' && styles.actionsTight]}>
         <Animated.View entering={enter(80)} style={styles.actionSlot}>
           <ChoicePrimary
-            label="Create account"
+            label={t('auth.createAccount')}
             onPress={() => router.push('/auth/worker/register')}
           />
         </Animated.View>
         <Animated.View entering={enter(160)} style={styles.actionSlot}>
           <ChoiceSecondary
-            label="Sign in"
+            label={t('auth.signIn')}
             onPress={() => router.push('/auth/worker/login')}
           />
         </Animated.View>

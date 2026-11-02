@@ -30,10 +30,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
+import { LanguageToggle } from '@/components/i18n/LanguageToggle';
 import { colors, shadows, spacing, typography } from '@/constants/theme';
 import { useAuthDensity, useKeyboardVisible } from '@/hooks/useAuthDensity';
 import { layout, useLayout } from '@/hooks/useLayout';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { authShellMetrics } from '@/lib/auth-density';
 
 type Props = {
@@ -83,6 +85,7 @@ export function AuthShell({
   const keyboardVisible = useKeyboardVisible();
   const m = authShellMetrics(density);
   const reduced = useReducedMotion();
+  const { t } = useTranslation();
   const reveal = useSharedValue(reduced ? 1 : 0.96);
   const breath = useSharedValue(0);
   /** Large centered hero only on the auth choice landing. */
@@ -170,7 +173,8 @@ export function AuthShell({
       : m.lightHeroBottom;
   const titleMetrics = isNavy ? m.title : m.lightTitle;
   const bottomPad = keyboardVisible ? spacing.lg : Math.max(insets.bottom, spacing.md);
-  const topPad = showBack ? m.scrollTop : m.scrollTopNoBack;
+  /** Header bar always reserves top chrome (back and/or language toggle). */
+  const topPad = m.scrollTop;
 
   return (
     <View style={[styles.root, isNavy && styles.rootLanding]}>
@@ -203,26 +207,37 @@ export function AuthShell({
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {showBack ? (
-            <Pressable
-              onPress={onBack ?? goBackSafely}
-              style={[
-                styles.back,
-                { marginLeft: gutter, marginTop: m.backTop, marginBottom: m.backBottom },
-              ]}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <View style={[styles.backBtn, isNavy && styles.backBtnLanding]}>
-                <Ionicons
-                  name="chevron-back"
-                  size={20}
-                  color={isNavy ? '#D7EEF2' : colors.navy}
-                />
-              </View>
-            </Pressable>
-          ) : null}
+          <View
+            style={[
+              styles.headerBar,
+              {
+                paddingHorizontal: gutter,
+                marginTop: m.backTop,
+                marginBottom: m.backBottom,
+              },
+            ]}
+          >
+            {showBack ? (
+              <Pressable
+                onPress={onBack ?? goBackSafely}
+                style={styles.back}
+                hitSlop={12}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.back')}
+              >
+                <View style={[styles.backBtn, isNavy && styles.backBtnLanding]}>
+                  <Ionicons
+                    name="chevron-back"
+                    size={20}
+                    color={isNavy ? '#D7EEF2' : colors.navy}
+                  />
+                </View>
+              </Pressable>
+            ) : (
+              <View style={styles.headerSpacer} />
+            )}
+            <LanguageToggle tone={isNavy ? 'light' : 'dark'} />
+          </View>
 
           <ScrollView
             style={styles.flex}
@@ -304,7 +319,7 @@ export function AuthShell({
                 </Animated.View>
               </View>
               <Text style={[styles.brand, isNavy && styles.brandLanding]}>
-                BridgeHive App
+                {t('common.brandName')}
               </Text>
               {isNavy ? <View style={styles.brandRule} /> : null}
               <Text
@@ -447,6 +462,15 @@ const styles = StyleSheet.create({
   },
   scrollCentered: {
     justifyContent: 'center',
+  },
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerSpacer: {
+    width: 44,
+    height: 44,
   },
   back: {
     alignSelf: 'flex-start',

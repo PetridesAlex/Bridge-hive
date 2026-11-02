@@ -4,6 +4,7 @@ import { useActionState, useMemo, useState } from 'react';
 import {
   eligiblePackageApproveCredentialIds,
 } from '@bridge-hive/domain';
+import { BadgeCheck, ClipboardCheck, Shield } from 'lucide-react';
 
 import {
   approveReviewedCredentialsAction,
@@ -17,6 +18,7 @@ import { CredentialStatusBadge } from '@/components/admin/status-badges';
 import { Button } from '@/components/ui/button';
 import { credentialTypeLabel } from '@/lib/admin/labels';
 import { formatDateTime } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 export type PackageReviewCredential = {
   id: string;
@@ -250,53 +252,104 @@ export function PackageReviewPanel({
       {canReview ? (
         <form
           action={approveAction}
-          className="space-y-3 rounded-2xl border border-bh-honey/50 bg-bh-honey-soft/70 p-4 shadow-[0_4px_16px_rgba(224,170,24,0.12)]"
+          className="relative overflow-hidden rounded-[1.25rem] border border-bh-border/90 bg-bh-surface shadow-[0_10px_36px_rgba(7,29,48,0.08)]"
         >
-          <input type="hidden" name="workerId" value={workerId} />
-          <input type="hidden" name="credentialIds" value={selected.join(',')} />
-          <input
-            type="hidden"
-            name="confirmReviewed"
-            value={confirmReviewed ? 'true' : 'false'}
+          <div
+            aria-hidden
+            className="h-1.5 bg-gradient-to-r from-bh-sidebar via-bh-teal to-bh-honey"
           />
-          {expectedLastActivity ? (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(640px_220px_at_0%_0%,rgba(7,29,48,0.06),transparent_55%),radial-gradient(520px_200px_at_100%_0%,rgba(22,166,182,0.10),transparent_50%)]"
+          />
+
+          <div className="relative space-y-4 p-4 sm:p-5">
+            <input type="hidden" name="workerId" value={workerId} />
             <input
               type="hidden"
-              name="expectedLastActivity"
-              value={expectedLastActivity}
+              name="credentialIds"
+              value={selected.join(',')}
             />
-          ) : null}
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey-strong">
-            Package decision
-          </p>
-          <p className="text-sm font-semibold text-bh-text">
-            Approve selected reviewed documents
-          </p>
-          <p className="text-xs leading-5 text-bh-text-secondary">
-            Only eligible pending or under-review documents with uploaded files
-            for this worker. Does not approve the worker for marketplace access.
-          </p>
-          <label className="flex items-start gap-2 text-sm text-bh-text">
             <input
-              type="checkbox"
-              checked={confirmReviewed}
-              onChange={(e) => setConfirmReviewed(e.target.checked)}
-              className="mt-1"
+              type="hidden"
+              name="confirmReviewed"
+              value={confirmReviewed ? 'true' : 'false'}
             />
-            <span>
-              I confirm that I reviewed the selected documents and that they
-              satisfy the applicable verification requirements.
-            </span>
-          </label>
-          <Button
-            type="submit"
-            className="h-10 rounded-full px-4"
-            disabled={
-              approvePending || selected.length === 0 || !confirmReviewed
-            }
-          >
-            Approve selected reviewed documents
-          </Button>
+            {expectedLastActivity ? (
+              <input
+                type="hidden"
+                name="expectedLastActivity"
+                value={expectedLastActivity}
+              />
+            ) : null}
+
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bh-sidebar text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+                  <ClipboardCheck className="h-5 w-5" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-teal-strong">
+                    Package decision
+                  </p>
+                  <p className="mt-1 text-base font-semibold tracking-tight text-bh-text">
+                    Approve selected reviewed documents
+                  </p>
+                  <p className="mt-1 max-w-xl text-xs leading-5 text-bh-text-secondary">
+                    Only eligible pending or under-review documents with uploaded
+                    files for this worker. This does not grant marketplace access.
+                  </p>
+                </div>
+              </div>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold',
+                  selected.length > 0
+                    ? 'bg-bh-teal-soft text-bh-teal-strong ring-1 ring-bh-teal/25'
+                    : 'bg-bh-subtle text-bh-text-muted ring-1 ring-bh-border',
+                )}
+              >
+                <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                {selected.length} selected
+              </span>
+            </div>
+
+            <div className="rounded-2xl border border-bh-border/80 bg-bh-subtle/60 px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+              <label className="flex cursor-pointer items-start gap-3 text-sm text-bh-text">
+                <input
+                  type="checkbox"
+                  checked={confirmReviewed}
+                  onChange={(e) => setConfirmReviewed(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-bh-border text-bh-teal focus:ring-bh-teal/30"
+                />
+                <span className="leading-5">
+                  <span className="font-semibold text-bh-text">
+                    Review confirmation
+                  </span>
+                  <span className="mt-0.5 block text-bh-text-secondary">
+                    I confirm that I reviewed the selected documents and that they
+                    satisfy the applicable verification requirements.
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-bh-border/70 pt-4">
+              <p className="inline-flex items-center gap-1.5 text-xs text-bh-text-muted">
+                <Shield className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                Credential approval only · worker status unchanged
+              </p>
+              <Button
+                type="submit"
+                className="h-10 rounded-full bg-bh-sidebar px-5 shadow-[0_8px_18px_rgba(7,29,48,0.22)] hover:bg-bh-sidebar-raised"
+                disabled={
+                  approvePending || selected.length === 0 || !confirmReviewed
+                }
+              >
+                Approve selected reviewed documents
+              </Button>
+            </div>
+          </div>
         </form>
       ) : null}
     </div>

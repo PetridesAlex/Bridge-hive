@@ -1,4 +1,13 @@
-import { ArrowLeft } from 'lucide-react';
+import {
+  ArrowLeft,
+  BadgeCheck,
+  CircleAlert,
+  CircleDashed,
+  Clock3,
+  FileWarning,
+  ShieldCheck,
+  Wallet,
+} from 'lucide-react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -7,6 +16,7 @@ import { OpenPayoutProofButton } from '@/components/admin/open-payout-proof-butt
 import { PackageReviewPanel } from '@/components/admin/package-review-panel';
 import {
   AccountStatusBadge,
+  ApplicationStatusBadge,
   OnboardingStatusBadge,
   VerificationStatusBadge,
 } from '@/components/admin/status-badges';
@@ -23,12 +33,14 @@ import {
   isReadyForFinalVerification,
   payoutAccountStatusLabel,
 } from '@/lib/admin/document-status';
-import { applicationStatusLabel, credentialTypeLabel } from '@/lib/admin/labels';
+import { credentialTypeLabel } from '@/lib/admin/labels';
 import { formatDateTime, roleLabel } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
+import { cn } from '@/lib/utils';
 import {
   credentialRequirementsForRole,
   payoutSummaryLabel,
+  type DocumentChecklistItemStatus,
 } from '@bridge-hive/domain';
 import type { WorkerRole } from '@bridge-hive/domain';
 
@@ -201,9 +213,12 @@ export default async function VerificationApplicationWorkspacePage({
               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
                 Workspace
               </p>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-bh-text">
-                {profile?.full_name ?? 'Worker'}
-              </h2>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-semibold tracking-tight text-bh-text">
+                  {profile?.full_name ?? 'Worker'}
+                </h2>
+                <ApplicationStatusBadge status={applicationStatus} />
+              </div>
               <p className="mt-1 text-sm text-bh-text-secondary">
                 {role ? roleLabel(role) : 'Role not set'} · Ref{' '}
                 {workerId.replaceAll('-', '').slice(0, 8)}
@@ -263,9 +278,7 @@ export default async function VerificationApplicationWorkspacePage({
             <VerificationStatusBadge status={worker.verification_status} />
           </StatusCell>
           <StatusCell label="Application status">
-            <span className="text-sm font-medium text-bh-text">
-              {applicationStatusLabel(applicationStatus)}
-            </span>
+            <ApplicationStatusBadge status={applicationStatus} />
           </StatusCell>
           <StatusCell label="Payout account">
             <span className="text-sm font-medium text-bh-text">
@@ -298,31 +311,21 @@ export default async function VerificationApplicationWorkspacePage({
         </dl>
       </Panel>
 
-      <Panel kicker="Checklist" title="Role-specific checklist">
-        <ul className="overflow-hidden rounded-xl border border-bh-border">
-          {checklist.map((item) => (
-            <li
-              key={item.credentialType}
-              className="flex items-center justify-between gap-3 border-b border-bh-border px-4 py-3 last:border-b-0"
-            >
-              <span className="text-sm font-medium text-bh-text">
-                {credentialTypeLabel(item.credentialType)}
-                {item.isRequired ? '' : ' — optional'}
-              </span>
-              <span className="rounded-full bg-bh-subtle px-2.5 py-1 text-[11px] font-semibold capitalize text-bh-text">
-                {String(item.status).replaceAll('_', ' ')}
-              </span>
-            </li>
-          ))}
-          <li className="flex items-center justify-between gap-3 bg-bh-subtle/50 px-4 py-3">
-            <span className="text-sm font-medium text-bh-text">
-              Payout account — separate administrative review
-            </span>
-            <span className="rounded-full bg-bh-honey-soft px-2.5 py-1 text-[11px] font-semibold text-bh-text">
-              {payoutSummaryLabel(payoutAccount?.status as never)}
-            </span>
-          </li>
-        </ul>
+      <Panel
+        kicker="Checklist"
+        title="Role-specific checklist"
+        description="What this role must complete before marketplace approval. Use Document review below to open files and take decisions."
+        accent="teal"
+      >
+        <ChecklistBoard
+          items={checklist}
+          requiredVerified={approved}
+          requiredTotal={requiredTotal}
+          awaiting={awaiting}
+          rejected={rejected}
+          payoutLabel={payoutSummaryLabel(payoutAccount?.status as never)}
+          payoutOk={payoutAccount?.status === 'verified'}
+        />
       </Panel>
 
       <Panel kicker="Documents" title="Document review">
@@ -411,63 +414,105 @@ export default async function VerificationApplicationWorkspacePage({
       </Panel>
 
       {ctx.capabilities.canVerifyWorkers ? (
-        <Panel kicker="Decision" title="Final worker approval">
-          <div className="space-y-3 text-sm">
-            <p className="leading-6 text-bh-text-secondary">
-              Marketplace access requires approved required documents, an approved
-              payout account, and this separate server action (
-              <code className="text-xs">set_worker_verification</code>
-              ). UI buttons cannot bypass those gates.
-            </p>
-            {worker.verification_status === 'submitted' ||
-            worker.verification_status === 'under_review' ? (
-              <p className="text-bh-text-secondary">
-                Worker package status:{' '}
-                <span className="font-medium capitalize text-bh-text">
-                  {String(worker.verification_status).replaceAll('_', ' ')}
+        <Panel
+          kicker="Decision"
+          title="Final worker approval"
+          description="Marketplace access is a separate gate after documents and payout are approved. These actions cannot bypass server checks."
+          accent="navy"
+        >
+          <div className="overflow-hidden rounded-[1.15rem] border border-bh-border/90 bg-gradient-to-br from-bh-subtle/80 via-bh-surface to-bh-teal-soft/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-bh-border/70 px-4 py-4 sm:px-5">
+              <div className="flex min-w-0 items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-bh-sidebar text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]">
+                  <ShieldCheck className="h-5 w-5" aria-hidden />
                 </span>
-                . Review credentials and payout below, then approve only when
-                the checklist is green.
-              </p>
-            ) : null}
-            {canFinalVerify ? (
-              <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 font-medium text-emerald-800">
-                Ready for final approval
-              </p>
-            ) : (
-              <p className="rounded-xl border border-bh-border bg-bh-subtle/60 px-3 py-2 text-bh-text-secondary">
-                Not ready — complete document and payout approvals first.
-              </p>
-            )}
-            <ConfirmDialog
-              title="Approve worker for marketplace access"
-              description="The database will recompute every requirement. This does not change individual credential history."
-              confirmLabel="Approve for marketplace"
-              triggerLabel="Approve worker for marketplace access"
-              disabled={!canFinalVerify}
-              hiddenFields={{ workerId, status: 'verified' }}
-              action={setWorkerVerificationAction}
-            />
-            <ConfirmDialog
-              title="Mark under review"
-              description="Sets worker verification status to under review without approving marketplace access."
-              confirmLabel="Mark under review"
-              triggerLabel="Mark application under review"
-              triggerVariant="secondary"
-              hiddenFields={{ workerId, status: 'under_review' }}
-              action={setWorkerVerificationAction}
-            />
-            <ConfirmDialog
-              title="Reject worker verification"
-              description="Requires a reason. Does not delete credentials or the account."
-              confirmLabel="Reject verification"
-              requireReason
-              destructive
-              triggerLabel="Reject verification"
-              triggerVariant="destructive"
-              hiddenFields={{ workerId, status: 'rejected' }}
-              action={setWorkerVerificationAction}
-            />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-text-muted">
+                    Marketplace gate
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-bh-text">
+                    Final verification decision
+                  </p>
+                  <p className="mt-1 max-w-xl text-xs leading-5 text-bh-text-secondary">
+                    Requires approved required documents, an approved payout
+                    account, and{' '}
+                    <code className="rounded bg-bh-subtle px-1 py-0.5 text-[11px] text-bh-text">
+                      set_worker_verification
+                    </code>
+                    . Buttons cannot skip those gates.
+                  </p>
+                </div>
+              </div>
+              {canFinalVerify ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-success/30 bg-bh-success-soft px-3 py-1.5 text-[11px] font-bold text-bh-success shadow-[0_0_0_3px_rgba(25,135,84,0.1)]">
+                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                  Ready for final approval
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-border bg-bh-subtle px-3 py-1.5 text-[11px] font-bold text-bh-text-secondary">
+                  <Clock3 className="h-3.5 w-3.5" aria-hidden />
+                  Not ready yet
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-4 px-4 py-4 sm:px-5">
+              {worker.verification_status === 'submitted' ||
+              worker.verification_status === 'under_review' ? (
+                <p className="rounded-xl border border-bh-border/80 bg-bh-surface/80 px-3.5 py-2.5 text-sm text-bh-text-secondary">
+                  Worker package status:{' '}
+                  <span className="font-semibold capitalize text-bh-text">
+                    {String(worker.verification_status).replaceAll('_', ' ')}
+                  </span>
+                  . Finish document and payout review, then approve only when
+                  the checklist is complete.
+                </p>
+              ) : null}
+
+              {!canFinalVerify ? (
+                <p className="rounded-xl border border-dashed border-bh-border bg-bh-subtle/50 px-3.5 py-2.5 text-sm text-bh-text-secondary">
+                  Not ready — complete document and payout approvals first.
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+                <ConfirmDialog
+                  title="Approve worker for marketplace access"
+                  description="The database will recompute every requirement. This does not change individual credential history."
+                  confirmLabel="Approve for marketplace"
+                  triggerLabel="Approve for marketplace access"
+                  triggerSize="default"
+                  triggerClassName="h-11 rounded-full bg-bh-sidebar px-5 font-semibold text-white shadow-[0_10px_24px_rgba(7,29,48,0.28)] transition hover:-translate-y-0.5 hover:bg-bh-sidebar-raised disabled:translate-y-0 disabled:shadow-none"
+                  disabled={!canFinalVerify}
+                  hiddenFields={{ workerId, status: 'verified' }}
+                  action={setWorkerVerificationAction}
+                />
+                <ConfirmDialog
+                  title="Mark under review"
+                  description="Sets worker verification status to under review without approving marketplace access."
+                  confirmLabel="Mark under review"
+                  triggerLabel="Mark under review"
+                  triggerVariant="outline"
+                  triggerSize="default"
+                  triggerClassName="h-11 rounded-full border-bh-border bg-bh-surface px-5 font-semibold text-bh-text shadow-sm transition hover:-translate-y-0.5 hover:border-bh-teal/40 hover:bg-bh-teal-soft/40 hover:text-bh-teal-strong"
+                  hiddenFields={{ workerId, status: 'under_review' }}
+                  action={setWorkerVerificationAction}
+                />
+                <ConfirmDialog
+                  title="Reject worker verification"
+                  description="Requires a reason. Does not delete credentials or the account."
+                  confirmLabel="Reject verification"
+                  requireReason
+                  destructive
+                  triggerLabel="Reject verification"
+                  triggerVariant="destructive"
+                  triggerSize="default"
+                  triggerClassName="h-11 rounded-full px-5 font-semibold shadow-[0_8px_18px_rgba(180,35,24,0.18)] transition hover:-translate-y-0.5"
+                  hiddenFields={{ workerId, status: 'rejected' }}
+                  action={setWorkerVerificationAction}
+                />
+              </div>
+            </div>
           </div>
         </Panel>
       ) : null}
@@ -486,23 +531,305 @@ function workerMark(name: string) {
 function Panel({
   kicker,
   title,
+  description,
+  accent,
   children,
 }: {
   kicker: string;
   title: string;
+  description?: string;
+  accent?: 'teal' | 'navy' | 'honey';
   children: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]">
-      <div className="border-b border-bh-border px-5 py-4">
+    <section className="overflow-hidden rounded-[1.25rem] border border-bh-border/90 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]">
+      {accent ? (
+        <div
+          aria-hidden
+          className={cn(
+            'h-1 bg-gradient-to-r',
+            accent === 'teal' &&
+              'from-bh-teal via-bh-teal-strong to-bh-sidebar',
+            accent === 'navy' &&
+              'from-bh-sidebar via-bh-sidebar-raised to-bh-teal',
+            accent === 'honey' &&
+              'from-bh-honey via-bh-honey-strong to-bh-sidebar',
+          )}
+        />
+      ) : null}
+      <div className="border-b border-bh-border/80 bg-gradient-to-b from-bh-subtle/80 to-bh-surface px-5 py-4">
         <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
           {kicker}
         </p>
-        <h3 className="mt-1 text-base font-semibold tracking-tight text-bh-text">{title}</h3>
+        <h3 className="mt-1 text-base font-semibold tracking-tight text-bh-text">
+          {title}
+        </h3>
+        {description ? (
+          <p className="mt-1 max-w-2xl text-sm leading-5 text-bh-text-secondary">
+            {description}
+          </p>
+        ) : null}
       </div>
       <div className="p-5">{children}</div>
     </section>
   );
+}
+
+function ChecklistBoard({
+  items,
+  requiredVerified,
+  requiredTotal,
+  awaiting,
+  rejected,
+  payoutLabel,
+  payoutOk,
+}: {
+  items: Array<{
+    credentialType: string;
+    isRequired: boolean;
+    status: DocumentChecklistItemStatus;
+  }>;
+  requiredVerified: number;
+  requiredTotal: number;
+  awaiting: number;
+  rejected: number;
+  payoutLabel: string;
+  payoutOk: boolean;
+}) {
+  const progress =
+    requiredTotal > 0
+      ? Math.round((requiredVerified / requiredTotal) * 100)
+      : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-2xl border border-bh-border/80 bg-gradient-to-br from-bh-subtle/90 via-bh-surface to-bh-teal-soft/30 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-text-muted">
+              Required progress
+            </p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-bh-text">
+              {requiredVerified}
+              <span className="text-base font-semibold text-bh-text-muted">
+                {' '}
+                / {requiredTotal}
+              </span>
+            </p>
+            <p className="mt-1 text-xs text-bh-text-secondary">
+              Required documents verified for this role
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <MiniStat
+              label="Awaiting"
+              value={awaiting}
+              tone={awaiting > 0 ? 'warning' : 'muted'}
+            />
+            <MiniStat
+              label="Rejected"
+              value={rejected}
+              tone={rejected > 0 ? 'danger' : 'muted'}
+            />
+            <MiniStat
+              label="Complete"
+              value={`${progress}%`}
+              tone={progress === 100 ? 'success' : 'info'}
+            />
+          </div>
+        </div>
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-bh-border/60">
+          <div
+            className={cn(
+              'h-full rounded-full transition-[width] duration-500',
+              progress === 100
+                ? 'bg-gradient-to-r from-bh-success to-[#146c43]'
+                : 'bg-gradient-to-r from-bh-teal to-bh-teal-strong',
+            )}
+            style={{ width: `${Math.min(100, progress)}%` }}
+          />
+        </div>
+      </div>
+
+      <ul className="space-y-2.5">
+        {items.map((item) => {
+          const visual = checklistVisual(item.status);
+          return (
+            <li
+              key={item.credentialType}
+              className={cn(
+                'flex items-start justify-between gap-3 rounded-2xl border px-3.5 py-3 shadow-[0_1px_2px_rgba(7,29,48,0.03)]',
+                visual.row,
+              )}
+            >
+              <div className="flex min-w-0 items-start gap-3">
+                <span
+                  className={cn(
+                    'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1',
+                    visual.iconWrap,
+                  )}
+                >
+                  <visual.Icon className="h-4 w-4" aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-bh-text">
+                    {credentialTypeLabel(item.credentialType)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-bh-text-secondary">
+                    {item.isRequired ? 'Required for this role' : 'Optional'}
+                    {visual.hint ? ` · ${visual.hint}` : ''}
+                  </p>
+                </div>
+              </div>
+              <span
+                className={cn(
+                  'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
+                  visual.badge,
+                )}
+              >
+                {visual.label}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div
+        className={cn(
+          'flex items-start justify-between gap-3 rounded-2xl border px-3.5 py-3.5',
+          payoutOk
+            ? 'border-bh-success/30 bg-bh-success-soft/50'
+            : 'border-bh-honey/35 bg-bh-honey-soft/60',
+        )}
+      >
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={cn(
+              'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1',
+              payoutOk
+                ? 'bg-bh-success-soft text-bh-success ring-bh-success/25'
+                : 'bg-bh-honey-soft text-bh-honey-strong ring-bh-honey/30',
+            )}
+          >
+            <Wallet className="h-4 w-4" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-bh-text">Payout account</p>
+            <p className="mt-0.5 text-xs text-bh-text-secondary">
+              Separate administrative review — bank proof is not a credential
+              document
+            </p>
+          </div>
+        </div>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold',
+            payoutOk
+              ? 'bg-bh-success text-white'
+              : 'bg-bh-honey-soft text-bh-warning',
+          )}
+        >
+          {payoutLabel}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function MiniStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  tone: 'success' | 'warning' | 'danger' | 'info' | 'muted';
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-xl px-3 py-2 text-center',
+        tone === 'success' && 'bg-bh-success-soft text-bh-success',
+        tone === 'warning' && 'bg-bh-honey-soft text-bh-warning',
+        tone === 'danger' && 'bg-bh-danger-soft text-bh-danger',
+        tone === 'info' && 'bg-bh-info-soft text-bh-info',
+        tone === 'muted' && 'bg-bh-subtle text-bh-text-secondary',
+      )}
+    >
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] opacity-80">
+        {label}
+      </p>
+      <p className="mt-0.5 text-sm font-bold tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function checklistVisual(status: DocumentChecklistItemStatus): {
+  label: string;
+  hint: string;
+  Icon: typeof BadgeCheck;
+  row: string;
+  badge: string;
+  iconWrap: string;
+} {
+  switch (status) {
+    case 'verified':
+      return {
+        label: 'Verified',
+        hint: 'Approved — no action needed',
+        Icon: BadgeCheck,
+        row: 'border-bh-success/25 bg-gradient-to-r from-bh-success-soft/70 to-bh-surface',
+        badge: 'bg-bh-success text-white shadow-[0_0_0_3px_rgba(25,135,84,0.12)]',
+        iconWrap: 'bg-bh-success-soft text-bh-success ring-bh-success/25',
+      };
+    case 'under_review':
+    case 'submitted':
+      return {
+        label: status === 'under_review' ? 'Under review' : 'Submitted',
+        hint: 'Ready for admin decision in Document review',
+        Icon: Clock3,
+        row: 'border-bh-honey/30 bg-gradient-to-r from-bh-honey-soft/70 to-bh-surface',
+        badge: 'bg-bh-honey-soft text-bh-warning',
+        iconWrap: 'bg-bh-honey-soft text-bh-honey-strong ring-bh-honey/30',
+      };
+    case 'rejected':
+      return {
+        label: 'Rejected',
+        hint: 'Worker must correct and resubmit',
+        Icon: CircleAlert,
+        row: 'border-bh-danger/25 bg-gradient-to-r from-bh-danger-soft/70 to-bh-surface',
+        badge: 'bg-bh-danger-soft text-bh-danger',
+        iconWrap: 'bg-bh-danger-soft text-bh-danger ring-bh-danger/25',
+      };
+    case 'expired':
+    case 'suspended':
+      return {
+        label: status === 'expired' ? 'Expired' : 'Suspended',
+        hint: 'Needs attention before approval',
+        Icon: FileWarning,
+        row: 'border-bh-danger/20 bg-bh-danger-soft/40',
+        badge: 'bg-bh-danger-soft text-bh-danger',
+        iconWrap: 'bg-bh-danger-soft text-bh-danger ring-bh-danger/20',
+      };
+    case 'draft':
+      return {
+        label: 'Draft',
+        hint: 'Uploaded but not submitted for review',
+        Icon: CircleDashed,
+        row: 'border-bh-border bg-bh-subtle/50',
+        badge: 'bg-bh-subtle text-bh-text-secondary',
+        iconWrap: 'bg-bh-subtle text-bh-text-muted ring-bh-border',
+      };
+    default:
+      return {
+        label: 'Not uploaded',
+        hint: 'Missing from the package',
+        Icon: CircleDashed,
+        row: 'border-dashed border-bh-border bg-bh-subtle/30',
+        badge: 'bg-bh-subtle text-bh-text-muted',
+        iconWrap: 'bg-bh-subtle text-bh-text-muted ring-bh-border',
+      };
+  }
 }
 
 function StatusCell({

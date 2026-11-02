@@ -16,6 +16,7 @@ import {
   workerRecoveryRedirectToOrFallback,
   workerRecoveryUrlErrorMessage,
   WORKER_ROLE_LABELS,
+  WORKER_ROLE_LABELS_EL,
   type WorkerRole,
 } from '@bridge-hive/domain';
 import * as Linking from 'expo-linking';
@@ -30,6 +31,7 @@ import React, {
 } from 'react';
 import { Platform } from 'react-native';
 
+import { i18n } from '@/i18n';
 import { clearAvatarUrlCache } from '@/lib/avatar';
 import { homeRouteForWorker } from '@/lib/home-route';
 import { deactivateCurrentPushDevice } from '@/lib/push/client';
@@ -706,10 +708,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     accountRejectionReason,
   });
   const firstName = firstNameFromFullName(profile?.full_name);
+  const roleLabels = i18n.locale === 'el' ? WORKER_ROLE_LABELS_EL : WORKER_ROLE_LABELS;
   const roleLabel =
     workerProfile?.worker_role && isWorkerRole(workerProfile.worker_role)
-      ? WORKER_ROLE_LABELS[workerProfile.worker_role]
-      : 'Worker';
+      ? roleLabels[workerProfile.worker_role]
+      : i18n.t('roles.worker');
   // Session can arrive before worker_profiles finishes loading. Treat that gap as
   // loading so routing never briefly resolves to choose-role for existing workers.
   const bundleReady = !session?.user || bundleUserId === session.user.id;

@@ -31,7 +31,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const CARD =
-  'rounded-2xl border border-bh-border bg-bh-surface shadow-[0_4px_16px_rgba(7,29,48,0.04)]';
+  'overflow-hidden rounded-[1.25rem] border border-bh-border/90 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]';
 
 function isoDaysAgo(days: number): string {
   const d = new Date();
@@ -170,6 +170,7 @@ export default async function AdminDashboardPage() {
     orgTotalResult,
     orgCreatedResult,
     workerCreatedResult,
+    workerTotalResult,
     auditCreatedResult,
     credentialCountResult,
     payoutCountResult,
@@ -217,6 +218,11 @@ export default async function AdminDashboardPage() {
           .select('created_at')
           .gte('created_at', since30)
       : Promise.resolve({ data: null, error: null }),
+    ctx.capabilities.canViewWorkers
+      ? supabase
+          .from('worker_profiles')
+          .select('user_id', { count: 'exact', head: true })
+      : Promise.resolve({ data: null, count: 0, error: null }),
     supabase
       .from('audit_events')
       .select('created_at')
@@ -319,6 +325,9 @@ export default async function AdminDashboardPage() {
     workerCreatedDates,
     auditCreatedDates,
   );
+  const totalMembers = workerTotalResult.count ?? 0;
+  const membersLast30 = workerCreatedDates.length;
+  const orgsLast30 = orgCreatedDates.length;
 
   const unreadOrgNotifs = (orgSubmittedNotifs.data ?? []).filter((n) => !n.read_at);
   const recentAudits = auditsResult.data ?? [];
@@ -400,23 +409,34 @@ export default async function AdminDashboardPage() {
 
   return (
     <div className="space-y-8 bh-fade-up">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey-strong">
-            Bridge Hive · Platform Admin
-          </p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-bh-text">
-            Dashboard
-          </h1>
-          <p className="mt-1.5 max-w-xl text-sm text-bh-text-secondary">
-            Live queues for organization review and worker verification — kept
-            separate so nothing gets mixed.
-          </p>
+      <header className="relative overflow-hidden rounded-[1.35rem] border border-bh-border/90 bg-bh-surface shadow-[0_10px_40px_rgba(7,29,48,0.06)]">
+        <div
+          aria-hidden
+          className="h-1.5 bg-gradient-to-r from-bh-sidebar via-bh-teal to-bh-honey"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(720px_240px_at_0%_0%,rgba(22,166,182,0.08),transparent_55%),radial-gradient(560px_220px_at_100%_0%,rgba(224,170,24,0.08),transparent_50%)]"
+        />
+        <div className="relative flex flex-wrap items-end justify-between gap-4 px-5 py-5 sm:px-6 sm:py-6">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
+              Bridge Hive · Platform Admin
+            </p>
+            <h1 className="mt-1.5 text-3xl font-bold tracking-tight text-bh-text sm:text-[2.15rem]">
+              Dashboard
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-bh-text-secondary">
+              Live queues for organization review and worker verification — kept
+              separate so nothing gets mixed.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-full border border-bh-border bg-bh-subtle/80 px-3.5 py-1.5 text-xs font-semibold text-bh-text-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.7)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-bh-teal shadow-[0_0_0_3px_rgba(22,166,182,0.2)]" />
+            Last 30 days
+          </span>
         </div>
-        <span className="inline-flex items-center rounded-full border border-bh-border bg-bh-surface px-3.5 py-1.5 text-xs font-semibold text-bh-text-secondary shadow-sm">
-          Last 30 days
-        </span>
-      </div>
+      </header>
 
       {metrics.length > 0 ? (
         <section
@@ -452,70 +472,98 @@ export default async function AdminDashboardPage() {
       )}
 
       <section className="grid gap-4 bh-fade-up-delay-2 lg:grid-cols-3">
-        <div className={cn(CARD, 'p-5 lg:col-span-2')}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 className="text-lg font-semibold text-bh-text">
-                Platform activity
-              </h2>
-              <p className="text-sm text-bh-text-secondary">
-                New organizations, worker profiles, and audit events by week
-              </p>
+        <div className={cn(CARD, 'lg:col-span-2')}>
+          <div
+            aria-hidden
+            className="h-1 bg-gradient-to-r from-bh-sidebar via-bh-teal to-bh-accent-blue"
+          />
+          <div className="border-b border-bh-border/80 bg-gradient-to-b from-bh-subtle/80 to-bh-surface px-5 py-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                  Live tracking
+                </p>
+                <h2 className="mt-1 text-lg font-semibold tracking-tight text-bh-text">
+                  Business growth
+                </h2>
+                <p className="mt-1 text-sm text-bh-text-secondary">
+                  Member registrations and organization onboarding over the last
+                  30 days
+                </p>
+              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-success/25 bg-bh-success-soft px-2.5 py-1 text-[11px] font-bold text-bh-success">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-bh-success" />
+                Live
+              </span>
             </div>
           </div>
-          <AdminActivityChart buckets={activityBuckets} />
+          <div className="p-5">
+            <AdminActivityChart
+              buckets={activityBuckets}
+              totalOrganizations={totalOrganizations}
+              totalMembers={totalMembers}
+              orgsLast30={orgsLast30}
+              membersLast30={membersLast30}
+            />
+          </div>
         </div>
 
-        <div className={cn(CARD, 'p-5')}>
-          <h2 className="text-lg font-semibold text-bh-text">System health</h2>
-          <p className="mt-1 text-sm text-bh-text-secondary">
-            Request-time checks for this page load — not external uptime SLOs.
-          </p>
-          <ul className="mt-5 space-y-3">
-            <li className="flex items-center justify-between gap-3 rounded-xl border border-bh-border bg-bh-subtle/40 px-3.5 py-3">
-              <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-bh-text">
-                <Database className="h-4 w-4 text-bh-teal-strong" aria-hidden />
-                Database
-              </span>
-              <span
-                className={cn(
-                  'text-xs font-bold uppercase tracking-wide',
-                  health.database ? 'text-bh-success' : 'text-bh-danger',
-                )}
-              >
-                {health.database ? 'OK' : 'Error'}
-              </span>
-            </li>
-            <li className="flex items-center justify-between gap-3 rounded-xl border border-bh-border bg-bh-subtle/40 px-3.5 py-3">
-              <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-bh-text">
-                <ShieldCheck className="h-4 w-4 text-bh-teal-strong" aria-hidden />
-                Auth session
-              </span>
-              <span className="text-xs font-bold uppercase tracking-wide text-bh-success">
-                OK
-              </span>
-            </li>
-            <li className="flex items-center justify-between gap-3 rounded-xl border border-bh-border bg-bh-subtle/40 px-3.5 py-3">
-              <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-bh-text">
-                <CheckCircle2 className="h-4 w-4 text-bh-text-muted" aria-hidden />
-                Storage
-              </span>
-              <span className="text-xs font-semibold text-bh-text-muted">
-                Not probed
-              </span>
-            </li>
-          </ul>
-          <p className="mt-4 text-xs text-bh-text-muted">
-            Platform · Bridge Hive admin console
-          </p>
+        <div className={CARD}>
+          <div
+            aria-hidden
+            className="h-1 bg-gradient-to-r from-bh-success via-bh-teal to-bh-sidebar"
+          />
+          <div className="border-b border-bh-border/80 bg-gradient-to-b from-bh-subtle/80 to-bh-surface px-5 py-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+              Status
+            </p>
+            <h2 className="mt-1 text-lg font-semibold tracking-tight text-bh-text">
+              System health
+            </h2>
+            <p className="mt-1 text-sm text-bh-text-secondary">
+              Request-time checks for this page load — not external uptime SLOs.
+            </p>
+          </div>
+          <div className="p-5">
+            <ul className="space-y-3">
+              <HealthRow
+                icon={Database}
+                label="Database"
+                ok={health.database}
+                detail={health.database ? 'OK' : 'Error'}
+              />
+              <HealthRow
+                icon={ShieldCheck}
+                label="Auth session"
+                ok
+                detail="OK"
+              />
+              <HealthRow
+                icon={CheckCircle2}
+                label="Storage"
+                ok={null}
+                detail="Not probed"
+              />
+            </ul>
+            <p className="mt-4 text-xs text-bh-text-muted">
+              Platform · Bridge Hive admin console
+            </p>
+          </div>
         </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-5">
-        <div className={cn(CARD, 'overflow-hidden lg:col-span-3')}>
-          <div className="flex items-center justify-between gap-2 border-b border-bh-border px-5 py-4">
+        <div className={cn(CARD, 'lg:col-span-3')}>
+          <div
+            aria-hidden
+            className="h-1 bg-gradient-to-r from-bh-sidebar via-bh-honey to-bh-teal"
+          />
+          <div className="flex items-center justify-between gap-2 border-b border-bh-border/80 bg-gradient-to-b from-bh-subtle/80 to-bh-surface px-5 py-4">
             <div>
-              <h2 className="text-lg font-semibold text-bh-text">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                Directory
+              </p>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-bh-text">
                 Recent organizations
               </h2>
               <p className="text-sm text-bh-text-secondary">
@@ -525,7 +573,7 @@ export default async function AdminDashboardPage() {
             {ctx.capabilities.canManageOrganizations ? (
               <Link
                 href="/admin/organizations"
-                className="text-sm font-semibold text-bh-teal-strong hover:underline"
+                className="inline-flex h-9 items-center rounded-full border border-bh-border bg-bh-surface px-3.5 text-sm font-semibold text-bh-teal-strong shadow-sm transition hover:border-bh-teal/35 hover:bg-bh-teal-soft/50"
               >
                 View all
               </Link>
@@ -548,42 +596,54 @@ export default async function AdminDashboardPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[480px] text-left text-sm">
+              <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-bh-border bg-bh-subtle/50 text-xs uppercase tracking-wide text-bh-text-muted">
-                    <th className="px-5 py-3 font-semibold">Organization</th>
-                    <th className="px-3 py-3 font-semibold">Type</th>
-                    <th className="px-3 py-3 font-semibold">Status</th>
-                    <th className="px-5 py-3 font-semibold">Activity</th>
+                  <tr className="border-b border-bh-border bg-bh-subtle/70 text-[11px] uppercase tracking-[0.12em] text-bh-text-muted">
+                    <th className="px-5 py-3.5 font-bold">Organization</th>
+                    <th className="px-3 py-3.5 font-bold">Type</th>
+                    <th className="px-3 py-3.5 font-bold">Status</th>
+                    <th className="px-5 py-3.5 font-bold">Activity</th>
                   </tr>
                 </thead>
                 <tbody>
                   {recentOrgRows.map((row) => (
                     <tr
                       key={row.id}
-                      className="border-b border-bh-border/70 last:border-0"
+                      className="border-b border-bh-border/70 transition-colors last:border-0 hover:bg-bh-teal-soft/25"
                     >
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-4">
                         <Link
                           href={`/admin/organizations/${row.id}`}
-                          className="font-semibold text-bh-text hover:text-bh-teal-strong hover:underline"
+                          className="group flex min-w-0 items-center gap-3"
                         >
-                          {row.display_name}
+                          <span
+                            aria-hidden
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-sidebar text-[12px] font-bold tracking-wide text-white shadow-[0_4px_12px_rgba(7,29,48,0.22)] ring-1 ring-black/5"
+                          >
+                            {orgMark(row.display_name)}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[15px] font-bold tracking-tight text-bh-text transition-colors group-hover:text-bh-teal-strong">
+                              {row.display_name}
+                            </span>
+                            <span className="mt-0.5 block truncate text-xs font-medium text-bh-text-muted">
+                              {row.legal_name}
+                            </span>
+                          </span>
                         </Link>
-                        <p className="mt-0.5 text-xs text-bh-text-muted">
-                          {row.legal_name}
-                        </p>
                       </td>
-                      <td className="px-3 py-3.5 text-bh-text-secondary">
-                        {ORGANIZATION_TYPE_LABELS[row.organization_type] ??
-                          row.organization_type}
+                      <td className="px-3 py-4">
+                        <span className="inline-flex rounded-full bg-bh-subtle px-2.5 py-1 text-xs font-semibold text-bh-text-secondary">
+                          {ORGANIZATION_TYPE_LABELS[row.organization_type] ??
+                            row.organization_type}
+                        </span>
                       </td>
-                      <td className="px-3 py-3.5">
+                      <td className="px-3 py-4">
                         <Badge variant={orgStatusVariant(row.status)}>
                           {ORG_STATUS_LABELS[row.status] ?? row.status}
                         </Badge>
                       </td>
-                      <td className="px-5 py-3.5 text-xs text-bh-text-muted">
+                      <td className="px-5 py-4 text-xs font-medium text-bh-text-secondary">
                         {formatDateTime(row.last_activity)}
                       </td>
                     </tr>
@@ -630,9 +690,16 @@ export default async function AdminDashboardPage() {
         </div>
 
         <div className={cn(CARD, 'lg:col-span-2')}>
-          <div className="flex items-center justify-between gap-2 border-b border-bh-border px-5 py-4">
+          <div
+            aria-hidden
+            className="h-1 bg-gradient-to-r from-bh-teal via-bh-sidebar to-bh-honey"
+          />
+          <div className="flex items-center justify-between gap-2 border-b border-bh-border/80 bg-gradient-to-b from-bh-subtle/80 to-bh-surface px-5 py-4">
             <div>
-              <h2 className="text-lg font-semibold text-bh-text">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                Timeline
+              </p>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-bh-text">
                 Recent activity
               </h2>
               <p className="text-sm text-bh-text-secondary">Audit timeline</p>
@@ -655,10 +722,13 @@ export default async function AdminDashboardPage() {
           ) : (
             <ul className="divide-y divide-bh-border/70">
               {recentAudits.map((event) => (
-                <li key={event.id} className="flex gap-3 px-5 py-3.5">
+                <li
+                  key={event.id}
+                  className="flex gap-3 px-5 py-3.5 transition-colors hover:bg-bh-subtle/50"
+                >
                   <span
                     className={cn(
-                      'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+                      'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 ring-black/5',
                       activityIconTone(event.action),
                     )}
                   >
@@ -685,5 +755,46 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function orgMark(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
+  }
+  return name.trim().slice(0, 2).toUpperCase() || '·';
+}
+
+function HealthRow({
+  icon: Icon,
+  label,
+  ok,
+  detail,
+}: {
+  icon: typeof Database;
+  label: string;
+  ok: boolean | null;
+  detail: string;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-2xl border border-bh-border/80 bg-gradient-to-r from-bh-subtle/70 to-bh-surface px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
+      <span className="inline-flex items-center gap-2.5 text-sm font-semibold text-bh-text">
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-bh-surface text-bh-teal-strong shadow-sm ring-1 ring-bh-border/70">
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+        {label}
+      </span>
+      <span
+        className={cn(
+          'rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide',
+          ok === true && 'bg-bh-success-soft text-bh-success',
+          ok === false && 'bg-bh-danger-soft text-bh-danger',
+          ok === null && 'bg-bh-subtle text-bh-text-muted',
+        )}
+      >
+        {detail}
+      </span>
+    </li>
   );
 }

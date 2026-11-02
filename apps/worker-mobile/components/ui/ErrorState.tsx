@@ -22,6 +22,7 @@ export function ErrorState({
       description={description}
       icon="cloud-offline-outline"
       actionLabel={onRetry ? retryLabel : undefined}
+      actionIcon={onRetry ? 'refresh' : undefined}
       onAction={onRetry}
     />
   );

@@ -30,11 +30,12 @@ export const en = {
     english: 'English',
     greek: 'Ελληνικά',
     selectLanguage: 'Select language',
+    ok: 'OK',
+    notNow: 'Not now',
   },
   boot: {
-    preparing: 'Preparing your workspace',
-    preparingSub:
-      'Checking your account and setting up your secure BridgeHive experience.',
+    preparing: 'Preparing workspace',
+    preparingSub: 'Securing your account.',
     bootstrapError:
       'We could not finish setting up your workspace. Check your connection and try again.',
     retrySetup: 'Retry workspace setup',
@@ -247,6 +248,9 @@ export const en = {
     detail: 'Shift details',
     claim: 'Claim shift',
     claimed: 'Shift claimed',
+    claimedTitle: 'Shift accepted',
+    claimedBody: 'This shift is now on your schedule.',
+    claimFailedTitle: 'Claim failed',
     calendar: 'Calendar',
     empty: 'No shifts match your filters',
     positions: 'Positions',
@@ -490,6 +494,21 @@ export const en = {
     languageSelected: 'Selected',
     selectEnglish: 'Use English',
     selectGreek: 'Use Greek',
+  },
+  calendar: {
+    syncLabel: 'Automatically add accepted shifts to my calendar',
+    syncHelp:
+      'When enabled, BridgeHive writes accepted shifts to the calendar you choose on this phone. Turning this off stops future writes and does not delete existing events.',
+    softPromptTitle: 'Add shifts to your calendar?',
+    softPromptBody:
+      'BridgeHive can add accepted shifts to your phone calendar so you do not miss them. You can change this anytime in notification preferences.',
+    enableSync: 'Enable calendar sync',
+    addManually: 'Add to calendar',
+    addedToast: 'Added to your calendar.',
+    permissionDeniedTitle: 'Calendar access needed',
+    permissionDeniedBody:
+      'Allow calendar access in Settings, or add this shift manually. Claiming shifts still works without calendar sync.',
+    syncManual: 'Sync calendar now',
   },
 } as const;
 

@@ -227,7 +227,8 @@ function WelcomeAction({
 
 export default function WelcomeScreen() {
   const { session, loading, homeRoute } = useAuth();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
+  const isGreek = language === 'el';
   const params = useLocalSearchParams<{ revisit?: string }>();
   const revisit = params.revisit === '1';
   const reduced = useReducedMotion();
@@ -337,14 +338,22 @@ export default function WelcomeScreen() {
           <View style={styles.heroSlot}>
             <Animated.View style={[styles.hero, { gap: w.heroGap }, heroMotion]}>
               <BridgeHiveMark size={w.mark} />
-              <Text style={styles.eyebrow}>{t('welcome.eyebrow')}</Text>
+              <Text
+                style={[
+                  styles.eyebrow,
+                  isGreek && styles.eyebrowGreek,
+                ]}
+              >
+                {t('welcome.eyebrow')}
+              </Text>
               <Text
                 style={[
                   styles.title,
+                  isGreek && styles.titleGreek,
                   {
                     fontSize: w.title.size,
                     lineHeight: w.title.line,
-                    letterSpacing: w.title.tracking,
+                    letterSpacing: isGreek ? 0 : w.title.tracking,
                   },
                 ]}
                 accessibilityRole="header"
@@ -354,6 +363,7 @@ export default function WelcomeScreen() {
               <Text
                 style={[
                   styles.subtitle,
+                  isGreek && styles.subtitleGreek,
                   { fontSize: w.subtitle.size, lineHeight: w.subtitle.line },
                 ]}
               >
@@ -378,6 +388,7 @@ export default function WelcomeScreen() {
                     <Text
                       style={[
                         styles.cueLabel,
+                        isGreek && styles.cueLabelGreek,
                         { fontSize: w.cueLabel.size, lineHeight: w.cueLabel.line },
                       ]}
                     >
@@ -483,15 +494,27 @@ const styles = StyleSheet.create({
     letterSpacing: 1.6,
     color: colors.yellow,
   },
+  /** Inter carries full Greek glyphs; Plus Jakarta does not. */
+  eyebrowGreek: {
+    fontFamily: typography.fonts.semibold,
+    letterSpacing: 0.2,
+    textTransform: 'none',
+  },
   title: {
     fontFamily: typography.fonts.displayExtra,
     color: '#D7EEF2',
+  },
+  titleGreek: {
+    fontFamily: typography.fonts.bold,
   },
   subtitle: {
     fontFamily: typography.fonts.medium,
     letterSpacing: -0.2,
     color: 'rgba(20, 169, 181, 0.92)',
     maxWidth: 360,
+  },
+  subtitleGreek: {
+    letterSpacing: 0,
   },
   cues: {},
   cueRow: {
@@ -518,6 +541,9 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.semibold,
     letterSpacing: -0.1,
     color: '#D7EEF2',
+  },
+  cueLabelGreek: {
+    letterSpacing: 0,
   },
   actions: {
     alignItems: 'center',

@@ -16,6 +16,7 @@ import {
   INTL_LOCALE_BY_LANGUAGE,
 } from '@/i18n';
 import { getStoredLocale, setStoredLocale } from '@/i18n/locale-preference';
+import { syncPushPreferredLocale } from '@/lib/push/client';
 
 type LocaleContextValue = {
   language: AppLanguage;
@@ -40,6 +41,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       applyAppLanguage(next);
       setLanguage(next);
       setReady(true);
+      void syncPushPreferredLocale(next);
     })();
     return () => {
       alive = false;
@@ -50,6 +52,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     applyAppLanguage(next);
     setLanguage(next);
     await setStoredLocale(next);
+    void syncPushPreferredLocale(next);
   }, []);
 
   const value = useMemo<LocaleContextValue>(

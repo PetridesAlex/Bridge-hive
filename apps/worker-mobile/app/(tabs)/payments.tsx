@@ -2,7 +2,7 @@ import { payoutSummaryLabel } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -11,6 +11,15 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { InvoiceCard } from '@/components/invoices/InvoiceCard';
 import { MoneySummaryTile } from '@/components/payments/MoneySummaryTile';
@@ -22,21 +31,283 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, motion, radii, spacing, typography } from '@/constants/theme';
 import { useInvoices } from '@/hooks/useInvoices';
 import { usePayouts } from '@/hooks/usePayouts';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 type MoneySegment = 'earnings' | 'invoices';
+
+function payoutAccountTone(status: string | null | undefined): StatusTone {
+  if (status === 'verified') return 'success';
+  if (status === 'pending') return 'info';
+  if (status === 'rejected' || status === 'failed' || status === 'suspended') return 'danger';
+  return 'neutral';
+}
+
+function payoutAccountIcon(
+  status: string | null | undefined,
+): keyof typeof Ionicons.glyphMap {
+  if (status === 'verified') return 'checkmark-circle';
+  if (status === 'pending') return 'time';
+  if (status === 'rejected' || status === 'failed' || status === 'suspended') {
+    return 'alert-circle';
+  }
+  return 'card-outline';
+}
+
+function FinancesIntro({
+  eyebrow,
+  title,
+  body,
+  earningsLabel,
+  invoicesLabel,
+}: {
+  eyebrow: string;
+  title: string;
+  body: string;
+  earningsLabel: string;
+  invoicesLabel: string;
+}) {
+  const reduced = useReducedMotion();
+  const enter = useSharedValue(reduced ? 1 : 0);
+  const wash = useSharedValue(0);
+  const orb = useSharedValue(0);
+  const rule = useSharedValue(reduced ? 1 : 0);
+
+  useEffect(() => {
+    if (reduced) {
+      enter.value = 1;
+      wash.value = 0.35;
+      orb.value = 0.5;
+      rule.value = 1;
+      return;
+    }
+    enter.value = withTiming(1, {
+      duration: motion.duration.slow,
+      easing: Easing.out(Easing.cubic),
+    });
+    rule.value = withTiming(1, {
+      duration: motion.duration.normal,
+      easing: Easing.out(Easing.cubic),
+    });
+    wash.value = withRepeat(
+      withTiming(1, { duration: 5200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+    orb.value = withRepeat(
+      withTiming(1, { duration: 6800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [enter, orb, reduced, rule, wash]);
+
+  const shellStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: interpolate(enter.value, [0, 1], [10, 0]) }],
+  }));
+  const washStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(wash.value, [0, 1], [0.16, 0.4]),
+    transform: [{ translateX: interpolate(wash.value, [0, 1], [-40, 70]) }],
+  }));
+  const orbStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(orb.value, [0, 1], [0.2, 0.45]),
+    transform: [
+      { translateX: interpolate(orb.value, [0, 1], [0, 14]) },
+      { translateY: interpolate(orb.value, [0, 1], [0, -12]) },
+      { scale: interpolate(orb.value, [0, 1], [0.94, 1.08]) },
+    ],
+  }));
+  const ruleStyle = useAnimatedStyle(() => ({
+    opacity: rule.value,
+    transform: [{ scaleX: interpolate(rule.value, [0, 1], [0.2, 1]) }],
+  }));
+
+  return (
+    <Animated.View style={[styles.intro, shellStyle]}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#071E33', '#0B2A43', '#0E4A5C', '#0F6B6B']}
+        locations={[0, 0.34, 0.7, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <Animated.View pointerEvents="none" style={[styles.introWash, washStyle]}>
+        <LinearGradient
+          colors={['transparent', 'rgba(255,255,255,0.16)', 'transparent']}
+          start={{ x: 0, y: 0.2 }}
+          end={{ x: 1, y: 0.8 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.introOrb, orbStyle]} />
+      <View pointerEvents="none" style={styles.introGlow} />
+
+      <View style={styles.introHeader}>
+        <LinearGradient
+          colors={['#FFD25A', '#F08C00']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.introIcon}
+        >
+          <Ionicons name="swap-horizontal" size={16} color={colors.navy} />
+        </LinearGradient>
+        <View style={styles.introHeaderCopy}>
+          <Text style={styles.introEyebrow}>{eyebrow}</Text>
+          <Text style={styles.introTitle}>{title}</Text>
+        </View>
+      </View>
+      <Animated.View style={[styles.introRule, ruleStyle]} />
+      <Text style={styles.introBody}>{body}</Text>
+      <View style={styles.introRails}>
+        <View style={styles.introRail}>
+          <View style={[styles.introRailDot, styles.introRailDotEarnings]} />
+          <Text style={styles.introRailLabel}>{earningsLabel}</Text>
+        </View>
+        <View style={styles.introRail}>
+          <View style={[styles.introRailDot, styles.introRailDotInvoices]} />
+          <Text style={styles.introRailLabel}>{invoicesLabel}</Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+function PayoutAccountCard({
+  account,
+  title,
+  manageLabel,
+  setupLabel,
+  addIbanLabel,
+}: {
+  account: ReturnType<typeof usePayouts>['account'];
+  title: string;
+  manageLabel: string;
+  setupLabel: string;
+  addIbanLabel: string;
+}) {
+  const reduced = useReducedMotion();
+  const enter = useSharedValue(reduced ? 1 : 0);
+  const press = useSharedValue(1);
+  const wash = useSharedValue(0);
+  const nudge = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduced) {
+      enter.value = 1;
+      wash.value = 0.35;
+      return;
+    }
+    enter.value = withTiming(1, {
+      duration: motion.duration.normal,
+      easing: Easing.out(Easing.cubic),
+    });
+    wash.value = withRepeat(
+      withTiming(1, { duration: 5600, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+    nudge.value = withRepeat(
+      withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+  }, [enter, nudge, reduced, wash]);
+
+  const shellStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [
+      { translateY: interpolate(enter.value, [0, 1], [10, 0]) },
+      { scale: press.value },
+    ],
+  }));
+  const washStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(wash.value, [0, 1], [0.14, 0.36]),
+    transform: [{ translateX: interpolate(wash.value, [0, 1], [-36, 60]) }],
+  }));
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: interpolate(nudge.value, [0, 1], [0, 3]) }],
+  }));
+
+  return (
+    <Animated.View style={shellStyle}>
+      <Pressable
+        style={styles.accountCard}
+        onPress={() => router.push('/payout-setup')}
+        onPressIn={() => {
+          if (!reduced) press.value = withSpring(0.985, { damping: 18, stiffness: 380 });
+        }}
+        onPressOut={() => {
+          if (!reduced) press.value = withSpring(1, { damping: 14, stiffness: 260 });
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={account ? manageLabel : setupLabel}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#071E33', '#0B2A43', '#0E4A5C', '#0F6B6B']}
+          locations={[0, 0.34, 0.7, 1]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <Animated.View pointerEvents="none" style={[styles.accountWash, washStyle]}>
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.14)', 'transparent']}
+            start={{ x: 0, y: 0.2 }}
+            end={{ x: 1, y: 0.8 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        <View pointerEvents="none" style={styles.accountGlow} />
+
+        <LinearGradient
+          colors={['#FFD25A', '#F08C00']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.accountIcon}
+        >
+          <Ionicons name="card-outline" size={18} color={colors.navy} />
+        </LinearGradient>
+        <View style={styles.accountCopy}>
+          <Text style={styles.accountTitle}>{title}</Text>
+          {account ? (
+            <>
+              <Text style={styles.accountIban} numberOfLines={1}>
+                {account.masked_iban}
+              </Text>
+              <StatusBadge
+                label={payoutSummaryLabel(account.status)}
+                tone={payoutAccountTone(account.status)}
+                icon={payoutAccountIcon(account.status)}
+                style={styles.accountBadge}
+              />
+            </>
+          ) : (
+            <Text style={styles.accountValue}>{addIbanLabel}</Text>
+          )}
+        </View>
+        <Animated.View style={[styles.accountChevron, chevronStyle]}>
+          <Ionicons name="chevron-forward" size={16} color={colors.white} />
+        </Animated.View>
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 export default function MoneyScreen() {
   const { user, isAppReviewDemo } = useAuth();
   const { t } = useTranslation();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { payouts, account, loading: payoutLoading, error: payoutError, refresh: refreshPayouts } =
-    usePayouts(user?.id);  const {
+    usePayouts(user?.id);
+  const {
     invoices,
     allInvoices,
     loading: invoiceLoading,
@@ -88,18 +359,13 @@ export default function MoneyScreen() {
         </View>
       ) : null}
 
-      <View style={styles.intro}>
-        <LinearGradient
-          pointerEvents="none"
-          colors={['rgba(22,166,182,0.12)', 'rgba(11,42,67,0.04)', 'rgba(255,255,255,0)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.introAccent} />
-        <Text style={styles.introTitle}>{t('payments.howPayWorks')}</Text>
-        <Text style={styles.introBody}>{t('payments.howPayWorksBody')}</Text>
-      </View>
+      <FinancesIntro
+        eyebrow={t('payments.eyebrow')}
+        title={t('payments.howPayWorks')}
+        body={t('payments.howPayWorksBody')}
+        earningsLabel={t('payments.title')}
+        invoicesLabel={t('invoices.title')}
+      />
 
       <View style={styles.summaries}>
         <MoneySummaryTile
@@ -127,36 +393,13 @@ export default function MoneyScreen() {
 
       {segment === 'earnings' ? (
         <>
-          <Pressable
-            style={styles.accountCard}
-            onPress={() => router.push('/payout-setup')}
-            accessibilityRole="button"
-            accessibilityLabel={
-              account ? t('payments.managePayout') : t('payments.setupPayout')
-            }
-          >
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(11,42,67,0.04)', 'rgba(22,166,182,0.08)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.accountIcon}>
-              <Ionicons name="card-outline" size={18} color={colors.white} />
-            </View>
-            <View style={styles.accountCopy}>
-              <Text style={styles.accountTitle}>{t('payments.payoutAccount')}</Text>
-              {account ? (
-                <Text style={styles.accountValue}>
-                  {account.masked_iban} · {payoutSummaryLabel(account.status)}
-                </Text>
-              ) : (
-                <Text style={styles.accountValue}>{t('payments.addIban')}</Text>
-              )}
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.navyLift} />
-          </Pressable>
+          <PayoutAccountCard
+            account={account}
+            title={t('payments.payoutAccount')}
+            manageLabel={t('payments.managePayout')}
+            setupLabel={t('payments.setupPayout')}
+            addIbanLabel={t('payments.addIban')}
+          />
 
           {payoutLoading && payouts.length === 0 ? (
             <SkeletonCard />
@@ -219,34 +462,115 @@ const styles = StyleSheet.create({
   intro: {
     borderRadius: radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    paddingVertical: spacing.md,
+    borderColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: '#0B2A43',
+    paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.lg,
-    paddingLeft: spacing.lg + 8,
     marginBottom: spacing.md,
     overflow: 'hidden',
-    gap: 4,
+    gap: spacing.sm,
   },
-  introAccent: {
+  introWash: {
     position: 'absolute',
-    left: 0,
-    top: 14,
-    bottom: 14,
-    width: 3,
-    borderRadius: 2,
-    backgroundColor: colors.tealStrong,
+    top: -20,
+    bottom: -20,
+    width: 130,
+  },
+  introOrb: {
+    position: 'absolute',
+    right: -40,
+    top: -48,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(22, 166, 182, 0.28)',
+  },
+  introGlow: {
+    position: 'absolute',
+    left: -30,
+    bottom: -50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(255, 210, 90, 0.10)',
+  },
+  introHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+  },
+  introIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  introHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  introEyebrow: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.yellow,
   },
   introTitle: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 13,
-    color: colors.navy,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.2,
+    color: colors.white,
+  },
+  introRule: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.yellow,
+    alignSelf: 'flex-start',
   },
   introBody: {
     fontFamily: typography.fonts.regular,
-    fontSize: typography.size.sm,
-    lineHeight: typography.lineHeight.sm,
-    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    color: 'rgba(255,255,255,0.72)',
+  },
+  introRails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: 2,
+  },
+  introRail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: radii.full,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  introRailDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  introRailDotEarnings: {
+    backgroundColor: colors.yellow,
+  },
+  introRailDotInvoices: {
+    backgroundColor: colors.tealStrong,
+  },
+  introRailLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.88)',
   },
   summaries: {
     flexDirection: 'row',
@@ -258,37 +582,75 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.card,
+    backgroundColor: '#0B2A43',
     borderRadius: radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    padding: spacing.md,
+    borderColor: 'rgba(255,255,255,0.14)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     marginBottom: spacing.md,
     overflow: 'hidden',
-    minHeight: 72,
+    minHeight: 94,
+  },
+  accountWash: {
+    position: 'absolute',
+    top: -16,
+    bottom: -16,
+    width: 120,
+  },
+  accountGlow: {
+    position: 'absolute',
+    right: -24,
+    top: -36,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(22, 166, 182, 0.22)',
   },
   accountIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.navy,
+    overflow: 'hidden',
   },
   accountCopy: {
     flex: 1,
     minWidth: 0,
-    gap: 2,
+    gap: 4,
   },
   accountTitle: {
     fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.md,
-    color: colors.text,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.white,
+  },
+  accountIban: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    color: 'rgba(255,255,255,0.72)',
+  },
+  accountBadge: {
+    alignSelf: 'flex-start',
+    marginTop: 2,
   },
   accountValue: {
     fontFamily: typography.fonts.medium,
     fontSize: typography.size.sm,
-    color: colors.textSecondary,
+    lineHeight: 18,
+    color: 'rgba(255,255,255,0.68)',
+  },
+  accountChevron: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   list: {
     paddingBottom: 0,

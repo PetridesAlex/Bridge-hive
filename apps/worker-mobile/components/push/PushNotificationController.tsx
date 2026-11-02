@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { reconcileCalendarAssignments } from '@/lib/calendar/sync';
+import { getMyAssignments } from '@/lib/queries';
 import { syncGrantedPushDevice } from '@/lib/push/client';
 import {
   claimNotificationResponse,
@@ -12,6 +14,7 @@ import {
   peekPendingShiftRoute,
   setPendingShiftRoute,
 } from '@/lib/push/pending-shift';
+import { useAppLocale } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 function openShiftRoute(
@@ -41,7 +44,8 @@ function openShiftRoute(
 
 /** Foreground banners, background taps, and cold-start taps. Never requests permission. */
 export function PushNotificationController() {
-  const { session, isVerified, loading } = useAuth();
+  const { session, user, isVerified, loading } = useAuth();
+  const { language } = useAppLocale();
   const sessionRef = useRef(session);
   const verifiedRef = useRef(isVerified);
   sessionRef.current = session;
@@ -64,7 +68,7 @@ export function PushNotificationController() {
 
     const responseSub = Notifications.addNotificationResponseReceivedListener(open);
     const receivedSub = Notifications.addNotificationReceivedListener(() => {
-      // Banner, list, and default sound are decided by setNotificationHandler.
+      // Presentation is decided by setNotificationHandler (no duplicate local push).
     });
 
     return () => {
@@ -86,10 +90,33 @@ export function PushNotificationController() {
     if (!session || Platform.OS === 'web') return;
     void syncGrantedPushDevice();
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void syncGrantedPushDevice();
+      if (state === 'active') {
+        void syncGrantedPushDevice();
+        if (user?.id && isVerified) {
+          void (async () => {
+            try {
+              const assignments = await getMyAssignments(user.id);
+              await reconcileCalendarAssignments({
+                workerId: user.id,
+                locale: language,
+                assignments: (assignments.data ?? []).map((row) => ({
+                  assignmentId: row.id,
+                  status: row.status,
+                  startsAt: row.shifts?.starts_at ?? '',
+                  endsAt: row.shifts?.ends_at ?? '',
+                  organizationName: 'Organization',
+                  roleLabel: row.shifts?.required_role ?? null,
+                })),
+              });
+            } catch {
+              // Calendar reconcile must never affect push or session.
+            }
+          })();
+        }
+      }
     });
     return () => subscription.remove();
-  }, [session]);
+  }, [session, user?.id, isVerified, language]);
 
   return null;
 }

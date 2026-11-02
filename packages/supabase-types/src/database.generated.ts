@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.17"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_events: {
@@ -2004,6 +1979,140 @@ export type Database = {
           },
         ]
       }
+      worker_notification_deliveries: {
+        Row: {
+          attempts: number
+          created_at: string
+          device_id: string
+          event_id: string
+          expo_ticket_id: string | null
+          id: string
+          next_attempt_at: string | null
+          receipt_attempts: number
+          receipt_checked_at: string | null
+          receipt_error: string | null
+          receipt_status: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          device_id: string
+          event_id: string
+          expo_ticket_id?: string | null
+          id?: string
+          next_attempt_at?: string | null
+          receipt_attempts?: number
+          receipt_checked_at?: string | null
+          receipt_error?: string | null
+          receipt_status?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          device_id?: string
+          event_id?: string
+          expo_ticket_id?: string | null
+          id?: string
+          next_attempt_at?: string | null
+          receipt_attempts?: number
+          receipt_checked_at?: string | null
+          receipt_error?: string | null
+          receipt_status?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_notification_deliveries_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "worker_push_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_notification_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "worker_notification_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_notification_deliveries_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      worker_notification_events: {
+        Row: {
+          assignment_id: string | null
+          batch_id: string | null
+          created_at: string
+          event_type: string
+          expires_at: string | null
+          id: string
+          payload: Json
+          publication_key: string
+          shift_id: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          batch_id?: string | null
+          created_at?: string
+          event_type?: string
+          expires_at?: string | null
+          id?: string
+          payload?: Json
+          publication_key: string
+          shift_id?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          batch_id?: string | null
+          created_at?: string
+          event_type?: string
+          expires_at?: string | null
+          id?: string
+          payload?: Json
+          publication_key?: string
+          shift_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_notification_events_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "shift_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_notification_events_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "shift_creation_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "worker_notification_events_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       worker_profiles: {
         Row: {
           bio: string | null
@@ -2042,6 +2151,56 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      worker_push_devices: {
+        Row: {
+          app_version: string | null
+          created_at: string
+          expo_push_token: string
+          id: string
+          invalidated_at: string | null
+          last_seen_at: string | null
+          notification_enabled: boolean
+          platform: string
+          preferred_locale: string
+          updated_at: string
+          worker_id: string
+        }
+        Insert: {
+          app_version?: string | null
+          created_at?: string
+          expo_push_token: string
+          id?: string
+          invalidated_at?: string | null
+          last_seen_at?: string | null
+          notification_enabled?: boolean
+          platform: string
+          preferred_locale?: string
+          updated_at?: string
+          worker_id: string
+        }
+        Update: {
+          app_version?: string | null
+          created_at?: string
+          expo_push_token?: string
+          id?: string
+          invalidated_at?: string | null
+          last_seen_at?: string | null
+          notification_enabled?: boolean
+          platform?: string
+          preferred_locale?: string
+          updated_at?: string
+          worker_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "worker_push_devices_worker_id_fkey"
+            columns: ["worker_id"]
+            isOneToOne: false
+            referencedRelation: "worker_profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -2145,6 +2304,11 @@ export type Database = {
           p_provider_event_id: string
         }
         Returns: Json
+      }
+      apply_worker_push_receipts: { Args: { p_results: Json }; Returns: number }
+      apply_worker_push_send_results: {
+        Args: { p_results: Json }
+        Returns: number
       }
       approve_organization: {
         Args: { p_organization_id: string }
@@ -2331,6 +2495,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_worker_push_deliveries: { Args: { p_limit: number }; Returns: Json }
       correct_credential_expires_at: {
         Args: { p_credential_id: string; p_expires_at: string }
         Returns: {
@@ -2478,6 +2643,26 @@ export type Database = {
           worker_id: string
         }[]
       }
+      deactivate_worker_push_device: {
+        Args: { p_expo_push_token: string }
+        Returns: undefined
+      }
+      enqueue_assignment_cancelled_notification: {
+        Args: { p_assignment_id: string }
+        Returns: string
+      }
+      enqueue_shift_batch_published_notification: {
+        Args: { p_batch_id: string }
+        Returns: string
+      }
+      enqueue_shift_cancelled_notification: {
+        Args: { p_shift_id: string }
+        Returns: string
+      }
+      enqueue_shift_published_notification: {
+        Args: { p_shift_id: string }
+        Returns: string
+      }
       ensure_my_worker_profile: {
         Args: {
           p_bio?: string
@@ -2486,6 +2671,7 @@ export type Database = {
         Returns: {
           bio: string | null
           created_at: string
+          is_app_review_demo: boolean
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           updated_at: string
           user_id: string
@@ -2498,6 +2684,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      format_shift_published_notification: {
+        Args: { p_shift_id: string }
+        Returns: {
+          body: string
+          open_positions: number
+          title: string
+        }[]
       }
       generate_invitation_raw_token: { Args: never; Returns: string }
       generate_payment_instructions: {
@@ -2537,6 +2731,7 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      get_app_review_demo_catalog: { Args: never; Returns: Json }
       get_effective_commission_rate_bps: {
         Args: { p_at?: string }
         Returns: number
@@ -2549,6 +2744,34 @@ export type Database = {
       get_my_organization_setup: {
         Args: { p_organization_id: string }
         Returns: Json
+      }
+      get_my_shift_alert_availability: {
+        Args: { p_shift_ids: string[] }
+        Returns: {
+          available: boolean
+          shift_id: string
+        }[]
+      }
+      get_org_payout_transfer_details: {
+        Args: { p_payout_id: string }
+        Returns: {
+          account_holder_name: string
+          assignment_id: string
+          currency: string
+          due_at: string
+          full_iban: string
+          gross_amount_minor: number
+          masked_iban: string
+          organization_id: string
+          organization_total_due_minor: number
+          payout_id: string
+          payout_status: string
+          shift_id: string
+          shift_title: string
+          worker_full_name: string
+          worker_id: string
+          worker_role: string
+        }[]
       }
       get_organization_invitation_preview: {
         Args: { p_raw_token: string }
@@ -2579,6 +2802,7 @@ export type Database = {
           worker_id: string
         }[]
       }
+      get_worker_push_preference: { Args: never; Returns: boolean }
       get_worker_shift_details: {
         Args: { p_shift_id: string }
         Returns: {
@@ -2600,14 +2824,6 @@ export type Database = {
           ward_name: string
         }[]
       }
-      shift_active_assignment_count: {
-        Args: { p_shift_id: string }
-        Returns: number
-      }
-      shift_open_positions: {
-        Args: { p_shift_id: string }
-        Returns: number
-      }
       has_org_role: {
         Args: {
           p_organization_id: string
@@ -2616,25 +2832,16 @@ export type Database = {
         Returns: boolean
       }
       hash_invitation_token: { Args: { p_raw_token: string }; Returns: string }
-      is_org_member: { Args: { p_organization_id: string }; Returns: boolean }
       is_app_review_demo_worker: {
         Args: { p_worker_id?: string }
         Returns: boolean
       }
+      is_org_member: { Args: { p_organization_id: string }; Returns: boolean }
       is_platform_admin: {
         Args: {
           p_required_role?: Database["public"]["Enums"]["platform_admin_role"]
         }
         Returns: boolean
-      }
-      get_app_review_demo_catalog: { Args: Record<string, never>; Returns: Json }
-      set_worker_app_review_demo: {
-        Args: {
-          p_worker_id: string
-          p_enabled: boolean
-          p_reason?: string
-        }
-        Returns: Database["public"]["Tables"]["worker_profiles"]["Row"]
       }
       is_valid_iban: { Args: { p_iban: string }; Returns: boolean }
       list_admin_organizations: {
@@ -2732,6 +2939,10 @@ export type Database = {
           status: Database["public"]["Enums"]["payout_account_status"]
           worker_id: string
         }[]
+      }
+      list_worker_push_receipt_candidates: {
+        Args: { p_limit: number }
+        Returns: Json
       }
       mark_credentials_under_review: {
         Args: { p_credential_ids: string[]; p_worker_id: string }
@@ -2839,6 +3050,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_org_worker_payment_due: {
+        Args: {
+          p_amount_minor: number
+          p_assignment_id: string
+          p_currency: string
+          p_due_at: string
+          p_organization_id: string
+          p_payout_id: string
+        }
+        Returns: undefined
+      }
       notify_organization_event: {
         Args: {
           p_event_type: string
@@ -2892,6 +3114,7 @@ export type Database = {
           notes: string | null
           organization_id: string
           rate_minor: number
+          required_positions: number
           required_role: Database["public"]["Enums"]["worker_role"]
           starts_at: string
           status: Database["public"]["Enums"]["shift_status"]
@@ -2905,6 +3128,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      push_retry_delay_seconds: {
+        Args: { p_attempts: number }
+        Returns: number
       }
       reactivate_organization: {
         Args: { p_organization_id: string; p_reason: string }
@@ -3039,6 +3266,15 @@ export type Database = {
         Args: { p_candidate_id: string; p_organization_id: string }
         Returns: boolean
       }
+      register_worker_push_device: {
+        Args: {
+          p_app_version?: string
+          p_expo_push_token: string
+          p_platform: string
+          p_preferred_locale?: string
+        }
+        Returns: string
+      }
       reject_organization: {
         Args: { p_organization_id: string; p_reason: string }
         Returns: {
@@ -3134,6 +3370,7 @@ export type Database = {
         Returns: undefined
       }
       run_worker_commission_due_dates: { Args: never; Returns: Json }
+      safe_push_error: { Args: { p_error: string }; Returns: string }
       set_location_image_path: {
         Args: {
           p_location_id: string
@@ -3196,15 +3433,12 @@ export type Database = {
         }
         Returns: undefined
       }
-      set_worker_verification: {
-        Args: {
-          p_reason?: string
-          p_status: Database["public"]["Enums"]["verification_status"]
-          p_worker_id: string
-        }
+      set_worker_app_review_demo: {
+        Args: { p_enabled: boolean; p_reason?: string; p_worker_id: string }
         Returns: {
           bio: string | null
           created_at: string
+          is_app_review_demo: boolean
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           updated_at: string
           user_id: string
@@ -3218,7 +3452,44 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_worker_push_locale: { Args: { p_locale: string }; Returns: string }
+      set_worker_push_preference: {
+        Args: { p_enabled: boolean }
+        Returns: boolean
+      }
+      set_worker_verification: {
+        Args: {
+          p_reason?: string
+          p_status: Database["public"]["Enums"]["verification_status"]
+          p_worker_id: string
+        }
+        Returns: {
+          bio: string | null
+          created_at: string
+          is_app_review_demo: boolean
+          onboarding_status: Database["public"]["Enums"]["onboarding_status"]
+          updated_at: string
+          user_id: string
+          verification_status: Database["public"]["Enums"]["verification_status"]
+          worker_role: Database["public"]["Enums"]["worker_role"] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "worker_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      shift_active_assignment_count: {
+        Args: { p_shift_id: string }
+        Returns: number
+      }
+      shift_open_positions: { Args: { p_shift_id: string }; Returns: number }
       shift_organization_id: { Args: { p_shift_id: string }; Returns: string }
+      shift_pending_assignment_count: {
+        Args: { p_shift_id: string }
+        Returns: number
+      }
       submit_credential_for_review: {
         Args: { p_credential_id: string }
         Returns: {
@@ -3278,27 +3549,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      get_org_payout_transfer_details: {
-        Args: { p_payout_id: string }
-        Returns: {
-          account_holder_name: string | null
-          assignment_id: string
-          currency: string
-          due_at: string
-          full_iban: string
-          gross_amount_minor: number
-          masked_iban: string
-          organization_id: string
-          organization_total_due_minor: number
-          payout_id: string
-          payout_status: string
-          shift_id: string | null
-          shift_title: string | null
-          worker_full_name: string
-          worker_id: string
-          worker_role: string | null
-        }[]
       }
       submit_payout_account: {
         Args: {
@@ -3367,6 +3617,7 @@ export type Database = {
         Returns: {
           bio: string | null
           created_at: string
+          is_app_review_demo: boolean
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           updated_at: string
           user_id: string
@@ -3434,6 +3685,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      touch_worker_push_device: {
+        Args: { p_expo_push_token: string }
+        Returns: undefined
       }
       update_organization_profile: {
         Args: {
@@ -3561,6 +3816,7 @@ export type Database = {
           created_at: string
           currency: string
           external_account_id: string | null
+          iban_ciphertext: string | null
           id: string
           last_verified_at: string | null
           masked_iban: string
@@ -3614,6 +3870,13 @@ export type Database = {
       }
       worker_is_ready_for_final_approval: {
         Args: { p_worker_id: string }
+        Returns: boolean
+      }
+      worker_push_device_is_eligible: {
+        Args: {
+          p_device_id: string
+          p_required_role?: Database["public"]["Enums"]["worker_role"]
+        }
         Returns: boolean
       }
       worker_required_credential_types: {
@@ -3758,505 +4021,6 @@ export type Database = {
       [_ in never]: never
     }
   }
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null
-          avif_autodetection: boolean | null
-          created_at: string | null
-          file_size_limit: number | null
-          id: string
-          lifecycle_configuration: Json | null
-          lifecycle_configuration_generation: string | null
-          name: string
-          owner: string | null
-          owner_id: string | null
-          public: boolean | null
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string | null
-          versioning_status: string
-        }
-        Insert: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id: string
-          lifecycle_configuration?: Json | null
-          lifecycle_configuration_generation?: string | null
-          name: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string | null
-          versioning_status?: string
-        }
-        Update: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id?: string
-          lifecycle_configuration?: Json | null
-          lifecycle_configuration_generation?: string | null
-          name?: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string | null
-          versioning_status?: string
-        }
-        Relationships: []
-      }
-      buckets_analytics: {
-        Row: {
-          created_at: string
-          deleted_at: string | null
-          format: string
-          id: string
-          name: string
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          deleted_at?: string | null
-          format?: string
-          id?: string
-          name: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          deleted_at?: string | null
-          format?: string
-          id?: string
-          name?: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      buckets_vectors: {
-        Row: {
-          created_at: string
-          id: string
-          type: Database["storage"]["Enums"]["buckettype"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          type?: Database["storage"]["Enums"]["buckettype"]
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      migrations: {
-        Row: {
-          executed_at: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Insert: {
-          executed_at?: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Update: {
-          executed_at?: string | null
-          hash?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      objects: {
-        Row: {
-          archived_at: string | null
-          bucket_id: string | null
-          created_at: string | null
-          id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
-          last_accessed_at: string | null
-          metadata: Json | null
-          name: string | null
-          owner: string | null
-          owner_id: string | null
-          path_tokens: string[] | null
-          updated_at: string | null
-          user_metadata: Json | null
-          version: string | null
-        }
-        Insert: {
-          archived_at?: string | null
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Update: {
-          archived_at?: string | null
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          is_delete_marker?: boolean
-          is_versioned?: boolean
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          user_metadata?: Json | null
-          version?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "objects_bucketId_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          id: string
-          in_progress_size: number
-          key: string
-          metadata: Json | null
-          owner_id: string | null
-          upload_signature: string
-          user_metadata: Json | null
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          id: string
-          in_progress_size?: number
-          key: string
-          metadata?: Json | null
-          owner_id?: string | null
-          upload_signature: string
-          user_metadata?: Json | null
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          id?: string
-          in_progress_size?: number
-          key?: string
-          metadata?: Json | null
-          owner_id?: string | null
-          upload_signature?: string
-          user_metadata?: Json | null
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      s3_multipart_uploads_parts: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          etag: string
-          id: string
-          key: string
-          owner_id: string | null
-          part_number: number
-          size: number
-          upload_id: string
-          version: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          etag: string
-          id?: string
-          key: string
-          owner_id?: string | null
-          part_number: number
-          size?: number
-          upload_id: string
-          version: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          etag?: string
-          id?: string
-          key?: string
-          owner_id?: string | null
-          part_number?: number
-          size?: number
-          upload_id?: string
-          version?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "s3_multipart_uploads_parts_upload_id_fkey"
-            columns: ["upload_id"]
-            isOneToOne: false
-            referencedRelation: "s3_multipart_uploads"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      vector_indexes: {
-        Row: {
-          bucket_id: string
-          created_at: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id: string
-          metadata_configuration: Json | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string
-          data_type: string
-          dimension: number
-          distance_metric: string
-          id?: string
-          metadata_configuration?: Json | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string
-          data_type?: string
-          dimension?: number
-          distance_metric?: string
-          id?: string
-          metadata_configuration?: Json | null
-          name?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "vector_indexes_bucket_id_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets_vectors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      allow_any_operation: {
-        Args: { expected_operations: string[] }
-        Returns: boolean
-      }
-      allow_only_operation: {
-        Args: { expected_operation: string }
-        Returns: boolean
-      }
-      can_insert_object: {
-        Args: { bucketid: string; metadata: Json; name: string; owner: string }
-        Returns: undefined
-      }
-      extension: { Args: { name: string }; Returns: string }
-      filename: { Args: { name: string }; Returns: string }
-      foldername: { Args: { name: string }; Returns: string[] }
-      get_common_prefix: {
-        Args: { p_delimiter: string; p_key: string; p_prefix: string }
-        Returns: string
-      }
-      get_size_by_bucket: {
-        Args: { delete_markers?: string; noncurrent_versions?: string }
-        Returns: {
-          bucket_id: string
-          size: number
-        }[]
-      }
-      list_multipart_uploads_with_delimiter: {
-        Args: {
-          bucket_id: string
-          delimiter_param: string
-          max_keys?: number
-          next_key_token?: string
-          next_upload_token?: string
-          prefix_param: string
-          raw_prefix_param?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-        }[]
-      }
-      list_objects_with_delimiter: {
-        Args: {
-          _bucket_id: string
-          delete_markers?: string
-          delimiter_param: string
-          max_keys?: number
-          next_token?: string
-          next_token_archived_at?: string
-          next_token_version?: string
-          noncurrent_versions?: string
-          prefix_param: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          archived_at: string
-          created_at: string
-          id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-          version: string
-        }[]
-      }
-      operation: { Args: never; Returns: string }
-      search: {
-        Args: {
-          bucketname: string
-          delete_markers?: string
-          levels?: number
-          limits?: number
-          noncurrent_versions?: string
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          archived_at: string
-          created_at: string
-          id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-          version: string
-        }[]
-      }
-      search_by_timestamp: {
-        Args: {
-          delete_markers?: string
-          noncurrent_versions?: string
-          p_bucket_id: string
-          p_level: number
-          p_limit: number
-          p_prefix: string
-          p_sort_column: string
-          p_sort_column_after: string
-          p_sort_order: string
-          p_start_after: string
-          p_start_after_version?: string
-        }
-        Returns: {
-          archived_at: string
-          created_at: string
-          id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-          version: string
-        }[]
-      }
-      search_v2: {
-        Args: {
-          bucket_name: string
-          delete_markers?: string
-          levels?: number
-          limits?: number
-          noncurrent_versions?: string
-          prefix: string
-          sort_column?: string
-          sort_column_after?: string
-          sort_order?: string
-          start_after?: string
-          start_after_archived_at?: string
-          start_after_is_continuation?: boolean
-          start_after_version?: string
-        }
-        Returns: {
-          archived_at: string
-          created_at: string
-          id: string
-          is_delete_marker: boolean
-          is_versioned: boolean
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-          version: string
-        }[]
-      }
-    }
-    Enums: {
-      buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
@@ -4377,9 +4141,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       account_status: ["active", "suspended", "deleted"],
@@ -4510,11 +4271,6 @@ export const Constants = {
         "uncollectible",
       ],
       worker_role: ["registered_nurse", "ward_assistant", "physiotherapist"],
-    },
-  },
-  storage: {
-    Enums: {
-      buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
     },
   },
 } as const

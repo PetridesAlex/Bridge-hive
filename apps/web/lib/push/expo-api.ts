@@ -1,7 +1,11 @@
 import {
   assertSafeShiftPushData,
+  buildAssignmentCancelledNotification,
+  buildShiftCancelledNotification,
+  buildShiftPublishedBatchNotification,
   buildShiftPublishedNotification,
-  type ShiftPublishedPushData,
+  normalizePushLocale,
+  type WorkerPushData,
 } from '@bridge-hive/domain';
 
 export const EXPO_PUSH_SEND_URL = 'https://exp.host/--/api/v2/push/send';
@@ -11,16 +15,22 @@ export const NEW_SHIFTS_CHANNEL_ID = 'new-shifts';
 export type ClaimedPushDelivery = {
   deliveryId: string;
   expoPushToken: string;
-  shiftId: string;
+  preferredLocale?: string | null;
+  eventType?: string | null;
+  payload?: Record<string, unknown> | null;
+  shiftId?: string | null;
+  batchId?: string | null;
+  assignmentId?: string | null;
   openPositions: number;
   status: string;
-  startsAt: string;
-  endsAt: string;
-  timeZone: string;
-  place: string;
-  requiredRole: string;
-  rateMinor: number;
-  currency: string;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  timeZone?: string | null;
+  place?: string | null;
+  requiredRole?: string | null;
+  rateMinor?: number | null;
+  currency?: string | null;
+  organizationName?: string | null;
 };
 
 export type ExpoPushMessage = {
@@ -30,7 +40,7 @@ export type ExpoPushMessage = {
   sound: 'default';
   priority: 'high';
   channelId: typeof NEW_SHIFTS_CHANNEL_ID;
-  data: ShiftPublishedPushData;
+  data: WorkerPushData;
 };
 
 export type PushSendOutcome = {
@@ -42,7 +52,7 @@ export type PushSendOutcome = {
 
 export type PushReceiptOutcome = {
   deliveryId: string;
-  receiptStatus: 'ok' | 'error';
+  receiptStatus: 'ok' | 'error' | 'pending';
   receiptError?: string;
 };
 
@@ -56,34 +66,70 @@ export function parseClaimedPushDeliveries(value: unknown): ClaimedPushDelivery[
     return (
       typeof candidate.deliveryId === 'string' &&
       typeof candidate.expoPushToken === 'string' &&
-      typeof candidate.shiftId === 'string' &&
-      typeof candidate.openPositions === 'number' &&
-      typeof candidate.startsAt === 'string' &&
-      typeof candidate.endsAt === 'string' &&
-      typeof candidate.timeZone === 'string' &&
-      typeof candidate.place === 'string' &&
-      typeof candidate.requiredRole === 'string' &&
-      typeof candidate.rateMinor === 'number'
+      typeof candidate.openPositions === 'number'
     );
   });
 }
 
 export function buildExpoPushMessage(row: ClaimedPushDelivery): ExpoPushMessage | null {
   if (!EXPO_TOKEN_RE.test(row.expoPushToken)) return null;
-  const message = buildShiftPublishedNotification({
-    shiftId: row.shiftId,
-    requiredRole: row.requiredRole,
-    startsAt: row.startsAt,
-    endsAt: row.endsAt,
-    timeZone: row.timeZone,
-    place: row.place,
-    openPositions: row.openPositions,
-    rateMinor: row.rateMinor,
-    currency: row.currency,
-    status: row.status,
-  });
+  const locale = normalizePushLocale(row.preferredLocale);
+  const eventType = row.eventType ?? 'shift_published';
+
+  let message: { title: string; body: string; data: WorkerPushData } | null = null;
+
+  if (eventType === 'shift_published_batch') {
+    const batchId = row.batchId ?? (typeof row.payload?.batchId === 'string' ? row.payload.batchId : null);
+    if (!batchId) return null;
+    message = buildShiftPublishedBatchNotification({
+      batchId,
+      shiftCount: row.openPositions,
+      locale,
+    });
+  } else if (eventType === 'shift_cancelled') {
+    if (!row.shiftId) return null;
+    message = buildShiftCancelledNotification({
+      shiftId: row.shiftId,
+      organizationName: row.organizationName,
+      locale,
+    });
+  } else if (eventType === 'assignment_cancelled') {
+    if (!row.shiftId || !row.assignmentId) return null;
+    message = buildAssignmentCancelledNotification({
+      shiftId: row.shiftId,
+      assignmentId: row.assignmentId,
+      organizationName: row.organizationName,
+      locale,
+    });
+  } else {
+    if (
+      !row.shiftId ||
+      !row.startsAt ||
+      !row.endsAt ||
+      !row.timeZone ||
+      !row.place ||
+      !row.requiredRole ||
+      typeof row.rateMinor !== 'number'
+    ) {
+      return null;
+    }
+    message = buildShiftPublishedNotification({
+      shiftId: row.shiftId,
+      requiredRole: row.requiredRole,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt,
+      timeZone: row.timeZone,
+      place: row.place,
+      openPositions: row.openPositions,
+      rateMinor: row.rateMinor,
+      currency: row.currency ?? 'EUR',
+      status: row.status,
+      locale,
+    });
+  }
+
   if (!message) return null;
-  const data = assertSafeShiftPushData(message.data);
+  const data = assertSafeShiftPushData(message.data as unknown as Record<string, unknown>);
   return {
     to: row.expoPushToken,
     title: message.title,
@@ -128,12 +174,19 @@ export function receiptFromExpo(
   deliveryId: string,
   receipt: unknown,
 ): PushReceiptOutcome {
-  if (!receipt || typeof receipt !== 'object') {
-    return { deliveryId, receiptStatus: 'error', receiptError: 'expo_unreachable' };
+  // Missing ticket in the Expo response is usually lag, not a hard failure.
+  if (receipt == null) {
+    return { deliveryId, receiptStatus: 'pending', receiptError: 'receipt_not_ready' };
+  }
+  if (typeof receipt !== 'object') {
+    return { deliveryId, receiptStatus: 'pending', receiptError: 'expo_unreachable' };
   }
   const row = receipt as { status?: string; details?: { error?: string } };
   if (row.status === 'ok') {
     return { deliveryId, receiptStatus: 'ok' };
+  }
+  if (!row.status) {
+    return { deliveryId, receiptStatus: 'pending', receiptError: 'expo_receipt_missing' };
   }
   const code = row.details?.error;
   if (code === 'DeviceNotRegistered' || code === 'MessageRateExceeded') {

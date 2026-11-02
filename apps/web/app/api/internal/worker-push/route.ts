@@ -11,32 +11,38 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 function authorized(request: Request): boolean {
-  const secret = process.env.WORKER_PUSH_DISPATCH_SECRET;
-  if (!secret || secret.length < 16) return false;
+  const secrets = [
+    process.env.WORKER_PUSH_DISPATCH_SECRET,
+    process.env.CRON_SECRET,
+  ].filter((value): value is string => typeof value === 'string' && value.length >= 16);
+
+  if (secrets.length === 0) return false;
+
   const header = request.headers.get('authorization') ?? '';
-  const expected = `Bearer ${secret}`;
   const actual = Buffer.from(header);
-  const wanted = Buffer.from(expected);
-  if (actual.length !== wanted.length) return false;
-  return timingSafeEqual(actual, wanted);
+
+  for (const secret of secrets) {
+    const expected = Buffer.from(`Bearer ${secret}`);
+    if (actual.length === expected.length && timingSafeEqual(actual, expected)) {
+      return true;
+    }
+  }
+  return false;
 }
 
-/**
- * Trusted retry/receipt entry. Publish actions also dispatch in-process.
- * This route never returns tokens, tickets, or shift private fields.
- */
-export async function POST(request: Request) {
+function taskFromRequest(request: Request, bodyTask?: unknown): 'dispatch' | 'receipts' {
+  const url = new URL(request.url);
+  const queryTask = url.searchParams.get('task');
+  if (queryTask === 'receipts' || bodyTask === 'receipts') return 'receipts';
+  return 'dispatch';
+}
+
+async function handle(request: Request, bodyTask?: unknown) {
   if (!authorized(request)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  let task = 'dispatch';
-  try {
-    const body = (await request.json()) as { task?: unknown };
-    if (body.task === 'receipts') task = 'receipts';
-  } catch {
-    task = 'dispatch';
-  }
+  const task = taskFromRequest(request, bodyTask);
 
   if (task === 'receipts') {
     try {
@@ -53,4 +59,27 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ claimed: 0, sent: 0 });
   }
+}
+
+/**
+ * Trusted retry/receipt entry. Publish actions also dispatch in-process.
+ * Vercel cron uses GET with ?task=; manual/ops may POST JSON { task }.
+ * This route never returns tokens, tickets, or shift private fields.
+ *
+ * Required secrets: WORKER_PUSH_DISPATCH_SECRET (or CRON_SECRET for Vercel cron).
+ * Optional: EXPO_ACCESS_TOKEN. APNs/FCM credentials come from EAS (ops checklist).
+ */
+export async function GET(request: Request) {
+  return handle(request);
+}
+
+export async function POST(request: Request) {
+  let bodyTask: unknown;
+  try {
+    const body = (await request.json()) as { task?: unknown };
+    bodyTask = body.task;
+  } catch {
+    bodyTask = undefined;
+  }
+  return handle(request, bodyTask);
 }

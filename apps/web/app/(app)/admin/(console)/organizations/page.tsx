@@ -136,9 +136,19 @@ export default async function OrganizationsPage({
         </div>
         <Link
           href="/admin/organizations/new"
-          className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white"
+          className="group relative inline-flex items-center gap-2 overflow-hidden rounded-full bg-gradient-to-r from-bh-sidebar via-bh-teal to-bh-honey px-5 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(11,42,67,0.28)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(11,42,67,0.34)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal"
         >
-          Create organization
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition duration-700 group-hover:translate-x-full"
+          />
+          <span className="relative">Create organization</span>
+          <span
+            aria-hidden
+            className="relative inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-xs transition group-hover:bg-white/30 group-hover:translate-x-0.5"
+          >
+            +
+          </span>
         </Link>
       </div>
 

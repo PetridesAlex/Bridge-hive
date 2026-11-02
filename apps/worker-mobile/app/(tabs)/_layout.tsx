@@ -112,7 +112,7 @@ export default function TabsLayout() {
             <AnimatedTabIcon
               variant="fab"
               focused={focused}
-              icon="briefcase"
+              icon="briefcase-outline"
               iconFocused="briefcase"
               accent={TAB_ACCENTS.work}
             />

@@ -62,6 +62,12 @@
             "android": ["en", "el"]
           }
         }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "BridgeHive can add accepted shifts to your calendar when you turn on calendar sync."
+        }
       ]
     ],
     "experiments": {

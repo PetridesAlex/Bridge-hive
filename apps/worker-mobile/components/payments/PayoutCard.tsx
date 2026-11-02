@@ -73,18 +73,18 @@ function Amount({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radii.md,
+    borderRadius: radii.lg,
     padding: spacing.md,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    gap: spacing.sm,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+    gap: spacing.sm + 2,
   },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  left: { gap: 2 },
+  left: { gap: 3, flex: 1, minWidth: 0, paddingRight: spacing.sm },
   title: {
     fontFamily: typography.fonts.semibold,
     fontSize: 15,
-    color: colors.text,
+    color: colors.navy,
   },
   date: {
     fontFamily: typography.fonts.regular,
@@ -94,25 +94,31 @@ const styles = StyleSheet.create({
   amounts: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingTop: 2,
   },
   amountLabel: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
     color: colors.textMuted,
   },
   amountValue: {
     fontFamily: typography.fonts.semibold,
     fontSize: 15,
+    marginTop: 2,
     color: colors.text,
   },
   amountEmphasize: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 17,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 18,
+    letterSpacing: -0.3,
     color: colors.navy,
   },
   note: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
 });

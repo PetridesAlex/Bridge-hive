@@ -31,7 +31,8 @@ export const colors = {
   text: semantic.text.primary,
   textSecondary: semantic.text.secondary,
   textMuted: semantic.text.muted,
-  background: semantic.background.canvas,
+  /** Matches HiveFlowBackground canvas — soft navy mist under page chrome. */
+  background: '#D5E3EF',
   card: semantic.background.surface,
   surfaceSubdued: semantic.background.subtle,
   border: semantic.border.default,

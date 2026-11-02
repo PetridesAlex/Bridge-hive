@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/internal/worker-push?task=dispatch",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/internal/worker-push?task=receipts",
+      "schedule": "*/15 * * * *"
+    }
+  ]
+}

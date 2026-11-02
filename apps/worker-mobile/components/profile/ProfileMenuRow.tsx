@@ -30,6 +30,10 @@ type Props = {
   trailing?: string | null;
   tone?: MenuTone;
   accessibilityHint?: string;
+  /** Flat row inside a shared bordered group (no per-row card chrome). */
+  grouped?: boolean;
+  /** Hairline under the row when grouped (omit on the last item). */
+  showDivider?: boolean;
 };
 
 export function ProfileMenuRow({
@@ -40,6 +44,8 @@ export function ProfileMenuRow({
   trailing,
   tone = 'neutral',
   accessibilityHint,
+  grouped = false,
+  showDivider = false,
 }: Props) {
   const reduced = useReducedMotion();
   const [hovered, setHovered] = useState(false);
@@ -57,12 +63,12 @@ export function ProfileMenuRow({
   }));
 
   return (
-    <Animated.View style={[styles.wrap, motionStyle]}>
+    <Animated.View style={[grouped ? styles.wrapGrouped : styles.wrap, motionStyle]}>
       <Pressable
         onPress={onPress}
         onHoverIn={() => {
           setHovered(true);
-          if (!reduced) lift.value = withSpring(-2, SPRING);
+          if (!reduced && !grouped) lift.value = withSpring(-2, SPRING);
         }}
         onHoverOut={() => {
           setHovered(false);
@@ -77,22 +83,24 @@ export function ProfileMenuRow({
           scale.value = withSpring(1, SPRING);
           nudge.value = withSpring(0, SPRING);
         }}
-        style={styles.row}
+        style={[styles.row, grouped && styles.rowGrouped, hovered && grouped && styles.rowGroupedHover]}
         accessibilityRole="button"
         accessibilityLabel={a11yLabel}
         accessibilityHint={accessibilityHint ?? subtitle}
       >
-        <LinearGradient
-          pointerEvents="none"
-          colors={
-            hovered
-              ? ['rgba(255,255,255,0.98)', 'rgba(243,250,252,0.96)']
-              : ['rgba(255,255,255,0.94)', 'rgba(248,251,253,0.9)']
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+        {!grouped ? (
+          <LinearGradient
+            pointerEvents="none"
+            colors={
+              hovered
+                ? ['rgba(255,255,255,0.98)', 'rgba(243,250,252,0.96)']
+                : ['rgba(255,255,255,0.94)', 'rgba(248,251,253,0.9)']
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        ) : null}
         <LinearGradient
           colors={[colors.navy, '#0C3E56', colors.tealStrong]}
           start={{ x: 0, y: 0 }}
@@ -122,6 +130,7 @@ export function ProfileMenuRow({
           <Ionicons name="arrow-forward" size={16} color={colors.navy} />
         </Animated.View>
       </Pressable>
+      {grouped && showDivider ? <View style={styles.divider} /> : null}
     </Animated.View>
   );
 }
@@ -129,6 +138,9 @@ export function ProfileMenuRow({
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: spacing.sm,
+  },
+  wrapGrouped: {
+    marginBottom: 0,
   },
   row: {
     flexDirection: 'row',
@@ -140,6 +152,22 @@ const styles = StyleSheet.create({
     borderRadius: radii.xl,
     overflow: 'hidden',
     ...shadows.sm,
+  },
+  rowGrouped: {
+    borderRadius: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+    backgroundColor: 'transparent',
+  },
+  rowGroupedHover: {
+    backgroundColor: 'rgba(11, 42, 67, 0.03)',
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
+    marginLeft: spacing.md + 42 + spacing.md,
   },
   iconWrap: {
     width: 42,

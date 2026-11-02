@@ -7,6 +7,17 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
+import {
+  getCalendarSyncEnabled,
+  setCalendarSyncEnabled,
+} from '@/lib/calendar/mapping';
+import {
+  probeCalendarPermission,
+  reconcileCalendarAssignments,
+  requestCalendarPermission,
+} from '@/lib/calendar/sync';
+import { getMyAssignments } from '@/lib/queries';
 import {
   enableShiftNotifications,
   openDeviceNotificationSettings,
@@ -14,10 +25,14 @@ import {
   readShiftPushPreference,
   setShiftPushPreference,
 } from '@/lib/push/client';
+import { useAuth } from '@/providers/AuthProvider';
 
 export default function NotificationPreferencesScreen() {
+  const { t, language } = useTranslation();
+  const { user } = useAuth();
   const [permission, setPermission] = useState<OsNotificationPermission>('undetermined');
   const [enabled, setEnabled] = useState(false);
+  const [calendarEnabled, setCalendarEnabled] = useState(false);
   const [working, setWorking] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -25,11 +40,14 @@ export default function NotificationPreferencesScreen() {
     setPermission(status);
     if (status !== 'granted') {
       setEnabled(false);
-      return;
+    } else {
+      const preference = await readShiftPushPreference();
+      setEnabled(preference ?? true);
     }
-    const preference = await readShiftPushPreference();
-    setEnabled(preference ?? true);
-  }, []);
+    if (user?.id) {
+      setCalendarEnabled(await getCalendarSyncEnabled(user.id));
+    }
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -59,11 +77,66 @@ export default function NotificationPreferencesScreen() {
     setWorking(false);
   };
 
+  const onToggleCalendar = async (next: boolean) => {
+    if (working || !user?.id) return;
+    setWorking(true);
+    if (next) {
+      const status = await requestCalendarPermission();
+      if (status !== 'granted') {
+        setCalendarEnabled(false);
+        setWorking(false);
+        return;
+      }
+      await setCalendarSyncEnabled(user.id, true);
+      setCalendarEnabled(true);
+      const assignments = await getMyAssignments(user.id);
+      await reconcileCalendarAssignments({
+        workerId: user.id,
+        locale: language,
+        assignments: (assignments.data ?? []).map((row) => ({
+          assignmentId: row.id,
+          status: row.status,
+          startsAt: row.shifts?.starts_at ?? '',
+          endsAt: row.shifts?.ends_at ?? '',
+          organizationName: 'Organization',
+          roleLabel: row.shifts?.required_role ?? null,
+        })),
+      });
+    } else {
+      await setCalendarSyncEnabled(user.id, false);
+      setCalendarEnabled(false);
+    }
+    setWorking(false);
+  };
+
+  const onManualSync = async () => {
+    if (!user?.id || working) return;
+    setWorking(true);
+    const status = await probeCalendarPermission();
+    if (status !== 'granted') {
+      await requestCalendarPermission();
+    }
+    const assignments = await getMyAssignments(user.id);
+    await reconcileCalendarAssignments({
+      workerId: user.id,
+      locale: language,
+      assignments: (assignments.data ?? []).map((row) => ({
+        assignmentId: row.id,
+        status: row.status,
+        startsAt: row.shifts?.starts_at ?? '',
+        endsAt: row.shifts?.ends_at ?? '',
+        organizationName: 'Organization',
+        roleLabel: row.shifts?.required_role ?? null,
+      })),
+    });
+    setWorking(false);
+  };
+
   const denied = permission === 'denied';
 
   return (
     <AppScreen edges={['top']}>
-      <ScreenHeader title="Notification preferences" showBack />
+      <ScreenHeader title={t('profile.notificationPreferences')} showBack />
       <View style={styles.card}>
         <View style={styles.row}>
           <View style={styles.copy}>
@@ -94,7 +167,33 @@ export default function NotificationPreferencesScreen() {
           </View>
           <Text style={styles.value}>Device</Text>
         </View>
+        <View style={styles.divider} />
+        <View style={styles.row}>
+          <View style={styles.copy}>
+            <Text style={styles.label}>{t('calendar.syncLabel')}</Text>
+            <Text style={styles.help}>{t('calendar.syncHelp')}</Text>
+          </View>
+          <Switch
+            accessibilityLabel={t('calendar.syncLabel')}
+            value={calendarEnabled}
+            disabled={working || Platform.OS === 'web' || !user?.id}
+            onValueChange={(value) => void onToggleCalendar(value)}
+            trackColor={{ false: colors.borderStrong, true: colors.navy }}
+            thumbColor={calendarEnabled ? colors.yellow : colors.white}
+          />
+        </View>
       </View>
+
+      {calendarEnabled && Platform.OS !== 'web' ? (
+        <View style={styles.note}>
+          <Button
+            label={t('calendar.syncManual')}
+            variant="secondary"
+            size="sm"
+            onPress={() => void onManualSync()}
+          />
+        </View>
+      ) : null}
 
       {denied ? (
         <View style={styles.note}>

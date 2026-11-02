@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -8,7 +8,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
-import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Props = {
@@ -17,111 +17,111 @@ type Props = {
   label?: string;
 };
 
-/** Borderless session tile — warm red mark, same surface as the account menu. */
+/** Centered session exit control — compact navy/red pill. */
 export function SignOutButton({
   onPress,
   loading = false,
   label = 'Sign out',
 }: Props) {
   const reduced = useReducedMotion();
-  const [hovered, setHovered] = useState(false);
   const scale = useSharedValue(1);
-  const lift = useSharedValue(0);
   const motionStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: lift.value }, { scale: scale.value }],
+    transform: [{ scale: scale.value }],
   }));
 
   return (
-    <Animated.View style={motionStyle}>
-      <Pressable
-        onPress={onPress}
-        disabled={loading}
-        onHoverIn={() => {
-          setHovered(true);
-          if (!reduced) lift.value = withSpring(-2, { damping: 16, stiffness: 260 });
-        }}
-        onHoverOut={() => {
-          setHovered(false);
-          lift.value = withSpring(0, { damping: 16, stiffness: 260 });
-        }}
-        onPressIn={() => {
-          if (reduced) return;
-          scale.value = withSpring(0.985, { damping: 18, stiffness: 420 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 16, stiffness: 260 });
-        }}
-        accessibilityRole="button"
-        accessibilityLabel={label}
-        accessibilityState={{ disabled: loading, busy: loading }}
-        style={styles.shell}
-      >
-        <LinearGradient
-          pointerEvents="none"
-          colors={
-            hovered
-              ? ['rgba(255,255,255,0.98)', 'rgba(255,246,244,0.96)']
-              : ['rgba(255,255,255,0.94)', 'rgba(255,248,246,0.9)']
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-        <LinearGradient
-          colors={['#8E1B14', '#B42318', '#D1432F']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.iconWrap}
+    <View style={styles.wrap}>
+      <Animated.View style={motionStyle}>
+        <Pressable
+          onPress={onPress}
+          disabled={loading}
+          onPressIn={() => {
+            if (reduced) return;
+            scale.value = withSpring(0.97, { damping: 18, stiffness: 420 });
+          }}
+          onPressOut={() => {
+            scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={label}
+          accessibilityState={{ disabled: loading, busy: loading }}
+          style={[styles.shell, loading && styles.shellBusy]}
         >
+          <LinearGradient
+            pointerEvents="none"
+            colors={['#8E1B14', '#B42318', '#D1432F']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View pointerEvents="none" style={styles.sheen} />
           {loading ? (
             <ActivityIndicator color={colors.white} size="small" />
           ) : (
-            <Ionicons name="log-out-outline" size={18} color={colors.white} />
+            <View style={styles.iconWrap}>
+              <Ionicons name="log-out-outline" size={16} color="#8E1B14" />
+            </View>
           )}
-        </LinearGradient>
-        <View style={styles.copy}>
           <Text style={styles.title}>{loading ? 'Signing out…' : label}</Text>
-          <Text style={styles.subtitle}>End your Bridge Hive session securely</Text>
-        </View>
-      </Pressable>
-    </Animated.View>
+        </Pressable>
+      </Animated.View>
+      <Text style={styles.subtitle}>End your Bridge Hive session securely</Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.xl,
+    gap: spacing.sm,
+  },
   shell: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    borderRadius: radii.xl,
+    justifyContent: 'center',
+    alignSelf: 'center',
+    gap: 10,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingLeft: 12,
+    paddingRight: 18,
+    borderRadius: radii.full,
     overflow: 'hidden',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    minHeight: 72,
-    marginBottom: spacing.lg,
-    ...shadows.sm,
+  },
+  shellBusy: {
+    opacity: 0.8,
+    minWidth: 148,
+  },
+  sheen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '48%',
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   iconWrap: {
-    width: 42,
-    height: 42,
+    width: 28,
+    height: 28,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  copy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 2,
+    backgroundColor: colors.white,
   },
   title: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    letterSpacing: -0.3,
-    color: '#8E1B14',
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    letterSpacing: -0.1,
+    color: colors.white,
   },
   subtitle: {
     fontFamily: typography.fonts.regular,
     fontSize: 12,
+    lineHeight: 16,
     color: colors.textMuted,
+    textAlign: 'center',
   },
 });

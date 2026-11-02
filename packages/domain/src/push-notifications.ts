@@ -1,21 +1,58 @@
 import { openPositionsLabel } from './shift-positions';
-import { WORKER_ROLE_LABELS, isWorkerRole, type WorkerRole } from './types';
+import {
+  WORKER_ROLE_LABELS,
+  WORKER_ROLE_LABELS_EL,
+  isWorkerRole,
+  type WorkerRole,
+} from './types';
 
 /** Internal route opened when a worker taps a shift-published notification. */
 export const SHIFT_PUBLISHED_PUSH_TYPE = 'shift_published' as const;
+export const SHIFT_PUBLISHED_BATCH_PUSH_TYPE = 'shift_published_batch' as const;
+export const SHIFT_CANCELLED_PUSH_TYPE = 'shift_cancelled' as const;
+export const ASSIGNMENT_CANCELLED_PUSH_TYPE = 'assignment_cancelled' as const;
+
+export type PushLocale = 'en' | 'el';
 
 export const SHIFT_UNAVAILABLE_TITLE = 'This shift is no longer available.';
+export const SHIFT_UNAVAILABLE_TITLE_EL = 'Αυτή η βάρδια δεν είναι πλέον διαθέσιμη.';
 
 const SHIFT_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const PUSH_DATA_KEYS = ['type', 'shiftId', 'url'] as const;
+const BATCH_SHIFTS_URL = 'bridgehive://shifts?filter=new';
+const BATCH_SHIFTS_PATH = '/shifts?filter=new';
 
 export type ShiftPublishedPushData = {
   type: typeof SHIFT_PUBLISHED_PUSH_TYPE;
   shiftId: string;
   url: string;
 };
+
+export type ShiftPublishedBatchPushData = {
+  type: typeof SHIFT_PUBLISHED_BATCH_PUSH_TYPE;
+  batchId: string;
+  url: string;
+};
+
+export type ShiftCancelledPushData = {
+  type: typeof SHIFT_CANCELLED_PUSH_TYPE;
+  shiftId: string;
+  url: string;
+};
+
+export type AssignmentCancelledPushData = {
+  type: typeof ASSIGNMENT_CANCELLED_PUSH_TYPE;
+  shiftId: string;
+  assignmentId: string;
+  url: string;
+};
+
+export type WorkerPushData =
+  | ShiftPublishedPushData
+  | ShiftPublishedBatchPushData
+  | ShiftCancelledPushData
+  | AssignmentCancelledPushData;
 
 export type ShiftPublishedMessageInput = {
   shiftId: string;
@@ -28,9 +65,27 @@ export type ShiftPublishedMessageInput = {
   rateMinor: number;
   currency?: string | null;
   status?: string | null;
+  locale?: PushLocale | null;
 };
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export type ShiftPublishedBatchMessageInput = {
+  batchId: string;
+  shiftCount: number;
+  locale?: PushLocale | null;
+};
+
+export type ShiftCancelledMessageInput = {
+  shiftId: string;
+  organizationName?: string | null;
+  locale?: PushLocale | null;
+};
+
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_EL = ['Ιαν', 'Φεβ', 'Μαρ', 'Απρ', 'Μαϊ', 'Ιουν', 'Ιουλ', 'Αυγ', 'Σεπ', 'Οκτ', 'Νοε', 'Δεκ'];
+
+export function normalizePushLocale(value: unknown): PushLocale {
+  return value === 'el' ? 'el' : 'en';
+}
 
 export function isShiftUuid(value: string): boolean {
   return SHIFT_ID_RE.test(value);
@@ -46,20 +101,50 @@ export function shiftNotificationPath(shiftId: string): string | null {
   return `/shifts/${shiftId.toLowerCase()}`;
 }
 
+export function batchShiftsNotificationUrl(): string {
+  return BATCH_SHIFTS_URL;
+}
+
+export function batchShiftsNotificationPath(): string {
+  return BATCH_SHIFTS_PATH;
+}
+
 /**
- * Accept only the internal shift route. Query strings, fragments, and other
- * schemes are rejected so a payload cannot carry a recovery or auth token.
+ * Accept only internal BridgeHive routes. Query strings only for the batch list
+ * filter. Other schemes and arbitrary URLs are rejected.
  */
 export function shiftRouteFromPushData(data: unknown): string | null {
   if (!data || typeof data !== 'object') return null;
   const record = data as Record<string, unknown>;
-  if (record.type !== SHIFT_PUBLISHED_PUSH_TYPE) return null;
-  const shiftId = record.shiftId;
+  const type = record.type;
   const url = record.url;
+
+  if (type === SHIFT_PUBLISHED_BATCH_PUSH_TYPE) {
+    if (typeof url !== 'string' || url !== BATCH_SHIFTS_URL) return null;
+    const batchId = record.batchId;
+    if (typeof batchId !== 'string' || !isShiftUuid(batchId)) return null;
+    return BATCH_SHIFTS_PATH;
+  }
+
+  if (
+    type !== SHIFT_PUBLISHED_PUSH_TYPE &&
+    type !== SHIFT_CANCELLED_PUSH_TYPE &&
+    type !== ASSIGNMENT_CANCELLED_PUSH_TYPE
+  ) {
+    return null;
+  }
+
+  const shiftId = record.shiftId;
   if (typeof shiftId !== 'string' || typeof url !== 'string') return null;
   const expectedUrl = shiftNotificationUrl(shiftId);
   const path = shiftNotificationPath(shiftId);
   if (!expectedUrl || !path || url !== expectedUrl) return null;
+
+  if (type === ASSIGNMENT_CANCELLED_PUSH_TYPE) {
+    const assignmentId = record.assignmentId;
+    if (typeof assignmentId !== 'string' || !isShiftUuid(assignmentId)) return null;
+  }
+
   return path;
 }
 
@@ -73,15 +158,48 @@ export function shiftPublishedPushData(shiftId: string): ShiftPublishedPushData 
   };
 }
 
-export function assertSafeShiftPushData(data: Record<string, unknown>): ShiftPublishedPushData {
+export function shiftPublishedBatchPushData(batchId: string): ShiftPublishedBatchPushData | null {
+  if (!isShiftUuid(batchId)) return null;
+  return {
+    type: SHIFT_PUBLISHED_BATCH_PUSH_TYPE,
+    batchId: batchId.toLowerCase(),
+    url: BATCH_SHIFTS_URL,
+  };
+}
+
+export function assertSafeShiftPushData(data: Record<string, unknown>): WorkerPushData {
+  const route = shiftRouteFromPushData(data);
+  if (!route) throw new Error('PUSH_DATA_ROUTE');
+
+  if (data.type === SHIFT_PUBLISHED_BATCH_PUSH_TYPE) {
+    return {
+      type: SHIFT_PUBLISHED_BATCH_PUSH_TYPE,
+      batchId: String(data.batchId).toLowerCase(),
+      url: BATCH_SHIFTS_URL,
+    };
+  }
+
+  if (data.type === SHIFT_CANCELLED_PUSH_TYPE) {
+    return {
+      type: SHIFT_CANCELLED_PUSH_TYPE,
+      shiftId: String(data.shiftId).toLowerCase(),
+      url: String(data.url),
+    };
+  }
+
+  if (data.type === ASSIGNMENT_CANCELLED_PUSH_TYPE) {
+    return {
+      type: ASSIGNMENT_CANCELLED_PUSH_TYPE,
+      shiftId: String(data.shiftId).toLowerCase(),
+      assignmentId: String(data.assignmentId).toLowerCase(),
+      url: String(data.url),
+    };
+  }
+
   const keys = Object.keys(data).sort();
-  const expected = [...PUSH_DATA_KEYS].sort();
+  const expected = ['shiftId', 'type', 'url'];
   if (keys.length !== expected.length || keys.some((key, index) => key !== expected[index])) {
     throw new Error('PUSH_DATA_KEYS');
-  }
-  const route = shiftRouteFromPushData(data);
-  if (!route || data.type !== SHIFT_PUBLISHED_PUSH_TYPE) {
-    throw new Error('PUSH_DATA_ROUTE');
   }
   return {
     type: SHIFT_PUBLISHED_PUSH_TYPE,
@@ -90,22 +208,39 @@ export function assertSafeShiftPushData(data: Record<string, unknown>): ShiftPub
   };
 }
 
-export function formatShiftHourlyRate(rateMinor: number, currency = 'EUR'): string {
+export function formatShiftHourlyRate(
+  rateMinor: number,
+  currency = 'EUR',
+  locale: PushLocale = 'en',
+): string {
   const minor = Math.trunc(rateMinor);
   if (!Number.isFinite(minor) || minor <= 0) return '';
   const whole = Math.trunc(minor / 100);
   const cents = Math.abs(minor % 100);
   const amount =
     cents === 0 ? String(whole) : `${whole}.${String(cents).padStart(2, '0')}`.replace(/0+$/, '');
-  if (currency.toUpperCase() === 'EUR') return `€${amount}/hour`;
-  return `${amount} ${currency.toUpperCase()}/hour`;
+  if (currency.toUpperCase() === 'EUR') {
+    return locale === 'el' ? `€${amount}/ώρα` : `€${amount}/hour`;
+  }
+  return `${amount} ${currency.toUpperCase()}/${locale === 'el' ? 'ώρα' : 'hour'}`;
 }
 
-function partsInTimeZone(iso: string, timeZone: string): { day: string; time: string } | null {
+function openPositionsLabelLocalized(count: number, locale: PushLocale): string {
+  if (locale === 'el') {
+    return count === 1 ? '1 θέση ανοιχτή' : `${count} θέσεις ανοιχτές`;
+  }
+  return openPositionsLabel(count);
+}
+
+function partsInTimeZone(
+  iso: string,
+  timeZone: string,
+  locale: PushLocale,
+): { day: string; time: string } | null {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;
   try {
-    const formatter = new Intl.DateTimeFormat('en-GB', {
+    const formatter = new Intl.DateTimeFormat(locale === 'el' ? 'el-GR' : 'en-GB', {
       timeZone,
       day: 'numeric',
       month: 'short',
@@ -119,17 +254,23 @@ function partsInTimeZone(iso: string, timeZone: string): { day: string; time: st
     const hour = parts.find((part) => part.type === 'hour')?.value;
     const minute = parts.find((part) => part.type === 'minute')?.value;
     if (!day || !month || !hour || !minute) return null;
-    const monthIndex = MONTHS.findIndex((name) => name.toLowerCase() === month.toLowerCase());
-    const monthLabel = monthIndex >= 0 ? MONTHS[monthIndex] : month;
+    const months = locale === 'el' ? MONTHS_EL : MONTHS_EN;
+    const monthIndex = MONTHS_EN.findIndex((name) => name.toLowerCase() === month.toLowerCase());
+    const monthLabel =
+      monthIndex >= 0
+        ? months[monthIndex]
+        : months.find((name) => name.toLowerCase() === month.toLowerCase()) ?? month;
     return { day: `${Number(day)} ${monthLabel}`, time: `${hour}:${minute}` };
   } catch {
     return null;
   }
 }
 
-export function roleLabelForShift(role: string): string | null {
+export function roleLabelForShift(role: string, locale: PushLocale = 'en'): string | null {
   if (!isWorkerRole(role)) return null;
-  return WORKER_ROLE_LABELS[role as WorkerRole];
+  return locale === 'el'
+    ? WORKER_ROLE_LABELS_EL[role as WorkerRole]
+    : WORKER_ROLE_LABELS[role as WorkerRole];
 }
 
 /**
@@ -139,35 +280,112 @@ export function roleLabelForShift(role: string): string | null {
 export function buildShiftPublishedNotification(
   input: ShiftPublishedMessageInput,
 ): { title: string; body: string; data: ShiftPublishedPushData } | null {
+  const locale = normalizePushLocale(input.locale);
   const openPositions = Math.trunc(input.openPositions);
   if (input.status && input.status !== 'published') return null;
   if (openPositions < 1) return null;
-  const roleLabel = roleLabelForShift(input.requiredRole);
+  const roleLabel = roleLabelForShift(input.requiredRole, locale);
   const data = shiftPublishedPushData(input.shiftId);
   if (!roleLabel || !data) return null;
 
   const timeZone = input.timeZone?.trim() || 'Europe/Nicosia';
-  const start = partsInTimeZone(input.startsAt, timeZone) ?? partsInTimeZone(input.startsAt, 'Europe/Nicosia');
-  const end = partsInTimeZone(input.endsAt, timeZone) ?? partsInTimeZone(input.endsAt, 'Europe/Nicosia');
+  const start =
+    partsInTimeZone(input.startsAt, timeZone, locale) ??
+    partsInTimeZone(input.startsAt, 'Europe/Nicosia', locale);
+  const end =
+    partsInTimeZone(input.endsAt, timeZone, locale) ??
+    partsInTimeZone(input.endsAt, 'Europe/Nicosia', locale);
   if (!start || !end) return null;
 
   const place = input.place.trim();
-  const rate = formatShiftHourlyRate(input.rateMinor, input.currency ?? 'EUR');
+  const rate = formatShiftHourlyRate(input.rateMinor, input.currency ?? 'EUR', locale);
   if (!place || !rate) return null;
 
   const body = [
     start.day,
     `${start.time}–${end.time}`,
     place,
-    openPositionsLabel(openPositions),
+    openPositionsLabelLocalized(openPositions, locale),
     rate,
   ].join(' · ');
 
   return {
-    title: `New ${roleLabel} shift`,
+    title: locale === 'el' ? `Νέα βάρδια ${roleLabel}` : `New ${roleLabel} shift`,
     body,
     data,
   };
+}
+
+export function buildShiftPublishedBatchNotification(
+  input: ShiftPublishedBatchMessageInput,
+): { title: string; body: string; data: ShiftPublishedBatchPushData } | null {
+  const locale = normalizePushLocale(input.locale);
+  const count = Math.trunc(input.shiftCount);
+  if (count < 2) return null;
+  const data = shiftPublishedBatchPushData(input.batchId);
+  if (!data) return null;
+  return {
+    title: locale === 'el' ? 'Νέες βάρδιες διαθέσιμες' : 'New shifts available',
+    body:
+      locale === 'el'
+        ? `${count} νέες βάρδιες ταιριάζουν με τον ρόλο σας`
+        : `${count} new shifts match your role`,
+    data,
+  };
+}
+
+export function buildShiftCancelledNotification(
+  input: ShiftCancelledMessageInput,
+): { title: string; body: string; data: ShiftCancelledPushData } | null {
+  const locale = normalizePushLocale(input.locale);
+  const url = shiftNotificationUrl(input.shiftId);
+  if (!url) return null;
+  const org = (input.organizationName ?? '').trim() || (locale === 'el' ? 'Οργανισμός' : 'Organization');
+  return {
+    title: locale === 'el' ? 'Η βάρδια ακυρώθηκε' : 'Shift cancelled',
+    body:
+      locale === 'el'
+        ? `Η βάρδια στο ${org} ακυρώθηκε.`
+        : `Your shift at ${org} was cancelled.`,
+    data: {
+      type: SHIFT_CANCELLED_PUSH_TYPE,
+      shiftId: input.shiftId.toLowerCase(),
+      url,
+    },
+  };
+}
+
+export function buildAssignmentCancelledNotification(
+  input: ShiftCancelledMessageInput & { assignmentId: string },
+): { title: string; body: string; data: AssignmentCancelledPushData } | null {
+  const locale = normalizePushLocale(input.locale);
+  const url = shiftNotificationUrl(input.shiftId);
+  if (!url || !isShiftUuid(input.assignmentId)) return null;
+  return {
+    title: locale === 'el' ? 'Η ανάθεση ακυρώθηκε' : 'Assignment cancelled',
+    body:
+      locale === 'el'
+        ? 'Η βάρδιά σας αφαιρέθηκε από το πρόγραμμά σας.'
+        : 'Your shift was removed from your schedule.',
+    data: {
+      type: ASSIGNMENT_CANCELLED_PUSH_TYPE,
+      shiftId: input.shiftId.toLowerCase(),
+      assignmentId: input.assignmentId.toLowerCase(),
+      url,
+    },
+  };
+}
+
+/** Calendar event title after a successful claim. */
+export function calendarShiftTitle(organizationName: string, locale: PushLocale = 'en'): string {
+  const org = organizationName.trim() || (locale === 'el' ? 'Οργανισμός' : 'Organization');
+  return locale === 'el' ? `BridgeHive βάρδια — ${org}` : `BridgeHive shift — ${org}`;
+}
+
+export const CALENDAR_EVENT_MARKER_PREFIX = 'bridgehive:assignment:';
+
+export function calendarAssignmentMarker(assignmentId: string): string {
+  return `${CALENDAR_EVENT_MARKER_PREFIX}${assignmentId.toLowerCase()}`;
 }
 
 export function pushRetryDelaySeconds(attempts: number): number {

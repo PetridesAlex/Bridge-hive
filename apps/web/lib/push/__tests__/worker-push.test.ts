@@ -8,8 +8,10 @@ import {
   outcomeFromExpoTicket,
   outcomesForTransportFailure,
   postExpoPush,
+  receiptFromExpo,
   type ClaimedPushDelivery,
 } from '../expo-api';
+import { isWorkerPushDispatchEnabled } from '../env';
 
 const shiftId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
@@ -32,8 +34,19 @@ describe('shift push payload', () => {
   it('uses position or positions from remaining capacity', () => {
     expect(openPositionsLabel(1)).toBe('1 position open');
     expect(openPositionsLabel(3)).toBe('3 positions open');
-    const one = buildShiftPublishedNotification({ ...claimed, openPositions: 1 });
-    const three = buildShiftPublishedNotification({ ...claimed, openPositions: 3 });
+    const base = {
+      shiftId: claimed.shiftId!,
+      requiredRole: claimed.requiredRole!,
+      startsAt: claimed.startsAt!,
+      endsAt: claimed.endsAt!,
+      timeZone: claimed.timeZone!,
+      place: claimed.place!,
+      rateMinor: claimed.rateMinor!,
+      currency: claimed.currency,
+      status: claimed.status,
+    };
+    const one = buildShiftPublishedNotification({ ...base, openPositions: 1 });
+    const three = buildShiftPublishedNotification({ ...base, openPositions: 3 });
     expect(one?.body).toContain('1 position open');
     expect(one?.body).not.toContain('1 positions');
     expect(three?.body).toContain('3 positions open');
@@ -100,6 +113,42 @@ describe('shift push payload', () => {
     });
     expect(bodies[0]).toContain('bridgehive://shifts/');
     expect(bodies[0]).not.toContain('SECRET');
+  });
+});
+
+describe('preview isolation', () => {
+  const original = process.env.VERCEL_ENV;
+  afterEach(() => {
+    if (original === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = original;
+    delete process.env.WORKER_PUSH_DISABLE;
+  });
+
+  it('disables Expo dispatch on Vercel Preview', () => {
+    process.env.VERCEL_ENV = 'preview';
+    expect(isWorkerPushDispatchEnabled()).toBe(false);
+  });
+
+  it('allows dispatch outside preview unless explicitly disabled', () => {
+    process.env.VERCEL_ENV = 'production';
+    expect(isWorkerPushDispatchEnabled()).toBe(true);
+    process.env.WORKER_PUSH_DISABLE = '1';
+    expect(isWorkerPushDispatchEnabled()).toBe(false);
+  });
+});
+
+describe('receipt lag policy', () => {
+  it('treats a missing Expo receipt as pending instead of a hard failure', () => {
+    expect(receiptFromExpo(claimed.deliveryId, undefined)).toEqual({
+      deliveryId: claimed.deliveryId,
+      receiptStatus: 'pending',
+      receiptError: 'receipt_not_ready',
+    });
+    expect(receiptFromExpo(claimed.deliveryId, {})).toEqual({
+      deliveryId: claimed.deliveryId,
+      receiptStatus: 'pending',
+      receiptError: 'expo_receipt_missing',
+    });
   });
 });
 

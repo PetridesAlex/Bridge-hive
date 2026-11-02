@@ -3,7 +3,10 @@ import path from 'node:path';
 
 import {
   SHIFT_UNAVAILABLE_TITLE,
+  buildShiftPublishedBatchNotification,
   buildShiftPublishedNotification,
+  calendarAssignmentMarker,
+  calendarShiftTitle,
   notificationEnableAction,
   shiftRouteFromPushData,
   shouldRequestNotificationPermissionOnMount,
@@ -124,6 +127,37 @@ describe('notification navigation', () => {
         url: 'https://example.com/shifts/' + shiftId,
       }),
     ).toBeNull();
+  });
+
+  it('opens the validated shifts list for a batch summary push', () => {
+    const batchId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    expect(
+      shiftRouteFromPushData({
+        type: 'shift_published_batch',
+        batchId,
+        url: 'bridgehive://shifts?filter=new',
+      }),
+    ).toBe('/shifts?filter=new');
+    expect(
+      shiftRouteFromPushData({
+        type: 'shift_published_batch',
+        batchId,
+        url: 'https://evil.example/phish',
+      }),
+    ).toBeNull();
+    const batch = buildShiftPublishedBatchNotification({
+      batchId,
+      shiftCount: 4,
+      locale: 'el',
+    });
+    expect(batch?.title).toBe('Νέες βάρδιες διαθέσιμες');
+    expect(batch?.data.url).toBe('bridgehive://shifts?filter=new');
+  });
+
+  it('keeps calendar copy free of private worker data', () => {
+    expect(calendarShiftTitle('Acme Care', 'en')).toBe('BridgeHive shift — Acme Care');
+    expect(calendarAssignmentMarker(shiftId)).toContain(shiftId);
+    expect(calendarAssignmentMarker(shiftId)).not.toContain('@');
   });
 
   it('handles cold start and background taps through the same listeners', () => {

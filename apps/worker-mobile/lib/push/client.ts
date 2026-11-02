@@ -1,7 +1,9 @@
 import {
+  normalizePushLocale,
   notificationEnableAction,
   sanitizePushLogFields,
   type OsNotificationPermission,
+  type PushLocale,
 } from '@bridge-hive/domain';
 import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
@@ -12,6 +14,7 @@ import { NEW_SHIFTS_CHANNEL } from '@/lib/push/channel';
 import { supabase } from '@/lib/supabase';
 
 let currentToken: string | null = null;
+let preferredLocale: PushLocale = 'en';
 
 function logPush(event: string, fields: Record<string, unknown> = {}) {
   if (!__DEV__) return;
@@ -45,6 +48,18 @@ async function ensureNewShiftsChannel() {
   });
 }
 
+export async function syncPushPreferredLocale(locale: PushLocale): Promise<void> {
+  preferredLocale = normalizePushLocale(locale);
+  try {
+    await supabase.rpc(
+      'set_worker_push_locale' as never,
+      { p_locale: preferredLocale } as never,
+    );
+  } catch {
+    logPush('locale_sync_failed');
+  }
+}
+
 async function registerCurrentToken(): Promise<void> {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
   const projectId =
@@ -62,6 +77,7 @@ async function registerCurrentToken(): Promise<void> {
       p_expo_push_token: token,
       p_platform: Platform.OS,
       p_app_version: Constants.expoConfig?.version ?? null,
+      p_preferred_locale: preferredLocale,
     } as never,
   );
   if (error) logPush('token_register_failed');
@@ -152,11 +168,20 @@ export async function readShiftPushPreference(): Promise<boolean | null> {
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowBanner: true,
-      shouldShowList: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
+    handleNotification: async (notification) => {
+      // Remote Expo pushes already present a banner; avoid a second local copy.
+      const trigger = notification.request.trigger;
+      const isPush =
+        trigger !== null &&
+        typeof trigger === 'object' &&
+        'type' in trigger &&
+        (trigger as { type?: string }).type === 'push';
+      return {
+        shouldShowBanner: !isPush,
+        shouldShowList: true,
+        shouldPlaySound: !isPush,
+        shouldSetBadge: false,
+      };
+    },
   });
 }

@@ -5,10 +5,12 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { colors, spacing, typography } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function WorkerRejectedScreen() {
   const { session, loading, accountRejectionReason, signOut } = useAuth();
+  const { t } = useTranslation();
 
   if (!loading && !session) {
     return <Redirect href="/auth/worker/login" />;
@@ -20,14 +22,14 @@ export default function WorkerRejectedScreen() {
 
   return (
     <AuthShell
-      title="Wrong app"
-      subtitle="This account cannot use the worker mobile app."
+      title={t('auth.rejectedTitle')}
+      subtitle={t('auth.rejectedBody')}
       showBack={false}
     >
       <Text style={styles.body}>{accountRejectionReason}</Text>
       <View style={styles.actions}>
         <Button
-          label="Sign out"
+          label={t('profile.signOut')}
           variant="brand"
           onPress={async () => {
             await signOut();

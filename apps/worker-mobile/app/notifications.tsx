@@ -22,6 +22,7 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useTranslation } from '@/i18n/locale-provider';
 import {
   getMyNotifications,
   markNotificationRead,
@@ -65,6 +66,7 @@ type BillingAlert = {
 
 export default function NotificationsScreen() {
   const { user, isVerified, isAppReviewDemo } = useAuth();
+  const { t } = useTranslation();
   const { allInvoices, refresh: refreshInvoices } = useInvoices(user?.id);
   const {
     summary: restrictionSummary,
@@ -82,8 +84,8 @@ export default function NotificationsScreen() {
     for (const invoice of pastDue) {
       alerts.push({
         id: `invoice-past-due-${invoice.id}`,
-        title: 'Commission invoice past due',
-        body: 'Pay this Bridge Hive invoice to keep claiming new shifts.',
+        title: t('notifications.pastDueInvoiceTitle'),
+        body: t('notifications.pastDueInvoiceBody'),
         href: `/invoices/${invoice.id}`,
         tone: 'danger',
       });
@@ -93,15 +95,15 @@ export default function NotificationsScreen() {
       if (dueSoon) {
         alerts.push({
           id: `invoice-due-soon-${dueSoon.id}`,
-          title: 'Commission invoice due soon',
-          body: 'Bridge Hive invoices are separate from organization earnings.',
+          title: t('notifications.dueSoonTitle'),
+          body: t('notifications.dueSoonBody'),
           href: `/invoices/${dueSoon.id}`,
           tone: 'money',
         });
       }
     }
     return alerts;
-  }, [allInvoices]);
+  }, [allInvoices, t]);
 
   const refresh = useCallback(async () => {
     if (!user?.id) return;
@@ -143,10 +145,10 @@ export default function NotificationsScreen() {
       else earlier.push(item);
     }
     return [
-      { title: 'Today', data: todays },
-      { title: 'Earlier', data: earlier },
+      { title: t('notifications.today'), data: todays },
+      { title: t('notifications.earlier'), data: earlier },
     ].filter((s) => s.data.length > 0);
-  }, [items]);
+  }, [items, t]);
 
   const flat = useMemo(() => {
     const rows: (
@@ -157,7 +159,7 @@ export default function NotificationsScreen() {
     )[] = [];
     const showRestriction = isRestricted && restrictionSummary;
     if (billingAlerts.length > 0 || showRestriction) {
-      rows.push({ type: 'header', title: 'Action needed' });
+      rows.push({ type: 'header', title: t('notifications.actionNeeded') });
       if (showRestriction) rows.push({ type: 'restriction', summary: restrictionSummary });
       for (const alert of billingAlerts) rows.push({ type: 'billing', alert });
     }
@@ -166,20 +168,20 @@ export default function NotificationsScreen() {
       for (const item of section.data) rows.push({ type: 'item', item });
     }
     return rows;
-  }, [billingAlerts, isRestricted, restrictionSummary, sections]);
+  }, [billingAlerts, isRestricted, restrictionSummary, sections, t]);
 
   const listEmpty = items.length === 0 && billingAlerts.length === 0 && !isRestricted;
 
   return (
     <AppScreen scroll={false} edges={['top']}>
-      <ScreenHeader title="Notifications" showBack />
+      <ScreenHeader title={t('notifications.title')} showBack />
       {loading && listEmpty ? (
         <View style={styles.list}>
           <SkeletonCard lines={2} />
           <SkeletonCard lines={2} />
         </View>
       ) : error && listEmpty ? (
-        <ErrorState title="Could not load notifications" onRetry={refresh} />
+        <ErrorState title={t('notifications.loadError')} onRetry={refresh} />
       ) : (
         <FlatList
           data={flat}
@@ -193,8 +195,8 @@ export default function NotificationsScreen() {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
           ListEmptyComponent={
             <EmptyState
-              title="No notifications"
-              description="Every new matching shift appears here with date, hours, location, and the time it was added."
+              title={t('notifications.empty')}
+              description={t('notifications.emptyBody')}
             />
           }
           renderItem={({ item: row, index }) => {
@@ -238,13 +240,13 @@ export default function NotificationsScreen() {
                         danger && { color: colors.error },
                       ]}
                     >
-                      {danger ? 'Past due' : 'Money'}
+                      {danger ? t('invoices.pastDue') : t('notifications.money')}
                     </Text>
                     <Text style={[styles.title, styles.titleUnread]}>{alert.title}</Text>
                     <Text style={styles.text} numberOfLines={3}>
                       {alert.body}
                     </Text>
-                    <Text style={styles.billingCta}>View invoice</Text>
+                    <Text style={styles.billingCta}>{t('notifications.viewInvoice')}</Text>
                   </View>
                   <Ionicons
                     name="chevron-forward"

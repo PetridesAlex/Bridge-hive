@@ -118,17 +118,35 @@ export function AdminTopbar({
           </Link>
         </Button>
 
-        <div className="hidden max-w-[17rem] items-center gap-2.5 rounded-2xl bg-bh-sidebar py-1.5 pl-1.5 pr-3.5 shadow-[0_10px_24px_rgba(7,29,48,0.32)] ring-1 ring-white/10 sm:flex">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bh-honey text-sm font-bold tracking-wide text-bh-sidebar">
-            {initials}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-bh-honey">
-              {roleLabel}
-            </p>
-            <p className="truncate text-[13px] font-semibold leading-tight text-white">
-              {displayName}
-            </p>
+        <div className="group relative hidden max-w-[18.5rem] overflow-hidden rounded-2xl p-[1px] shadow-[0_12px_28px_rgba(7,29,48,0.22)] sm:block">
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-br from-bh-teal via-[#0e4a63] to-bh-sidebar"
+          />
+          <div
+            aria-hidden
+            className="absolute -right-6 -top-8 h-20 w-20 rounded-full bg-bh-honey/25 blur-2xl transition-opacity duration-500 group-hover:opacity-80"
+          />
+          <div
+            aria-hidden
+            className="absolute -bottom-8 -left-4 h-16 w-16 rounded-full bg-bh-teal/35 blur-xl"
+          />
+          <div className="relative flex items-center gap-2.5 rounded-[15px] bg-gradient-to-br from-[#0b2a43]/92 via-[#0a334f]/95 to-[#071d30] py-1.5 pl-1.5 pr-3.5 ring-1 ring-white/15 backdrop-blur-sm">
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-bh-honey to-[#c9920f] text-sm font-bold tracking-wide text-bh-sidebar shadow-[0_4px_12px_rgba(224,170,24,0.35)] ring-1 ring-white/25">
+              {initials}
+              <span
+                aria-hidden
+                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-bh-success ring-2 ring-[#071d30]"
+              />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-bh-honey">
+                {roleLabel}
+              </p>
+              <p className="truncate text-[13px] font-semibold leading-tight text-white">
+                {email ?? displayName}
+              </p>
+            </div>
           </div>
         </div>
       </div>

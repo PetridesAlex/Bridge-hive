@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Platform,
@@ -39,6 +40,7 @@ import { useCredentials } from '@/hooks/useCredentials';
 import { useInvoices } from '@/hooks/useInvoices';
 import { usePayouts } from '@/hooks/usePayouts';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useAppLocale, useTranslation } from '@/i18n/locale-provider';
 import { getAvatarSignedUrl } from '@/lib/avatar';
 import { getMyNotifications } from '@/lib/queries';
 import { useAuth } from '@/providers/AuthProvider';
@@ -102,6 +104,8 @@ export default function AccountHubScreen() {
     isVerified,
     isAppReviewDemo,
   } = useAuth();
+  const { t } = useTranslation();
+  const { language, setLocale } = useAppLocale();
   const reducedMotion = useReducedMotion();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const [signingOut, setSigningOut] = useState(false);
@@ -196,22 +200,49 @@ export default function AccountHubScreen() {
   const confirmSignOut = () => {
     if (Platform.OS === 'web') {
       const confirmed =
-        typeof window !== 'undefined' && window.confirm('End your Bridge Hive session?');
+        typeof window !== 'undefined' &&
+        window.confirm(t('profile.signOutConfirmBody'));
       if (confirmed) void onSignOut();
       return;
     }
 
-    Alert.alert('Sign out', 'End your Bridge Hive session?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => void onSignOut() },
+    Alert.alert(t('profile.signOutConfirmTitle'), t('profile.signOutConfirmBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('profile.signOut'), style: 'destructive', onPress: () => void onSignOut() },
+    ]);
+  };
+
+  const languageTrailing =
+    language === 'el' ? t('profile.languageGreek') : t('profile.languageEnglish');
+
+  const openLanguageChooser = () => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [t('common.cancel'), t('common.english'), t('common.greek')],
+          cancelButtonIndex: 0,
+          title: t('common.selectLanguage'),
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) void setLocale('en');
+          if (buttonIndex === 2) void setLocale('el');
+        },
+      );
+      return;
+    }
+
+    Alert.alert(t('common.selectLanguage'), undefined, [
+      { text: t('common.english'), onPress: () => void setLocale('en') },
+      { text: t('common.greek'), onPress: () => void setLocale('el') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
   return (
     <AppScreen edges={['top']} contentStyle={{ paddingBottom: tabScrollInset }}>
       <ScreenHeader
-        title="Account"
-        subtitle="Manage your profile, verification, and preferences."
+        title={t('profile.account')}
+        subtitle={t('profile.subtitle')}
       />
       {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
 
@@ -224,7 +255,7 @@ export default function AccountHubScreen() {
         <Pressable
           onPress={() => router.push('/profile/personal-information')}
           accessibilityRole="button"
-          accessibilityLabel="Change profile photo"
+          accessibilityLabel={t('profile.changePhoto')}
           style={styles.avatarPress}
         >
           <View style={styles.avatarWrap}>
@@ -247,7 +278,7 @@ export default function AccountHubScreen() {
           </View>
         </Pressable>
 
-        <Text style={styles.heroName}>{profile?.full_name ?? 'Worker'}</Text>
+        <Text style={styles.heroName}>{profile?.full_name ?? t('roles.worker')}</Text>
         <Text style={styles.heroRole}>{roleLabel}</Text>
         <View style={styles.pillRow}>
           <StatusBadge
@@ -267,10 +298,10 @@ export default function AccountHubScreen() {
         </View>
       </LinearGradient>
 
-      <MenuSection title="Account" />
+      <MenuSection title={t('profile.account')} />
       <ProfileMenuRow
         icon="person-outline"
-        label="Personal information"
+        label={t('profile.personalInformation')}
         trailing={personalTrailing}
         tone={personalTrailing === 'Complete' ? 'positive' : 'attention'}
         onPress={() => router.push('/profile/personal-information')}
@@ -278,7 +309,7 @@ export default function AccountHubScreen() {
       {!isVerified ? (
         <ProfileMenuRow
           icon="clipboard-outline"
-          label="Account Setup"
+          label={t('profile.accountSetup')}
           trailing={setupTrailing}
           tone="attention"
           onPress={() => router.push('/auth/worker/pending')}
@@ -286,61 +317,67 @@ export default function AccountHubScreen() {
       ) : null}
       <ProfileMenuRow
         icon="document-text-outline"
-        label="Credentials"
+        label={t('profile.credentials')}
         trailing={credentialsTrailing}
         tone={credentialsTone(credentialsTrailing)}
         onPress={() => router.push('/documents')}
       />
       <ProfileMenuRow
         icon="card-outline"
-        label="Payout account"
+        label={t('profile.payoutAccount')}
         trailing={payoutTrailing}
         tone={payoutTone(account?.status)}
         onPress={() => router.push('/payout-setup')}
       />
 
-      <MenuSection title="Activity" />
+      <MenuSection title={t('profile.activity')} />
       <ProfileMenuRow
         icon="notifications-outline"
-        label="Notifications"
+        label={t('notifications.title')}
         trailing={notificationsTrailing}
         tone={unreadCount > 0 ? 'attention' : 'neutral'}
         onPress={() => router.push('/notifications')}
       />
       <ProfileMenuRow
         icon="options-outline"
-        label="Notification preferences"
+        label={t('profile.notificationPreferences')}
         onPress={() => router.push('/profile/notification-preferences')}
       />
       <ProfileMenuRow
         icon="wallet-outline"
-        label="Earnings"
+        label={t('tabs.earnings')}
         trailing={earningsTrailing}
         tone={awaitingPayouts > 0 ? 'attention' : 'neutral'}
         onPress={() => router.push('/(tabs)/payments')}
       />
       <ProfileMenuRow
         icon="receipt-outline"
-        label="Bridge Hive invoices"
+        label={t('profile.invoices')}
         trailing={invoicesTrailing}
         tone={invoiceTone(invoicesTrailing)}
         onPress={() => router.push('/(tabs)/invoices')}
       />
 
-      <MenuSection title="Help" />
+      <MenuSection title={t('profile.help')} />
       <ProfileMenuRow
         icon="help-circle-outline"
-        label="Support"
+        label={t('profile.support')}
         onPress={() => router.push('/support')}
       />
       <ProfileMenuRow
+        icon="language-outline"
+        label={t('profile.language')}
+        trailing={languageTrailing}
+        onPress={openLanguageChooser}
+      />
+      <ProfileMenuRow
         icon="information-circle-outline"
-        label="App information"
+        label={t('profile.appInformation')}
         trailing={`v${appVersion}`}
         onPress={() => router.push('/profile/app-information')}
       />
 
-      <MenuSection title="Session" />
+      <MenuSection title={t('profile.session')} />
       <SignOutButton onPress={confirmSignOut} loading={signingOut} />
     </AppScreen>
   );

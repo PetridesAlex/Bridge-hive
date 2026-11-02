@@ -26,6 +26,8 @@ type ConfirmDialogProps = {
   ) => Promise<ConfirmActionResult>;
   triggerLabel: string;
   triggerVariant?: 'default' | 'destructive' | 'outline' | 'secondary';
+  triggerClassName?: string;
+  triggerSize?: 'default' | 'sm' | 'lg' | 'icon';
   disabled?: boolean;
 };
 
@@ -42,6 +44,8 @@ export function ConfirmDialog({
   action,
   triggerLabel,
   triggerVariant = 'default',
+  triggerClassName,
+  triggerSize = 'sm',
   disabled = false,
 }: ConfirmDialogProps) {
   const [open, setOpen] = useState(false);
@@ -62,7 +66,8 @@ export function ConfirmDialog({
         <Button
           type="button"
           variant={triggerVariant}
-          size="sm"
+          size={triggerSize}
+          className={triggerClassName}
           disabled={disabled}
         >
           {triggerLabel}

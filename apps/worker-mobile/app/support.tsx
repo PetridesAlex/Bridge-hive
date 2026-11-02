@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -8,23 +8,29 @@ import { ListGroup } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { APP_CONFIG } from '@/constants/config';
 import { colors, radii, spacing, typography } from '@/constants/theme';
-
-const TOPICS = [
-  {
-    title: 'Account & verification',
-    body: 'Questions about Account Setup, credentials, or marketplace approval.',
-  },
-  {
-    title: 'Shifts & timesheets',
-    body: 'Help with completed hours or timesheet review.',
-  },
-  {
-    title: 'Payouts & invoices',
-    body: 'Bank account review, earnings, or Bridge Hive commission invoices.',
-  },
-] as const;
+import { useTranslation } from '@/i18n/locale-provider';
 
 export default function SupportScreen() {
+  const { t } = useTranslation();
+
+  const topics = useMemo(
+    () => [
+      {
+        title: t('support.topicAccount'),
+        body: t('support.topicAccountBody'),
+      },
+      {
+        title: t('support.topicShifts'),
+        body: t('support.topicShiftsBody'),
+      },
+      {
+        title: t('support.topicPayouts'),
+        body: t('support.topicPayoutsBody'),
+      },
+    ],
+    [t],
+  );
+
   const openMail = (subject: string) => {
     void Linking.openURL(
       `mailto:${APP_CONFIG.supportEmail}?subject=${encodeURIComponent(subject)}`,
@@ -34,23 +40,20 @@ export default function SupportScreen() {
   return (
     <AppScreen contentKind="detail">
       <ScreenHeader
-        title="Support"
+        title={t('support.title')}
         showBack
         titleSize="detail"
-        subtitle="Get help with your Bridge Hive worker account."
+        subtitle={t('support.subtitle')}
       />
 
-      <Text style={styles.lead}>
-        Browse common topics below, then contact the Bridge Hive team. Include your registered
-        email so we can find your account quickly.
-      </Text>
+      <Text style={styles.lead}>{t('support.lead')}</Text>
 
-      <Text style={styles.group}>Topics</Text>
+      <Text style={styles.group}>{t('support.topics')}</Text>
       <ListGroup>
-        {TOPICS.map((topic, index) => (
+        {topics.map((topic, index) => (
           <View
             key={topic.title}
-            style={[styles.topicRow, index < TOPICS.length - 1 && styles.topicBorder]}
+            style={[styles.topicRow, index < topics.length - 1 && styles.topicBorder]}
           >
             <Text style={styles.topicTitle}>{topic.title}</Text>
             <Text style={styles.topicBody}>{topic.body}</Text>
@@ -58,18 +61,18 @@ export default function SupportScreen() {
         ))}
       </ListGroup>
 
-      <Text style={styles.group}>Contact</Text>
+      <Text style={styles.group}>{t('support.contact')}</Text>
       <Pressable
         style={styles.contactCard}
-        onPress={() => openMail('Bridge Hive worker support')}
+        onPress={() => openMail(t('support.mailSubject'))}
         accessibilityRole="button"
-        accessibilityLabel={`Email ${APP_CONFIG.supportEmail}`}
+        accessibilityLabel={`${t('support.emailCta')} ${APP_CONFIG.supportEmail}`}
       >
         <View style={styles.contactIcon}>
           <Ionicons name="mail-outline" size={22} color={colors.navy} />
         </View>
         <View style={styles.contactCopy}>
-          <Text style={styles.contactTitle}>Email support</Text>
+          <Text style={styles.contactTitle}>{t('support.emailCta')}</Text>
           <Text style={styles.contactEmail}>{APP_CONFIG.supportEmail}</Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />

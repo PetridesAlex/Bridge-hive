@@ -15,10 +15,12 @@ import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { APP_CONFIG } from '@/constants/config';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function WorkerForgotPasswordScreen() {
   const { resetPassword, session, loading, homeRoute } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string>();
   const [success, setSuccess] = useState<string>();
@@ -47,7 +49,7 @@ export default function WorkerForgotPasswordScreen() {
     setSuccess(undefined);
 
     if (!isValidWorkerRecoveryEmail(email)) {
-      setError('Enter a valid email address.');
+      setError(t('auth.enterValidEmail'));
       return;
     }
 
@@ -69,8 +71,8 @@ export default function WorkerForgotPasswordScreen() {
 
   return (
     <AuthShell
-      title="Reset your password"
-      subtitle="Enter the email for your Bridge Hive worker account. We will send reset instructions if an account exists."
+      title={t('auth.resetPasswordTitle')}
+      subtitle={t('auth.resetPasswordSubtitle')}
       showBack
       centered
       footer={
@@ -78,26 +80,28 @@ export default function WorkerForgotPasswordScreen() {
           <Pressable
             onPress={() => router.replace('/auth/worker/login')}
             accessibilityRole="link"
-            accessibilityLabel="Back to sign in"
+            accessibilityLabel={t('auth.backToSignIn')}
             hitSlop={10}
             style={styles.backLink}
           >
-            <Text style={styles.backLinkText}>Back to sign in</Text>
+            <Text style={styles.backLinkText}>{t('auth.backToSignIn')}</Text>
           </Pressable>
           <Pressable
             onPress={() => void Linking.openURL(`mailto:${APP_CONFIG.supportEmail}`)}
             accessibilityRole="link"
-            accessibilityLabel={`Email support at ${APP_CONFIG.supportEmail}`}
+            accessibilityLabel={`${t('auth.emailSupport')} ${APP_CONFIG.supportEmail}`}
             hitSlop={8}
             style={styles.supportHit}
           >
-            <Text style={styles.support}>Support: {APP_CONFIG.supportEmail}</Text>
+            <Text style={styles.support}>
+              {t('auth.supportLabel', { email: APP_CONFIG.supportEmail })}
+            </Text>
           </Pressable>
         </View>
       }
     >
       <AuthField
-        label="Email"
+        label={t('common.email')}
         icon="mail-outline"
         value={email}
         onChangeText={setEmail}
@@ -105,8 +109,8 @@ export default function WorkerForgotPasswordScreen() {
         keyboardType="email-address"
         autoComplete="email"
         textContentType="emailAddress"
-        placeholder="name@email.com"
-        accessibilityLabel="Email for password recovery"
+        placeholder={t('auth.emailPlaceholder')}
+        accessibilityLabel={t('auth.recoveryEmailA11y')}
         editable={!submitting}
       />
 
@@ -125,7 +129,7 @@ export default function WorkerForgotPasswordScreen() {
           <View style={styles.successIconWrap}>
             <Ionicons name="checkmark-circle" size={28} color={colors.tealStrong} />
           </View>
-          <Text style={styles.successTitle}>Check your email</Text>
+          <Text style={styles.successTitle}>{t('auth.checkEmailTitle')}</Text>
           <Text style={styles.success}>{success}</Text>
         </View>
       ) : null}
@@ -134,10 +138,10 @@ export default function WorkerForgotPasswordScreen() {
         <Button
           label={
             cooldownLeftSec > 0
-              ? `Resend available in ${cooldownLeftSec}s`
+              ? t('auth.resendAvailableIn', { seconds: cooldownLeftSec })
               : success
-                ? 'Resend instructions'
-                : 'Send reset instructions'
+                ? t('auth.resendInstructions')
+                : t('auth.sendResetInstructions')
           }
           variant="primary"
           size="lg"
@@ -145,7 +149,7 @@ export default function WorkerForgotPasswordScreen() {
           disabled={!canSubmit}
           onPress={() => void onSubmit()}
           style={styles.cta}
-          accessibilityHint="Sends a password reset email if an account exists for this address"
+          accessibilityHint={t('auth.sendResetHint')}
         />
       </View>
     </AuthShell>

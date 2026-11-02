@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { WORKER_ROLE_LABELS } from '@bridge-hive/domain';
+import { WORKER_ROLE_LABELS, WORKER_ROLE_LABELS_EL } from '@bridge-hive/domain';
 
 import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
@@ -19,6 +19,7 @@ import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useShifts } from '@/hooks/useShifts';
+import { useTranslation } from '@/i18n/locale-provider';
 import type { MarketplaceShift } from '@/lib/queries';
 import { formatDayLabel, isoDateFromTimestamp } from '@/utils/format';
 
@@ -37,15 +38,17 @@ export default function ShiftsScreen() {
     isVerified,
     isAppReviewDemo,
   } = useShifts();
+  const { t, language } = useTranslation();
   const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(
     isVerified && !isAppReviewDemo,
   );
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
 
+  const roleLabels = language === 'el' ? WORKER_ROLE_LABELS_EL : WORKER_ROLE_LABELS;
   const roleLabel =
-    workerRole && workerRole in WORKER_ROLE_LABELS
-      ? WORKER_ROLE_LABELS[workerRole as keyof typeof WORKER_ROLE_LABELS]
-      : 'Worker';
+    workerRole && workerRole in roleLabels
+      ? roleLabels[workerRole as keyof typeof roleLabels]
+      : t('roles.worker');
 
   const rows = useMemo(() => {
     const byDate = new Map<string, MarketplaceShift[]>();
@@ -79,14 +82,14 @@ export default function ShiftsScreen() {
   return (
     <AppScreen scroll={false} edges={['top']}>
       <ScreenHeader
-        eyebrow="Marketplace"
-        title="Open shifts"
-        subtitle="Find flexible shifts that match your role."
+        eyebrow={t('shifts.eyebrow')}
+        title={t('shifts.openTitle')}
+        subtitle={t('shifts.subtitle')}
         right={
           isVerified && !isAppReviewDemo ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Open shift calendar"
+              accessibilityLabel={t('shifts.openCalendar')}
               onPress={() => router.push('/shifts/calendar')}
               style={({ pressed }) => [styles.calCta, pressed && styles.calCtaPressed]}
             >
@@ -113,8 +116,8 @@ export default function ShiftsScreen() {
       {offline ? (
         <Banner
           variant="warning"
-          title="You appear to be offline"
-          body="Pull to refresh when your connection returns."
+          title={t('shifts.offlineTitle')}
+          body={t('shifts.offlineBody')}
           style={styles.banner}
         />
       ) : null}
@@ -134,22 +137,22 @@ export default function ShiftsScreen() {
         <OfflineState onRetry={onRefresh} />
       ) : error && shifts.length === 0 ? (
         <ErrorState
-          title="We couldn’t load shifts"
-          description="This is a connection or server problem — not an empty marketplace."
+          title={t('shifts.loadError')}
+          description={t('shifts.loadErrorBody')}
           onRetry={onRefresh}
         />
       ) : !isVerified && !isAppReviewDemo ? (
         <EmptyState
-          title="Marketplace access pending"
-          description="Complete verification, required credentials, and payout approval before open shifts appear."
-          actionLabel="Continue setup"
+          title={t('shifts.pendingTitle')}
+          description={t('shifts.pendingBody')}
+          actionLabel={t('shifts.continueSetup')}
           onAction={() => router.push('/auth/worker/pending')}
         />
       ) : isRestricted ? (
         <EmptyState
-          title="New shift access paused"
-          description="New shift access is paused because a commission invoice is overdue. You can still open already accepted assignments from My shifts."
-          actionLabel="View invoices"
+          title={t('shifts.pausedTitle')}
+          description={t('shifts.pausedBody')}
+          actionLabel={t('shifts.viewInvoices')}
           onAction={() => router.push('/(tabs)/invoices')}
         />
       ) : (
@@ -161,9 +164,9 @@ export default function ShiftsScreen() {
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
               <EmptyState
-                title={`No open ${roleLabel} shifts are available right now.`}
-                description="Published shifts disappear from this list when their acceptance window closes, they start, or they are filled."
-                actionLabel="Refresh"
+                title={t('shifts.emptyRole', { role: roleLabel })}
+                description={t('shifts.emptyBody')}
+                actionLabel={t('shifts.refresh')}
                 onAction={onRefresh}
               />
             </View>

@@ -44,6 +44,7 @@ import {
   buildWorkerJourneySnapshot,
   type WorkerJourneyAccountStatus,
 } from '@/lib/worker-journey';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 type UploadState = {
@@ -160,6 +161,7 @@ function accountStatusIcon(
 
 export default function DocumentsScreen() {
   const { user, workerProfile, isVerified, isAppReviewDemo } = useAuth();
+  const { t } = useTranslation();
   const { credentials, loading, error, refresh } = useCredentials(user?.id);
   const {
     account: payoutAccount,
@@ -357,10 +359,10 @@ export default function DocumentsScreen() {
   if (!workerProfile?.worker_role) {
     return (
       <AppScreen scroll={false} edges={['top']}>
-        <ScreenHeader title="Credentials" showBack onBack={goAccountSetup} />
+        <ScreenHeader title={t('documents.title')} showBack onBack={goAccountSetup} />
         <EmptyState
-          title="Choose a worker role first"
-          description="Complete onboarding so we can show the correct document checklist."
+          title={t('documents.chooseRoleFirst')}
+          description={t('documents.chooseRoleFirstBody')}
         />
       </AppScreen>
     );
@@ -369,14 +371,14 @@ export default function DocumentsScreen() {
   return (
     <AppScreen scroll={false} edges={['top']}>
       <ScreenHeader
-        title="Credentials"
+        title={t('documents.title')}
         showBack
         onBack={goAccountSetup}
-        subtitle="Document checklist — account activation is separate"
+        subtitle={t('documents.subtitle')}
         right={
           <IconButton
             icon="refresh"
-            accessibilityLabel="Refresh credentials"
+            accessibilityLabel={t('documents.refresh')}
             onPress={() => void refreshAll()}
             loading={loading || payoutLoading}
             color={colors.tealStrong}
@@ -394,9 +396,9 @@ export default function DocumentsScreen() {
         <ActivityIndicator color={colors.navy} style={{ marginTop: spacing.xl }} />
       ) : error && credentials.length === 0 ? (
         <EmptyState
-          title="Could not load credentials"
+          title={t('documents.loadError')}
           description={error}
-          actionLabel="Retry"
+          actionLabel={t('common.retry')}
           onAction={() => void refreshAll()}
         />
       ) : (

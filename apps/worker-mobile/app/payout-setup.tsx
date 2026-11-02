@@ -38,6 +38,7 @@ import {
   uploadPayoutProof,
 } from '@/lib/payout';
 import { submitPayoutAccount } from '@/lib/rpcs';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 function statusTone(status: PayoutAccountStatusInput): {
@@ -176,6 +177,7 @@ export default function PayoutSetupScreen() {
     accountRejectionReason,
     isAppReviewDemo,
   } = useAuth();
+  const { t } = useTranslation();
   const { account, refresh } = usePayouts(user?.id);
   const [holderName, setHolderName] = useState('');
   const [ibanInput, setIbanInput] = useState('');
@@ -302,8 +304,8 @@ export default function PayoutSetupScreen() {
   return (
     <AppScreen>
       <ScreenHeader
-        title="Payout account"
-        subtitle="Needed for account activation — separate from your credentials"
+        title={t('payout.title')}
+        subtitle={t('payout.subtitle')}
         showBack
         onBack={goBack}
       />
@@ -322,11 +324,8 @@ export default function PayoutSetupScreen() {
             <Ionicons name="card" size={18} color={colors.white} />
           </View>
           <View style={styles.heroCopy}>
-            <Text style={styles.heroTitle}>Receive shift earnings</Text>
-            <Text style={styles.heroBody}>
-              Organizations pay approved shift earnings directly to your approved account.
-              BridgeHive stores only a masked IBAN.
-            </Text>
+            <Text style={styles.heroTitle}>{t('payout.receiveTitle')}</Text>
+            <Text style={styles.heroBody}>{t('payout.receiveBody')}</Text>
           </View>
         </View>
         <View style={styles.statusRow}>
@@ -345,13 +344,13 @@ export default function PayoutSetupScreen() {
           <View style={styles.metaBlock}>
             {account?.account_holder_name ? (
               <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Holder</Text>
+                <Text style={styles.metaLabel}>{t('payout.holder')}</Text>
                 <Text style={styles.metaValue}>{account.account_holder_name}</Text>
               </View>
             ) : null}
             {account?.created_at ? (
               <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Submitted</Text>
+                <Text style={styles.metaLabel}>{t('payout.submitted')}</Text>
                 <Text style={styles.metaValue}>
                   {new Date(account.created_at).toLocaleDateString()}
                 </Text>
@@ -359,7 +358,7 @@ export default function PayoutSetupScreen() {
             ) : null}
             {account?.verified_at ? (
               <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Approved</Text>
+                <Text style={styles.metaLabel}>{t('payout.approved')}</Text>
                 <Text style={styles.metaValue}>
                   {new Date(account.verified_at).toLocaleDateString()}
                 </Text>
@@ -377,9 +376,7 @@ export default function PayoutSetupScreen() {
               {account?.rejection_reason ? (
                 <Text style={styles.reason}>{account.rejection_reason}</Text>
               ) : null}
-              <Text style={styles.reasonFollowUp}>
-                Update your details and submit again.
-              </Text>
+              <Text style={styles.reasonFollowUp}>{t('payout.updateAgain')}</Text>
             </View>
           </View>
         ) : null}
@@ -387,33 +384,30 @@ export default function PayoutSetupScreen() {
         {canEdit ? (
           <View style={styles.hintBox}>
             <Ionicons name="document-attach-outline" size={16} color={colors.tealStrong} />
-            <Text style={styles.hint}>
-              Upload a bank certificate, account confirmation, or statement that clearly shows
-              the account holder name and IBAN.
-            </Text>
+            <Text style={styles.hint}>{t('payout.proofHint')}</Text>
           </View>
         ) : null}
 
         {canEdit ? (
           <>
             <TextInput
-              label="Account holder name"
+              label={t('payout.accountHolderName')}
               value={holderName}
               onChangeText={setHolderName}
               autoCapitalize="words"
             />
             <TextInput
-              label="IBAN"
+              label={t('payout.iban')}
               value={ibanInput}
               onChangeText={setIbanInput}
               autoCapitalize="characters"
               autoCorrect={false}
-              placeholder="Enter your IBAN"
-              helpText="Use an account in your own name. We will review your account details before activation."
+              placeholder={t('payout.ibanPlaceholder')}
+              helpText={t('payout.ibanHelp')}
             />
 
             <View style={styles.proofBlock}>
-              <Text style={styles.proofLabel}>Proof of bank account</Text>
+              <Text style={styles.proofLabel}>{t('payout.proofLabel')}</Text>
               {proofLabel ? (
                 <View style={styles.fileChip}>
                   <Ionicons name="checkmark-circle" size={14} color={colors.success} />
@@ -422,12 +416,12 @@ export default function PayoutSetupScreen() {
                   </Text>
                 </View>
               ) : (
-                <Text style={styles.proofHelp}>PDF, JPEG or PNG · up to 10 MB</Text>
+                <Text style={styles.proofHelp}>{t('payout.proofHelp')}</Text>
               )}
               <View style={styles.row}>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Upload PDF or image"
+                  accessibilityLabel={t('payout.uploadFile')}
                   disabled={uploading}
                   onPress={() => void onPickProof('file')}
                   style={({ pressed }) => [
@@ -438,12 +432,12 @@ export default function PayoutSetupScreen() {
                 >
                   <Ionicons name="cloud-upload-outline" size={16} color={colors.navy} />
                   <Text style={styles.uploadBtnText}>
-                    {uploading ? 'Uploading…' : 'Upload file'}
+                    {uploading ? t('payout.uploading') : t('payout.uploadFile')}
                   </Text>
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Choose from photo library"
+                  accessibilityLabel={t('payout.photoLibrary')}
                   disabled={uploading}
                   onPress={() => void onPickProof('image')}
                   style={({ pressed }) => [
@@ -453,7 +447,7 @@ export default function PayoutSetupScreen() {
                   ]}
                 >
                   <Ionicons name="images-outline" size={16} color={colors.tealStrong} />
-                  <Text style={styles.uploadBtnGhostText}>Photo library</Text>
+                  <Text style={styles.uploadBtnGhostText}>{t('payout.photoLibrary')}</Text>
                 </Pressable>
               </View>
             </View>
@@ -466,9 +460,7 @@ export default function PayoutSetupScreen() {
 
             <SubmitPayoutButton
               label={
-                account?.status === 'rejected'
-                  ? 'Resubmit payout'
-                  : 'Submit payout'
+                account?.status === 'rejected' ? t('payout.resubmit') : t('payout.submit')
               }
               loading={saving}
               onPress={() => void onSubmit()}

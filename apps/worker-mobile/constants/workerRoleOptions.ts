@@ -4,13 +4,23 @@ import {
   type WorkerRole,
 } from '@bridge-hive/domain';
 
-const WORKER_ROLE_DESCRIPTIONS: Record<WorkerRole, string> = {
-  registered_nurse:
-    'Licensed nurses delivering hands-on clinical care on registered nurse shifts.',
-  ward_assistant:
-    'Ward support staff assisting daily patient care on ward assistant shifts.',
-  physiotherapist:
-    'Registered physiotherapists providing therapy and rehabilitation on physio shifts.',
+const ROLE_TITLE_KEYS = {
+  registered_nurse: 'roles.registered_nurse',
+  ward_assistant: 'roles.ward_assistant',
+  physiotherapist: 'roles.physiotherapist',
+} as const satisfies Record<WorkerRole, string>;
+
+const ROLE_DESC_KEYS = {
+  registered_nurse: 'roles.registered_nurse_desc',
+  ward_assistant: 'roles.ward_assistant_desc',
+  physiotherapist: 'roles.physiotherapist_desc',
+} as const satisfies Record<WorkerRole, string>;
+
+/** English fallbacks — avoid importing i18n at module load (Jest / non-UI callers). */
+const ROLE_DESC_EN: Record<WorkerRole, string> = {
+  registered_nurse: 'Licensed nursing professionals for clinical shift coverage.',
+  ward_assistant: 'Support roles for ward and care-team assistance.',
+  physiotherapist: 'Licensed physiotherapy professionals for scheduled care.',
 };
 
 export type WorkerRoleOption = {
@@ -19,11 +29,16 @@ export type WorkerRoleOption = {
   description: string;
 };
 
-/** Onboarding role cards — driven by the shared domain role registry. */
-export const WORKER_ROLE_OPTIONS: WorkerRoleOption[] = WORKER_ROLES.map(
-  (role) => ({
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+/** Onboarding role cards — driven by the shared domain role registry + i18n. */
+export function getWorkerRoleOptions(translate?: TranslateFn): WorkerRoleOption[] {
+  return WORKER_ROLES.map((role) => ({
     role,
-    title: WORKER_ROLE_LABELS[role],
-    description: WORKER_ROLE_DESCRIPTIONS[role],
-  }),
-);
+    title: translate ? translate(ROLE_TITLE_KEYS[role]) : WORKER_ROLE_LABELS[role],
+    description: translate ? translate(ROLE_DESC_KEYS[role]) : ROLE_DESC_EN[role],
+  }));
+}
+
+/** English defaults for tests / non-React callers. Prefer getWorkerRoleOptions(t). */
+export const WORKER_ROLE_OPTIONS: WorkerRoleOption[] = getWorkerRoleOptions();

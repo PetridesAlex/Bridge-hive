@@ -21,19 +21,21 @@ import { SkeletonCard } from '@/components/ui/Skeleton';
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { type InvoiceFilter, useInvoices } from '@/hooks/useInvoices';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
-
-const FILTERS: { key: InvoiceFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'open', label: 'Open' },
-  { key: 'past_due', label: 'Past due' },
-  { key: 'paid', label: 'Paid' },
-];
 
 export default function InvoicesScreen() {
   const { user, isAppReviewDemo } = useAuth();
+  const { t } = useTranslation();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { invoices, allInvoices, loading, error, refresh, filter, setFilter } = useInvoices(user?.id);
+
+  const FILTERS: { key: InvoiceFilter; label: string }[] = [
+    { key: 'all', label: t('invoices.filterAll') },
+    { key: 'open', label: t('invoices.filterOpen') },
+    { key: 'past_due', label: t('invoices.filterPastDue') },
+    { key: 'paid', label: t('invoices.filterPaid') },
+  ];
 
   const totals = useMemo(() => {
     const open = allInvoices
@@ -51,22 +53,26 @@ export default function InvoicesScreen() {
   return (
     <AppScreen scroll={false} edges={['top']}>
       <ScreenHeader
-        eyebrow="Finances"
-        title="Invoices"
-        subtitle="Bridge Hive commission invoices"
+        eyebrow={t('invoices.eyebrow')}
+        title={t('invoices.title')}
+        subtitle={t('invoices.subtitle')}
       />
       {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
       <Banner
         variant="info"
-        title="Separate from your shift pay"
-        body="The organization pays your approved gross shift amount separately. This list is the Bridge Hive platform commission."
+        title={t('invoices.separateTitle')}
+        body={t('invoices.separateBody')}
         style={styles.explainer}
       />
 
       <View style={styles.metrics}>
-        <Metric label="Open" amountMinor={totals.open} />
-        <Metric label="Past due" amountMinor={totals.pastDue} danger={totals.pastDue > 0} />
-        <Metric label="Paid" amountMinor={totals.paid} />
+        <Metric label={t('invoices.open')} amountMinor={totals.open} />
+        <Metric
+          label={t('invoices.pastDue')}
+          amountMinor={totals.pastDue}
+          danger={totals.pastDue > 0}
+        />
+        <Metric label={t('invoices.paid')} amountMinor={totals.paid} />
       </View>
 
       <View style={styles.filters}>
@@ -95,7 +101,7 @@ export default function InvoicesScreen() {
           <SkeletonCard />
         </View>
       ) : error && invoices.length === 0 ? (
-        <ErrorState title="Could not load invoices" onRetry={refresh} />
+        <ErrorState title={t('invoices.loadError')} onRetry={refresh} />
       ) : (
         <FlatList
           data={invoices}
@@ -104,8 +110,8 @@ export default function InvoicesScreen() {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
           ListEmptyComponent={
             <EmptyState
-              title="No invoices yet"
-              description="When an organization approves your timesheet, a Bridge Hive commission invoice appears here. Due in 10 calendar days."
+              title={t('invoices.empty')}
+              description={t('invoices.emptyBody')}
             />
           }
           renderItem={({ item }) => (

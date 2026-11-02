@@ -11,6 +11,7 @@ import Animated, {
 
 import { radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 /** Official Google brand colors (Identity guidelines). */
@@ -97,6 +98,7 @@ export function GoogleSignInButton({
   glass?: boolean;
 }) {
   const { signInWithGoogle } = useAuth();
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
@@ -157,7 +159,7 @@ export function GoogleSignInButton({
           onPress={() => void onPress()}
           disabled={loading}
           accessibilityRole="button"
-          accessibilityLabel="Continue with Google"
+          accessibilityLabel={t('auth.googleContinue')}
           accessibilityHint="Opens Google sign-in in the system browser"
           accessibilityState={{ busy: loading, disabled: loading }}
           onPressIn={() => {
@@ -183,7 +185,7 @@ export function GoogleSignInButton({
                   glass && styles.labelGlass,
                 ]}
               >
-                {compact ? 'Google' : 'Continue with Google'}
+                {compact ? t('auth.googleShort') : t('auth.googleContinue')}
               </Text>
             </>
           )}

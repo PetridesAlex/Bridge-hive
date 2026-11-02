@@ -6,8 +6,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { Button } from '@/components/ui/Button';
 import { TextInput } from '@/components/ui/TextInput';
-import { WORKER_ROLE_OPTIONS } from '@/constants/workerRoleOptions';
+import { getWorkerRoleOptions } from '@/constants/workerRoleOptions';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function WorkerChooseRoleScreen() {
@@ -22,6 +23,8 @@ export default function WorkerChooseRoleScreen() {
     completeWorkerRoleSetup,
     signOut,
   } = useAuth();
+  const { t } = useTranslation();
+  const roleOptions = getWorkerRoleOptions(t);
   const [workerRole, setWorkerRole] = useState<WorkerRole>('registered_nurse');
   const [fullName, setFullName] = useState(
     () =>
@@ -71,21 +74,25 @@ export default function WorkerChooseRoleScreen() {
 
   return (
     <AuthShell
-      title="Choose your role"
-      subtitle="Welcome to Bridge Hive. Choose your professional role, confirm your details, then complete Account Setup before claiming shifts."
+      title={t('auth.chooseRoleTitle')}
+      subtitle={t('auth.chooseRoleSubtitle')}
       showBack={false}
       centered={false}
     >
       <View style={styles.fields}>
-        <TextInput label="Full name" value={fullName} onChangeText={setFullName} />
         <TextInput
-          label="Phone"
+          label={t('auth.fullName')}
+          value={fullName}
+          onChangeText={setFullName}
+        />
+        <TextInput
+          label={t('common.phone')}
           value={phone}
           onChangeText={setPhone}
           keyboardType="phone-pad"
         />
-        <Text style={styles.section}>Professional role</Text>
-        {WORKER_ROLE_OPTIONS.map((option) => {
+        <Text style={styles.section}>{t('auth.professionalRole')}</Text>
+        {roleOptions.map((option) => {
           const selected = workerRole === option.role;
           return (
             <Pressable
@@ -109,12 +116,16 @@ export default function WorkerChooseRoleScreen() {
         })}
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button
-          label="Continue to Account Setup"
+          label={t('auth.continueToAccountSetup')}
           variant="primary"
           loading={submitting}
           onPress={() => void onContinue()}
         />
-        <Button label="Sign out" variant="ghost" onPress={() => void signOut()} />
+        <Button
+          label={t('profile.signOut')}
+          variant="ghost"
+          onPress={() => void signOut()}
+        />
       </View>
     </AuthShell>
   );

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import Animated, {
   FadeInDown,
   useAnimatedStyle,
@@ -38,6 +38,8 @@ import { useAssignments } from '@/hooks/useAssignments';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useShifts } from '@/hooks/useShifts';
+import { useTranslation } from '@/i18n/locale-provider';
+import { getAvatarSignedUrl } from '@/lib/avatar';
 import {
   canSubmitCompletedHours,
   getWorkerShiftDetails,
@@ -61,6 +63,7 @@ function assignmentStatusLabel(status: string): string {
 export default function HomeScreen() {
   const { user, firstName, roleLabel, profile, isVerified, isAppReviewDemo } =
     useAuth();
+  const { t } = useTranslation();
   const { assignments, loading, error, refresh } = useAssignments(user?.id);
   const { isRestricted, refresh: refreshBilling } = useBillingRestriction(
     isVerified && !isAppReviewDemo,
@@ -73,6 +76,7 @@ export default function HomeScreen() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const initials =
     (profile?.full_name ?? 'BH')
@@ -81,6 +85,25 @@ export default function HomeScreen() {
       .join('')
       .slice(0, 2)
       .toUpperCase() || 'BH';
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      const load = async () => {
+        if (!user?.id) {
+          setAvatarUrl(null);
+          return;
+        }
+        const signed = await getAvatarSignedUrl(profile?.avatar_path, user.id);
+        if (!active) return;
+        setAvatarUrl(signed);
+      };
+      void load();
+      return () => {
+        active = false;
+      };
+    }, [user?.id, profile?.avatar_path]),
+  );
 
   const activeAssignments = useMemo(
     () =>
@@ -280,6 +303,7 @@ export default function HomeScreen() {
           firstName={firstName}
           roleLabel={roleLabel}
           initials={initials}
+          imageUri={avatarUrl}
           unreadCount={notificationAlertCount}
           verified={isVerified}
           alertTone={pastDueCount > 0 || isRestricted ? 'danger' : dueSoon ? 'money' : 'default'}
@@ -303,8 +327,8 @@ export default function HomeScreen() {
           <SkeletonCard />
         ) : error ? (
           <ErrorState
-            title="Could not load assignments"
-            description="Check your connection and try again."
+            title={t('home.loadError')}
+            description={t('home.loadErrorBody')}
             onRetry={refresh}
           />
         ) : (
@@ -328,9 +352,9 @@ export default function HomeScreen() {
           dayAssignments.length === 0 && dayOpens.length === 0 ? (
             <EmptyState
               icon="calendar-outline"
-              title="Nothing on this day"
-              description="Booked shifts and open shifts for your role appear here."
-              actionLabel="Browse open shifts"
+              title={t('home.emptyDay')}
+              description={t('home.emptyDayBody')}
+              actionLabel={t('home.browseOpen')}
               onAction={() => router.push('/(tabs)/shifts')}
             />
           ) : (

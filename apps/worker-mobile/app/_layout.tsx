@@ -19,11 +19,14 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { APP_BOOT_BG, AppBootCover } from '@/components/brand/AppBootCover';
 import { colors } from '@/constants/theme';
+import { LocaleProvider } from '@/i18n/locale-provider';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { UnverifiedRouteGuard } from '@/components/auth/UnverifiedRouteGuard';
 import { PushNotificationController } from '@/components/push/PushNotificationController';
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
+// Fade navy-only native splash into the JS boot cover (no extra delay).
+SplashScreen.setOptions({ fade: true, duration: 300 });
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -46,8 +49,10 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
-        <StatusBar style="light" />
-        <AppBootCover />
+        <LocaleProvider>
+          <StatusBar style="light" />
+          <AppBootCover />
+        </LocaleProvider>
       </GestureHandlerRootView>
     );
   }
@@ -55,17 +60,18 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <PushNotificationController />
-          <UnverifiedRouteGuard>
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.background },
-                animation: 'slide_from_right',
-              }}
-            >
+        <LocaleProvider>
+          <AuthProvider>
+            <PushNotificationController />
+            <UnverifiedRouteGuard>
+              <StatusBar style="dark" />
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: colors.background },
+                  animation: 'slide_from_right',
+                }}
+              >
               {/* Navy first-launch journey: navy content + fade so no light flash between screens. */}
               <Stack.Screen
                 name="index"
@@ -106,10 +112,11 @@ export default function RootLayout() {
               <Stack.Screen name="profile/personal-information" />
               <Stack.Screen name="profile/app-information" />
               <Stack.Screen name="profile/notification-preferences" />
-              <Stack.Screen name="support" />
-            </Stack>
-          </UnverifiedRouteGuard>
-        </AuthProvider>
+                <Stack.Screen name="support" />
+              </Stack>
+            </UnverifiedRouteGuard>
+          </AuthProvider>
+        </LocaleProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

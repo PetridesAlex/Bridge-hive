@@ -12,6 +12,7 @@ import {
   useAdaptiveTabBarStyle,
 } from '@/components/navigation/AnimatedTabBar';
 import { colors } from '@/constants/theme';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function TabsLayout() {
@@ -22,6 +23,7 @@ export default function TabsLayout() {
     accountRejectionReason,
     homeRoute,
   } = useAuth();
+  const { t } = useTranslation();
   const tabBarStyle = useAdaptiveTabBarStyle();
 
   if (loading) {
@@ -62,11 +64,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarAccessibilityLabel: 'Home',
+          title: t('tabs.home'),
+          tabBarAccessibilityLabel: t('tabs.home'),
           tabBarLabel: ({ focused }) => (
             <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.home}>
-              Home
+              {t('tabs.home')}
             </AnimatedTabLabel>
           ),
           tabBarIcon: ({ focused }) => (
@@ -82,11 +84,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="shifts"
         options={{
-          title: 'Shifts',
-          tabBarAccessibilityLabel: 'Shifts',
+          title: t('tabs.shifts'),
+          tabBarAccessibilityLabel: t('tabs.shifts'),
           tabBarLabel: ({ focused }) => (
             <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.shifts}>
-              Shifts
+              {t('tabs.shifts')}
             </AnimatedTabLabel>
           ),
           tabBarIcon: ({ focused }) => (
@@ -102,8 +104,8 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="work"
         options={{
-          title: 'My shifts',
-          tabBarAccessibilityLabel: 'My shifts',
+          title: t('tabs.myShifts'),
+          tabBarAccessibilityLabel: t('tabs.myShifts'),
           // Center action button: no text label, the raised honey button is the tab.
           tabBarLabel: () => null,
           tabBarIcon: ({ focused }) => (
@@ -120,11 +122,11 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="payments"
         options={{
-          title: 'Earnings',
-          tabBarAccessibilityLabel: 'Earnings',
+          title: t('tabs.earnings'),
+          tabBarAccessibilityLabel: t('tabs.earnings'),
           tabBarLabel: ({ focused }) => (
             <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.finances}>
-              Earnings
+              {t('tabs.earnings')}
             </AnimatedTabLabel>
           ),
           tabBarIcon: ({ focused }) => (
@@ -141,17 +143,17 @@ export default function TabsLayout() {
         name="invoices"
         options={{
           href: null,
-          title: 'Invoices',
+          title: t('tabs.invoices'),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'More',
-          tabBarAccessibilityLabel: 'More',
+          title: t('tabs.more'),
+          tabBarAccessibilityLabel: t('tabs.more'),
           tabBarLabel: ({ focused }) => (
             <AnimatedTabLabel focused={focused} accent={TAB_ACCENTS.more}>
-              More
+              {t('tabs.more')}
             </AnimatedTabLabel>
           ),
           tabBarIcon: ({ focused }) => (

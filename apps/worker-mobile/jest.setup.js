@@ -15,3 +15,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     }),
   },
 }));
+
+jest.mock('expo-localization', () => ({
+  getLocales: jest.fn(() => [{ languageCode: 'en', languageTag: 'en-CY' }]),
+  useLocales: jest.fn(() => [{ languageCode: 'en', languageTag: 'en-CY' }]),
+}));

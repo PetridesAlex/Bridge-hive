@@ -21,6 +21,7 @@ import {
   type WorkSegment,
 } from '@/constants/workSegments';
 import { useAssignments } from '@/hooks/useAssignments';
+import { useTranslation } from '@/i18n/locale-provider';
 import type { AssignmentWithShift } from '@/lib/queries';
 import { canSubmitCompletedHours, shiftHasEnded } from '@/lib/rpcs';
 import { useAuth } from '@/providers/AuthProvider';
@@ -40,6 +41,7 @@ function segmentFor(assignment: AssignmentWithShift, now = new Date()): WorkSegm
 
 export default function WorkScreen() {
   const { user, isAppReviewDemo } = useAuth();
+  const { t } = useTranslation();
   const { assignments, loading, error, refresh } = useAssignments(user?.id);
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const [segment, setSegment] = useState<WorkSegment>('upcoming');
@@ -69,6 +71,18 @@ export default function WorkScreen() {
   );
 
   const theme = WORK_SEGMENTS[segment];
+  const segmentLabel =
+    segment === 'upcoming'
+      ? t('work.upcoming')
+      : segment === 'to_submit'
+        ? t('work.toSubmit')
+        : t('work.completed');
+  const segmentDescription =
+    segment === 'upcoming'
+      ? t('work.upcomingDesc')
+      : segment === 'to_submit'
+        ? t('work.toSubmitDesc')
+        : t('work.completedDesc');
 
   const active = useMemo(() => {
     const needingSubmit = assignments.find(
@@ -87,26 +101,28 @@ export default function WorkScreen() {
       active.shifts?.ends_at != null && shiftHasEnded(active.shifts.ends_at, now);
     if (canSubmitCompletedHours(active.status) && ended) {
       return {
-        label: 'Submit completed hours',
+        label: t('work.submitHours'),
+        icon: 'checkmark-circle-outline' as const,
         onPress: () => router.push(`/shifts/${active.shift_id}`),
       };
     }
     if (canSubmitCompletedHours(active.status)) {
       return {
-        label: 'Open my shift',
+        label: t('work.openMyShift'),
+        icon: 'arrow-forward' as const,
         onPress: () => router.push(`/shifts/${active.shift_id}`),
       };
     }
     return null;
-  }, [active, now]);
+  }, [active, now, t]);
 
   return (
     <AppScreen scroll={false} edges={['top']}>
       <View>
         <ScreenHeader
-          eyebrow="Assignments"
-          title="My shifts"
-          subtitle="Accepted shifts — submit hours after each scheduled end"
+          eyebrow={t('work.eyebrow')}
+          title={t('work.title')}
+          subtitle={t('work.subtitle')}
         />
         {isAppReviewDemo ? (
           <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
@@ -117,7 +133,7 @@ export default function WorkScreen() {
           tabs={[
             {
               key: 'upcoming',
-              label: 'Upcoming',
+              label: t('work.upcoming'),
               icon: WORK_SEGMENTS.upcoming.icon,
               iconFocused: WORK_SEGMENTS.upcoming.iconFocused,
               badge: counts.upcoming,
@@ -126,7 +142,7 @@ export default function WorkScreen() {
             },
             {
               key: 'to_submit',
-              label: 'To submit',
+              label: t('work.toSubmit'),
               icon: WORK_SEGMENTS.to_submit.icon,
               iconFocused: WORK_SEGMENTS.to_submit.iconFocused,
               badge: counts.to_submit,
@@ -135,7 +151,7 @@ export default function WorkScreen() {
             },
             {
               key: 'completed',
-              label: 'Completed',
+              label: t('work.completed'),
               icon: WORK_SEGMENTS.completed.icon,
               iconFocused: WORK_SEGMENTS.completed.iconFocused,
               badge: counts.completed,
@@ -163,10 +179,10 @@ export default function WorkScreen() {
           </LinearGradient>
           <View style={styles.legendCopy}>
             <Text style={[styles.legendTitle, { color: theme.accent }]}>
-              {theme.label}
+              {segmentLabel}
               {counts[segment] > 0 ? ` · ${counts[segment]}` : ''}
             </Text>
-            <Text style={styles.legendBody}>{theme.description}</Text>
+            <Text style={styles.legendBody}>{segmentDescription}</Text>
           </View>
         </View>
       </View>
@@ -177,7 +193,7 @@ export default function WorkScreen() {
           <SkeletonCard />
         </View>
       ) : error && assignments.length === 0 ? (
-        <ErrorState title="Could not load shifts" onRetry={refresh} />
+        <ErrorState title={t('work.loadError')} onRetry={refresh} />
       ) : (
         <FlatList
           data={filtered}
@@ -188,13 +204,13 @@ export default function WorkScreen() {
             <EmptyState
               title={
                 segment === 'upcoming'
-                  ? 'No upcoming shifts'
+                  ? t('work.emptyUpcoming')
                   : segment === 'to_submit'
-                    ? 'Nothing to submit'
-                    : 'No completed shifts yet'
+                    ? t('work.emptyToSubmit')
+                    : t('work.emptyCompleted')
               }
-              description={theme.description}
-              actionLabel={segment === 'upcoming' ? 'Browse shifts' : undefined}
+              description={segmentDescription}
+              actionLabel={segment === 'upcoming' ? t('shifts.browse') : undefined}
               onAction={
                 segment === 'upcoming' ? () => router.push('/(tabs)/shifts') : undefined
               }
@@ -219,9 +235,7 @@ export default function WorkScreen() {
           <PremiumActionButton
             label={sticky.label}
             onPress={sticky.onPress}
-            icon={
-              sticky.label.startsWith('Submit') ? 'checkmark-circle-outline' : 'arrow-forward'
-            }
+            icon={sticky.icon}
           />
         </StickyActionBar>
       ) : null}

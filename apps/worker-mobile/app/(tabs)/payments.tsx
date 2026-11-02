@@ -26,12 +26,14 @@ import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useInvoices } from '@/hooks/useInvoices';
 import { usePayouts } from '@/hooks/usePayouts';
+import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
 type MoneySegment = 'earnings' | 'invoices';
 
 export default function MoneyScreen() {
   const { user, isAppReviewDemo } = useAuth();
+  const { t } = useTranslation();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { payouts, account, loading: payoutLoading, error: payoutError, refresh: refreshPayouts } =
     usePayouts(user?.id);  const {
@@ -61,10 +63,10 @@ export default function MoneyScreen() {
   const invoiceDue = invoiceTotals.open + invoiceTotals.pastDue;
   const invoiceHint =
     invoiceTotals.pastDue > 0
-      ? 'Past due — pay now'
+      ? t('payments.pastDuePayNow')
       : invoiceDue > 0
-        ? 'Open commission due'
-        : 'Platform commission';
+        ? t('payments.openCommissionDue')
+        : t('payments.platformCommission');
 
   const onRefresh = () => {
     void refreshPayouts();
@@ -76,9 +78,9 @@ export default function MoneyScreen() {
   return (
     <AppScreen scroll={false} edges={['top']}>
       <ScreenHeader
-        eyebrow="Finances"
-        title="Money"
-        subtitle="Track earnings and commission in one place"
+        eyebrow={t('payments.eyebrow')}
+        title={t('payments.moneyTitle')}
+        subtitle={t('payments.subtitle')}
       />
       {isAppReviewDemo ? (
         <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
@@ -95,26 +97,23 @@ export default function MoneyScreen() {
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.introAccent} />
-        <Text style={styles.introTitle}>How pay works</Text>
-        <Text style={styles.introBody}>
-          Organizations pay approved shift earnings directly to you. Bridge Hive commission invoices
-          stay separate and are paid in the app.
-        </Text>
+        <Text style={styles.introTitle}>{t('payments.howPayWorks')}</Text>
+        <Text style={styles.introBody}>{t('payments.howPayWorksBody')}</Text>
       </View>
 
       <View style={styles.summaries}>
         <MoneySummaryTile
-          label="Earnings"
+          label={t('payments.title')}
           amountMinor={earningsTotal}
-          hint="Paid by organizations"
+          hint={t('payments.paidByOrgs')}
           icon="wallet-outline"
           selected={segment === 'earnings'}
           delayMs={40}
           onPress={() => setSegment('earnings')}
-          accessibilityLabel={`Earnings ${earningsTotal === 0 ? 'zero euros' : ''}. View earnings`}
+          accessibilityLabel={`${t('payments.title')}. ${t('payments.paidByOrgs')}`}
         />
         <MoneySummaryTile
-          label="Invoices"
+          label={t('invoices.title')}
           amountMinor={invoiceDue}
           hint={invoiceHint}
           icon={invoiceTotals.pastDue > 0 ? 'alert-circle-outline' : 'receipt-outline'}
@@ -122,7 +121,7 @@ export default function MoneyScreen() {
           emphasis={invoiceTotals.pastDue > 0 ? 'alert' : 'default'}
           delayMs={90}
           onPress={() => setSegment('invoices')}
-          accessibilityLabel={`Invoices. ${invoiceHint}. View invoices`}
+          accessibilityLabel={`${t('invoices.title')}. ${invoiceHint}`}
         />
       </View>
 
@@ -133,7 +132,7 @@ export default function MoneyScreen() {
             onPress={() => router.push('/payout-setup')}
             accessibilityRole="button"
             accessibilityLabel={
-              account ? 'Manage payout account' : 'Set up payout account'
+              account ? t('payments.managePayout') : t('payments.setupPayout')
             }
           >
             <LinearGradient
@@ -147,13 +146,13 @@ export default function MoneyScreen() {
               <Ionicons name="card-outline" size={18} color={colors.white} />
             </View>
             <View style={styles.accountCopy}>
-              <Text style={styles.accountTitle}>Payout account</Text>
+              <Text style={styles.accountTitle}>{t('payments.payoutAccount')}</Text>
               {account ? (
                 <Text style={styles.accountValue}>
                   {account.masked_iban} · {payoutSummaryLabel(account.status)}
                 </Text>
               ) : (
-                <Text style={styles.accountValue}>Add your IBAN to receive earnings</Text>
+                <Text style={styles.accountValue}>{t('payments.addIban')}</Text>
               )}
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.navyLift} />
@@ -162,7 +161,7 @@ export default function MoneyScreen() {
           {payoutLoading && payouts.length === 0 ? (
             <SkeletonCard />
           ) : payoutError && payouts.length === 0 ? (
-            <ErrorState title="Could not load earnings" onRetry={refreshPayouts} />
+            <ErrorState title={t('payments.loadEarningsError')} onRetry={refreshPayouts} />
           ) : (
             <FlatList
               data={payouts}
@@ -171,8 +170,8 @@ export default function MoneyScreen() {
               refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
               ListEmptyComponent={
                 <EmptyState
-                  title="No earnings yet"
-                  description="Approved timesheets create payout snapshots here. Paid only after reconciliation."
+                  title={t('payments.emptyEarnings')}
+                  description={t('payments.emptyEarningsBody')}
                 />
               }
               renderItem={({ item }) => <PayoutCard payout={item} />}
@@ -182,7 +181,7 @@ export default function MoneyScreen() {
       ) : invoiceLoading && invoices.length === 0 ? (
         <SkeletonCard />
       ) : invoiceError && invoices.length === 0 ? (
-        <ErrorState title="Could not load invoices" onRetry={refreshInvoices} />
+        <ErrorState title={t('payments.loadInvoicesError')} onRetry={refreshInvoices} />
       ) : (
         <FlatList
           data={invoices}
@@ -191,13 +190,13 @@ export default function MoneyScreen() {
           refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
           ListEmptyComponent={
             <EmptyState
-              title="No invoices yet"
-              description="When an organization approves your timesheet, a Bridge Hive commission invoice appears here."
+              title={t('invoices.empty')}
+              description={t('payments.emptyInvoicesBody')}
             />
           }
           ListHeaderComponent={
             <Button
-              label="Open full invoice list"
+              label={t('payments.openFullList')}
               variant="ghost"
               size="sm"
               onPress={() => router.push('/(tabs)/invoices')}

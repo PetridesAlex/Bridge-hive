@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { ApplicationStatusBadge } from '@/components/admin/status-badges';
 import { EmptyState } from '@/components/empty-state';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
 import {
@@ -237,9 +238,7 @@ export default async function VerificationApplicationsPage({
                       <h3 className="truncate text-base font-semibold tracking-tight text-bh-text">
                         {card.fullName ?? 'Worker'}
                       </h3>
-                      <span className="rounded-full bg-bh-honey-soft px-2.5 py-1 text-[11px] font-semibold text-bh-text">
-                        {card.applicationStatusLabel}
-                      </span>
+                      <ApplicationStatusBadge status={card.applicationStatus} />
                     </div>
                     <p className="mt-0.5 truncate text-sm text-bh-text-secondary">
                       {card.workerRole

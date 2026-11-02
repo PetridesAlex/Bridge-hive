@@ -13,23 +13,35 @@ import Animated, {
 
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import {
   APP_BOOT_MIN_MS,
   canDismissWorkspacePreparation,
   WORKSPACE_PREPARATION_MINIMUM_MS,
 } from '@/lib/workspace-preparation';
 
-/** Navy canvas matching the native splash — no white flash. */
+/** Navy canvas matching the native launch background — no white flash. */
 export const APP_BOOT_BG = '#071A2F';
 
 /** @deprecated Prefer APP_BOOT_BG — kept for leftover imports. */
 export const APP_BOOT_NAVY = APP_BOOT_BG;
 
-/**
- * Mark width matching app.json expo-splash-screen imageWidth so the
- * native splash → JS cover handoff does not shrink the icon.
- */
+const BOOT_MIDNIGHT = '#061528';
+const BOOT_ELEVATED = '#0B2742';
+const BOOT_TEAL = '#0B5266';
+const BOOT_CYAN = '#1596B5';
+const BOOT_GOLD = '#F4C542';
+const BOOT_TEXT = '#F4FAFC';
+const BOOT_TEXT_SECONDARY = '#AFC9D5';
+
+/** Official mark size on the JS “Preparing your workspace” cover. */
 export const APP_BOOT_MARK_SIZE = 220;
+
+/** Logo breath cycle while workspace is preparing (ms). */
+export const APP_BOOT_BREATH_MS = 3600;
+
+/** Background atmosphere drift cycle (ms). */
+export const APP_BOOT_DRIFT_MS = 13000;
 
 export {
   APP_BOOT_MIN_MS,
@@ -67,6 +79,59 @@ type AppBootCoverProps = {
   onRetryBootstrap?: () => void;
 };
 
+function BootAtmosphere({ reducedMotion }: { reducedMotion: boolean }) {
+  const drift = useSharedValue(reducedMotion ? 0.5 : 0);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      drift.value = 0.5;
+      return;
+    }
+    drift.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: APP_BOOT_DRIFT_MS / 2, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: APP_BOOT_DRIFT_MS / 2, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [drift, reducedMotion]);
+
+  const poolA = useAnimatedStyle(() => {
+    if (reducedMotion) {
+      return { opacity: 0.14, transform: [{ translateX: 0 }, { translateY: 0 }] };
+    }
+    return {
+      opacity: interpolate(drift.value, [0, 1], [0.1, 0.18]),
+      transform: [
+        { translateX: interpolate(drift.value, [0, 1], [-10, 14]) },
+        { translateY: interpolate(drift.value, [0, 1], [8, -12]) },
+      ],
+    };
+  });
+
+  const poolB = useAnimatedStyle(() => {
+    if (reducedMotion) {
+      return { opacity: 0.1, transform: [{ translateX: 0 }, { translateY: 0 }] };
+    }
+    return {
+      opacity: interpolate(drift.value, [0, 1], [0.08, 0.14]),
+      transform: [
+        { translateX: interpolate(drift.value, [0, 1], [12, -8]) },
+        { translateY: interpolate(drift.value, [0, 1], [-6, 16]) },
+      ],
+    };
+  });
+
+  return (
+    <View pointerEvents="none" style={StyleSheet.absoluteFill} accessibilityElementsHidden>
+      <View style={styles.midnightWash} />
+      <Animated.View style={[styles.poolCyan, poolA]} />
+      <Animated.View style={[styles.poolTeal, poolB]} />
+    </View>
+  );
+}
+
 function PreparationProgress({ active, reducedMotion }: { active: boolean; reducedMotion: boolean }) {
   const pulse = useSharedValue(reducedMotion ? 1 : 0);
 
@@ -77,8 +142,8 @@ function PreparationProgress({ active, reducedMotion }: { active: boolean; reduc
     }
     pulse.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 900, easing: Easing.inOut(Easing.sin) }),
+        withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
       ),
       -1,
       false,
@@ -86,49 +151,39 @@ function PreparationProgress({ active, reducedMotion }: { active: boolean; reduc
   }, [active, pulse, reducedMotion]);
 
   const lineStyle = useAnimatedStyle(() => ({
-    opacity: reducedMotion ? 0.45 : interpolate(pulse.value, [0, 1], [0.25, 0.85]),
-    transform: [{ scaleX: reducedMotion ? 1 : interpolate(pulse.value, [0, 1], [0.55, 1]) }],
+    opacity: reducedMotion ? 0.55 : interpolate(pulse.value, [0, 1], [0.35, 0.9]),
+    transform: [{ scaleX: reducedMotion ? 1 : interpolate(pulse.value, [0, 1], [0.62, 1]) }],
   }));
 
-  const dotA = useAnimatedStyle(() => ({
-    opacity: reducedMotion ? 0.7 : interpolate(pulse.value, [0, 1], [0.35, 1]),
-  }));
-  const dotB = useAnimatedStyle(() => ({
-    opacity: reducedMotion
-      ? 0.55
-      : interpolate(pulse.value, [0, 0.5, 1], [0.25, 1, 0.35]),
-  }));
-  const dotC = useAnimatedStyle(() => ({
-    opacity: reducedMotion ? 0.4 : interpolate(pulse.value, [0, 1], [1, 0.3]),
+  const goldAccent = useAnimatedStyle(() => ({
+    opacity: reducedMotion ? 0.35 : interpolate(pulse.value, [0, 1], [0.18, 0.55]),
   }));
 
   if (!active) return null;
 
   return (
     <View style={styles.progressBlock} accessibilityElementsHidden>
-      <Animated.View style={[styles.progressLine, lineStyle]} />
-      <View style={styles.dotsRow}>
-        <Animated.View style={[styles.dot, dotA]} />
-        <Animated.View style={[styles.dot, dotB]} />
-        <Animated.View style={[styles.dot, dotC]} />
+      <View style={styles.progressTrack}>
+        <Animated.View style={[styles.progressLine, lineStyle]} />
+        <Animated.View style={[styles.progressGold, goldAccent]} />
       </View>
     </View>
   );
 }
 
 /**
- * Navy launch cover — official mark + preparing copy, subtle breathing.
- * System fonts keep every glyph visible even before custom fonts load.
- * Mark size matches the native splash imageWidth for a seamless handoff.
+ * Navy launch cover — first branded BridgeHive experience after the navy-only
+ * native splash. System fonts keep every glyph visible before custom fonts load.
  */
 export function AppBootCover({
   showSlowIndicator = false,
   bootstrapError = false,
   onRetryBootstrap,
 }: AppBootCoverProps) {
+  const { t } = useTranslation();
   const reducedMotion = useReducedMotion();
   const settle = useSharedValue(reducedMotion ? 1 : 0);
-  const breath = useSharedValue(0);
+  const breath = useSharedValue(reducedMotion ? 0.5 : 0);
   const [showProgress, setShowProgress] = useState(false);
 
   useEffect(() => {
@@ -145,17 +200,17 @@ export function AppBootCover({
   useEffect(() => {
     if (reducedMotion) {
       settle.value = 1;
-      breath.value = 1;
+      breath.value = 0.5;
       return;
     }
-    // Soft settle from splash scale → calm rest, then breathe.
+    // Soft entrance, then calm breath — mark is introduced here, not continued from native splash.
     settle.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
     breath.value = withDelay(
       720,
       withRepeat(
         withSequence(
-          withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
-          withTiming(0, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+          withTiming(1, { duration: APP_BOOT_BREATH_MS / 2, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: APP_BOOT_BREATH_MS / 2, easing: Easing.inOut(Easing.sin) }),
         ),
         -1,
         false,
@@ -167,22 +222,22 @@ export function AppBootCover({
     if (reducedMotion) {
       return { transform: [{ scale: 1 }], opacity: 1 };
     }
-    const settledScale = interpolate(settle.value, [0, 1], [1, 0.82]);
-    const breathScale = interpolate(breath.value, [0, 1], [1, 1.035]);
+    const entrance = interpolate(settle.value, [0, 1], [0.96, 1]);
+    const breathScale = interpolate(breath.value, [0, 1], [1, 1.025]);
+    const breathOpacity = interpolate(breath.value, [0, 1], [0.94, 1]);
     return {
-      transform: [{ scale: settledScale * breathScale }],
-      opacity: interpolate(settle.value, [0, 1], [0.96, 1]),
+      transform: [{ scale: entrance * breathScale }],
+      opacity: interpolate(settle.value, [0, 1], [0, 1]) * breathOpacity,
     };
   });
 
-  const glowMotion = useAnimatedStyle(() => {
+  const haloMotion = useAnimatedStyle(() => {
     if (reducedMotion) {
-      return { opacity: 0.22 };
+      return { opacity: 0.16, transform: [{ scale: 1 }] };
     }
-    const t = Math.max(settle.value * 0.5, breath.value);
     return {
-      opacity: interpolate(t, [0, 1], [0.14, 0.3]),
-      transform: [{ scale: interpolate(t, [0, 1], [0.92, 1.06]) }],
+      opacity: interpolate(breath.value, [0, 1], [0.1, 0.22]) * settle.value,
+      transform: [{ scale: interpolate(breath.value, [0, 1], [0.96, 1.08]) }],
     };
   });
 
@@ -200,37 +255,37 @@ export function AppBootCover({
     <View
       style={styles.root}
       accessibilityRole="progressbar"
-      accessibilityLabel="Preparing your workspace"
+      accessibilityLabel={t('boot.preparing')}
     >
-      <Animated.View pointerEvents="none" style={[styles.glowBlue, glowMotion]} />
-      <Animated.View pointerEvents="none" style={[styles.glowGold, glowMotion]} />
+      <BootAtmosphere reducedMotion={reducedMotion} />
 
       <Animated.View style={[styles.logoWrap, logoMotion]}>
-        <BridgeHiveMark size={APP_BOOT_MARK_SIZE} />
+        <Animated.View pointerEvents="none" style={[styles.logoHalo, haloMotion]} />
+        <BridgeHiveMark variant="boot" size={APP_BOOT_MARK_SIZE} />
       </Animated.View>
 
       <Animated.View style={[styles.copyBlock, copyMotion]}>
         <Text style={styles.copy} allowFontScaling={false}>
-          Preparing your workspace
+          {t('boot.preparing')}
         </Text>
         <Text style={styles.subcopy} allowFontScaling={false}>
-          Setting up your secure BridgeHive experience
+          {t('boot.preparingSub')}
         </Text>
       </Animated.View>
 
       {bootstrapError ? (
         <View style={styles.errorBlock}>
           <Text style={styles.errorText} accessibilityLiveRegion="polite">
-            We could not finish setting up your workspace. Check your connection and try again.
+            {t('boot.bootstrapError')}
           </Text>
           {onRetryBootstrap ? (
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Retry workspace setup"
+              accessibilityLabel={t('boot.retrySetup')}
               onPress={onRetryBootstrap}
               style={({ pressed }) => [styles.retryBtn, pressed && styles.retryBtnPressed]}
             >
-              <Text style={styles.retryLabel}>Retry</Text>
+              <Text style={styles.retryLabel}>{t('common.retry')}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -250,27 +305,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     overflow: 'hidden',
   },
-  glowBlue: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(20, 169, 181, 0.2)',
-    top: '26%',
+  midnightWash: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: BOOT_MIDNIGHT,
+    opacity: 0.35,
   },
-  glowGold: {
+  poolCyan: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(228, 179, 52, 0.12)',
-    top: '34%',
-    left: '16%',
+    width: 340,
+    height: 340,
+    borderRadius: 170,
+    backgroundColor: BOOT_CYAN,
+    top: '18%',
+    alignSelf: 'center',
+  },
+  poolTeal: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: BOOT_TEAL,
+    top: '42%',
+    left: '8%',
   },
   logoWrap: {
     marginBottom: 28,
     padding: 4,
     overflow: 'visible',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoHalo: {
+    position: 'absolute',
+    width: APP_BOOT_MARK_SIZE * 1.35,
+    height: APP_BOOT_MARK_SIZE * 1.35,
+    borderRadius: APP_BOOT_MARK_SIZE * 0.675,
+    backgroundColor: BOOT_CYAN,
   },
   copyBlock: {
     alignItems: 'center',
@@ -287,7 +357,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 26,
     letterSpacing: -0.2,
-    color: 'rgba(247, 251, 253, 0.88)',
+    color: BOOT_TEXT,
     textAlign: 'center',
     width: '100%',
   },
@@ -300,33 +370,36 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     letterSpacing: -0.1,
-    color: 'rgba(184, 228, 234, 0.72)',
+    color: BOOT_TEXT_SECONDARY,
     textAlign: 'center',
     width: '100%',
   },
   progressBlock: {
     marginTop: 28,
     alignItems: 'center',
-    gap: 14,
     width: '100%',
-    maxWidth: 160,
+    maxWidth: 168,
   },
-  progressLine: {
+  progressTrack: {
     height: 2,
     width: '100%',
     borderRadius: 1,
-    backgroundColor: 'rgba(20, 169, 181, 0.75)',
+    backgroundColor: BOOT_ELEVATED,
+    overflow: 'hidden',
+    justifyContent: 'center',
   },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  progressLine: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: BOOT_CYAN,
+    opacity: 0.75,
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(20, 169, 181, 0.9)',
+  progressGold: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '28%',
+    backgroundColor: BOOT_GOLD,
   },
   errorBlock: {
     marginTop: 28,
@@ -351,8 +424,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(20, 169, 181, 0.45)',
-    backgroundColor: 'rgba(20, 169, 181, 0.18)',
+    borderColor: 'rgba(21, 150, 181, 0.45)',
+    backgroundColor: 'rgba(21, 150, 181, 0.18)',
   },
   retryBtnPressed: {
     opacity: 0.85,
@@ -364,6 +437,6 @@ const styles = StyleSheet.create({
       default: { fontWeight: '600' as const },
     }),
     fontSize: 14,
-    color: 'rgba(247, 251, 253, 0.95)',
+    color: BOOT_TEXT,
   },
 });

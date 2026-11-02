@@ -27,6 +27,8 @@ type Props = {
   firstName: string;
   roleLabel: string;
   initials: string;
+  /** Signed profile photo URL when available; falls back to initials. */
+  imageUri?: string | null;
   unreadCount?: number;
   /** Visual tone for the bell badge (billing vs generic). */
   alertTone?: 'default' | 'money' | 'danger';
@@ -175,6 +177,7 @@ export function GreetingHeader({
   firstName,
   roleLabel,
   initials,
+  imageUri,
   unreadCount = 0,
   alertTone = 'default',
   verified = false,
@@ -258,6 +261,7 @@ export function GreetingHeader({
                 size={64}
                 backgroundColor={colors.navy}
                 textColor={colors.white}
+                imageUri={imageUri}
               />
               <View style={[styles.statusBadge, !verified && styles.statusBadgePending]}>
                 <Ionicons

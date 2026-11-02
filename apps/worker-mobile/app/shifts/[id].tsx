@@ -4,11 +4,25 @@ import {
   estimatedWorkerShiftPayMinor,
   openPositionsLabel,
   SHIFT_UNAVAILABLE_TITLE,
+  shiftNotificationUrl,
 } from '@bridge-hive/domain';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import {
+  getCalendarPromptSeen,
+  getCalendarSyncEnabled,
+  setCalendarPromptSeen,
+  setCalendarSyncEnabled,
+} from '@/lib/calendar/mapping';
+import {
+  addShiftToCalendarManually,
+  requestCalendarPermission,
+  writeAcceptedShiftToCalendar,
+} from '@/lib/calendar/sync';
+import { useTranslation } from '@/i18n/locale-provider';
 
 import { AppScreen } from '@/components/ui/AppScreen';
 import { AssignmentTimeline } from '@/components/ui/AssignmentTimeline';
@@ -98,6 +112,7 @@ export default function ShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, isVerified, isAppReviewDemo, canPerformLiveMarketplaceActions } =
     useAuth();
+  const { t, language } = useTranslation();
   const [shift, setShift] = useState<WorkerShiftDetails | null>(null);
   const [assignment, setAssignment] = useState<ShiftAssignment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -194,11 +209,91 @@ export default function ShiftDetailScreen() {
     if (result.error) {
       const message = claimErrorMessage(result.error, shift?.required_role);
       setActionError(message);
-      Alert.alert('Claim failed', message);
+      Alert.alert(t('shifts.claimFailedTitle'), message);
       return;
     }
-    setActionSuccess('Shift accepted. It is now on My shifts.');
-    Alert.alert('Shift accepted.', 'This shift is now on your schedule.');
+
+    const assignmentId = result.data?.id;
+    let calendarNote = '';
+    if (user?.id && assignmentId && shift) {
+      const calInput = {
+        workerId: user.id,
+        assignmentId,
+        organizationName: shift.organization_name,
+        startsAt: shift.starts_at,
+        endsAt: shift.ends_at,
+        location: [shift.ward_name, shift.location_name].filter(Boolean).join(' · ') || null,
+        roleLabel: WORKER_ROLE_LABELS[shift.required_role as keyof typeof WORKER_ROLE_LABELS] ?? null,
+        locale: language,
+        deepLink: shiftNotificationUrl(shift.shift_id),
+      };
+      const written = await writeAcceptedShiftToCalendar(calInput);
+      if (written.ok) {
+        calendarNote = t('calendar.addedToast');
+      } else {
+        const syncOn = await getCalendarSyncEnabled(user.id);
+        const promptSeen = await getCalendarPromptSeen(user.id);
+        if (!syncOn && !promptSeen) {
+          await setCalendarPromptSeen(user.id);
+          Alert.alert(t('calendar.softPromptTitle'), t('calendar.softPromptBody'), [
+            { text: t('common.notNow'), style: 'cancel' },
+            {
+              text: t('calendar.enableSync'),
+              onPress: () => {
+                void (async () => {
+                  const permission = await requestCalendarPermission();
+                  if (permission !== 'granted') {
+                    Alert.alert(t('calendar.permissionDeniedTitle'), t('calendar.permissionDeniedBody'), [
+                      { text: t('common.ok') },
+                      {
+                        text: t('calendar.addManually'),
+                        onPress: () => {
+                          void addShiftToCalendarManually(calInput).then((manual) => {
+                            if (manual.ok) {
+                              setActionSuccess(t('calendar.addedToast'));
+                            }
+                          });
+                        },
+                      },
+                    ]);
+                    return;
+                  }
+                  await setCalendarSyncEnabled(user.id, true);
+                  const again = await writeAcceptedShiftToCalendar(calInput);
+                  if (again.ok) setActionSuccess(t('calendar.addedToast'));
+                })();
+              },
+            },
+          ]);
+        } else if (!syncOn) {
+          // Offer a non-blocking manual add when sync stays off.
+          Alert.alert(t('shifts.claimedTitle'), t('shifts.claimedBody'), [
+            { text: t('common.ok') },
+            {
+              text: t('calendar.addManually'),
+              onPress: () => {
+                void addShiftToCalendarManually(calInput).then((manual) => {
+                  if (manual.ok) setActionSuccess(t('calendar.addedToast'));
+                });
+              },
+            },
+          ]);
+          void refresh();
+          return;
+        }
+      }
+    }
+
+    setActionSuccess(
+      calendarNote
+        ? `${t('shifts.claimedBody')} ${calendarNote}`
+        : t('shifts.claimedBody'),
+    );
+    if (!calendarNote) {
+      Alert.alert(t('shifts.claimedTitle'), t('shifts.claimedBody'));
+    } else {
+      Alert.alert(t('shifts.claimedTitle'), `${t('shifts.claimedBody')}\n${calendarNote}`);
+    }
     void refresh();
   };
 

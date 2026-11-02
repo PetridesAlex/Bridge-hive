@@ -4,6 +4,7 @@ import { sanitizePushLogFields } from '@bridge-hive/domain';
 
 import { createServiceRoleClient } from '@/lib/supabase/admin';
 
+import { isWorkerPushDispatchEnabled } from './env';
 import {
   buildExpoPushMessage,
   outcomeFromExpoTicket,
@@ -15,6 +16,8 @@ import {
   type PushReceiptOutcome,
   type PushSendOutcome,
 } from './expo-api';
+
+export { isWorkerPushDispatchEnabled } from './env';
 
 const BATCH_LIMIT = 100;
 
@@ -36,6 +39,11 @@ async function applySendResults(outcomes: PushSendOutcome[]): Promise<void> {
 }
 
 export async function dispatchWorkerPushNotifications(): Promise<{ claimed: number; sent: number }> {
+  if (!isWorkerPushDispatchEnabled()) {
+    logPush('dispatch_skipped', { reason: 'disabled_for_environment' });
+    return { claimed: 0, sent: 0 };
+  }
+
   const admin = createServiceRoleClient();
   const { data, error } = await admin.rpc(
     'claim_worker_push_deliveries' as never,
@@ -85,6 +93,11 @@ export async function dispatchWorkerPushNotifications(): Promise<{ claimed: numb
 }
 
 export async function checkWorkerPushReceipts(): Promise<{ checked: number }> {
+  if (!isWorkerPushDispatchEnabled()) {
+    logPush('receipts_skipped', { reason: 'disabled_for_environment' });
+    return { checked: 0 };
+  }
+
   const admin = createServiceRoleClient();
   const { data, error } = await admin.rpc(
     'list_worker_push_receipt_candidates' as never,

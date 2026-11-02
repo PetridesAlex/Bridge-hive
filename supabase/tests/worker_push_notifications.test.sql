@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(43);
+select plan(50);
 
 create extension if not exists pgtap with schema extensions;
 
@@ -61,7 +61,7 @@ select ok(
 );
 
 select ok(
-  not has_function_privilege('anon', 'public.register_worker_push_device(text, text, text)', 'EXECUTE'),
+  not has_function_privilege('anon', 'public.register_worker_push_device(text, text, text, text)', 'EXECUTE'),
   'anon cannot register push tokens'
 );
 select ok(
@@ -626,6 +626,57 @@ select is(
   (select available from public.get_my_shift_alert_availability(array['c0340001-cccc-4000-8000-0000000000d1']::uuid[])),
   false,
   'a different role does not see the shift as available'
+);
+
+-- 040 hardening checks
+reset role;
+select ok(
+  exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'worker_push_devices'
+      and column_name = 'preferred_locale'
+  ),
+  'preferred_locale exists on push devices'
+);
+
+select ok(
+  exists (
+    select 1 from pg_constraint
+    where conname = 'worker_notification_deliveries_status_check'
+      and pg_get_constraintdef(oid) like '%sending%'
+  ),
+  'delivery status allows sending lease'
+);
+
+select ok(
+  has_function_privilege('authenticated', 'public.set_worker_push_locale(text)', 'EXECUTE'),
+  'workers can set push locale'
+);
+
+select ok(
+  has_function_privilege('service_role', 'public.enqueue_shift_batch_published_notification(uuid)', 'EXECUTE'),
+  'service role can enqueue batch summary pushes'
+);
+
+select ok(
+  not has_function_privilege('authenticated', 'public.enqueue_shift_batch_published_notification(uuid)', 'EXECUTE'),
+  'authenticated cannot enqueue batch pushes directly'
+);
+
+select ok(
+  coalesce(nullif(current_setting('bridgehive.suppress_shift_push_enqueue', true), ''), 'off') <> 'on',
+  'suppress GUC is not stuck on outside bulk publish'
+);
+
+select ok(
+  exists (
+    select 1 from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+      and p.proname = 'enqueue_assignment_cancelled_notification'
+  ),
+  'assignment cancel enqueue function exists'
 );
 
 select * from finish();

@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
@@ -9,18 +8,23 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-import { ShiftCard } from '@/components/shifts/ShiftCard';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { ListGroupSeparator } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
-import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useAssignments } from '@/hooks/useAssignments';
 import { useShifts } from '@/hooks/useShifts';
 import type { MarketplaceShift } from '@/lib/queries';
+import { useAuth } from '@/providers/AuthProvider';
 import {
-  WEEKDAY_LABELS,
   addMonths,
   buildMonthGrid,
   formatMonthYear,
@@ -34,6 +38,17 @@ import {
   isoDateFromTimestamp,
 } from '@/utils/format';
 
+type Density = 'compact' | 'stacked' | 'list';
+
+const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+
+const OPEN = colors.yellow;
+const BOOKED = colors.tealStrong;
+/** Today accent — Bridge Hive honey (not Apple red). */
+const TODAY = colors.yellow;
+const TODAY_SOFT = 'rgba(224, 170, 24, 0.16)';
+const TODAY_INK = colors.navy;
+
 function shiftsByDate(shifts: MarketplaceShift[]): Map<string, MarketplaceShift[]> {
   const map = new Map<string, MarketplaceShift[]>();
   for (const shift of shifts) {
@@ -45,14 +60,35 @@ function shiftsByDate(shifts: MarketplaceShift[]): Map<string, MarketplaceShift[
   return map;
 }
 
+function bookedByDate(
+  assignments: { status: string; shifts?: { starts_at?: string | null } | null }[],
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const a of assignments) {
+    if (!['accepted', 'checked_in', 'checked_out', 'submitted', 'approved'].includes(a.status)) {
+      continue;
+    }
+    const start = a.shifts?.starts_at;
+    if (!start) continue;
+    const key = isoDateFromTimestamp(start);
+    map.set(key, (map.get(key) ?? 0) + 1);
+  }
+  return map;
+}
+
 export default function ShiftCalendarScreen() {
+  const { user } = useAuth();
   const { shifts, loading, error, refresh, workerRole } = useShifts();
+  const { assignments, refresh: refreshAssignments } = useAssignments(user?.id);
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
   const [selectedIso, setSelectedIso] = useState<string | null>(() => toIsoDate(new Date()));
+  const [density, setDensity] = useState<Density>('list');
+  const dragX = useSharedValue(0);
 
   const todayIso = toIsoDate(new Date());
   const cells = useMemo(() => buildMonthGrid(monthCursor), [monthCursor]);
   const byDate = useMemo(() => shiftsByDate(shifts), [shifts]);
+  const bookedMap = useMemo(() => bookedByDate(assignments), [assignments]);
 
   const monthShiftCount = useMemo(() => {
     let count = 0;
@@ -68,10 +104,15 @@ export default function ShiftCalendarScreen() {
     return count;
   }, [byDate, monthCursor]);
 
-  const selectedShifts = useMemo(() => {
+  const selectedOpens = useMemo(() => {
     if (!selectedIso) return [];
     return byDate.get(selectedIso) ?? [];
   }, [byDate, selectedIso]);
+
+  const selectedBooked = useMemo(() => {
+    if (!selectedIso) return 0;
+    return bookedMap.get(selectedIso) ?? 0;
+  }, [bookedMap, selectedIso]);
 
   const roleLabel =
     workerRole && workerRole in WORKER_ROLE_LABELS
@@ -89,13 +130,56 @@ export default function ShiftCalendarScreen() {
           d.getFullYear() === next.getFullYear() && d.getMonth() === next.getMonth()
         );
       })();
-    if (!stillVisible) setSelectedIso(null);
+    if (!stillVisible) {
+      const today = new Date();
+      if (
+        today.getFullYear() === next.getFullYear() &&
+        today.getMonth() === next.getMonth()
+      ) {
+        setSelectedIso(toIsoDate(today));
+      } else {
+        setSelectedIso(toIsoDate(next));
+      }
+    }
+  };
+
+  const selectDay = (iso: string, inMonth: boolean) => {
+    if (!inMonth) {
+      const d = new Date(`${iso}T12:00:00`);
+      setMonthCursor(startOfMonth(d));
+    }
+    setSelectedIso(iso);
   };
 
   const goToday = () => {
     const now = new Date();
     setMonthCursor(startOfMonth(now));
     setSelectedIso(toIsoDate(now));
+  };
+
+  const pan = Gesture.Pan()
+    .activeOffsetX([-24, 24])
+    .failOffsetY([-12, 12])
+    .onUpdate((e) => {
+      dragX.value = e.translationX * 0.35;
+    })
+    .onEnd((e) => {
+      const shouldFlip = Math.abs(e.translationX) > 64 || Math.abs(e.velocityX) > 700;
+      if (shouldFlip) {
+        runOnJS(moveMonth)(e.translationX < 0 ? 1 : -1);
+      }
+      dragX.value = withSpring(0, { damping: 18, stiffness: 220 });
+    });
+
+  const densifyCycle = () => {
+    setDensity((prev) =>
+      prev === 'compact' ? 'stacked' : prev === 'stacked' ? 'list' : 'compact',
+    );
+  };
+
+  const onRefreshAll = () => {
+    void refresh();
+    void refreshAssignments();
   };
 
   return (
@@ -105,9 +189,9 @@ export default function ShiftCalendarScreen() {
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader
-          title="Shift calendar"
+          title="Calendar"
           showBack
-          subtitle={`Browse open ${roleLabel} shifts by month. Tap a day for details.`}
+          subtitle={`Open ${roleLabel} shifts and your booked work.`}
           titleSize="detail"
         />
 
@@ -116,245 +200,236 @@ export default function ShiftCalendarScreen() {
             title="Could not load calendar"
             description={error}
             actionLabel="Retry"
-            onAction={refresh}
+            onAction={onRefreshAll}
           />
         ) : (
           <>
-            <View style={styles.card}>
-              <View style={styles.hero}>
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View style={styles.monthNav}>
+            <View style={styles.calendarShell}>
+              {/* iPhone-style month chrome */}
+              <View style={styles.monthChrome}>
+                <View style={styles.monthTitleBlock}>
+                  <Text style={styles.monthTitle}>{formatMonthYear(monthCursor)}</Text>
+                  <Text style={styles.monthMeta}>
+                    {monthShiftCount === 0
+                      ? 'No open shifts'
+                      : `${monthShiftCount} open`}
+                    {density === 'list' ? ' · List' : density === 'stacked' ? ' · Stacked' : ' · Compact'}
+                  </Text>
+                </View>
+                <View style={styles.monthActions}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Change calendar density"
+                    onPress={densifyCycle}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
+                  >
+                    <Ionicons
+                      name={
+                        density === 'list'
+                          ? 'list'
+                          : density === 'stacked'
+                            ? 'menu'
+                            : 'grid-outline'
+                      }
+                      size={20}
+                      color={colors.navy}
+                    />
+                  </Pressable>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Previous month"
                     onPress={() => moveMonth(-1)}
-                    hitSlop={10}
-                    style={({ pressed }) => [styles.navBtn, pressed && styles.navPressed]}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
                   >
-                    <Ionicons name="chevron-back" size={22} color={colors.white} />
+                    <Ionicons name="chevron-back" size={22} color={colors.navy} />
                   </Pressable>
-                  <View style={styles.monthHeading}>
-                    <Text style={styles.kicker}>Month view</Text>
-                    <Text style={styles.monthTitle}>{formatMonthYear(monthCursor)}</Text>
-                    <Text style={styles.monthSummary}>
-                      {monthShiftCount === 0
-                        ? 'No open shifts this month'
-                        : `${monthShiftCount} open shift${monthShiftCount === 1 ? '' : 's'}`}
-                    </Text>
-                  </View>
                   <Pressable
                     accessibilityRole="button"
                     accessibilityLabel="Next month"
                     onPress={() => moveMonth(1)}
-                    hitSlop={10}
-                    style={({ pressed }) => [styles.navBtn, pressed && styles.navPressed]}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.iconBtn, pressed && styles.iconBtnPressed]}
                   >
-                    <Ionicons name="chevron-forward" size={22} color={colors.white} />
+                    <Ionicons name="chevron-forward" size={22} color={colors.navy} />
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Jump to today"
+                    onPress={goToday}
+                    hitSlop={8}
+                    style={({ pressed }) => [styles.todayChip, pressed && styles.iconBtnPressed]}
+                  >
+                    <Text style={styles.todayChipText}>Today</Text>
                   </Pressable>
                 </View>
-
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Jump to today"
-                  onPress={goToday}
-                  style={({ pressed }) => [styles.todayBtn, pressed && styles.navPressed]}
-                >
-                  <Ionicons name="today-outline" size={14} color={colors.white} />
-                  <Text style={styles.todayText}>Today</Text>
-                </Pressable>
               </View>
 
-              <View style={styles.body}>
-                <View style={styles.dowRow}>
-                  {WEEKDAY_LABELS.map((label) => (
-                    <Text key={label} style={styles.dow}>
-                      {label}
-                    </Text>
-                  ))}
-                </View>
-
-                <View style={styles.grid}>
-                  {cells.map((cell) => {
-                    const dayShifts = cell.inMonth ? byDate.get(cell.iso) ?? [] : [];
-                    const count = dayShifts.length;
-                    const selected = selectedIso === cell.iso;
-                    const isToday = cell.iso === todayIso;
-                    return (
-                      <Pressable
-                        key={cell.key}
-                        disabled={!cell.inMonth}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected, disabled: !cell.inMonth }}
-                        accessibilityLabel={`${cell.day}${count ? `, ${count} open` : ''}`}
-                        onPress={() =>
-                          setSelectedIso((prev) => (prev === cell.iso ? null : cell.iso))
-                        }
-                        style={[
-                          styles.cell,
-                          !cell.inMonth && styles.cellMuted,
-                          isToday && !selected && styles.cellToday,
-                          selected && styles.cellSelected,
-                          count > 0 && !selected && styles.cellHasShifts,
-                        ]}
+              <GestureDetector gesture={pan}>
+                <Animated.View style={styles.monthBody}>
+                  <View style={styles.dowRow}>
+                    {DOW.map((label, i) => (
+                      <Text
+                        key={`${label}-${i}`}
+                        style={[styles.dow, i >= 5 && styles.dowWeekend]}
                       >
-                        {selected ? (
-                          <LinearGradient
-                            pointerEvents="none"
-                            colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={StyleSheet.absoluteFill}
-                          />
-                        ) : null}
-                        <Text
-                          style={[
-                            styles.dayNum,
-                            !cell.inMonth && styles.dayMuted,
-                            selected && styles.daySelected,
-                            count > 0 && !selected && styles.dayHasShifts,
-                          ]}
-                        >
-                          {cell.day}
-                        </Text>
-                        {count > 0 ? (
-                          <View style={styles.dots}>
-                            {Array.from({ length: Math.min(count, 3) }).map((_, i) => (
-                              <View
-                                key={i}
-                                style={[styles.dot, selected && styles.dotSelected]}
-                              />
-                            ))}
-                          </View>
-                        ) : (
-                          <View style={styles.dotsSpacer} />
-                        )}
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                        {label}
+                      </Text>
+                    ))}
+                  </View>
 
-                <View style={styles.legend}>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendSwatch, styles.legendOpen]} />
-                    <Text style={styles.legendText}>Open to claim</Text>
+                  <View style={styles.grid}>
+                    {cells.map((cell) => {
+                      const opens = cell.inMonth ? byDate.get(cell.iso) ?? [] : [];
+                      const booked = cell.inMonth ? bookedMap.get(cell.iso) ?? 0 : 0;
+                      const openCount = opens.length;
+                      const selected = selectedIso === cell.iso;
+                      const isToday = cell.iso === todayIso;
+                      const hasEvents = openCount > 0 || booked > 0;
+
+                      return (
+                        <Pressable
+                          key={cell.key}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          accessibilityLabel={`${cell.day}${openCount ? `, ${openCount} open` : ''}${booked ? `, ${booked} booked` : ''}`}
+                          onPress={() => selectDay(cell.iso, cell.inMonth)}
+                          style={styles.cell}
+                        >
+                          <View
+                            style={[
+                              styles.dayBubble,
+                              isToday && !selected && styles.dayBubbleToday,
+                              selected && styles.dayBubbleSelected,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.dayNum,
+                                !cell.inMonth && styles.dayMuted,
+                                isToday && !selected && styles.dayTodayText,
+                                selected && styles.daySelectedText,
+                              ]}
+                            >
+                              {cell.day}
+                            </Text>
+                          </View>
+
+                          {density === 'compact' ? (
+                            <View style={styles.dotRow}>
+                              {openCount > 0 ? <View style={[styles.dot, { backgroundColor: OPEN }]} /> : null}
+                              {booked > 0 ? <View style={[styles.dot, { backgroundColor: BOOKED }]} /> : null}
+                              {!hasEvents ? <View style={styles.dotSpacer} /> : null}
+                            </View>
+                          ) : density === 'stacked' ? (
+                            <View style={styles.stackBars}>
+                              {openCount > 0 ? (
+                                <View style={[styles.stackBar, { backgroundColor: OPEN }]} />
+                              ) : null}
+                              {booked > 0 ? (
+                                <View style={[styles.stackBar, { backgroundColor: BOOKED }]} />
+                              ) : null}
+                              {!hasEvents ? <View style={styles.stackSpacer} /> : null}
+                            </View>
+                          ) : (
+                            <View style={styles.dotRow}>
+                              {openCount > 0 ? <View style={[styles.dot, { backgroundColor: OPEN }]} /> : null}
+                              {booked > 0 ? <View style={[styles.dot, { backgroundColor: BOOKED }]} /> : null}
+                              {!hasEvents ? <View style={styles.dotSpacer} /> : null}
+                            </View>
+                          )}
+                        </Pressable>
+                      );
+                    })}
                   </View>
-                  <View style={styles.legendItem}>
-                    <View style={[styles.legendSwatch, styles.legendToday]} />
-                    <Text style={styles.legendText}>Today</Text>
-                  </View>
+                </Animated.View>
+              </GestureDetector>
+
+              <View style={styles.legend}>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: OPEN }]} />
+                  <Text style={styles.legendText}>Open</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: BOOKED }]} />
+                  <Text style={styles.legendText}>Booked</Text>
+                </View>
+                <View style={styles.legendItem}>
+                  <View style={styles.legendToday} />
+                  <Text style={styles.legendText}>Today</Text>
                 </View>
               </View>
             </View>
 
-            <View style={styles.daySection}>
-              <Text style={styles.daySectionTitle}>
-                {selectedIso
-                  ? formatDayLabel(selectedIso)
-                  : 'Select a day'}
-              </Text>
-              <Text style={styles.daySectionSub}>
-                {selectedIso
-                  ? selectedShifts.length === 0
-                    ? 'No open shifts on this day.'
-                    : `${selectedShifts.length} open shift${selectedShifts.length === 1 ? '' : 's'} available`
-                  : 'Tap a highlighted day to review open shifts.'}
-              </Text>
+            {/* List / agenda for selected day — iPhone Calendar list mode */}
+            <View style={styles.agenda}>
+              <View style={styles.agendaHeader}>
+                <Text style={styles.agendaTitle}>
+                  {selectedIso ? formatDayLabel(selectedIso) : 'Select a day'}
+                </Text>
+                {selectedIso === todayIso ? (
+                  <View style={styles.agendaTodayPill}>
+                    <Text style={styles.agendaTodayText}>Today</Text>
+                  </View>
+                ) : null}
+              </View>
 
-              {selectedIso && selectedShifts.length > 0 ? (
-                <View style={styles.cardStack}>
-                  {selectedShifts.map((shift) => (
-                    <React.Fragment key={shift.id}>
-                      <ShiftCard
-                        shift={shift}
-                        organizationName={shift.organization_name ?? undefined}
-                        locationName={
-                          [shift.location_name, shift.ward_name]
-                            .filter(Boolean)
-                            .join(' · ') || undefined
-                        }
-                        onPress={() => router.push(`/shifts/${shift.id}`)}
-                      />
-                    </React.Fragment>
-                  ))}
-                </View>
-              ) : selectedIso && selectedShifts.length === 0 ? (
-                <View style={styles.emptyDay}>
-                  <Ionicons name="calendar-outline" size={22} color={colors.tealStrong} />
-                  <Text style={styles.emptyDayText}>
-                    Nothing open on {formatDayLabel(selectedIso)}. Try another day or
-                    month.
-                  </Text>
+              {selectedIso && selectedOpens.length === 0 && selectedBooked === 0 ? (
+                <View style={styles.agendaEmpty}>
+                  <Text style={styles.agendaEmptyText}>No shifts on this day</Text>
                 </View>
               ) : null}
-            </View>
 
-            {!selectedIso && monthShiftCount > 0 ? (
-              <View style={styles.upcoming}>
-                <Text style={styles.daySectionTitle}>Coming up this month</Text>
-                <Text style={styles.daySectionSub}>
-                  Next open shifts in {formatMonthYear(monthCursor)}.
-                </Text>
-                <View style={styles.listCard}>
-                  {shifts
-                    .filter((s) => {
-                      const d = new Date(s.starts_at);
-                      return (
-                        d.getFullYear() === monthCursor.getFullYear() &&
-                        d.getMonth() === monthCursor.getMonth()
-                      );
-                    })
-                    .slice(0, 5)
-                    .map((shift, index) => (
-                      <React.Fragment key={shift.id}>
-                        {index > 0 ? <ListGroupSeparator /> : null}
-                        <Pressable
-                          style={styles.compactRow}
-                          onPress={() => router.push(`/shifts/${shift.id}`)}
-                          accessibilityRole="button"
-                          accessibilityLabel={shift.title ?? 'Open shift'}
-                        >
-                          <View style={styles.compactDate}>
-                            <Text style={styles.compactDay}>
-                              {new Date(shift.starts_at).getDate()}
-                            </Text>
-                          </View>
-                          <View style={styles.compactMain}>
-                            <Text style={styles.compactTitle} numberOfLines={1}>
-                              {shift.title?.trim() ||
-                                WORKER_ROLE_LABELS[
-                                  shift.required_role as keyof typeof WORKER_ROLE_LABELS
-                                ] ||
-                                shift.required_role}
-                            </Text>
-                            <View style={styles.compactMetaRow}>
-                              <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
-                              <Text style={styles.compactMeta} numberOfLines={1}>
-                                {formatTimeRange(shift.starts_at, shift.ends_at)}
-                              </Text>
-                            </View>
-                            <View style={styles.compactMetaRow}>
-                              <Ionicons name="location" size={12} color={colors.tealStrong} />
-                              <Text style={styles.compactLocation} numberOfLines={1}>
-                                {shift.location_name?.trim() || 'Location not listed'}
-                                {shift.ward_name ? ` · ${shift.ward_name}` : ''}
-                              </Text>
-                            </View>
-                          </View>
-                          <Text style={styles.compactRate}>
-                            {formatMoney(shift.rate_minor, shift.currency)}/hr
-                          </Text>
-                        </Pressable>
-                      </React.Fragment>
-                    ))}
-                </View>
-              </View>
-            ) : null}
+              {selectedBooked > 0 ? (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="View my shifts"
+                  onPress={() => router.push('/(tabs)/work')}
+                  style={styles.agendaRow}
+                >
+                  <View style={[styles.agendaRail, { backgroundColor: BOOKED }]} />
+                  <View style={styles.agendaCopy}>
+                    <Text style={styles.agendaRowTitle}>
+                      {selectedBooked} booked shift{selectedBooked === 1 ? '' : 's'}
+                    </Text>
+                    <Text style={styles.agendaRowSub}>View in My shifts</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </Pressable>
+              ) : null}
+
+              {selectedOpens.map((shift) => (
+                <Pressable
+                  key={shift.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={shift.title ?? 'Open shift'}
+                  onPress={() => router.push(`/shifts/${shift.id}`)}
+                  style={styles.agendaRow}
+                >
+                  <View style={[styles.agendaRail, { backgroundColor: OPEN }]} />
+                  <View style={styles.agendaCopy}>
+                    <Text style={styles.agendaTime}>
+                      {formatTimeRange(shift.starts_at, shift.ends_at)}
+                    </Text>
+                    <Text style={styles.agendaRowTitle} numberOfLines={1}>
+                      {shift.title?.trim() ||
+                        WORKER_ROLE_LABELS[
+                          shift.required_role as keyof typeof WORKER_ROLE_LABELS
+                        ] ||
+                        shift.required_role}
+                    </Text>
+                    <Text style={styles.agendaRowSub} numberOfLines={1}>
+                      {shift.location_name?.trim() || 'Location not listed'}
+                      {shift.ward_name ? ` · ${shift.ward_name}` : ''}
+                      {' · '}
+                      {formatMoney(shift.rate_minor, shift.currency)}/hr
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                </Pressable>
+              ))}
+            </View>
           </>
         )}
 
@@ -369,292 +444,265 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.huge,
     gap: spacing.lg,
   },
-  card: {
+  calendarShell: {
     backgroundColor: colors.card,
-    borderRadius: radii.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(20, 169, 181, 0.2)',
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
     overflow: 'hidden',
-    ...shadows.lg,
+    paddingBottom: spacing.md,
   },
-  hero: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.lg,
-    gap: spacing.md,
-    overflow: 'hidden',
-    alignItems: 'center',
-  },
-  monthNav: {
+  monthChrome: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: spacing.sm,
-    width: '100%',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md + 2,
+    paddingBottom: spacing.sm,
   },
-  navBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.35)',
-  },
-  navPressed: {
-    backgroundColor: 'rgba(255, 255, 255, 0.32)',
-    transform: [{ scale: 0.96 }],
-  },
-  monthHeading: {
+  monthTitleBlock: {
     flex: 1,
-    alignItems: 'center',
+    minWidth: 0,
     gap: 2,
   },
-  kicker: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: colors.yellow,
-  },
   monthTitle: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 22,
-    color: colors.white,
-    letterSpacing: -0.3,
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 28,
+    lineHeight: 34,
+    letterSpacing: -0.8,
+    color: colors.navy,
   },
-  monthSummary: {
+  monthMeta: {
     fontFamily: typography.fonts.medium,
     fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.78)',
+    color: colors.textSecondary,
   },
-  todayBtn: {
+  monthActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    minHeight: 34,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    gap: 2,
+    paddingTop: 4,
   },
-  todayText: {
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconBtnPressed: {
+    opacity: 0.55,
+  },
+  todayChip: {
+    minHeight: 32,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: TODAY_SOFT,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(224, 170, 24, 0.45)',
+  },
+  todayChipText: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 13,
-    color: colors.white,
+    fontSize: 14,
+    color: TODAY_INK,
   },
-  body: {
-    padding: spacing.md,
-    gap: spacing.md,
-    backgroundColor: colors.card,
+  monthBody: {
+    paddingHorizontal: spacing.sm,
   },
   dowRow: {
     flexDirection: 'row',
+    marginBottom: 4,
   },
   dow: {
     flex: 1,
     textAlign: 'center',
     fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    letterSpacing: 0.4,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  dowWeekend: {
     color: colors.tealStrong,
-    textTransform: 'uppercase',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    rowGap: 4,
   },
   cell: {
     width: `${100 / 7}%`,
-    aspectRatio: 1,
+    alignItems: 'center',
+    paddingVertical: 4,
+    gap: 3,
+    minHeight: 52,
+  },
+  dayBubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radii.lg,
-    paddingVertical: 4,
-    gap: 2,
-    overflow: 'hidden',
   },
-  cellMuted: {
-    opacity: 0.28,
+  dayBubbleToday: {
+    backgroundColor: TODAY,
   },
-  cellToday: {
-    borderWidth: 1.5,
-    borderColor: colors.tealStrong,
-  },
-  cellHasShifts: {
-    backgroundColor: colors.tealSoft,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(20, 169, 181, 0.35)',
-  },
-  cellSelected: {
-    borderColor: 'transparent',
+  dayBubbleSelected: {
+    backgroundColor: colors.navy,
   },
   dayNum: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 15,
+    fontFamily: typography.fonts.regular,
+    fontSize: 17,
     color: colors.text,
   },
   dayMuted: {
     color: colors.textMuted,
   },
-  dayHasShifts: {
-    color: colors.tealStrong,
+  dayTodayText: {
+    color: colors.navy,
     fontFamily: typography.fonts.bold,
   },
-  daySelected: {
+  daySelectedText: {
     color: colors.white,
+    fontFamily: typography.fonts.semibold,
   },
-  dots: {
+  dotRow: {
     flexDirection: 'row',
-    gap: 2,
+    gap: 3,
     height: 6,
     alignItems: 'center',
-  },
-  dotsSpacer: {
-    height: 6,
+    justifyContent: 'center',
   },
   dot: {
     width: 5,
     height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.yellow,
+    borderRadius: 2.5,
   },
-  dotSelected: {
-    backgroundColor: colors.white,
+  dotSpacer: {
+    height: 6,
+    width: 5,
+  },
+  stackBars: {
+    width: '70%',
+    gap: 2,
+    minHeight: 8,
+    justifyContent: 'center',
+  },
+  stackBar: {
+    height: 3,
+    borderRadius: 1.5,
+    width: '100%',
+  },
+  stackSpacer: {
+    height: 8,
   },
   legend: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: spacing.lg,
-    paddingTop: 2,
+    paddingTop: spacing.sm,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  legendSwatch: {
+  legendDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  legendToday: {
     width: 10,
     height: 10,
     borderRadius: 5,
-  },
-  legendOpen: {
-    backgroundColor: colors.tealSoft,
-    borderWidth: 1,
-    borderColor: colors.tealStrong,
-  },
-  legendToday: {
-    borderWidth: 1.5,
-    borderColor: colors.tealStrong,
-    backgroundColor: colors.white,
+    backgroundColor: TODAY,
   },
   legendText: {
     fontFamily: typography.fonts.medium,
     fontSize: 12,
     color: colors.textSecondary,
   },
-  daySection: {
+  agenda: {
     gap: spacing.sm,
   },
-  daySectionTitle: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 18,
-    color: colors.navy,
-    letterSpacing: -0.2,
-  },
-  daySectionSub: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textSecondary,
-  },
-  cardStack: {
-    marginTop: spacing.xs,
-    gap: spacing.md,
-  },
-  listCard: {
-    marginTop: spacing.xs,
-    backgroundColor: colors.card,
-    borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(20, 169, 181, 0.14)',
-    overflow: 'hidden',
-    ...shadows.sm,
-  },
-  emptyDay: {
-    marginTop: spacing.sm,
-    padding: spacing.lg,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surfaceSubdued,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+  agendaHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  emptyDayText: {
+  agendaTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 20,
+    letterSpacing: -0.3,
+    color: colors.navy,
+  },
+  agendaTodayPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: TODAY_SOFT,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(224, 170, 24, 0.4)',
+  },
+  agendaTodayText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    color: TODAY_INK,
+  },
+  agendaEmpty: {
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    backgroundColor: colors.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.08)',
+  },
+  agendaEmptyText: {
     fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  upcoming: {
-    gap: spacing.sm,
-  },
-  compactRow: {
+  agendaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
     minHeight: 64,
+    paddingVertical: spacing.sm + 2,
+    paddingRight: spacing.md,
+    paddingLeft: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.08)',
+    overflow: 'hidden',
   },
-  compactDate: {
-    width: 40,
-    height: 40,
-    borderRadius: radii.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.tealSoft,
+  agendaRail: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderRadius: 2,
+    marginVertical: 4,
   },
-  compactDay: {
-    fontFamily: typography.fonts.bold,
-    fontSize: 16,
-    color: colors.tealStrong,
-  },
-  compactMain: {
+  agendaCopy: {
     flex: 1,
     minWidth: 0,
     gap: 2,
   },
-  compactTitle: {
+  agendaTime: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 15,
+    fontSize: 12,
+    color: colors.textSecondary,
+  },
+  agendaRowTitle: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 16,
     color: colors.text,
   },
-  compactMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  compactMeta: {
-    flexShrink: 1,
+  agendaRowSub: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
     color: colors.textSecondary,
-  },
-  compactLocation: {
-    flexShrink: 1,
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    color: colors.tealStrong,
-  },
-  compactRate: {
-    fontFamily: typography.fonts.bold,
-    fontSize: 13,
-    color: colors.navy,
   },
   loading: {
     fontFamily: typography.fonts.regular,

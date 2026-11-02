@@ -166,7 +166,10 @@ export default function ShiftsScreen() {
               <EmptyState
                 title={t('shifts.emptyRole', { role: roleLabel })}
                 description={t('shifts.emptyBody')}
+                icon="calendar-outline"
                 actionLabel={t('shifts.refresh')}
+                actionIcon="refresh"
+                actionLoading={loading}
                 onAction={onRefresh}
               />
             </View>

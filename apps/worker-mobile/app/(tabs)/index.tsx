@@ -4,7 +4,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,6 +11,7 @@ import {
 import { router, useFocusEffect } from 'expo-router';
 import Animated, {
   FadeInDown,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -77,6 +77,12 @@ export default function HomeScreen() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
 
   const initials =
     (profile?.full_name ?? 'BH')
@@ -295,9 +301,11 @@ export default function HomeScreen() {
 
   return (
     <AppScreen scroll={false} edges={['top']}>
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: tabScrollInset }]}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
       >
         <GreetingHeader
           firstName={firstName}
@@ -307,6 +315,7 @@ export default function HomeScreen() {
           unreadCount={notificationAlertCount}
           verified={isVerified}
           alertTone={pastDueCount > 0 || isRestricted ? 'danger' : dueSoon ? 'money' : 'default'}
+          scrollY={scrollY}
         />
 
         {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
@@ -410,7 +419,7 @@ export default function HomeScreen() {
             pastDueCount={pastDueCount}
           />
         ) : null}
-      </ScrollView>
+      </Animated.ScrollView>
     </AppScreen>
   );
 }

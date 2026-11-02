@@ -20,6 +20,7 @@ export function OfflineState({
       description={description}
       icon="wifi-outline"
       actionLabel={onRetry ? 'Retry' : undefined}
+      actionIcon={onRetry ? 'refresh' : undefined}
       onAction={onRetry}
     />
   );

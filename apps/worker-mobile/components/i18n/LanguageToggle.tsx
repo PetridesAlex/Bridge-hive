@@ -1,24 +1,33 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { colors, spacing, typography } from '@/constants/theme';
 import { useAppLocale } from '@/i18n/locale-provider';
 import type { AppLanguage } from '@/i18n/types';
-import { colors, spacing } from '@/constants/theme';
 
 type LanguageToggleProps = {
-  /** Lighter text for navy backgrounds (welcome / auth). */
+  /** Lighter chrome for navy backgrounds (welcome / auth). */
   tone?: 'light' | 'dark';
 };
 
+const OPTIONS: {
+  code: AppLanguage;
+  flag: string;
+  label: string;
+}[] = [
+  { code: 'en', flag: '🇬🇧', label: 'EN' },
+  { code: 'el', flag: '🇬🇷', label: 'ΕΛ' },
+];
+
 function Option({
-  code,
+  flag,
   label,
   selected,
   tone,
   onPress,
   accessibilityLabel,
 }: {
-  code: AppLanguage;
+  flag: string;
   label: string;
   selected: boolean;
   tone: 'light' | 'dark';
@@ -26,67 +35,65 @@ function Option({
   accessibilityLabel: string;
 }) {
   const light = tone === 'light';
+
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={accessibilityLabel}
       onPress={onPress}
-      hitSlop={8}
+      hitSlop={6}
       style={({ pressed }) => [
         styles.option,
-        selected && (light ? styles.optionSelectedLight : styles.optionSelectedDark),
+        selected && (light ? styles.optionOnLight : styles.optionOnDark),
         pressed && styles.optionPressed,
       ]}
     >
+      <View style={[styles.flagDisc, light ? styles.flagDiscLight : styles.flagDiscDark]}>
+        <Text style={styles.flag} allowFontScaling={false}>
+          {flag}
+        </Text>
+      </View>
       <Text
         style={[
           styles.optionLabel,
           light ? styles.labelLight : styles.labelDark,
-          selected && (light ? styles.labelSelectedLight : styles.labelSelectedDark),
+          selected && (light ? styles.labelOnLight : styles.labelOnDark),
         ]}
         allowFontScaling={false}
       >
         {label}
       </Text>
-      {selected ? <View style={[styles.dot, light ? styles.dotLight : styles.dotDark]} /> : null}
     </Pressable>
   );
 }
 
-/** Compact EN | ΕΛ language control — no flags. */
+/** Premium language switcher with national flags for EN / Greek. */
 export function LanguageToggle({ tone = 'dark' }: LanguageToggleProps) {
   const { language, setLocale, t } = useAppLocale();
+  const light = tone === 'light';
 
   return (
     <View
-      style={[styles.row, tone === 'light' ? styles.rowLight : styles.rowDark]}
+      style={[styles.row, light ? styles.rowLight : styles.rowDark]}
       accessibilityRole="radiogroup"
       accessibilityLabel={t('common.selectLanguage')}
     >
-      <Option
-        code="en"
-        label="EN"
-        selected={language === 'en'}
-        tone={tone}
-        onPress={() => {
-          void setLocale('en');
-        }}
-        accessibilityLabel={`${t('a11y.selectEnglish')}${language === 'en' ? `, ${t('a11y.languageSelected')}` : ''}`}
-      />
-      <Text style={[styles.divider, tone === 'light' ? styles.dividerLight : styles.dividerDark]}>
-        |
-      </Text>
-      <Option
-        code="el"
-        label="ΕΛ"
-        selected={language === 'el'}
-        tone={tone}
-        onPress={() => {
-          void setLocale('el');
-        }}
-        accessibilityLabel={`${t('a11y.selectGreek')}${language === 'el' ? `, ${t('a11y.languageSelected')}` : ''}`}
-      />
+      {OPTIONS.map((option) => (
+        <Option
+          key={option.code}
+          flag={option.flag}
+          label={option.label}
+          selected={language === option.code}
+          tone={tone}
+          onPress={() => {
+            void setLocale(option.code);
+          }}
+          accessibilityLabel={`${
+            option.code === 'en' ? t('a11y.selectEnglish') : t('a11y.selectGreek')
+          }${language === option.code ? `, ${t('a11y.languageSelected')}` : ''}`}
+        />
+      ))}
     </View>
   );
 }
@@ -95,72 +102,76 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
     minHeight: 44,
-    paddingHorizontal: spacing.xs,
+    padding: 4,
     borderRadius: 999,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   rowLight: {
-    backgroundColor: 'rgba(247, 251, 253, 0.1)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
   rowDark: {
-    backgroundColor: 'rgba(7, 26, 47, 0.06)',
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
+    borderColor: 'rgba(11, 42, 67, 0.12)',
   },
   option: {
-    minWidth: 44,
-    minHeight: 44,
-    paddingHorizontal: 10,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 7,
+    minHeight: 36,
+    paddingVertical: 4,
+    paddingLeft: 5,
+    paddingRight: 12,
     borderRadius: 999,
   },
-  optionSelectedLight: {
-    backgroundColor: 'rgba(20, 169, 181, 0.28)',
+  optionOnLight: {
+    backgroundColor: colors.yellow,
   },
-  optionSelectedDark: {
-    backgroundColor: 'rgba(20, 169, 181, 0.16)',
+  optionOnDark: {
+    backgroundColor: colors.navy,
   },
   optionPressed: {
-    opacity: 0.85,
+    opacity: 0.88,
+  },
+  flagDisc: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  flagDiscLight: {
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderColor: 'rgba(255,255,255,0.28)',
+  },
+  flagDiscDark: {
+    backgroundColor: colors.white,
+    borderColor: 'rgba(11, 42, 67, 0.12)',
+  },
+  flag: {
+    fontSize: 15,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   optionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    letterSpacing: 0.4,
+    fontFamily: typography.fonts.bold,
+    fontSize: 12,
+    letterSpacing: 0.8,
   },
   labelLight: {
     color: 'rgba(247, 251, 253, 0.72)',
   },
   labelDark: {
-    color: colors.textSecondary ?? '#5A6B7A',
+    color: colors.textSecondary,
   },
-  labelSelectedLight: {
-    color: '#F4FAFC',
+  labelOnLight: {
+    color: colors.navy,
   },
-  labelSelectedDark: {
-    color: colors.navy ?? '#071A2F',
-  },
-  divider: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginHorizontal: 2,
-  },
-  dividerLight: {
-    color: 'rgba(247, 251, 253, 0.35)',
-  },
-  dividerDark: {
-    color: 'rgba(7, 26, 47, 0.25)',
-  },
-  dot: {
-    position: 'absolute',
-    bottom: 6,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-  dotLight: {
-    backgroundColor: '#F4FAFC',
-  },
-  dotDark: {
-    backgroundColor: colors.teal ?? '#14A9B5',
+  labelOnDark: {
+    color: colors.white,
   },
 });

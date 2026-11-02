@@ -1,17 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  Easing,
   FadeInDown,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
-import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type AccessItem = {
@@ -20,9 +23,11 @@ type AccessItem = {
   subtitle: string;
   icon: keyof typeof Ionicons.glyphMap;
   href: string;
+  /** Icon + badge gradient — brand navy / teal / honey only. */
   gradient: [string, string];
-  soft: string;
-  border: string;
+  /** Soft glass wash behind the row. */
+  wash: [string, string];
+  accent: string;
   badge?: string;
 };
 
@@ -33,9 +38,9 @@ const ITEMS: AccessItem[] = [
     subtitle: 'Role-matched marketplace',
     icon: 'search',
     href: '/(tabs)/shifts',
-    gradient: [colors.navy, colors.tealStrong],
-    soft: colors.tealSoft,
-    border: 'rgba(20, 169, 181, 0.28)',
+    gradient: ['#0B2A43', '#0F6B6B'],
+    wash: ['rgba(15, 107, 107, 0.28)', 'rgba(11, 42, 67, 0.18)'],
+    accent: colors.tealStrong,
     badge: 'Browse',
   },
   {
@@ -44,9 +49,9 @@ const ITEMS: AccessItem[] = [
     subtitle: 'Accepted assignments',
     icon: 'briefcase',
     href: '/(tabs)/work',
-    gradient: [colors.honeyStrong, '#C47A12'],
-    soft: colors.yellowLight,
-    border: 'rgba(212, 148, 36, 0.35)',
+    gradient: ['#F08C00', '#E0AA18'],
+    wash: ['rgba(224, 170, 24, 0.22)', 'rgba(11, 42, 67, 0.16)'],
+    accent: colors.yellow,
     badge: 'Work',
   },
   {
@@ -55,9 +60,9 @@ const ITEMS: AccessItem[] = [
     subtitle: 'Earnings and invoices',
     icon: 'wallet',
     href: '/(tabs)/payments',
-    gradient: ['#146C43', colors.success],
-    soft: colors.successLight,
-    border: 'rgba(25, 135, 84, 0.28)',
+    gradient: ['#0E4A5C', '#16A6B6'],
+    wash: ['rgba(22, 166, 182, 0.24)', 'rgba(11, 42, 67, 0.16)'],
+    accent: '#3BC4D8',
     badge: 'Pay',
   },
 ];
@@ -95,22 +100,17 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
         }}
         accessibilityRole="button"
         accessibilityLabel={item.title}
-        style={({ pressed }) => [
-          styles.card,
-          {
-            backgroundColor: item.soft,
-            shadowColor: item.gradient[1],
-          },
-          pressed && styles.cardPressed,
-        ]}
+        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
       >
         <LinearGradient
           pointerEvents="none"
-          colors={[`${item.gradient[0]}18`, 'transparent']}
+          colors={item.wash}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
+        <View pointerEvents="none" style={[styles.cardEdge, { backgroundColor: item.accent }]} />
+
         <Animated.View style={iconStyle}>
           <LinearGradient
             colors={item.gradient}
@@ -118,7 +118,11 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
             end={{ x: 1, y: 1 }}
             style={styles.icon}
           >
-            <Ionicons name={item.icon} size={20} color={colors.white} />
+            <Ionicons
+              name={item.icon}
+              size={20}
+              color={item.key === 'work' ? colors.navy : colors.white}
+            />
           </LinearGradient>
         </Animated.View>
 
@@ -126,8 +130,15 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
           <View style={styles.titleRow}>
             <Text style={styles.title}>{item.title}</Text>
             {item.badge ? (
-              <View style={[styles.badge, { backgroundColor: item.gradient[0] }]}>
-                <Text style={styles.badgeText}>{item.badge}</Text>
+              <View style={[styles.badge, { backgroundColor: item.accent }]}>
+                <Text
+                  style={[
+                    styles.badgeText,
+                    item.key === 'work' && styles.badgeTextOnHoney,
+                  ]}
+                >
+                  {item.badge}
+                </Text>
               </View>
             ) : null}
           </View>
@@ -136,9 +147,9 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
           </Text>
         </View>
 
-        <View style={[styles.chevron, { backgroundColor: `${item.gradient[1]}22` }]}>
+        <View style={styles.chevron}>
           <Animated.View style={arrowStyle}>
-            <Ionicons name="arrow-forward" size={16} color={item.gradient[0]} />
+            <Ionicons name="arrow-forward" size={16} color={colors.white} />
           </Animated.View>
         </View>
       </Pressable>
@@ -146,10 +157,65 @@ function AccessCard({ item, index }: { item: AccessItem; index: number }) {
   );
 }
 
-/** Premium home shortcuts with per-destination color systems. */
+/** Home shortcuts — navy panel with brand navy / teal / honey destinations. */
 export function QuickAccess() {
+  const reduced = useReducedMotion();
+  const wash = useSharedValue(0);
+  const orb = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduced) {
+      wash.value = 0.35;
+      orb.value = 0.5;
+      return;
+    }
+    wash.value = withRepeat(
+      withTiming(1, { duration: 5600, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+    orb.value = withRepeat(
+      withTiming(1, { duration: 7200, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [orb, reduced, wash]);
+
+  const washStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(wash.value, [0, 1], [0.14, 0.36]),
+    transform: [{ translateX: interpolate(wash.value, [0, 1], [-36, 64]) }],
+  }));
+
+  const orbStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(orb.value, [0, 1], [0.16, 0.38]),
+    transform: [
+      { translateX: interpolate(orb.value, [0, 1], [0, 12]) },
+      { translateY: interpolate(orb.value, [0, 1], [0, -10]) },
+      { scale: interpolate(orb.value, [0, 1], [0.94, 1.08]) },
+    ],
+  }));
+
   return (
     <View style={styles.wrap}>
+      <LinearGradient
+        pointerEvents="none"
+        colors={['#071E33', '#0B2A43', '#0E4A5C']}
+        locations={[0, 0.45, 1]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <Animated.View pointerEvents="none" style={[styles.panelWash, washStyle]}>
+        <LinearGradient
+          colors={['transparent', 'rgba(255,255,255,0.12)', 'transparent']}
+          start={{ x: 0, y: 0.2 }}
+          end={{ x: 1, y: 0.8 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+      <Animated.View pointerEvents="none" style={[styles.panelOrb, orbStyle]} />
+      <View pointerEvents="none" style={styles.panelHoney} />
+
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>Shortcuts</Text>
@@ -157,7 +223,7 @@ export function QuickAccess() {
         </View>
         <View style={styles.headerAccent}>
           <LinearGradient
-            colors={[colors.navy, colors.tealStrong]}
+            colors={[colors.yellow, colors.tealStrong]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 1, y: 0.5 }}
             style={styles.headerBar}
@@ -177,6 +243,38 @@ export function QuickAccess() {
 const styles = StyleSheet.create({
   wrap: {
     gap: spacing.md,
+    borderRadius: radii.xl,
+    overflow: 'hidden',
+    backgroundColor: '#0B2A43',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
+    paddingTop: spacing.md + 2,
+    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  panelWash: {
+    position: 'absolute',
+    top: -20,
+    bottom: -20,
+    width: 130,
+  },
+  panelOrb: {
+    position: 'absolute',
+    right: -40,
+    top: -48,
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(22, 166, 182, 0.24)',
+  },
+  panelHoney: {
+    position: 'absolute',
+    left: -28,
+    bottom: -40,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: 'rgba(255, 210, 90, 0.10)',
   },
   header: {
     flexDirection: 'row',
@@ -194,13 +292,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
-    color: colors.tealStrong,
+    color: colors.yellow,
   },
   heading: {
     fontFamily: typography.fonts.displaySemibold,
     fontSize: 20,
     letterSpacing: -0.3,
-    color: colors.navy,
+    color: colors.white,
   },
   headerAccent: {
     paddingBottom: 6,
@@ -220,16 +318,23 @@ const styles = StyleSheet.create({
     minHeight: 84,
     borderRadius: radii.xl,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
     overflow: 'hidden',
     position: 'relative',
-    ...shadows.sm,
-    shadowOpacity: 0.16,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
   },
   cardPressed: {
     opacity: 0.92,
+  },
+  cardEdge: {
+    position: 'absolute',
+    left: 0,
+    top: 12,
+    bottom: 12,
+    width: 3,
+    borderRadius: 2,
   },
   icon: {
     width: 44,
@@ -237,6 +342,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   copy: {
     flex: 1,
@@ -253,7 +359,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.displaySemibold,
     fontSize: 16,
     letterSpacing: -0.2,
-    color: colors.text,
+    color: colors.white,
   },
   badge: {
     borderRadius: radii.full,
@@ -267,10 +373,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.white,
   },
+  badgeTextOnHoney: {
+    color: colors.navy,
+  },
   subtitle: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    color: colors.textSecondary,
+    color: 'rgba(255,255,255,0.68)',
   },
   chevron: {
     width: 32,
@@ -278,5 +387,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
 });

@@ -1,5 +1,6 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -12,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
+import { typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTranslation } from '@/i18n/locale-provider';
 import {
@@ -133,39 +135,92 @@ function BootAtmosphere({ reducedMotion }: { reducedMotion: boolean }) {
 }
 
 function PreparationProgress({ active, reducedMotion }: { active: boolean; reducedMotion: boolean }) {
-  const pulse = useSharedValue(reducedMotion ? 1 : 0);
+  const fill = useSharedValue(reducedMotion ? 0.72 : 0.12);
+  const sweep = useSharedValue(0);
+  const glow = useSharedValue(reducedMotion ? 0.5 : 0);
 
   useEffect(() => {
-    if (reducedMotion || !active) {
-      pulse.value = reducedMotion ? 1 : 0;
+    if (!active) {
+      fill.value = reducedMotion ? 0.72 : 0.12;
+      sweep.value = 0;
+      glow.value = reducedMotion ? 0.5 : 0;
       return;
     }
-    pulse.value = withRepeat(
+    if (reducedMotion) {
+      fill.value = 0.72;
+      glow.value = 0.5;
+      return;
+    }
+    fill.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
-        withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.88, { duration: 2400, easing: Easing.out(Easing.cubic) }),
+        withTiming(0.28, { duration: 900, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
       false,
     );
-  }, [active, pulse, reducedMotion]);
+    sweep.value = withRepeat(
+      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      false,
+    );
+    glow.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0.35, { duration: 900, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [active, fill, glow, reducedMotion, sweep]);
 
-  const lineStyle = useAnimatedStyle(() => ({
-    opacity: reducedMotion ? 0.55 : interpolate(pulse.value, [0, 1], [0.35, 0.9]),
-    transform: [{ scaleX: reducedMotion ? 1 : interpolate(pulse.value, [0, 1], [0.62, 1]) }],
+  const fillStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: interpolate(fill.value, [0, 1], [0.14, 1]) }],
   }));
 
-  const goldAccent = useAnimatedStyle(() => ({
-    opacity: reducedMotion ? 0.35 : interpolate(pulse.value, [0, 1], [0.18, 0.55]),
+  const sweepStyle = useAnimatedStyle(() => ({
+    opacity: reducedMotion ? 0 : interpolate(sweep.value, [0, 0.15, 0.75, 1], [0, 1, 1, 0]),
+    transform: [{ translateX: interpolate(sweep.value, [0, 1], [-36, 200]) }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: reducedMotion ? 0.28 : interpolate(glow.value, [0, 1], [0.22, 0.55]),
+    transform: [{ scaleX: interpolate(glow.value, [0, 1], [0.92, 1.06]) }],
+  }));
+
+  const tipStyle = useAnimatedStyle(() => ({
+    opacity: reducedMotion ? 0.7 : interpolate(glow.value, [0, 1], [0.55, 1]),
   }));
 
   if (!active) return null;
 
   return (
     <View style={styles.progressBlock} accessibilityElementsHidden>
+      <Animated.View style={[styles.progressGlow, glowStyle]} />
       <View style={styles.progressTrack}>
-        <Animated.View style={[styles.progressLine, lineStyle]} />
-        <Animated.View style={[styles.progressGold, goldAccent]} />
+        <Animated.View style={[styles.progressFill, fillStyle]}>
+          <LinearGradient
+            colors={['#0E6B7A', BOOT_CYAN, '#3BC4D8', BOOT_GOLD]}
+            locations={[0, 0.45, 0.82, 1]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Animated.View style={[styles.progressSweep, sweepStyle]}>
+            <LinearGradient
+              colors={['transparent', 'rgba(255,255,255,0.55)', 'transparent']}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+          <Animated.View style={[styles.progressTip, tipStyle]} />
+        </Animated.View>
+      </View>
+      <View style={styles.progressMarks}>
+        <View style={styles.progressMark} />
+        <View style={[styles.progressMark, styles.progressMarkMid]} />
+        <View style={styles.progressMark} />
       </View>
     </View>
   );
@@ -173,7 +228,7 @@ function PreparationProgress({ active, reducedMotion }: { active: boolean; reduc
 
 /**
  * Navy launch cover — first branded BridgeHive experience after the navy-only
- * native splash. System fonts keep every glyph visible before custom fonts load.
+ * native splash. Display typography matches the rest of the worker brand.
  */
 export function AppBootCover({
   showSlowIndicator = false,
@@ -184,6 +239,7 @@ export function AppBootCover({
   const reducedMotion = useReducedMotion();
   const settle = useSharedValue(reducedMotion ? 1 : 0);
   const breath = useSharedValue(reducedMotion ? 0.5 : 0);
+  const rule = useSharedValue(reducedMotion ? 1 : 0);
   const [showProgress, setShowProgress] = useState(false);
 
   useEffect(() => {
@@ -201,12 +257,17 @@ export function AppBootCover({
     if (reducedMotion) {
       settle.value = 1;
       breath.value = 0.5;
+      rule.value = 1;
       return;
     }
-    // Soft entrance, then calm breath — mark is introduced here, not continued from native splash.
+    // Soft entrance, then clear logo breath — mark is introduced here, not continued from native splash.
     settle.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
+    rule.value = withDelay(
+      280,
+      withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
+    );
     breath.value = withDelay(
-      720,
+      280,
       withRepeat(
         withSequence(
           withTiming(1, { duration: APP_BOOT_BREATH_MS / 2, easing: Easing.inOut(Easing.sin) }),
@@ -216,15 +277,15 @@ export function AppBootCover({
         false,
       ),
     );
-  }, [breath, reducedMotion, settle]);
+  }, [breath, reducedMotion, rule, settle]);
 
   const logoMotion = useAnimatedStyle(() => {
     if (reducedMotion) {
       return { transform: [{ scale: 1 }], opacity: 1 };
     }
-    const entrance = interpolate(settle.value, [0, 1], [0.96, 1]);
-    const breathScale = interpolate(breath.value, [0, 1], [1, 1.025]);
-    const breathOpacity = interpolate(breath.value, [0, 1], [0.94, 1]);
+    const entrance = interpolate(settle.value, [0, 1], [0.92, 1]);
+    const breathScale = interpolate(breath.value, [0, 1], [1, 1.07]);
+    const breathOpacity = interpolate(breath.value, [0, 1], [0.88, 1]);
     return {
       transform: [{ scale: entrance * breathScale }],
       opacity: interpolate(settle.value, [0, 1], [0, 1]) * breathOpacity,
@@ -233,11 +294,11 @@ export function AppBootCover({
 
   const haloMotion = useAnimatedStyle(() => {
     if (reducedMotion) {
-      return { opacity: 0.16, transform: [{ scale: 1 }] };
+      return { opacity: 0.18, transform: [{ scale: 1 }] };
     }
     return {
-      opacity: interpolate(breath.value, [0, 1], [0.1, 0.22]) * settle.value,
-      transform: [{ scale: interpolate(breath.value, [0, 1], [0.96, 1.08]) }],
+      opacity: interpolate(breath.value, [0, 1], [0.12, 0.34]) * settle.value,
+      transform: [{ scale: interpolate(breath.value, [0, 1], [0.9, 1.14]) }],
     };
   });
 
@@ -247,9 +308,14 @@ export function AppBootCover({
     }
     return {
       opacity: interpolate(settle.value, [0, 1], [0, 1]),
-      transform: [{ translateY: interpolate(settle.value, [0, 1], [8, 0]) }],
+      transform: [{ translateY: interpolate(settle.value, [0, 1], [10, 0]) }],
     };
   });
+
+  const ruleMotion = useAnimatedStyle(() => ({
+    opacity: rule.value,
+    transform: [{ scaleX: interpolate(rule.value, [0, 1], [0.2, 1]) }],
+  }));
 
   return (
     <View
@@ -268,6 +334,7 @@ export function AppBootCover({
         <Text style={styles.copy} allowFontScaling={false}>
           {t('boot.preparing')}
         </Text>
+        <Animated.View style={[styles.copyRule, ruleMotion]} />
         <Text style={styles.subcopy} allowFontScaling={false}>
           {t('boot.preparingSub')}
         </Text>
@@ -346,60 +413,103 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     width: '100%',
-    maxWidth: 320,
+    maxWidth: 300,
   },
   copy: {
-    ...Platform.select({
-      ios: { fontFamily: 'System', fontWeight: '500' as const },
-      android: { fontFamily: 'sans-serif-medium', fontWeight: '500' as const },
-      default: { fontWeight: '500' as const },
-    }),
-    fontSize: 17,
-    lineHeight: 26,
-    letterSpacing: -0.2,
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 26,
+    lineHeight: 32,
+    letterSpacing: -0.7,
     color: BOOT_TEXT,
     textAlign: 'center',
     width: '100%',
   },
+  copyRule: {
+    width: 28,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: BOOT_GOLD,
+    marginTop: 2,
+    marginBottom: 2,
+  },
   subcopy: {
-    ...Platform.select({
-      ios: { fontFamily: 'System', fontWeight: '400' as const },
-      android: { fontFamily: 'sans-serif', fontWeight: '400' as const },
-      default: { fontWeight: '400' as const },
-    }),
+    fontFamily: typography.fonts.medium,
     fontSize: 14,
     lineHeight: 20,
-    letterSpacing: -0.1,
+    letterSpacing: 0.2,
     color: BOOT_TEXT_SECONDARY,
     textAlign: 'center',
     width: '100%',
+    maxWidth: 260,
   },
   progressBlock: {
-    marginTop: 28,
+    marginTop: 32,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 168,
+    maxWidth: 220,
+    gap: 10,
+  },
+  progressGlow: {
+    position: 'absolute',
+    top: -6,
+    width: '92%',
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(21, 150, 181, 0.35)',
   },
   progressTrack: {
-    height: 2,
+    height: 5,
     width: '100%',
-    borderRadius: 1,
-    backgroundColor: BOOT_ELEVATED,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
     overflow: 'hidden',
     justifyContent: 'center',
   },
-  progressLine: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: BOOT_CYAN,
-    opacity: 0.75,
+  progressFill: {
+    height: '100%',
+    width: '100%',
+    borderRadius: 999,
+    overflow: 'hidden',
+    transformOrigin: 'left center',
   },
-  progressGold: {
+  progressSweep: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 48,
+  },
+  progressTip: {
     position: 'absolute',
     right: 0,
     top: 0,
     bottom: 0,
-    width: '28%',
+    width: 10,
     backgroundColor: BOOT_GOLD,
+    shadowColor: BOOT_GOLD,
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  progressMarks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 2,
+  },
+  progressMark: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  progressMarkMid: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(244, 197, 66, 0.55)',
   },
   errorBlock: {
     marginTop: 28,
@@ -408,11 +518,7 @@ const styles = StyleSheet.create({
     maxWidth: 300,
   },
   errorText: {
-    ...Platform.select({
-      ios: { fontFamily: 'System', fontWeight: '400' as const },
-      android: { fontFamily: 'sans-serif', fontWeight: '400' as const },
-      default: { fontWeight: '400' as const },
-    }),
+    fontFamily: typography.fonts.regular,
     fontSize: 14,
     lineHeight: 20,
     color: 'rgba(255, 200, 180, 0.92)',
@@ -431,11 +537,7 @@ const styles = StyleSheet.create({
     opacity: 0.85,
   },
   retryLabel: {
-    ...Platform.select({
-      ios: { fontFamily: 'System', fontWeight: '600' as const },
-      android: { fontFamily: 'sans-serif-medium', fontWeight: '600' as const },
-      default: { fontWeight: '600' as const },
-    }),
+    fontFamily: typography.fonts.semibold,
     fontSize: 14,
     color: BOOT_TEXT,
   },

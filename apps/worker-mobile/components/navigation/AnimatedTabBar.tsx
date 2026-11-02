@@ -21,6 +21,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg';
 
+import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
@@ -79,6 +80,7 @@ type TabMetrics = {
   highlightWidth: number;
   highlightHeight: number;
   fabSize: number;
+  fabGlyph: number;
   /** Center of the floating action button, measured from the top of the bar. */
   fabCenterY: number;
   /** translateY that moves the FAB from the slot's center to fabCenterY. */
@@ -103,8 +105,8 @@ function useTabMetrics(): TabMetrics {
     const labelSize = density === 'narrow' ? 11 : 12;
     const labelLine = labelSize + 3;
     const gap = 3;
-    const fabSize = density === 'narrow' ? 46 : density === 'regular' ? 50 : 52;
-    const fabCenterY = fabSize / 2 + 3;
+    const fabSize = density === 'narrow' ? 58 : density === 'regular' ? 64 : 68;
+    const fabCenterY = fabSize / 2 + 2;
 
     return {
       density,
@@ -124,7 +126,8 @@ function useTabMetrics(): TabMetrics {
       fabSize,
       fabCenterY,
       fabLift: -(topPad + contentHeight / 2 - fabCenterY),
-      notchRadius: fabSize / 2 + 5,
+      notchRadius: fabSize / 2 + 7,
+      fabGlyph: density === 'narrow' ? 26 : 30,
       useShortLabels: slotWidth < 82,
       focusedLabelOnly: slotWidth < 62,
     };
@@ -359,7 +362,13 @@ export function AnimatedTabIcon({
               { width: m.fabSize, height: m.fabSize, borderRadius: m.fabSize / 2 },
             ]}
           >
-            <Ionicons name={focused ? iconFocused : icon} size={24} color={colors.white} />
+            <View style={styles.fabMarkWrap}>
+              <BridgeHiveMark
+                variant="boot"
+                size={Math.round(m.fabSize * 0.72)}
+                style={focused ? styles.fabMarkFocused : undefined}
+              />
+            </View>
             {!reduced ? (
               <Animated.View pointerEvents="none" style={[styles.fabShine, shineStyle]} />
             ) : null}
@@ -369,7 +378,7 @@ export function AnimatedTabIcon({
           pointerEvents="none"
           style={[
             styles.fabCaptionWrap,
-            { top: m.fabSize + 8, left: -(CAPTION_WIDTH - m.fabSize) / 2 },
+            { top: m.fabSize + 6, left: -(CAPTION_WIDTH - m.fabSize) / 2 },
             captionStyle,
           ]}
         >
@@ -554,6 +563,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  fabMarkWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabMarkFocused: {
+    transform: [{ scale: 1.04 }],
   },
   fabBackdrop: {
     position: 'absolute',

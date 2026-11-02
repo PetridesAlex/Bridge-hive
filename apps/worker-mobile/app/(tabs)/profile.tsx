@@ -10,46 +10,43 @@ import {
   profileInitials,
   type CredentialSummary,
 } from '@bridge-hive/domain';
-import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActionSheetIOS,
-  ActivityIndicator,
   Alert,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
+import { ProfileHero } from '@/components/profile/ProfileHero';
 import { ProfileMenuRow, type MenuTone } from '@/components/profile/ProfileMenuRow';
 import { SignOutButton } from '@/components/profile/SignOutButton';
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
-import { Avatar } from '@/components/ui/Avatar';
+import { ListGroup } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { StatusBadge } from '@/components/ui/StatusBadge';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useCredentials } from '@/hooks/useCredentials';
 import { useInvoices } from '@/hooks/useInvoices';
 import { usePayouts } from '@/hooks/usePayouts';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAppLocale, useTranslation } from '@/i18n/locale-provider';
 import { getAvatarSignedUrl } from '@/lib/avatar';
 import { getMyNotifications } from '@/lib/queries';
 import { useAuth } from '@/providers/AuthProvider';
 
-function verificationTone(status?: string | null) {
-  if (status === 'verified') return 'success' as const;
-  if (status === 'rejected') return 'danger' as const;
-  if (status === 'under_review' || status === 'submitted') return 'info' as const;
-  return 'warning' as const;
+function verificationChipTone(
+  status?: string | null,
+): 'success' | 'danger' | 'warning' | 'info' {
+  if (status === 'verified') return 'success';
+  if (status === 'rejected') return 'danger';
+  if (status === 'under_review' || status === 'submitted') return 'info';
+  return 'warning';
 }
 
 function MenuSection({ title }: { title: string }) {
@@ -106,7 +103,6 @@ export default function AccountHubScreen() {
   } = useAuth();
   const { t } = useTranslation();
   const { language, setLocale } = useAppLocale();
-  const reducedMotion = useReducedMotion();
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const [signingOut, setSigningOut] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -239,143 +235,147 @@ export default function AccountHubScreen() {
   };
 
   return (
-    <AppScreen edges={['top']} contentStyle={{ paddingBottom: tabScrollInset }}>
+    <AppScreen
+      edges={['top']}
+      contentStyle={{ paddingBottom: tabScrollInset }}
+    >
       <ScreenHeader
         title={t('profile.account')}
         subtitle={t('profile.subtitle')}
       />
       {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
 
-      <LinearGradient
-        colors={['#0B2A43', '#0E4A5C', '#0F6B6B']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[styles.hero, !reducedMotion && styles.heroEnter]}
-      >
-        <Pressable
-          onPress={() => router.push('/profile/personal-information')}
-          accessibilityRole="button"
-          accessibilityLabel={t('profile.changePhoto')}
-          style={styles.avatarPress}
-        >
-          <View style={styles.avatarWrap}>
-            {avatarLoading && !avatarUrl ? (
-              <View style={[styles.avatarPlaceholder, { width: 92, height: 92 }]}>
-                <ActivityIndicator color={colors.white} />
-              </View>
-            ) : (
-              <Avatar
-                initials={initials}
-                size={92}
-                imageUri={avatarUrl}
-                backgroundColor="rgba(255,255,255,0.18)"
-                textColor={colors.white}
-              />
-            )}
-            <View style={styles.cameraBadge} accessibilityElementsHidden>
-              <Ionicons name="camera" size={16} color={colors.navy} />
-            </View>
-          </View>
-        </Pressable>
-
-        <Text style={styles.heroName}>{profile?.full_name ?? t('roles.worker')}</Text>
-        <Text style={styles.heroRole}>{roleLabel}</Text>
-        <View style={styles.pillRow}>
-          <StatusBadge
-            label={verificationLabel(workerProfile?.verification_status)}
-            tone={verificationTone(workerProfile?.verification_status)}
-            solid={workerProfile?.verification_status === 'verified'}
-            icon="shield-checkmark-outline"
-          />
-          <StatusBadge
-            label={billingStandingLabel(billing?.standing)}
-            tone={billing?.standing === 'restricted' ? 'danger' : 'success'}
-            solid={
-              billing?.standing === 'restricted' || billing?.standing === 'good_standing'
-            }
-            icon="card-outline"
-          />
-        </View>
-      </LinearGradient>
+      <ProfileHero
+        name={profile?.full_name ?? t('roles.worker')}
+        roleLabel={roleLabel}
+        initials={initials}
+        imageUri={avatarUrl}
+        avatarLoading={avatarLoading}
+        changePhotoLabel={t('profile.changePhoto')}
+        onPressAvatar={() => router.push('/profile/personal-information')}
+        chips={[
+          {
+            label: verificationLabel(workerProfile?.verification_status),
+            icon: 'shield-checkmark-outline',
+            tone: verificationChipTone(workerProfile?.verification_status),
+            solid: workerProfile?.verification_status === 'verified',
+            pulse: workerProfile?.verification_status === 'verified',
+          },
+          {
+            label: billingStandingLabel(billing?.standing),
+            icon: 'card-outline',
+            tone: billing?.standing === 'restricted' ? 'danger' : 'success',
+            solid:
+              billing?.standing === 'restricted' ||
+              billing?.standing === 'good_standing',
+            pulse: billing?.standing === 'good_standing',
+          },
+        ]}
+      />
 
       <MenuSection title={t('profile.account')} />
-      <ProfileMenuRow
-        icon="person-outline"
-        label={t('profile.personalInformation')}
-        trailing={personalTrailing}
-        tone={personalTrailing === 'Complete' ? 'positive' : 'attention'}
-        onPress={() => router.push('/profile/personal-information')}
-      />
-      {!isVerified ? (
+      <ListGroup style={styles.menuGroup}>
         <ProfileMenuRow
-          icon="clipboard-outline"
-          label={t('profile.accountSetup')}
-          trailing={setupTrailing}
-          tone="attention"
-          onPress={() => router.push('/auth/worker/pending')}
+          grouped
+          showDivider
+          icon="person-outline"
+          label={t('profile.personalInformation')}
+          trailing={personalTrailing}
+          tone={personalTrailing === 'Complete' ? 'positive' : 'attention'}
+          onPress={() => router.push('/profile/personal-information')}
         />
-      ) : null}
-      <ProfileMenuRow
-        icon="document-text-outline"
-        label={t('profile.credentials')}
-        trailing={credentialsTrailing}
-        tone={credentialsTone(credentialsTrailing)}
-        onPress={() => router.push('/documents')}
-      />
-      <ProfileMenuRow
-        icon="card-outline"
-        label={t('profile.payoutAccount')}
-        trailing={payoutTrailing}
-        tone={payoutTone(account?.status)}
-        onPress={() => router.push('/payout-setup')}
-      />
+        {!isVerified ? (
+          <ProfileMenuRow
+            grouped
+            showDivider
+            icon="clipboard-outline"
+            label={t('profile.accountSetup')}
+            trailing={setupTrailing}
+            tone="attention"
+            onPress={() => router.push('/auth/worker/pending')}
+          />
+        ) : null}
+        <ProfileMenuRow
+          grouped
+          showDivider
+          icon="document-text-outline"
+          label={t('profile.credentials')}
+          trailing={credentialsTrailing}
+          tone={credentialsTone(credentialsTrailing)}
+          onPress={() => router.push('/documents')}
+        />
+        <ProfileMenuRow
+          grouped
+          icon="card-outline"
+          label={t('profile.payoutAccount')}
+          trailing={payoutTrailing}
+          tone={payoutTone(account?.status)}
+          onPress={() => router.push('/payout-setup')}
+        />
+      </ListGroup>
 
       <MenuSection title={t('profile.activity')} />
-      <ProfileMenuRow
-        icon="notifications-outline"
-        label={t('notifications.title')}
-        trailing={notificationsTrailing}
-        tone={unreadCount > 0 ? 'attention' : 'neutral'}
-        onPress={() => router.push('/notifications')}
-      />
-      <ProfileMenuRow
-        icon="options-outline"
-        label={t('profile.notificationPreferences')}
-        onPress={() => router.push('/profile/notification-preferences')}
-      />
-      <ProfileMenuRow
-        icon="wallet-outline"
-        label={t('tabs.earnings')}
-        trailing={earningsTrailing}
-        tone={awaitingPayouts > 0 ? 'attention' : 'neutral'}
-        onPress={() => router.push('/(tabs)/payments')}
-      />
-      <ProfileMenuRow
-        icon="receipt-outline"
-        label={t('profile.invoices')}
-        trailing={invoicesTrailing}
-        tone={invoiceTone(invoicesTrailing)}
-        onPress={() => router.push('/(tabs)/invoices')}
-      />
+      <ListGroup style={styles.menuGroup}>
+        <ProfileMenuRow
+          grouped
+          showDivider
+          icon="notifications-outline"
+          label={t('notifications.title')}
+          trailing={notificationsTrailing}
+          tone={unreadCount > 0 ? 'attention' : 'neutral'}
+          onPress={() => router.push('/notifications')}
+        />
+        <ProfileMenuRow
+          grouped
+          showDivider
+          icon="options-outline"
+          label={t('profile.notificationPreferences')}
+          onPress={() => router.push('/profile/notification-preferences')}
+        />
+        <ProfileMenuRow
+          grouped
+          showDivider
+          icon="wallet-outline"
+          label={t('tabs.earnings')}
+          trailing={earningsTrailing}
+          tone={awaitingPayouts > 0 ? 'attention' : 'neutral'}
+          onPress={() => router.push('/(tabs)/payments')}
+        />
+        <ProfileMenuRow
+          grouped
+          icon="receipt-outline"
+          label={t('profile.invoices')}
+          trailing={invoicesTrailing}
+          tone={invoiceTone(invoicesTrailing)}
+          onPress={() => router.push('/(tabs)/invoices')}
+        />
+      </ListGroup>
 
       <MenuSection title={t('profile.help')} />
-      <ProfileMenuRow
-        icon="help-circle-outline"
-        label={t('profile.support')}
-        onPress={() => router.push('/support')}
-      />
-      <ProfileMenuRow
-        icon="language-outline"
-        label={t('profile.language')}
-        trailing={languageTrailing}
-        onPress={openLanguageChooser}
-      />
-      <ProfileMenuRow
-        icon="information-circle-outline"
-        label={t('profile.appInformation')}
-        trailing={`v${appVersion}`}
-        onPress={() => router.push('/profile/app-information')}
-      />
+      <ListGroup style={styles.menuGroup}>
+        <ProfileMenuRow
+          grouped
+          showDivider
+          icon="help-circle-outline"
+          label={t('profile.support')}
+          onPress={() => router.push('/support')}
+        />
+        <ProfileMenuRow
+          grouped
+          showDivider
+          icon="language-outline"
+          label={t('profile.language')}
+          trailing={languageTrailing}
+          onPress={openLanguageChooser}
+        />
+        <ProfileMenuRow
+          grouped
+          icon="information-circle-outline"
+          label={t('profile.appInformation')}
+          trailing={`v${appVersion}`}
+          onPress={() => router.push('/profile/app-information')}
+        />
+      </ListGroup>
 
       <MenuSection title={t('profile.session')} />
       <SignOutButton onPress={confirmSignOut} loading={signingOut} />
@@ -384,62 +384,6 @@ export default function AccountHubScreen() {
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    borderRadius: radii.lg,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  heroEnter: {
-    // Soft presence without bounce; ScreenEnter already handles page fade.
-    opacity: 1,
-  },
-  avatarPress: {
-    marginBottom: spacing.xs,
-  },
-  avatarWrap: {
-    position: 'relative',
-  },
-  avatarPlaceholder: {
-    borderRadius: 46,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cameraBadge: {
-    position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#0E4A5C',
-  },
-  heroName: {
-    fontFamily: typography.fonts.display,
-    fontSize: 22,
-    color: colors.white,
-    textAlign: 'center',
-  },
-  heroRole: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.82)',
-    textAlign: 'center',
-  },
-  pillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
   section: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -458,5 +402,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 0.4,
     color: colors.navy,
+  },
+  menuGroup: {
+    borderRadius: radii.lg,
+    borderColor: 'rgba(11, 42, 67, 0.12)',
+    marginBottom: spacing.xs,
   },
 });

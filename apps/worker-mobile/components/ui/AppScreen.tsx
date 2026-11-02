@@ -28,6 +28,8 @@ type Props = {
   contentKind?: ContentKind;
   /** Skip first-mount enter animation. */
   disableEnter?: boolean;
+  /** Optional soft tint layered over the shared Hive flow atmosphere. */
+  backgroundColor?: string;
 };
 
 export function AppScreen({
@@ -41,6 +43,7 @@ export function AppScreen({
   fullBleed = false,
   contentKind = 'list',
   disableEnter = false,
+  backgroundColor,
 }: Props) {
   const { gutter, contentMaxWidth } = useLayout(contentKind);
 
@@ -72,6 +75,12 @@ export function AppScreen({
   return (
     <View style={styles.root}>
       <HiveFlowBackground />
+      {backgroundColor ? (
+        <View
+          pointerEvents="none"
+          style={[styles.tint, { backgroundColor }]}
+        />
+      ) : null}
       <SafeAreaView style={[styles.safe, style]} edges={edges}>
         {disableEnter ? body : <ScreenEnter>{body}</ScreenEnter>}
       </SafeAreaView>
@@ -82,6 +91,10 @@ export function AppScreen({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  tint: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.22,
   },
   safe: {
     flex: 1,

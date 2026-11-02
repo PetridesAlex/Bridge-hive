@@ -34,9 +34,8 @@ export const en = {
     notNow: 'Not now',
   },
   boot: {
-    preparing: 'Preparing your workspace',
-    preparingSub:
-      'Checking your account and setting up your secure BridgeHive experience.',
+    preparing: 'Preparing workspace',
+    preparingSub: 'Securing your account.',
     bootstrapError:
       'We could not finish setting up your workspace. Check your connection and try again.',
     retrySetup: 'Retry workspace setup',

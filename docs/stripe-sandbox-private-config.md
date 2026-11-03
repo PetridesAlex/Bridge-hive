@@ -126,15 +126,28 @@ EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=sandbox
 3. Card entry remains available when a wallet is unsupported (PaymentSheet default + hosted Checkout fallback).
 4. Live Google Pay Business Console approval is a later step. Not available in Expo Go.
 
-**EAS Preview env (private)** — required for `testflight-sandbox` / `android-sandbox`:
+**EAS Preview env (private)** — required for `testflight-sandbox` / `android-sandbox`.
+
+Audit finding: **preview currently has no EAS environment variables** (production has Supabase URL/key for `hfnymqjrbppculcofaag` only; no Stripe publishable key listed there either). Configure preview privately before any sandbox build:
 
 ```bash
 cd apps/worker-mobile
-npx eas-cli env:list --environment preview
-# Must show EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY starting with pk_test_
-# Must keep EXPO_PUBLIC_SUPABASE_URL on https://hfnymqjrbppculcofaag.supabase.co
-# If missing publishable key:
-npx eas-cli env:create --environment preview --name EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY --value 'pk_test_…' --visibility sensitive --type string
+npx eas-cli env:list preview
+
+# Create each missing preview variable (values stay private; visibility sensitive where appropriate):
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL \
+  --value 'https://hfnymqjrbppculcofaag.supabase.co' --visibility plaintext --type string
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
+  --value '<same Bridge-Hive anon/publishable as production>' --visibility sensitive --type string
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_WEB_APP_URL \
+  --value 'https://bridgehive.app' --visibility plaintext --type string
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+  --value 'pk_test_…' --visibility sensitive --type string
+
+# Verify names only (do not use --include-sensitive in shared logs):
+npx eas-cli env:list preview
+# Confirm EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY exists, then privately confirm it starts with pk_test_
 ```
 
-Never paste full key values into chat. Leave EAS **production** Stripe keys / `EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=live` unchanged.
+`testflight-sandbox` / `android-sandbox` already set `EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=sandbox` in `eas.json` profile `env`.  
+Never paste full key values into chat. Leave EAS **production** values unchanged (no live Stripe publishable key changes in this prep).

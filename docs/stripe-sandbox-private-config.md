@@ -65,7 +65,7 @@ Mobile Supabase stays on Bridge-Hive (`EXPO_PUBLIC_SUPABASE_URL` / publishable k
 3. Confirm `EXPO_PUBLIC_SUPABASE_URL` still points at `hfnymqjrbppculcofaag`.
 4. Profile `testflight-sandbox` already sets `EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=sandbox` and store distribution. Production sets `live`.
 
-## D. Authorize a payment test account (after migration `041_worker_sandbox_payments`)
+## D. Authorize a payment test account (after sandbox migration applied)
 
 Platform admin (SQL/RPC, not client). **Not part of the first deploy approval** — enable only after webhook secrets exist:
 
@@ -74,7 +74,14 @@ select public.set_worker_payment_sandbox_tester('<worker_user_uuid>', true, 'Str
 select public.create_worker_sandbox_invoice('<worker_user_uuid>', 4250, 'EUR', 25000, 1700, 'Sandbox fixture');
 ```
 
-Live PaymentIntent hardening is **deferred** in `supabase/deferred_migrations/042_live_worker_invoice_payment_intent.sql` (not applied by `db push`).
+### Migration version mapping
+
+| Approved release name | Local / remote history version | Status |
+| --- | --- | --- |
+| `041_worker_sandbox_payments` | `20261103132451` / `worker_sandbox_payments` | Applied on Bridge-Hive; local file renamed to match remote |
+| Live PaymentIntent hardening | Deferred file only: `supabase/deferred_migrations/042_live_worker_invoice_payment_intent.sql` | **Not** in `supabase/migrations/`; not applied by `db push` |
+
+Any **future** active migration under `supabase/migrations/` must use a version ordered **after** `20261103132451`. Do not renumber, move, or silently activate deferred `042`.
 
 ## E. Local (optional)
 
@@ -97,23 +104,37 @@ EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=sandbox
 
 ## Not done until separately approved
 
-- Apply migration 041 to Bridge-Hive
-- Deploy sandbox + live payment functions
-- Create webhook destination + set `STRIPE_TEST_WEBHOOK_SECRET`
+- Controlled sandbox tester enablement + one TEST invoice + one Checkout payment
+- Native PaymentSheet / Apple Pay / Google Pay device verification
 - EAS `testflight-sandbox` build / TestFlight upload
-- Any real or test charges
+- Any live billing charges or live function changes
 
-## Apple Pay / Google Pay (not “ready” from code alone)
+## Apple Pay / Google Pay (native build readiness)
 
 **Apple Pay**
 
-1. Apple Developer → Identifiers → Merchant IDs → create `merchant.com.bridgehive.worker`.
-2. Enable Apple Pay on App ID `com.bridgehive.worker`.
-3. Stripe Dashboard (test) → Settings → Payment methods → Apple Pay → add iOS app → upload CSR.
-4. Requires a **development / store build** (not Expo Go).
+1. Merchant ID `merchant.com.bridgehive.worker` (Apple Developer + Stripe sandbox Payment Processing Certificate).
+2. Apple Pay capability enabled on App ID `com.bridgehive.worker`.
+3. App config / `StripeProvider` / iOS entitlement must all use the same merchant id (Stripe Expo plugin + `BridgeHiveApp.entitlements`).
+4. Next iOS provisioning profile for `com.bridgehive.worker` must include **Apple Pay** (do not revoke existing signing certs — regenerate/select profile after capability enable).
+5. Requires a **development / store build** (not Expo Go).
 
 **Google Pay**
 
-1. Sandbox: PaymentSheet `googlePay.testEnv: true` with `pk_test_` is enough for test cards in a native build.
-2. Live: Google Pay Business Console / production approval required later.
-3. Not available in Expo Go.
+1. Stripe plugin `enableGooglePay: true` → AndroidManifest `com.google.android.gms.wallet.api.enabled=true`.
+2. Sandbox PaymentSheet: `googlePay.testEnv: true`, merchant country `CY`, invoice currency from server (EUR).
+3. Card entry remains available when a wallet is unsupported (PaymentSheet default + hosted Checkout fallback).
+4. Live Google Pay Business Console approval is a later step. Not available in Expo Go.
+
+**EAS Preview env (private)** — required for `testflight-sandbox` / `android-sandbox`:
+
+```bash
+cd apps/worker-mobile
+npx eas-cli env:list --environment preview
+# Must show EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY starting with pk_test_
+# Must keep EXPO_PUBLIC_SUPABASE_URL on https://hfnymqjrbppculcofaag.supabase.co
+# If missing publishable key:
+npx eas-cli env:create --environment preview --name EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY --value 'pk_test_…' --visibility sensitive --type string
+```
+
+Never paste full key values into chat. Leave EAS **production** Stripe keys / `EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=live` unchanged.

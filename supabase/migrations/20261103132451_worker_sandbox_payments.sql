@@ -1,4 +1,8 @@
--- 041_worker_sandbox_payments.sql
+-- 20261103132451_worker_sandbox_payments.sql
+-- Approved release name: 041_worker_sandbox_payments (content unchanged).
+-- Remote history (Bridge-Hive hfnymqjrbppculcofaag): version 20261103132451 / name worker_sandbox_payments.
+-- Local filename renamed to match remote so CLI does not treat 041 as still pending.
+--
 -- SAME-PROJECT Stripe sandbox isolation ONLY (Bridge-Hive hfnymqjrbppculcofaag).
 --
 -- This migration does NOT:
@@ -10,7 +14,11 @@
 -- Sandbox Edge secrets (never overwrite live STRIPE_*):
 --   STRIPE_TEST_SECRET_KEY, STRIPE_TEST_WEBHOOK_SECRET
 --
--- Live PaymentIntent hardening is deferred to 042 (not part of sandbox release).
+-- Live PaymentIntent hardening remains deferred in
+--   supabase/deferred_migrations/042_live_worker_invoice_payment_intent.sql
+-- Do not move 042 into supabase/migrations/ until a separate live release.
+-- Any future active migration must use a version ordered AFTER 20261103132451;
+-- do not renumber or silently activate the deferred live migration.
 
 -- ---------------------------------------------------------------------------
 -- 1. Payment sandbox tester flag (server-authorized only)

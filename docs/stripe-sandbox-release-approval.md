@@ -1,92 +1,30 @@
-# Sandbox-only payment release — approval request
+# Sandbox-only payment release — status + next approval
 
 **Project:** Bridge-Hive `hfnymqjrbppculcofaag`  
-**Scope:** migration `041_worker_sandbox_payments` + deploy **only** three sandbox Edge Functions.  
-**Not in this release:** live function redeploys, live secret changes, `042` live hardening, tester enablement, EAS builds, Stripe charges.
+**Approved source SHA (deployed):** `4c5e986f212b198babecbdaedd309e2ce4b0e3b5`
 
-## Production read-only findings
+## Migration version mapping
 
-| Check | Result |
+| Item | Value |
 | --- | --- |
-| Applied migrations | `001` … `040` (latest `040_worker_push_calendar_hardening`) |
-| Pending (active folder) | **`041_worker_sandbox_payments` only** |
-| Deferred (not auto-applied) | `supabase/deferred_migrations/042_live_worker_invoice_payment_intent.sql` |
-| Deployed Edge Functions | `create-worker-invoice-checkout` only (v1) |
-| `worker_commission_invoices` rows | **0** |
-| Sandbox tables / tester column | **absent** |
-| Live `apply_worker_invoice_provider_event` | 8-arg signature (no `p_livemode`) |
+| Approved release name | `041_worker_sandbox_payments` |
+| Remote `schema_migrations` | version `20261103132451`, name `worker_sandbox_payments` |
+| Local active file | `supabase/migrations/20261103132451_worker_sandbox_payments.sql` (renamed to match remote; SQL body of approved 041) |
+| Deferred live hardening | `supabase/deferred_migrations/042_live_worker_invoice_payment_intent.sql` — **not** auto-applied |
 
-## Migration 041 effects (sandbox-only rewrite)
+Do **not** re-apply this SQL, insert a duplicate history row, or `db push` expecting a pending `041`.  
+Any future active migration must be versioned **after** `20261103132451`. Do not renumber or move deferred `042` into `supabase/migrations/` without a separate live release approval.
 
-**Does change when applied:**
-- Adds `worker_profiles.is_payment_sandbox_tester` (default `false`) + guard trigger + admin RPC `set_worker_payment_sandbox_tester`
-- Creates `worker_sandbox_commission_invoices` / `worker_sandbox_invoice_events` + RLS
-- Adds sandbox RPCs only (`create_worker_sandbox_invoice`, list/get, record PI/checkout, `apply_worker_sandbox_invoice_provider_event`)
+## Deployed (sandbox lane)
 
-**Does NOT change:**
-- `apply_worker_invoice_provider_event` (live) — left as currently deployed signature
-- `record_worker_invoice_checkout` / live invoice columns / rows
-- Commission obligations, overdue standing, billing emails
-- Existing invoice data (there are none)
+- Secrets (names only): `STRIPE_TEST_SECRET_KEY`, `STRIPE_TEST_WEBHOOK_SECRET`
+- Functions: `create-sandbox-worker-invoice-payment-sheet`, `create-sandbox-worker-invoice-checkout`, `stripe-test-webhook`
+- Live Checkout / live webhook / live secrets: not in this sandbox release scope
 
-**Compatibility with deployed Checkout v1:** unchanged. Checkout still calls `record_worker_invoice_checkout` and live Stripe secrets. Sandbox release does not redeploy it.
+## Next controlled test — approval request (not executed until you confirm)
 
-**Why the previous combined 041 was not used:** it replaced live `apply_worker_invoice_provider_event` (provider-id match + `p_livemode`), which would alter the live billing contract even with zero invoice rows. Live hardening sits in deferred `042` for a later explicit approval.
+See chat for the exact account / amount / Checkout-first scope. Default proposed amount unless you override: **€42.50** commission (`4250` minor) on **€250.00** gross (`25000` minor), rate **1700** bps, notes clearly labelled sandbox TEST.
 
-## Fail-closed before webhook secret
+**In scope after approval:** enable one non-demo tester → create one sandbox invoice → one hosted Checkout card payment → verify webhook + sandbox paid state → confirm live billing untouched → revoke tester.
 
-Sandbox PaymentSheet / Checkout / test webhook all require **both**:
-- `STRIPE_TEST_SECRET_KEY`
-- `STRIPE_TEST_WEBHOOK_SECRET`
-
-If the webhook secret is missing → HTTP 503 `payment_unavailable` / provider not configured. No PaymentIntent or Checkout Session is created.
-
-## Proposed commands (do not run until approved)
-
-```bash
-# 0) Confirm branch SHA
-git rev-parse HEAD
-
-# 1) Backup readiness (Dashboard or CLI)
-# Supabase Dashboard → Project Settings → Database → take a backup / note PITR window
-# Or: pg_dump of public schema if you maintain off-platform backups
-
-# 2) Apply ONLY pending active migration 041 (not deferred 042)
-npx supabase db push --linked
-# When prompted / listed, confirm only: 041_worker_sandbox_payments
-# Do NOT copy 042 into supabase/migrations/ for this release.
-
-# 3) Deploy sandbox functions ONLY (JWT defaults: checkout/sheet verify JWT; webhook verify_jwt=false via config)
-npx supabase functions deploy create-sandbox-worker-invoice-payment-sheet --project-ref hfnymqjrbppculcofaag
-npx supabase functions deploy create-sandbox-worker-invoice-checkout --project-ref hfnymqjrbppculcofaag
-npx supabase functions deploy stripe-test-webhook --project-ref hfnymqjrbppculcofaag
-
-# 4) AFTER Stripe test webhook endpoint exists, add secrets (new names only)
-npx supabase secrets set STRIPE_TEST_SECRET_KEY=*** STRIPE_TEST_WEBHOOK_SECRET=*** --project-ref hfnymqjrbppculcofaag
-# Never set/overwrite STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET in this release.
-
-# 5) Post-deploy verification (read-only / safe probes)
-# - Dashboard: functions list shows the three sandbox slugs ACTIVE
-# - curl OPTIONS/unauthorized to payment-sheet → 401
-# - invoke without STRIPE_TEST_WEBHOOK_SECRET configured → 503 (fail closed)
-# - select to_regclass('public.worker_sandbox_commission_invoices') is not null
-# - select count(*) from worker_commission_invoices still 0 / unchanged
-# - live create-worker-invoice-checkout still the only pre-existing live payment function
-
-# 6) Recovery
-# - Function: redeploy previous (none for sandbox — delete function if needed)
-# - Migration: forward-only; do not db reset. Compensating SQL would drop sandbox objects only if approved
-# - Secrets: delete STRIPE_TEST_* only; never rotate live keys as “recovery”
-```
-
-## Post-deploy (later approvals — not this ask)
-
-- Create Stripe test webhook → `…/functions/v1/stripe-test-webhook`
-- Set `STRIPE_TEST_*` secrets
-- `set_worker_payment_sandbox_tester` + `create_worker_sandbox_invoice`
-- EAS `testflight-sandbox`
-
-## Tests run / not run
-
-**Run:** Jest `@bridge-hive/web` worker-commission suite (unit/domain + migration file assertions).  
-**Not run:** `supabase test db` / pgTAP against production or local Docker; device PaymentSheet; real Stripe webhooks; EAS build.
+**Out of scope:** PaymentSheet/wallets, EAS, production merge, live function changes, migration 042.

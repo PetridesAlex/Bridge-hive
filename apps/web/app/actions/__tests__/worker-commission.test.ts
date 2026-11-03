@@ -34,7 +34,7 @@ import {
   workerInvoiceStatusLabel,
   WORKER_COMMISSION_DUE_DAYS,
 } from '@bridge-hive/domain';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 describe('worker commission money helpers', () => {
@@ -241,16 +241,21 @@ describe('stripe checkout request guards', () => {
     expect(stripeEventMatchesMode(true, 'test')).toBe(false);
   });
 
-  it('ships sandbox-only migration 041 and defers live hardening', () => {
+  it('ships sandbox migration aligned to remote 20261103132451 and defers live hardening', () => {
     const migrationsDir = join(__dirname, '../../../../../supabase/migrations');
     const deferredDir = join(
       __dirname,
       '../../../../../supabase/deferred_migrations',
     );
+    // Approved release was named 041; remote/history version is 20261103132451.
     const active = readFileSync(
-      join(migrationsDir, '041_worker_sandbox_payments.sql'),
+      join(migrationsDir, '20261103132451_worker_sandbox_payments.sql'),
       'utf8',
     );
+    expect(existsSync(join(migrationsDir, '041_worker_sandbox_payments.sql'))).toBe(
+      false,
+    );
+    expect(active).toContain('Approved release name: 041_worker_sandbox_payments');
     expect(active).toContain('worker_sandbox_commission_invoices');
     expect(active).toContain('is_payment_sandbox_tester');
     expect(active).toContain('apply_worker_sandbox_invoice_provider_event');
@@ -261,12 +266,16 @@ describe('stripe checkout request guards', () => {
     expect(active).toContain(
       'create or replace function public.record_worker_sandbox_invoice_payment_intent',
     );
+    expect(active).toContain('ordered AFTER 20261103132451');
     const deferred = readFileSync(
       join(deferredDir, '042_live_worker_invoice_payment_intent.sql'),
       'utf8',
     );
     expect(deferred).toContain('DEFERRED');
     expect(deferred).toContain('record_worker_invoice_payment_intent');
+    expect(
+      existsSync(join(migrationsDir, '042_live_worker_invoice_payment_intent.sql')),
+    ).toBe(false);
   });
 
   it('rejects webhook livemode mismatches', () => {

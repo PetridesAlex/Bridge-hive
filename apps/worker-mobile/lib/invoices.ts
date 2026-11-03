@@ -79,7 +79,7 @@ function asSandboxListItem(
   };
 }
 
-/** Sandbox RPCs land in generated types after migration 041 + db:types. */
+/** Sandbox RPCs land in generated types after migration 20261103132451 (approved 041) + db:types. */
 async function rpcSandbox(name: string, args?: Record<string, unknown>) {
   return (supabase as unknown as {
     rpc: (

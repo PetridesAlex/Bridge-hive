@@ -31,6 +31,18 @@
         "EXPO_PUBLIC_STRIPE_PAYMENTS_MODE": "sandbox"
       }
     },
+    "android-sandbox": {
+      "distribution": "internal",
+      "environment": "preview",
+      "channel": "preview",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_WEB_APP_URL": "https://bridgehive.app",
+        "EXPO_PUBLIC_STRIPE_PAYMENTS_MODE": "sandbox"
+      }
+    },
     "production": {
       "distribution": "store",
       "environment": "production",

@@ -18,7 +18,8 @@
 ## Local verification
 
 ```bash
-# Apply migration 041 without resetting data
+# Apply active migrations without resetting data
+# Sandbox lane: 20261103132451_worker_sandbox_payments.sql (approved name 041)
 npx supabase migration up --local
 npm run db:types
 npx supabase test db
@@ -68,11 +69,10 @@ If not, claim-time eligibility remains the safety net; schedule via Supabase Cro
 
 ## Deferred / separate approval
 
-- Apply migration 041 to Bridge-Hive + deploy sandbox/live payment functions
-- Add `STRIPE_TEST_*` secrets (without touching live Stripe secrets)
-- Create `stripe-test-webhook` destination in Stripe test mode
-- Authorize payment sandbox tester + create sandbox fixture invoice
+- Controlled sandbox tester + one TEST invoice + Checkout payment verification
+- Native PaymentSheet / Apple Pay / Google Pay (Merchant ID + CSR + native build)
 - EAS `testflight-sandbox` / TestFlight (when approved)
+- Live PaymentIntent hardening (`deferred_migrations/042_…` — version after `20261103132451` when promoted)
 - Credit notes / refunds UI / VAT treatment / Cyprus invoice legal format
 - Pay-all-invoices batch
 - Worker terms disclosure before production launch

@@ -1,5 +1,4 @@
 import {
-  ArrowLeft,
   BadgeCheck,
   CircleAlert,
   CircleDashed,
@@ -11,6 +10,7 @@ import {
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { AdminBackLink } from '@/components/admin/admin-back-link';
 import { ConfirmDialog } from '@/components/admin/confirm-dialog';
 import { OpenPayoutProofButton } from '@/components/admin/open-payout-proof-button';
 import { PackageReviewPanel } from '@/components/admin/package-review-panel';
@@ -189,13 +189,10 @@ export default async function VerificationApplicationWorkspacePage({
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <Link
+        <AdminBackLink
           href="/admin/applications"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-bh-text-secondary transition hover:text-bh-text"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Verification applications
-        </Link>
+          label="Verification applications"
+        />
         <header className="mt-4 overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
           <div
             aria-hidden
@@ -342,34 +339,62 @@ export default async function VerificationApplicationWorkspacePage({
           )}
       </Panel>
 
-      <Panel kicker="Payout" title="Payout account">
+      <Panel
+        kicker="Payout"
+        title="Payout account"
+        description="Bank details for platform payouts. Approval confirms platform use only."
+        accent="honey"
+        icon={Wallet}
+      >
         <div className="space-y-4 text-sm">
-          <dl className="grid gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border sm:grid-cols-3">
-            <StatusCell label="Status">
-              <span className="text-sm font-medium text-bh-text">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <PayoutTile label="Status" tone={payoutTone(payoutAccount?.status)}>
+              <span className="inline-flex items-center gap-1.5">
+                {payoutAccount?.status === 'verified' ? (
+                  <BadgeCheck className="h-4 w-4 shrink-0" aria-hidden />
+                ) : payoutAccount?.status === 'pending' ? (
+                  <Clock3 className="h-4 w-4 shrink-0" aria-hidden />
+                ) : payoutAccount?.status ? (
+                  <CircleAlert className="h-4 w-4 shrink-0" aria-hidden />
+                ) : (
+                  <CircleDashed className="h-4 w-4 shrink-0" aria-hidden />
+                )}
                 {payoutSummaryLabel(payoutAccount?.status as never)}
               </span>
-            </StatusCell>
-            <StatusCell label="Holder">
-              <span className="text-sm font-medium text-bh-text">
-                {canViewPayoutBank ? payoutAccount?.account_holder_name || '—' : 'Restricted'}
-              </span>
-            </StatusCell>
-            <StatusCell label="Masked IBAN">
-              <span className="font-mono text-sm font-medium text-bh-text">
-                {canViewPayoutBank ? payoutAccount?.masked_iban || '—' : 'Restricted'}
-              </span>
-            </StatusCell>
-          </dl>
+            </PayoutTile>
+            <PayoutTile label="Holder">
+              {canViewPayoutBank
+                ? payoutAccount?.account_holder_name || '—'
+                : 'Restricted'}
+            </PayoutTile>
+            <PayoutTile label="Masked IBAN" mono>
+              {canViewPayoutBank ? payoutAccount?.masked_iban || '—' : 'Restricted'}
+            </PayoutTile>
+          </div>
           {canViewPayoutBank && payoutAccount ? (
             <>
               {payoutAccount.rejection_reason ? (
-                <p className="rounded-xl border border-bh-danger/30 bg-bh-danger-soft px-3 py-2 text-sm text-bh-danger">
+                <p className="rounded-xl border border-bh-danger/30 bg-bh-danger-soft px-3.5 py-2.5 text-sm font-medium text-bh-danger">
                   Reason: {payoutAccount.rejection_reason}
                 </p>
               ) : null}
               {payoutAccount.proof_storage_path ? (
-                <OpenPayoutProofButton payoutAccountId={payoutAccount.id} />
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-bh-border/80 bg-gradient-to-r from-bh-subtle/70 via-bh-surface to-bh-surface px-4 py-3.5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-honey-soft text-bh-honey-strong ring-1 ring-bh-honey/30">
+                      <ShieldCheck className="h-4 w-4" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold tracking-tight text-bh-text">
+                        Proof of account
+                      </p>
+                      <p className="text-xs text-bh-text-muted">
+                        Opens a short-lived secure link in a new tab
+                      </p>
+                    </div>
+                  </div>
+                  <OpenPayoutProofButton payoutAccountId={payoutAccount.id} />
+                </div>
               ) : null}
               {ctx.capabilities.canApprovePayoutAccounts &&
               payoutAccount.status === 'pending' ? (
@@ -528,17 +553,84 @@ function workerMark(name: string) {
   return name.trim().slice(0, 2).toUpperCase() || '·';
 }
 
+type PayoutTone = 'success' | 'warning' | 'danger' | 'muted';
+
+function payoutTone(status: string | null | undefined): PayoutTone {
+  if (status === 'verified') return 'success';
+  if (status === 'pending') return 'warning';
+  if (status === 'rejected' || status === 'failed' || status === 'suspended') {
+    return 'danger';
+  }
+  return 'muted';
+}
+
+function PayoutTile({
+  label,
+  tone,
+  mono,
+  children,
+}: {
+  label: string;
+  tone?: PayoutTone;
+  mono?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        'group relative overflow-hidden rounded-2xl border px-4 py-3.5 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(7,29,48,0.07)] motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+        tone === 'success' &&
+          'border-bh-success/30 bg-gradient-to-br from-bh-success-soft to-bh-surface',
+        tone === 'warning' &&
+          'border-bh-honey/35 bg-gradient-to-br from-bh-honey-soft to-bh-surface',
+        tone === 'danger' &&
+          'border-bh-danger/30 bg-gradient-to-br from-bh-danger-soft to-bh-surface',
+        (!tone || tone === 'muted') &&
+          'border-bh-border/80 bg-gradient-to-br from-bh-subtle/70 to-bh-surface',
+      )}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-y-3 left-0 w-1 rounded-full',
+          tone === 'success' && 'bg-bh-success',
+          tone === 'warning' && 'bg-bh-honey',
+          tone === 'danger' && 'bg-bh-danger',
+          (!tone || tone === 'muted') && 'bg-bh-sidebar/25',
+        )}
+      />
+      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+        {label}
+      </p>
+      <div
+        className={cn(
+          'mt-1.5 break-words text-sm font-semibold tracking-tight',
+          mono && 'font-mono tracking-[0.06em]',
+          tone === 'success' && 'text-bh-success',
+          tone === 'warning' && 'text-bh-honey-strong',
+          tone === 'danger' && 'text-bh-danger',
+          (!tone || tone === 'muted') && 'text-bh-text',
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function Panel({
   kicker,
   title,
   description,
   accent,
+  icon: Icon,
   children,
 }: {
   kicker: string;
   title: string;
   description?: string;
   accent?: 'teal' | 'navy' | 'honey';
+  icon?: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
 }) {
   return (
@@ -557,18 +649,25 @@ function Panel({
           )}
         />
       ) : null}
-      <div className="border-b border-bh-border/80 bg-gradient-to-b from-bh-subtle/80 to-bh-surface px-5 py-4">
-        <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
-          {kicker}
-        </p>
-        <h3 className="mt-1 text-base font-semibold tracking-tight text-bh-text">
-          {title}
-        </h3>
-        {description ? (
-          <p className="mt-1 max-w-2xl text-sm leading-5 text-bh-text-secondary">
-            {description}
-          </p>
+      <div className="flex items-start gap-3 border-b border-bh-border/80 bg-gradient-to-b from-bh-subtle/80 to-bh-surface px-5 py-4">
+        {Icon ? (
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-sidebar text-bh-honey shadow-[0_6px_14px_rgba(7,29,48,0.2)]">
+            <Icon className="h-4 w-4" />
+          </span>
         ) : null}
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
+            {kicker}
+          </p>
+          <h3 className="mt-1 text-base font-semibold tracking-tight text-bh-text">
+            {title}
+          </h3>
+          {description ? (
+            <p className="mt-1 max-w-2xl text-sm leading-5 text-bh-text-secondary">
+              {description}
+            </p>
+          ) : null}
+        </div>
       </div>
       <div className="p-5">{children}</div>
     </section>

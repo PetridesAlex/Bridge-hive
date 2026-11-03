@@ -1,14 +1,17 @@
 'use client';
 
+import { ExternalLink, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { getPayoutProofDocumentUrl } from '@/app/actions/admin';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export function OpenPayoutProofButton({
   payoutAccountId,
+  className,
 }: {
   payoutAccountId: string;
+  className?: string;
 }) {
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
@@ -26,18 +29,37 @@ export function OpenPayoutProofButton({
   };
 
   return (
-    <div className="space-y-2">
-      <Button
+    <div className={cn('space-y-1.5', className)}>
+      <button
         type="button"
-        size="sm"
-        variant="outline"
         disabled={loading}
         onClick={() => void onOpen()}
+        className={cn(
+          'group relative inline-flex h-10 items-center justify-center gap-2 overflow-hidden rounded-full bg-bh-sidebar px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)] transition duration-300',
+          'hover:-translate-y-0.5 hover:bg-bh-sidebar-raised hover:shadow-[0_12px_24px_rgba(7,29,48,0.28)]',
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal',
+          'disabled:pointer-events-none disabled:opacity-60',
+          'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+        )}
       >
-        {loading ? 'Opening…' : 'Open proof document'}
-      </Button>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition duration-700 group-hover:translate-x-full"
+        />
+        {loading ? (
+          <Loader2 className="relative h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          <ExternalLink
+            className="relative h-4 w-4 transition duration-300 group-hover:scale-110"
+            aria-hidden
+          />
+        )}
+        <span className="relative">
+          {loading ? 'Opening…' : 'Open proof document'}
+        </span>
+      </button>
       {error ? (
-        <p className="text-sm text-rose-600" role="alert">
+        <p className="text-xs font-medium text-bh-danger" role="alert">
           {error}
         </p>
       ) : null}

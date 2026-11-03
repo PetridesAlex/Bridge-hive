@@ -188,32 +188,28 @@ export function AdminTopbar({
           ) : null}
         </Link>
 
-        <div className="group relative hidden max-w-[18.5rem] overflow-hidden rounded-2xl p-[1px] shadow-[0_12px_28px_rgba(7,29,48,0.22)] sm:block">
+        <div className="group relative hidden max-w-[18.5rem] overflow-hidden rounded-full bg-[#0b2a43] py-1.5 pl-1.5 pr-4 shadow-[0_10px_28px_rgba(7,29,48,0.18)] transition duration-300 hover:bg-[#0e3552] hover:shadow-[0_14px_32px_rgba(7,29,48,0.24)] sm:block">
           <div
             aria-hidden
-            className="absolute inset-0 bg-gradient-to-br from-bh-teal via-[#0e4a63] to-bh-sidebar"
+            className="pointer-events-none absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-bh-teal/15 to-transparent opacity-70 transition-opacity duration-500 group-hover:opacity-100"
           />
           <div
             aria-hidden
-            className="absolute -right-6 -top-8 h-20 w-20 rounded-full bg-bh-honey/25 blur-2xl transition-opacity duration-500 group-hover:opacity-80"
+            className="pointer-events-none absolute inset-x-3 bottom-0 h-px bg-gradient-to-r from-transparent via-bh-honey/45 to-transparent opacity-70"
           />
-          <div
-            aria-hidden
-            className="absolute -bottom-8 -left-4 h-16 w-16 rounded-full bg-bh-teal/35 blur-xl"
-          />
-          <div className="relative flex items-center gap-2.5 rounded-[15px] bg-gradient-to-br from-[#0b2a43]/92 via-[#0a334f]/95 to-[#071d30] py-1.5 pl-1.5 pr-3.5 ring-1 ring-white/15 backdrop-blur-sm">
-            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-bh-honey to-[#c9920f] text-sm font-bold tracking-wide text-bh-sidebar shadow-[0_4px_12px_rgba(224,170,24,0.35)] ring-1 ring-white/25">
+          <div className="relative flex items-center gap-2.5">
+            <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bh-honey text-[13px] font-bold tracking-wide text-bh-sidebar shadow-[0_6px_14px_rgba(224,170,24,0.28)]">
               {initials}
               <span
                 aria-hidden
-                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-bh-success ring-2 ring-[#071d30]"
+                className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-bh-success shadow-[0_0_0_2px_#0b2a43]"
               />
             </span>
-            <div className="min-w-0">
-              <p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-bh-honey">
+            <div className="min-w-0 pr-0.5">
+              <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-white/55">
                 {roleLabel}
               </p>
-              <p className="truncate text-[13px] font-semibold leading-tight text-white">
+              <p className="truncate text-[13px] font-semibold leading-tight tracking-tight text-white">
                 {email ?? displayName}
               </p>
             </div>

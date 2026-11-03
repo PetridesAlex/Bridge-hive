@@ -6,7 +6,6 @@ import {
   type WorkerRole,
 } from '@bridge-hive/domain';
 import {
-  ArrowLeft,
   Briefcase,
   Clock3,
   FileText,
@@ -18,6 +17,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { setRecruitmentPlatformStatusAction } from '@/app/actions/recruitment-admin';
+import { AdminBackLink } from '@/components/admin/admin-back-link';
 import { Button } from '@/components/ui/button';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { asUntypedDb } from '@/lib/recruitment-db';
@@ -76,13 +76,7 @@ export default async function AdminRecruitmentCandidatePage({
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="space-y-4">
-        <Link
-          href="/admin/recruitment"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-bh-text-secondary transition-colors hover:text-bh-teal-strong"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Recruitment
-        </Link>
+        <AdminBackLink href="/admin/recruitment" label="Recruitment" />
 
         <header className="overflow-hidden rounded-[1.35rem] border border-bh-border bg-bh-surface shadow-[0_10px_40px_rgba(7,29,48,0.06)]">
           <div

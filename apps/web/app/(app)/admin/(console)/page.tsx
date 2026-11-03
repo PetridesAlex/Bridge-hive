@@ -1,4 +1,6 @@
 import {
+  ArrowUpRight,
+  Bell,
   Building2,
   CheckCircle2,
   ClipboardCheck,
@@ -655,35 +657,139 @@ export default async function AdminDashboardPage() {
 
           {ctx.capabilities.canManageOrganizations &&
           (orgSubmittedNotifs.data ?? []).length > 0 ? (
-            <div className="border-t border-bh-border bg-bh-subtle/30 px-5 py-4">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-semibold text-bh-text">
-                  Submission notices
-                </p>
+            <div className="relative overflow-hidden border-t border-bh-border/80 bg-gradient-to-br from-[#fff8e8]/90 via-bh-subtle/40 to-bh-surface px-5 py-5">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-bh-honey/20 blur-2xl"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -bottom-14 left-8 h-28 w-28 rounded-full bg-bh-teal/10 blur-2xl"
+              />
+              <div
+                aria-hidden
+                className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-bh-honey to-transparent"
+              />
+
+              <div className="relative mb-3.5 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-bh-honey via-[#c9920f] to-bh-sidebar text-bh-sidebar shadow-[0_8px_18px_rgba(224,170,24,0.35)] ring-1 ring-white/40">
+                    <Bell className="h-4 w-4" aria-hidden />
+                    {unreadOrgNotifs.length > 0 ? (
+                      <span
+                        aria-hidden
+                        className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-bh-honey ring-2 ring-white"
+                      />
+                    ) : null}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-bh-honey-strong">
+                        Live queue
+                      </p>
+                      {unreadOrgNotifs.length > 0 ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-bh-honey px-2 py-0.5 text-[10px] font-bold tabular-nums text-bh-sidebar shadow-[0_4px_10px_rgba(224,170,24,0.35)]">
+                          <span
+                            aria-hidden
+                            className="h-1.5 w-1.5 animate-pulse rounded-full bg-bh-sidebar"
+                          />
+                          {unreadOrgNotifs.length} unread
+                        </span>
+                      ) : (
+                        <span className="inline-flex rounded-full border border-bh-border/80 bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
+                          All caught up
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-sm font-semibold tracking-tight text-bh-text">
+                      Submission notices
+                    </p>
+                  </div>
+                </div>
                 {unreadOrgNotifs.length > 0 ? (
                   <form action={markOrgSubmittedNotificationsReadAction}>
-                    <Button type="submit" size="sm" variant="outline">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="h-9 rounded-full border border-bh-honey/40 bg-white/90 px-3.5 text-xs font-semibold text-bh-honey-strong shadow-sm transition hover:-translate-y-0.5 hover:border-bh-honey hover:bg-bh-honey-soft hover:text-bh-sidebar"
+                      variant="outline"
+                    >
                       Mark notices read
                     </Button>
                   </form>
                 ) : null}
               </div>
-              <ul className="space-y-1.5">
-                {(orgSubmittedNotifs.data ?? []).slice(0, 3).map((n) => (
-                  <li key={n.id} className="text-sm text-bh-text-secondary">
-                    <Link
-                      href="/admin/organizations?status=under_review&sort=oldest"
-                      className="font-medium text-bh-honey-strong hover:underline"
-                    >
-                      {n.title}
-                    </Link>
-                    <span className="text-bh-text-muted">
-                      {' '}
-                      · {formatDateTime(n.created_at)}
-                      {n.read_at ? '' : ' · unread'}
-                    </span>
-                  </li>
-                ))}
+
+              <ul className="relative space-y-2">
+                {(orgSubmittedNotifs.data ?? []).slice(0, 3).map((n, index) => {
+                  const unread = !n.read_at;
+                  return (
+                    <li key={n.id}>
+                      <Link
+                        href="/admin/organizations?status=under_review&sort=oldest"
+                        className={cn(
+                          'group relative flex items-center gap-3 overflow-hidden rounded-2xl border px-3.5 py-3 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_10px_24px_rgba(7,29,48,0.08)] motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                          unread
+                            ? 'border-bh-honey/35 bg-white shadow-[0_6px_16px_rgba(224,170,24,0.12)]'
+                            : 'border-bh-border/70 bg-white/70 hover:border-bh-border-strong hover:bg-white',
+                        )}
+                        style={{
+                          animationDelay: `${index * 60}ms`,
+                        }}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'absolute inset-y-2 left-0 w-1 rounded-full transition-opacity',
+                            unread
+                              ? 'bg-bh-honey shadow-[0_0_10px_rgba(224,170,24,0.55)]'
+                              : 'bg-bh-teal/0 group-hover:bg-bh-teal/50',
+                          )}
+                        />
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/50 to-transparent transition duration-700 group-hover:translate-x-full"
+                        />
+                        <span
+                          className={cn(
+                            'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ring-1 transition duration-300 group-hover:scale-105',
+                            unread
+                              ? 'bg-bh-honey-soft text-bh-honey-strong ring-bh-honey/30'
+                              : 'bg-bh-subtle text-bh-text-secondary ring-bh-border/80 group-hover:bg-bh-teal-soft group-hover:text-bh-teal-strong',
+                          )}
+                        >
+                          <Building2 className="h-4 w-4" />
+                        </span>
+                        <span className="relative min-w-0 flex-1">
+                          <span
+                            className={cn(
+                              'block truncate text-sm font-semibold tracking-tight transition-colors',
+                              unread
+                                ? 'text-bh-text group-hover:text-bh-honey-strong'
+                                : 'text-bh-text-secondary group-hover:text-bh-teal-strong',
+                            )}
+                          >
+                            {n.title}
+                          </span>
+                          <span className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-bh-text-muted">
+                            <time dateTime={n.created_at}>
+                              {formatDateTime(n.created_at)}
+                            </time>
+                            {unread ? (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-bh-honey/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-bh-honey-strong">
+                                Unread
+                              </span>
+                            ) : null}
+                          </span>
+                        </span>
+                        <ArrowUpRight
+                          className="relative h-4 w-4 shrink-0 text-bh-text-muted transition duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-bh-honey-strong"
+                          aria-hidden
+                        />
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ) : null}

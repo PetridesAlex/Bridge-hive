@@ -1,6 +1,6 @@
-import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { AdminBackLink } from '@/components/admin/admin-back-link';
 import {
   CheckActivationRedirectButton,
   ReplaceAdminInviteForm,
@@ -136,13 +136,7 @@ export default async function OrganizationDetailPage({
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      <Link
-        href="/admin/organizations"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-bh-text-secondary transition hover:text-bh-text"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Back to organizations
-      </Link>
+      <AdminBackLink href="/admin/organizations" label="Back to organizations" />
 
       <header className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
         <div

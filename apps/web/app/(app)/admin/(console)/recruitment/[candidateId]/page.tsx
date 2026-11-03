@@ -13,7 +13,6 @@ import {
   Phone,
   ShieldCheck,
 } from 'lucide-react';
-import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 
 import { setRecruitmentPlatformStatusAction } from '@/app/actions/recruitment-admin';

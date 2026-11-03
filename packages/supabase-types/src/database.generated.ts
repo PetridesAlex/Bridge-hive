@@ -2118,6 +2118,7 @@ export type Database = {
           bio: string | null
           created_at: string
           is_app_review_demo: boolean
+          is_payment_sandbox_tester: boolean
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           updated_at: string
           user_id: string
@@ -2128,6 +2129,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           is_app_review_demo?: boolean
+          is_payment_sandbox_tester?: boolean
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           updated_at?: string
           user_id: string
@@ -2138,6 +2140,7 @@ export type Database = {
           bio?: string | null
           created_at?: string
           is_app_review_demo?: boolean
+          is_payment_sandbox_tester?: boolean
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           updated_at?: string
           user_id?: string

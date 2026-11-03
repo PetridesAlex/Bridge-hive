@@ -19,13 +19,26 @@
         "autoIncrement": true
       }
     },
+    "testflight-sandbox": {
+      "distribution": "store",
+      "environment": "preview",
+      "channel": "preview",
+      "ios": {
+        "autoIncrement": true
+      },
+      "env": {
+        "EXPO_PUBLIC_WEB_APP_URL": "https://bridgehive.app",
+        "EXPO_PUBLIC_STRIPE_PAYMENTS_MODE": "sandbox"
+      }
+    },
     "production": {
       "distribution": "store",
       "environment": "production",
       "channel": "production",
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_WEB_APP_URL": "https://bridgehive.app"
+        "EXPO_PUBLIC_WEB_APP_URL": "https://bridgehive.app",
+        "EXPO_PUBLIC_STRIPE_PAYMENTS_MODE": "live"
       }
     }
   },

@@ -75,6 +75,11 @@ type AuthContextValue = {
   isVerified: boolean;
   /** Server flag only — never set from client storage or deep links. */
   isAppReviewDemo: boolean;
+  /**
+   * Server flag only — authorizes Stripe sandbox payment functions/tables.
+   * Never granted by client env, email match, or publishable key prefix alone.
+   */
+  isPaymentSandboxTester: boolean;
   /** Verified worker OR App Review demo — may enter dashboard shell. */
   canAccessWorkerShell: boolean;
   /** Verified and not demo — may claim shifts / pay invoices. */
@@ -699,6 +704,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isVerified = workerProfile?.verification_status === 'verified';
   const isAppReviewDemo = Boolean(workerProfile?.is_app_review_demo);
+  const isPaymentSandboxTester = Boolean(
+    (workerProfile as { is_payment_sandbox_tester?: boolean } | null)
+      ?.is_payment_sandbox_tester,
+  );
   const canAccessWorkerShell = isVerified || isAppReviewDemo;
   const canPerformLiveMarketplaceActions = isVerified && !isAppReviewDemo;
   const isWorker = Boolean(workerProfile);
@@ -727,6 +736,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading: authLoading,
       isVerified,
       isAppReviewDemo,
+      isPaymentSandboxTester,
       canAccessWorkerShell,
       canPerformLiveMarketplaceActions,
       isWorker,
@@ -756,6 +766,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authLoading,
       isVerified,
       isAppReviewDemo,
+      isPaymentSandboxTester,
       canAccessWorkerShell,
       canPerformLiveMarketplaceActions,
       isWorker,

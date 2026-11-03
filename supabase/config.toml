@@ -54,5 +54,9 @@ enabled = true
 [functions.stripe-webhook]
 verify_jwt = false
 
+# Sandbox webhook (STRIPE_TEST_WEBHOOK_SECRET) — same JWT exception.
+[functions.stripe-test-webhook]
+verify_jwt = false
+
 [analytics]
 enabled = false

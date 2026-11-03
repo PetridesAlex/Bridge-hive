@@ -25,6 +25,10 @@ const PUBLIC_PATHS = [
 export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.includes(pathname)) return true;
   if (pathname.startsWith('/auth/')) return true;
+  // Stripe Checkout return → deep-link into the worker app (never marks paid).
+  if (pathname === '/invoices' || pathname.startsWith('/invoices/')) {
+    return true;
+  }
   if (pathname === '/recruitment' || pathname.startsWith('/recruitment/')) {
     return true;
   }

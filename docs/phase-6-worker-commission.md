@@ -18,7 +18,7 @@
 ## Local verification
 
 ```bash
-# Apply migration 035 without resetting data
+# Apply migration 041 without resetting data
 npx supabase migration up --local
 npm run db:types
 npx supabase test db
@@ -28,20 +28,28 @@ npm run lint
 npm run build -w @bridge-hive/web
 ```
 
-## Stripe test setup (user action — do not paste secrets into chat)
+## Stripe sandbox setup (same Bridge-Hive project — do not paste secrets into chat)
 
-1. Create/use a Stripe **test-mode** account.
-2. Copy test secret key and webhook signing secret into ignored local env only:
-   - `supabase/functions/.env.local` (from `.env.local.example`)
-   - root/web `.env.local` placeholders if needed for tooling
-3. Serve functions: `npx supabase functions serve --env-file supabase/functions/.env.local`
-4. Forward webhooks (if Stripe CLI already installed):
-   `stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhook`
-5. Worker taps **Pay invoice** → hosted Checkout. Payment methods follow the Stripe Dashboard
-   configuration (card, Apple Pay, Google Pay when eligible). Expo Go cannot prove native Apple Pay.
-6. Return URL shows **Payment confirmation pending** until the webhook marks paid.
+Full private steps: [stripe-sandbox-private-config.md](./stripe-sandbox-private-config.md).
+
+Summary:
+
+1. Keep mobile Supabase on **Bridge-Hive** (`hfnymqjrbppculcofaag`). Do not use Bridge-Hive-Test.
+2. Add **separately named** secrets `STRIPE_TEST_SECRET_KEY` / `STRIPE_TEST_WEBHOOK_SECRET` — never overwrite live `STRIPE_SECRET_KEY`.
+3. Sandbox functions: `create-sandbox-worker-invoice-payment-sheet`, `create-sandbox-worker-invoice-checkout`, `stripe-test-webhook`.
+4. Isolated tables: `worker_sandbox_commission_invoices` — never settle live invoices/debts.
+5. Authorize testers with `set_worker_payment_sandbox_tester` (server-only). App Review demo stays blocked.
+6. EAS `testflight-sandbox` uses `EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=sandbox` + `pk_test_` on preview env.
+7. Client success only shows pending until `stripe-test-webhook` confirms.
 
 Without Stripe credentials, invoices, restrictions, and dashboards still work; Pay shows a safe “temporarily unavailable” message.
+
+## Native Apple Pay / Google Pay
+
+- Merchant ID: `merchant.com.bridgehive.worker` (create in Apple Developer; upload CSR in Stripe).
+- Requires a **development / store build**. Expo Go cannot prove Apple Pay / Google Pay.
+- Code presence alone does **not** mean wallets are ready — certificates and native builds are required.
+- Google Pay sandbox uses `testEnv: true` with `pk_test_`.
 
 ## Local overdue fixture (privileged)
 
@@ -58,9 +66,13 @@ Or use ignored `scripts/local/simulate-worker-invoice-paid.sql` for payment simu
 If `pg_cron` is available, migration 018 schedules `process-worker-commission-overdue` hourly.
 If not, claim-time eligibility remains the safety net; schedule via Supabase Cron later.
 
-## Deferred
+## Deferred / separate approval
 
-- Native Apple Pay (Merchant ID + Expo dev build)
+- Apply migration 041 to Bridge-Hive + deploy sandbox/live payment functions
+- Add `STRIPE_TEST_*` secrets (without touching live Stripe secrets)
+- Create `stripe-test-webhook` destination in Stripe test mode
+- Authorize payment sandbox tester + create sandbox fixture invoice
+- EAS `testflight-sandbox` / TestFlight (when approved)
 - Credit notes / refunds UI / VAT treatment / Cyprus invoice legal format
 - Pay-all-invoices batch
 - Worker terms disclosure before production launch

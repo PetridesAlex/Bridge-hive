@@ -10,19 +10,44 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
+import { StripeProvider } from '@stripe/stripe-react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import React, { useEffect, type ReactElement } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { APP_BOOT_BG, AppBootCover } from '@/components/brand/AppBootCover';
+import {
+  getStripePublishableKey,
+  getStripeUrlScheme,
+  STRIPE_MERCHANT_IDENTIFIER,
+} from '@/constants/stripe';
 import { colors } from '@/constants/theme';
 import { LocaleProvider } from '@/i18n/locale-provider';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { UnverifiedRouteGuard } from '@/components/auth/UnverifiedRouteGuard';
 import { PushNotificationController } from '@/components/push/PushNotificationController';
+
+function OptionalStripeProvider({
+  children,
+}: {
+  children: ReactElement | ReactElement[];
+}) {
+  // Provider must always mount so useStripe() is safe; Pay is gated on a real key.
+  const publishableKey =
+    getStripePublishableKey() ?? 'pk_test_bridgehive_unavailable';
+  return (
+    <StripeProvider
+      publishableKey={publishableKey}
+      merchantIdentifier={STRIPE_MERCHANT_IDENTIFIER}
+      urlScheme={getStripeUrlScheme()}
+    >
+      {children}
+    </StripeProvider>
+  );
+}
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 // Fade navy-only native splash into the JS boot cover (no extra delay).
@@ -61,17 +86,18 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
       <SafeAreaProvider>
         <LocaleProvider>
-          <AuthProvider>
-            <PushNotificationController />
-            <UnverifiedRouteGuard>
-              <StatusBar style="dark" />
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: colors.background },
-                  animation: 'slide_from_right',
-                }}
-              >
+          <OptionalStripeProvider>
+            <AuthProvider>
+              <PushNotificationController />
+              <UnverifiedRouteGuard>
+                <StatusBar style="dark" />
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.background },
+                    animation: 'slide_from_right',
+                  }}
+                >
               {/* Navy first-launch journey: navy content + fade so no light flash between screens. */}
               <Stack.Screen
                 name="index"
@@ -112,10 +138,11 @@ export default function RootLayout() {
               <Stack.Screen name="profile/personal-information" />
               <Stack.Screen name="profile/app-information" />
               <Stack.Screen name="profile/notification-preferences" />
-                <Stack.Screen name="support" />
-              </Stack>
-            </UnverifiedRouteGuard>
-          </AuthProvider>
+                  <Stack.Screen name="support" />
+                </Stack>
+              </UnverifiedRouteGuard>
+            </AuthProvider>
+          </OptionalStripeProvider>
         </LocaleProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -9,16 +9,28 @@ import {
   daysUntilDue,
   dueDateCopy,
   isAllowedCheckoutOrigin,
+  isStripePublishableTestKey,
   isWorkerInvoicePayable,
   normalizeRouteParam,
   parseCheckoutInvoiceId,
   paymentReturnMarksPaid,
   PENDING_CONFIRMATION_MAX_MS,
   PENDING_CONFIRMATION_POLL_MS,
+  canStartSandboxPayment,
+  parseStripePaymentsMode,
+  providerIdsMatchInvoice,
   rejectClientChosenAmount,
+  resolveConfiguredStripeMode,
+  resolveLiveStripeMode,
   resolveInvoiceDetailUiState,
+  resolveSandboxTestSecret,
+  sandboxPaymentsReady,
+  sandboxStripeConfigured,
+  sandboxWebhookTargetsLiveInvoiceTable,
   shouldContinuePendingPoll,
   stripeConfigured,
+  stripeEventMatchesMode,
+  stripeModeFromSecretKey,
   workerInvoiceStatusLabel,
   WORKER_COMMISSION_DUE_DAYS,
 } from '@bridge-hive/domain';
@@ -108,6 +120,191 @@ describe('stripe checkout request guards', () => {
     ).toBe(true);
   });
 
+  it('resolves live vs sandbox secrets without cross-wiring', () => {
+    expect(stripeModeFromSecretKey('sk_test_abc')).toBe('test');
+    expect(stripeModeFromSecretKey('rk_live_abc')).toBe('live');
+    expect(stripeModeFromSecretKey('pk_test_abc')).toBeNull();
+    expect(
+      resolveLiveStripeMode({
+        STRIPE_SECRET_KEY: 'sk_live_abc',
+      }),
+    ).toBe('live');
+    expect(
+      resolveLiveStripeMode({
+        STRIPE_SECRET_KEY: 'sk_live_abc',
+        STRIPE_MODE: 'test',
+      }),
+    ).toBeNull();
+    expect(
+      resolveConfiguredStripeMode({
+        STRIPE_SECRET_KEY: 'sk_test_abc',
+        STRIPE_MODE: 'test',
+      }),
+    ).toBe('test');
+    expect(resolveSandboxTestSecret('sk_test_abc')?.mode).toBe('test');
+    expect(resolveSandboxTestSecret('sk_live_abc')).toBeNull();
+    expect(
+      sandboxStripeConfigured({
+        STRIPE_TEST_SECRET_KEY: 'sk_test_abc',
+        STRIPE_TEST_WEBHOOK_SECRET: 'whsec_x',
+      }),
+    ).toBe(true);
+    expect(
+      sandboxStripeConfigured({
+        STRIPE_TEST_SECRET_KEY: 'sk_live_abc',
+        STRIPE_TEST_WEBHOOK_SECRET: 'whsec_x',
+      }),
+    ).toBe(false);
+    expect(parseStripePaymentsMode('sandbox')).toBe('sandbox');
+    expect(parseStripePaymentsMode(undefined)).toBe('live');
+  });
+
+  it('documents separately named sandbox functions and secrets', () => {
+    const readme = readFileSync(
+      join(__dirname, '../../../../../supabase/functions/README.md'),
+      'utf8',
+    );
+    expect(readme).toContain('STRIPE_TEST_SECRET_KEY');
+    expect(readme).toContain('STRIPE_TEST_WEBHOOK_SECRET');
+    expect(readme).toContain('create-sandbox-worker-invoice-payment-sheet');
+    expect(readme).toContain('stripe-test-webhook');
+    expect(readme).toContain('STRIPE_SECRET_KEY');
+  });
+
+  it('fail-closes sandbox payments until webhook secret exists', () => {
+    expect(
+      sandboxPaymentsReady({
+        STRIPE_TEST_SECRET_KEY: 'sk_test_abc',
+        STRIPE_TEST_WEBHOOK_SECRET: '',
+      }),
+    ).toBe(false);
+    expect(
+      sandboxPaymentsReady({
+        STRIPE_TEST_SECRET_KEY: 'sk_test_abc',
+        STRIPE_TEST_WEBHOOK_SECRET: 'whsec_abc',
+      }),
+    ).toBe(true);
+  });
+
+  it('denies unauthorized sandbox access and app-review demo', () => {
+    expect(
+      canStartSandboxPayment({
+        isPaymentSandboxTester: false,
+        isAppReviewDemo: false,
+        paymentsMode: 'sandbox',
+      }),
+    ).toBe(false);
+    expect(
+      canStartSandboxPayment({
+        isPaymentSandboxTester: true,
+        isAppReviewDemo: true,
+        paymentsMode: 'sandbox',
+      }),
+    ).toBe(false);
+    expect(
+      canStartSandboxPayment({
+        isPaymentSandboxTester: true,
+        isAppReviewDemo: false,
+        paymentsMode: 'live',
+      }),
+    ).toBe(false);
+    expect(
+      canStartSandboxPayment({
+        isPaymentSandboxTester: true,
+        isAppReviewDemo: false,
+        paymentsMode: 'sandbox',
+      }),
+    ).toBe(true);
+  });
+
+  it('keeps sandbox webhook off live invoice tables', () => {
+    expect(sandboxWebhookTargetsLiveInvoiceTable('worker_commission_invoices')).toBe(
+      true,
+    );
+    expect(
+      sandboxWebhookTargetsLiveInvoiceTable('worker_sandbox_commission_invoices'),
+    ).toBe(false);
+  });
+
+  it('rejects amount/currency/provider id mismatches and ignores client paid status', () => {
+    expect(amountsMatch(4250, 4251)).toBe(false);
+    expect(currenciesMatch('EUR', 'USD')).toBe(false);
+    expect(
+      providerIdsMatchInvoice({
+        storedCheckoutSessionId: 'cs_a',
+        storedPaymentIntentId: 'pi_a',
+        eventCheckoutSessionId: 'cs_b',
+        eventPaymentIntentId: 'pi_b',
+      }),
+    ).toBe(false);
+    expect(paymentReturnMarksPaid({ payment_status: 'success' })).toBe(false);
+    expect(stripeEventMatchesMode(true, 'test')).toBe(false);
+  });
+
+  it('ships sandbox-only migration 041 and defers live hardening', () => {
+    const migrationsDir = join(__dirname, '../../../../../supabase/migrations');
+    const deferredDir = join(
+      __dirname,
+      '../../../../../supabase/deferred_migrations',
+    );
+    const active = readFileSync(
+      join(migrationsDir, '041_worker_sandbox_payments.sql'),
+      'utf8',
+    );
+    expect(active).toContain('worker_sandbox_commission_invoices');
+    expect(active).toContain('is_payment_sandbox_tester');
+    expect(active).toContain('apply_worker_sandbox_invoice_provider_event');
+    expect(active).not.toContain('create or replace function public.apply_worker_invoice_provider_event');
+    expect(active).not.toContain(
+      'create or replace function public.record_worker_invoice_payment_intent',
+    );
+    expect(active).toContain(
+      'create or replace function public.record_worker_sandbox_invoice_payment_intent',
+    );
+    const deferred = readFileSync(
+      join(deferredDir, '042_live_worker_invoice_payment_intent.sql'),
+      'utf8',
+    );
+    expect(deferred).toContain('DEFERRED');
+    expect(deferred).toContain('record_worker_invoice_payment_intent');
+  });
+
+  it('rejects webhook livemode mismatches', () => {
+    expect(stripeEventMatchesMode(false, 'test')).toBe(true);
+    expect(stripeEventMatchesMode(true, 'test')).toBe(false);
+    expect(stripeEventMatchesMode(true, 'live')).toBe(true);
+    expect(stripeEventMatchesMode(false, 'live')).toBe(false);
+  });
+
+  it('requires stored provider ids to match before paid apply', () => {
+    expect(
+      providerIdsMatchInvoice({
+        storedCheckoutSessionId: 'cs_1',
+        storedPaymentIntentId: null,
+        eventCheckoutSessionId: 'cs_1',
+        eventPaymentIntentId: 'pi_x',
+      }),
+    ).toBe(true);
+    expect(
+      providerIdsMatchInvoice({
+        storedCheckoutSessionId: 'cs_1',
+        storedPaymentIntentId: 'pi_1',
+        eventCheckoutSessionId: 'cs_other',
+        eventPaymentIntentId: 'pi_1',
+      }),
+    ).toBe(true);
+    expect(
+      providerIdsMatchInvoice({
+        storedCheckoutSessionId: 'cs_1',
+        storedPaymentIntentId: 'pi_1',
+        eventCheckoutSessionId: 'cs_other',
+        eventPaymentIntentId: 'pi_other',
+      }),
+    ).toBe(false);
+    expect(isStripePublishableTestKey('pk_test_x')).toBe(true);
+    expect(isStripePublishableTestKey('pk_live_x')).toBe(false);
+  });
+
   it('allowlists localhost return origins and rejects unknown hosts', () => {
     expect(isAllowedCheckoutOrigin('http://127.0.0.1:8081')).toBe(true);
     expect(isAllowedCheckoutOrigin('http://localhost:8081')).toBe(true);
@@ -132,13 +329,14 @@ describe('stripe checkout request guards', () => {
     );
   });
 
-  it('disables Supabase JWT verification for stripe-webhook only', () => {
+  it('disables Supabase JWT verification for live and sandbox Stripe webhooks', () => {
     const configPath = join(
       __dirname,
       '../../../../../supabase/config.toml',
     );
     const toml = readFileSync(configPath, 'utf8');
     expect(toml).toMatch(/\[functions\.stripe-webhook\][\s\S]*?verify_jwt\s*=\s*false/);
+    expect(toml).toMatch(/\[functions\.stripe-test-webhook\][\s\S]*?verify_jwt\s*=\s*false/);
   });
 
   it('normalizes route params and strips query pollution from ids', () => {

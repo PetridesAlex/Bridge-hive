@@ -44,6 +44,179 @@ export function stripeConfigured(env: {
   return Boolean(env.STRIPE_SECRET_KEY?.trim() && env.STRIPE_WEBHOOK_SECRET?.trim());
 }
 
+export type StripeMode = 'test' | 'live';
+
+/** Infer Stripe mode from secret/restricted key prefix. */
+export function stripeModeFromSecretKey(
+  secretKey: string | null | undefined,
+): StripeMode | null {
+  const key = secretKey?.trim() ?? '';
+  if (key.startsWith('sk_test_') || key.startsWith('rk_test_')) return 'test';
+  if (key.startsWith('sk_live_') || key.startsWith('rk_live_')) return 'live';
+  return null;
+}
+
+export function parseStripeMode(
+  value: string | null | undefined,
+): StripeMode | null {
+  const normalized = value?.trim().toLowerCase();
+  if (normalized === 'test' || normalized === 'live') return normalized;
+  return null;
+}
+
+/**
+ * Live payment secrets: STRIPE_SECRET_KEY (+ optional STRIPE_MODE).
+ * If STRIPE_MODE is unset, mode is inferred from the key prefix.
+ */
+export function resolveLiveStripeMode(env: {
+  STRIPE_SECRET_KEY?: string | null;
+  STRIPE_MODE?: string | null;
+}): StripeMode | null {
+  const fromKey = stripeModeFromSecretKey(env.STRIPE_SECRET_KEY);
+  if (!fromKey) return null;
+  const configured = parseStripeMode(env.STRIPE_MODE);
+  if (configured && configured !== fromKey) return null;
+  return fromKey;
+}
+
+/**
+ * Sandbox secrets on the same Supabase project: STRIPE_TEST_SECRET_KEY only.
+ * Must be sk_test_ / rk_test_. Never treat live STRIPE_SECRET_KEY as sandbox.
+ */
+export function resolveSandboxTestSecret(
+  testSecretKey: string | null | undefined,
+): { key: string; mode: 'test' } | null {
+  const key = testSecretKey?.trim() ?? '';
+  if (!key) return null;
+  if (stripeModeFromSecretKey(key) !== 'test') return null;
+  return { key, mode: 'test' };
+}
+
+export function sandboxStripeConfigured(env: {
+  STRIPE_TEST_SECRET_KEY?: string | null;
+  STRIPE_TEST_WEBHOOK_SECRET?: string | null;
+}): boolean {
+  return Boolean(
+    resolveSandboxTestSecret(env.STRIPE_TEST_SECRET_KEY) &&
+      env.STRIPE_TEST_WEBHOOK_SECRET?.trim(),
+  );
+}
+
+/**
+ * Sandbox PaymentSheet/Checkout must fail closed until BOTH test secrets exist.
+ * Prevents charging before stripe-test-webhook can confirm payment.
+ */
+export function sandboxPaymentsReady(env: {
+  STRIPE_TEST_SECRET_KEY?: string | null;
+  STRIPE_TEST_WEBHOOK_SECRET?: string | null;
+}): boolean {
+  return sandboxStripeConfigured(env);
+}
+
+/** Sandbox webhook must never apply to live invoice tables. */
+export function sandboxWebhookTargetsLiveInvoiceTable(
+  tableName: string | null | undefined,
+): boolean {
+  return tableName === 'worker_commission_invoices';
+}
+
+/**
+ * Authorize sandbox payment start: server tester flag required.
+ * Client mode / email / pk_test_ alone are insufficient.
+ */
+export function canStartSandboxPayment(args: {
+  isPaymentSandboxTester: boolean;
+  isAppReviewDemo: boolean;
+  paymentsMode: StripePaymentsMode;
+}): boolean {
+  if (args.isAppReviewDemo) return false;
+  if (args.paymentsMode !== 'sandbox') return false;
+  return args.isPaymentSandboxTester === true;
+}
+
+/** Client build payment lane: sandbox TestFlight vs live production. */
+export type StripePaymentsMode = 'sandbox' | 'live';
+
+export function parseStripePaymentsMode(
+  value: string | null | undefined,
+): StripePaymentsMode {
+  return value?.trim().toLowerCase() === 'sandbox' ? 'sandbox' : 'live';
+}
+
+/**
+ * @deprecated Prefer resolveLiveStripeMode. Kept for existing unit tests.
+ * Requires explicit STRIPE_MODE matching the key.
+ */
+export function resolveConfiguredStripeMode(env: {
+  STRIPE_SECRET_KEY?: string | null;
+  STRIPE_MODE?: string | null;
+}): StripeMode | null {
+  const configured = parseStripeMode(env.STRIPE_MODE);
+  const fromKey = stripeModeFromSecretKey(env.STRIPE_SECRET_KEY);
+  if (!configured || !fromKey) return null;
+  if (configured !== fromKey) return null;
+  return configured;
+}
+
+/** Webhook events must match the function's configured mode. */
+export function stripeEventMatchesMode(
+  livemode: boolean,
+  configuredMode: StripeMode,
+): boolean {
+  return livemode === (configuredMode === 'live');
+}
+
+/** Publishable key is test when it starts with pk_test_. */
+export function isStripePublishableTestKey(
+  publishableKey: string | null | undefined,
+): boolean {
+  return Boolean(publishableKey?.trim().startsWith('pk_test_'));
+}
+
+/** PaymentIntent / Checkout Session idempotency for PaymentSheet. */
+export function paymentIntentIdempotencyKey(
+  invoiceId: string,
+  priorPaymentIntentId: string | null | undefined,
+  priorIntentStatus: string | null | undefined,
+): string {
+  if (
+    priorPaymentIntentId &&
+    priorIntentStatus &&
+    priorIntentStatus !== 'requires_payment_method' &&
+    priorIntentStatus !== 'requires_confirmation' &&
+    priorIntentStatus !== 'requires_action'
+  ) {
+    return `invoice-pi-${invoiceId}-${priorPaymentIntentId}`;
+  }
+  if (priorPaymentIntentId && !priorIntentStatus) {
+    return `invoice-pi-${invoiceId}-${priorPaymentIntentId}`;
+  }
+  return `invoice-pi-${invoiceId}-v1`;
+}
+
+/**
+ * Paid apply requires the provider id on the event to match the id stored
+ * when checkout / PaymentSheet was initiated.
+ */
+export function providerIdsMatchInvoice(args: {
+  storedCheckoutSessionId: string | null | undefined;
+  storedPaymentIntentId: string | null | undefined;
+  eventCheckoutSessionId: string | null | undefined;
+  eventPaymentIntentId: string | null | undefined;
+}): boolean {
+  const sessionOk = Boolean(
+    args.eventCheckoutSessionId &&
+      args.storedCheckoutSessionId &&
+      args.eventCheckoutSessionId === args.storedCheckoutSessionId,
+  );
+  const piOk = Boolean(
+    args.eventPaymentIntentId &&
+      args.storedPaymentIntentId &&
+      args.eventPaymentIntentId === args.storedPaymentIntentId,
+  );
+  return sessionOk || piOk;
+}
+
 /**
  * Normalize Expo Router / deep-link params so query fragments never pollute IDs.
  */

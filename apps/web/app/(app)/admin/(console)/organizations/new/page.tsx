@@ -1,6 +1,4 @@
-import { ArrowLeft } from 'lucide-react';
-import Link from 'next/link';
-
+import { AdminBackLink } from '@/components/admin/admin-back-link';
 import { CreateOrganizationForm } from '@/components/admin/create-organization-form';
 import { EmptyState } from '@/components/empty-state';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
@@ -19,13 +17,10 @@ export default async function NewOrganizationPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <Link
+        <AdminBackLink
           href="/admin/organizations"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-bh-text-secondary transition hover:text-bh-text"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-          Back to organizations
-        </Link>
+          label="Back to organizations"
+        />
         <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
           Provisioning
         </p>

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   formatMoneyMinor,
@@ -6,6 +5,7 @@ import {
   workerInvoiceStatusLabel,
 } from '@bridge-hive/domain';
 
+import { AdminBackLink } from '@/components/admin/admin-back-link';
 import { EmptyState } from '@/components/empty-state';
 import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { formatDateTime, roleLabel } from '@/lib/format';
@@ -150,9 +150,7 @@ export default async function AdminFinanceInvoiceDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/admin/finance" className="text-sm text-slate-600 hover:underline">
-          ← Finance
-        </Link>
+        <AdminBackLink href="/admin/finance" label="Finance" />
         <h2 className="mt-2 text-2xl font-semibold text-slate-900">
           {full.invoice_number}
         </h2>

@@ -1,3 +1,4 @@
+import { ArrowLeft, Check } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -9,7 +10,12 @@ import {
 } from '@bridge-hive/domain';
 
 import { ConfirmActivationForm } from '@/components/auth/confirm-activation-form';
-import { Button } from '@/components/ui/button';
+import {
+  SecureAuthShell as Shell,
+  secureAuthBodyClass,
+  secureAuthSecondaryClass,
+  secureAuthTitleClass,
+} from '@/components/auth/secure-auth-shell';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,20 +43,25 @@ export default async function AuthConfirmPage({
 
   if (!tokenHash || !typeRaw || !isAuthConfirmEmailOtpType(typeRaw, next)) {
     return (
-      <Shell>
-        <h1 className="text-2xl font-semibold text-bh-text">
+      <Shell tone="danger" kicker="Secure link">
+        <h1 className={secureAuthTitleClass}>
           This secure link is no longer valid
         </h1>
-        <p className="mt-2 text-sm text-bh-text-secondary">
+        <p className={secureAuthBodyClass}>
           It may have expired, already been used, or been replaced by a newer
           email. Request a new link from the Bridge Hive worker app or ask your
           administrator for a new activation email.
         </p>
-        <div className="mt-6">
-          <Button asChild variant="outline">
-            <Link href="/sign-in">Back to sign in</Link>
-          </Button>
-        </div>
+        <Link
+          href="/sign-in"
+          className={`mt-8 ${secureAuthSecondaryClass}`}
+        >
+          <ArrowLeft
+            className="h-4 w-4 transition group-hover:-translate-x-0.5"
+            aria-hidden
+          />
+          Back to sign in
+        </Link>
       </Shell>
     );
   }
@@ -71,15 +82,37 @@ export default async function AuthConfirmPage({
       ? 'Continue password reset'
       : 'Continue activation';
 
+  const kicker = workerSignup
+    ? 'Email confirmation'
+    : workerRecovery
+      ? 'Password reset'
+      : 'Organization activation';
+
   return (
-    <Shell>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-honey-strong">
-        Bridge Hive
-      </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight text-bh-text">
+    <Shell kicker={kicker}>
+      <h1 className={secureAuthTitleClass}>
         {title}
       </h1>
-      <p className="mt-2 text-sm text-bh-text-secondary">{body}</p>
+      <p className={secureAuthBodyClass}>{body}</p>
+
+      <ul className="mt-6 space-y-2.5">
+        {[
+          'Single-use secure link',
+          'Verified once — never on page load',
+          'Expires automatically if unused',
+        ].map((item) => (
+          <li
+            key={item}
+            className="flex items-center gap-2.5 text-[13px] font-medium text-bh-text-secondary"
+          >
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-bh-teal-strong ring-1 ring-bh-teal/25">
+              <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+            </span>
+            {item}
+          </li>
+        ))}
+      </ul>
+
       <ConfirmActivationForm
         tokenHash={tokenHash}
         type={typeRaw}
@@ -96,14 +129,4 @@ function first(
   if (typeof value === 'string') return value;
   if (Array.isArray(value) && typeof value[0] === 'string') return value[0];
   return null;
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-bh-subtle to-bh-surface px-4 py-12">
-      <div className="w-full max-w-lg rounded-3xl border border-bh-border bg-bh-surface p-6 shadow-[0_8px_30px_rgba(7,29,48,0.06)] sm:p-8">
-        {children}
-      </div>
-    </div>
-  );
 }

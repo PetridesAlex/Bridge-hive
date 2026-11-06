@@ -1,11 +1,13 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import {
   fetchAppReviewDemoCatalog,
   marketplaceShiftFromDemoCatalog,
 } from '@/lib/app-review-demo';
 import { getPublishedShifts, type MarketplaceShift } from '@/lib/queries';
+import { marketplaceShiftIsVisible } from '@/lib/shift-availability';
 import { useAuth } from '@/providers/AuthProvider';
 
 export function useShifts() {
@@ -22,6 +24,7 @@ export function useShifts() {
     setError(undefined);
 
     if (!user?.id) {
+      if (currentRequest !== requestId.current) return;
       setShifts([]);
       setLoading(false);
       return;
@@ -57,10 +60,12 @@ export function useShifts() {
       } else {
         // Marketplace RLS already enforces role/org/deadline. Keep enum-safe client filter.
         const role = workerProfile?.worker_role;
+        // Keep shifts with known open capacity, and keep unknown capacity
+        // visible (do not treat missing open_positions as 0 available).
         const filtered = (role
           ? result.data.filter((shift) => shift.required_role === role)
           : result.data
-        ).filter((shift) => shift.open_positions > 0);
+        ).filter(marketplaceShiftIsVisible);
         setShifts(filtered);
         setOffline(false);
       }
@@ -88,6 +93,13 @@ export function useShifts() {
       void refresh();
     }, [refresh]),
   );
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refresh();
+    });
+    return () => sub.remove();
+  }, [refresh]);
 
   return {
     shifts,

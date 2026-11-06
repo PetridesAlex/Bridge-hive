@@ -60,6 +60,8 @@ describe('app-review-demo helpers', () => {
     expect(shift.id).toBe(APP_REVIEW_DEMO_SHIFT_ID);
     expect(shift.notes).toContain('APP REVIEW DEMO');
     expect(shift.open_positions).toBe(1);
+    expect(shift.availability_known).toBe(true);
+    expect(shift.availability_error).toBeNull();
     expect(shift.organization_name).toBe('Demo Care Facility (sample)');
   });
 
@@ -67,6 +69,9 @@ describe('app-review-demo helpers', () => {
     const detail = workerShiftDetailsFromDemoCatalog(sampleCatalog);
     expect(detail.shift_id).toBe(APP_REVIEW_DEMO_SHIFT_ID);
     expect(detail.notes).toContain('NOT A LIVE SHIFT');
+    expect(detail.open_positions).toBe(1);
+    expect(detail.availability_known).toBe(true);
+    expect(detail.availability_error).toBeNull();
 
     const invoice = invoiceListItemFromDemoCatalog(sampleCatalog, 'worker-1');
     expect(invoice.id).toBe(APP_REVIEW_DEMO_INVOICE_ID);

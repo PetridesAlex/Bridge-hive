@@ -76,5 +76,7 @@ describe('bulk shift action gates', () => {
       },
     ];
     expect(rpcShifts[0]!.required_positions).toBe(3);
+    // Persistence of required_positions is asserted in
+    // supabase/tests/bulk_shift_creation.test.sql (DB).
   });
 });

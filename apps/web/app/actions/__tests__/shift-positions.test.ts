@@ -1,7 +1,9 @@
 import {
+  countOccupyingAssignments,
   filledPositionsLabel,
   openPositionsLabel,
   parseShiftPositions,
+  positionsAvailabilityLabel,
   remainingOpenPositions,
   sumRequiredPositions,
 } from '@bridge-hive/domain';
@@ -40,5 +42,11 @@ describe('shift-positions helpers', () => {
     expect(filledPositionsLabel(1, 3)).toBe('1 / 3 positions filled');
     expect(remainingOpenPositions(3, 1)).toBe(2);
     expect(remainingOpenPositions(1, 1)).toBe(0);
+    expect(positionsAvailabilityLabel(4, 2)).toBe(
+      '4 positions · 2 filled · 2 available',
+    );
+    expect(countOccupyingAssignments(['accepted', 'rejected', 'withdrawn'])).toBe(
+      1,
+    );
   });
 });

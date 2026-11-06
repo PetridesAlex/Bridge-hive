@@ -49,7 +49,7 @@ export default async function BulkNewShiftsPage({
     const { data: shift } = await supabase
       .from('shifts')
       .select(
-        'location_id, ward_id, required_role, starts_at, ends_at, break_minutes, rate_minor, currency, title, notes, acceptance_deadline, location:locations(timezone)',
+        'location_id, ward_id, required_role, starts_at, ends_at, break_minutes, rate_minor, currency, title, notes, acceptance_deadline, required_positions, location:locations(timezone)',
       )
       .eq('id', template)
       .eq('organization_id', ctx.org.id)
@@ -84,6 +84,11 @@ export default async function BulkNewShiftsPage({
         title: shift.title,
         notes: shift.notes,
         deadlineHoursBefore: deadlineHours,
+        requiredPositions:
+          typeof shift.required_positions === 'number' &&
+          Number.isFinite(shift.required_positions)
+            ? Math.min(100, Math.max(1, Math.trunc(shift.required_positions)))
+            : 1,
       };
     }
   }

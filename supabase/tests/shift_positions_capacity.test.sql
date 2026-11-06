@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(12);
+select plan(16);
 
 create extension if not exists pgtap with schema extensions;
 
@@ -275,6 +275,40 @@ select is(
   public.shift_open_positions('d3100001-cccc-4000-8000-0000000000d1'),
   1,
   'one open position remains after withdraw'
+);
+
+-- Same worker cannot occupy two positions (idempotent return, not a second seat)
+reset role;
+select pg_temp.auth_as('d3100001-0000-4000-8000-000000000003');
+select lives_ok(
+  $$ select public.claim_shift('d3100001-cccc-4000-8000-0000000000d1') $$,
+  'repeat claim by already-accepted worker is idempotent'
+);
+
+select is(
+  public.shift_active_assignment_count('d3100001-cccc-4000-8000-0000000000d1'),
+  2,
+  'repeat claim does not consume a second position'
+);
+
+-- Cannot reduce required_positions below occupied capacity
+reset role;
+select pg_temp.auth_as('d3100001-0000-4000-8000-000000000001');
+select throws_ok(
+  $$ update public.shifts
+     set required_positions = 1
+     where id = 'd3100001-cccc-4000-8000-0000000000d1' $$,
+  'P0001',
+  'CAPACITY_BELOW_OCCUPIED',
+  'reducing positions below occupied assignments is rejected'
+);
+
+-- Increase remains allowed
+select lives_ok(
+  $$ update public.shifts
+     set required_positions = 4
+     where id = 'd3100001-cccc-4000-8000-0000000000d1' $$,
+  'increasing positions above occupied assignments is allowed'
 );
 
 select * from finish();

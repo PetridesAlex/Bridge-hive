@@ -1,8 +1,8 @@
 import { WORKER_ROLE_LABELS } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import {
   ShiftSummaryCard,
@@ -16,8 +16,11 @@ import {
   WORK_SEGMENTS,
   type WorkSegment,
 } from '@/constants/workSegments';
+import { useTranslation } from '@/i18n/locale-provider';
+import { getOrCreateConversation } from '@/lib/messaging';
 import type { AssignmentWithShift } from '@/lib/queries';
 import { canSubmitCompletedHours, shiftHasEnded } from '@/lib/rpcs';
+import { useAuth } from '@/providers/AuthProvider';
 
 type Props = {
   assignment: AssignmentWithShift;
@@ -100,6 +103,9 @@ export function AssignmentCard({
   onToggle,
   now,
 }: Props) {
+  const { t } = useTranslation();
+  const { user, isAppReviewDemo } = useAuth();
+  const [messagingBusy, setMessagingBusy] = useState(false);
   const theme = WORK_SEGMENTS[segment];
   const shift = assignment.shifts;
   const roleLabel = shift
@@ -146,6 +152,49 @@ export function AssignmentCard({
     </View>
   ) : null;
 
+  const canMessageOrg =
+    assignment.status === 'approved' &&
+    !isAppReviewDemo &&
+    Boolean(user?.id) &&
+    Boolean(shift?.organization_id);
+
+  const messageCta = canMessageOrg ? (
+    <Pressable
+      disabled={messagingBusy}
+      onPress={() => {
+        void (async () => {
+          if (!user?.id || !shift?.organization_id || messagingBusy) return;
+          setMessagingBusy(true);
+          try {
+            const created = await getOrCreateConversation(
+              shift.organization_id,
+              user.id,
+            );
+            if (created.error || !created.data) {
+              Alert.alert(t('messages.loadError'), created.error ?? undefined);
+              return;
+            }
+            router.push(`/messages/${created.data.id}`);
+          } finally {
+            setMessagingBusy(false);
+          }
+        })();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={t('messages.messageOrganization')}
+      style={({ pressed }) => [
+        styles.messageCta,
+        pressed && styles.messageCtaPressed,
+        messagingBusy && styles.messageCtaBusy,
+      ]}
+    >
+      <Ionicons name="chatbubbles-outline" size={16} color={colors.tealStrong} />
+      <Text style={styles.messageCtaText}>
+        {messagingBusy ? t('messages.pending') : t('messages.messageOrganization')}
+      </Text>
+    </Pressable>
+  ) : null;
+
   if (!shift) {
     return null;
   }
@@ -172,6 +221,7 @@ export function AssignmentCard({
     >
       {toggle}
       {timeline}
+      {messageCta}
     </ShiftSummaryCard>
   );
 }
@@ -212,5 +262,28 @@ const styles = StyleSheet.create({
   },
   timeline: {
     paddingTop: spacing.xs,
+  },
+  messageCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 16,
+    backgroundColor: colors.tealSoft,
+    minHeight: 44,
+  },
+  messageCtaPressed: {
+    opacity: 0.88,
+  },
+  messageCtaBusy: {
+    opacity: 0.7,
+  },
+  messageCtaText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    color: colors.navy,
+    flexShrink: 1,
   },
 });

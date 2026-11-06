@@ -325,6 +325,15 @@ export default function AccountHubScreen() {
           tone={unreadCount > 0 ? 'attention' : 'neutral'}
           onPress={() => router.push('/notifications')}
         />
+        {!isAppReviewDemo ? (
+          <ProfileMenuRow
+            grouped
+            showDivider
+            icon="chatbubbles-outline"
+            label={t('messages.title')}
+            onPress={() => router.push('/messages')}
+          />
+        ) : null}
         <ProfileMenuRow
           grouped
           showDivider

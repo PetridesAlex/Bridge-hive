@@ -104,6 +104,7 @@ describe('org dashboard helpers', () => {
     });
     expect(admin.map((i) => i.id)).toEqual([
       'dashboard',
+      'messages',
       'shifts',
       'timesheets',
       'locations',
@@ -138,6 +139,7 @@ describe('org dashboard helpers', () => {
       'payments',
       'settings',
     ]);
+    expect(billing.map((i) => i.id)).not.toContain('messages');
     expect(JSON.stringify(admin)).not.toMatch(/members/i);
 
     const scheduler = orgNavItemsForCapabilities('acme', {
@@ -148,6 +150,7 @@ describe('org dashboard helpers', () => {
       canAccessBilling: false,
       canEditOrgSettings: false,
     });
+    expect(scheduler.map((i) => i.id)).toContain('messages');
     expect(scheduler.map((i) => i.id)).not.toContain('payments');
   });
 

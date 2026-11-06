@@ -110,7 +110,9 @@ values ('<auth-user-uuid>', 'platform_super_admin');
 
 ## Explicitly deferred
 
-Multi-slot shifts, shift swapping, ratings, in-app chat, route tracking, advanced rostering, referrals, subscriptions, automated dispute resolution, automatic payouts / Stripe Connect.
+Multi-slot shifts, shift swapping, ratings, in-app chat attachments/calls/groups/community feed, route tracking, advanced rostering, referrals, subscriptions, automated dispute resolution, automatic payouts / Stripe Connect.
+
+Organization–worker 1:1 text messaging (approved assignment + timesheet eligibility) shipped separately — see [org-worker-messaging.md](./org-worker-messaging.md).
 
 ## Decision owners
 

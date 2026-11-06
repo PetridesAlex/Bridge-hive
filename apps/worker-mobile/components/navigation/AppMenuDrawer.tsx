@@ -51,7 +51,11 @@ type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 function buildMenuSections(
   t: TranslateFn,
-  extras: { languageTrailing: string; onLanguage: () => void },
+  extras: {
+    languageTrailing: string;
+    onLanguage: () => void;
+    showMessages: boolean;
+  },
 ): { title: string; items: MenuItem[] }[] {
   return [
     {
@@ -155,6 +159,18 @@ function buildMenuSections(
           href: '/notifications',
           accent: [colors.honeyStrong, colors.yellow],
         },
+        ...(extras.showMessages
+          ? [
+              {
+                key: 'messages',
+                label: t('messages.title'),
+                subtitle: t('messages.subtitle'),
+                icon: 'chatbubbles' as const,
+                href: '/messages',
+                accent: [colors.tealStrong, colors.navy] as [string, string],
+              },
+            ]
+          : []),
         {
           key: 'prefs',
           label: t('profile.notificationPreferences'),
@@ -288,7 +304,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
   const reduced = useReducedMotion();
   const { t } = useTranslation();
   const { language, setLocale } = useAppLocale();
-  const { signOut } = useAuth();
+  const { signOut, isAppReviewDemo } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const { width } = useWindowDimensions();
   const panelWidth = Math.min(348, Math.max(288, width * 0.88));
@@ -422,6 +438,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
   const menuSections = buildMenuSections(t, {
     languageTrailing,
     onLanguage: openLanguageChooser,
+    showMessages: !isAppReviewDemo,
   });
 
   const confirmSignOut = () => {

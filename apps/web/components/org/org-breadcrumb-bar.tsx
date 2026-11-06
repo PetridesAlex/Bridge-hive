@@ -21,6 +21,11 @@ function breadcrumbsForPath(slug: string, pathname: string, orgName: string) {
     crumbs.push({ label: 'Shift detail' });
   } else if (pathname.includes('/shifts')) {
     crumbs.push({ label: 'Shifts' });
+  } else if (/\/messages\/[^/]+$/.test(pathname)) {
+    crumbs.push({ label: 'Messages', href: `${base}/messages` });
+    crumbs.push({ label: 'Conversation' });
+  } else if (pathname.includes('/messages')) {
+    crumbs.push({ label: 'Messages' });
   } else if (pathname.includes('/timesheets')) {
     crumbs.push({ label: 'Timesheets' });
   } else if (/\/payments\/[^/]+$/.test(pathname)) {

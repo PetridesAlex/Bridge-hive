@@ -1,4 +1,4 @@
-import { shiftRouteFromPushData } from '@bridge-hive/domain';
+import { appRouteFromPushData } from '@bridge-hive/domain';
 import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
@@ -17,7 +17,7 @@ import {
 import { useAppLocale } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
-function openShiftRoute(
+function openPushRoute(
   response: Notifications.NotificationResponse | null,
   sessionPresent: boolean,
   verified: boolean,
@@ -26,7 +26,7 @@ function openShiftRoute(
   if (response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
   const responseId = response.notification.request.identifier;
   if (!claimNotificationResponse(responseId)) return;
-  const route = shiftRouteFromPushData(response.notification.request.content.data);
+  const route = appRouteFromPushData(response.notification.request.content.data);
   Notifications.clearLastNotificationResponse();
   if (!route) return;
   if (!sessionPresent) {
@@ -57,7 +57,7 @@ export function PushNotificationController() {
 
     const open = (response: Notifications.NotificationResponse | null) => {
       if (cancelled) return;
-      openShiftRoute(response, Boolean(sessionRef.current), verifiedRef.current);
+      openPushRoute(response, Boolean(sessionRef.current), verifiedRef.current);
     };
 
     void (async () => {

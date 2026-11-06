@@ -10,7 +10,7 @@ import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { NEW_SHIFTS_CHANNEL } from '@/lib/push/channel';
+import { NEW_SHIFTS_CHANNEL, ORG_MESSAGES_CHANNEL } from '@/lib/push/channel';
 import { supabase } from '@/lib/supabase';
 
 let currentToken: string | null = null;
@@ -44,6 +44,14 @@ async function ensureNewShiftsChannel() {
     vibrationPattern: [0, 250, 250, 250],
     enableVibrate: NEW_SHIFTS_CHANNEL.vibration,
     lightColor: NEW_SHIFTS_CHANNEL.lightColor,
+    sound: null,
+  });
+  await Notifications.setNotificationChannelAsync(ORG_MESSAGES_CHANNEL.id, {
+    name: ORG_MESSAGES_CHANNEL.name,
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    enableVibrate: ORG_MESSAGES_CHANNEL.vibration,
+    lightColor: ORG_MESSAGES_CHANNEL.lightColor,
     sound: null,
   });
 }

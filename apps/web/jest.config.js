@@ -5,6 +5,7 @@ const config = {
   testMatch: ['**/__tests__/**/*.test.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^@bridge-hive/domain$': '<rootDir>/../../packages/domain/src/index.ts',
   },
   collectCoverageFrom: [
     'lib/**/*.ts',

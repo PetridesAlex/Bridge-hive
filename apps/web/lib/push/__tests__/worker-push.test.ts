@@ -1,10 +1,16 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { buildShiftPublishedNotification, openPositionsLabel } from '@bridge-hive/domain';
+import {
+  buildOrgWorkerMessageNotification,
+  buildShiftPublishedNotification,
+  openPositionsLabel,
+  ORG_WORKER_MESSAGE_PUSH_TYPE,
+} from '@bridge-hive/domain';
 
 import {
   buildExpoPushMessage,
+  ORG_MESSAGES_CHANNEL_ID,
   outcomeFromExpoTicket,
   outcomesForTransportFailure,
   postExpoPush,
@@ -113,6 +119,50 @@ describe('shift push payload', () => {
     });
     expect(bodies[0]).toContain('bridgehive://shifts/');
     expect(bodies[0]).not.toContain('SECRET');
+  });
+});
+
+describe('org_worker_message push payload', () => {
+  const conversationId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+
+  it('uses org-messages channel and never includes chat body text', () => {
+    const message = buildExpoPushMessage({
+      deliveryId: claimed.deliveryId,
+      expoPushToken: claimed.expoPushToken,
+      eventType: 'org_worker_message',
+      conversationId,
+      organizationName: 'Acme Care',
+      preferredLocale: 'en',
+      openPositions: 0,
+      payload: { conversationId },
+      shiftId: null,
+      status: 'n/a',
+      startsAt: null,
+      endsAt: null,
+      timeZone: null,
+      place: null,
+      requiredRole: null,
+      rateMinor: null,
+      currency: null,
+    });
+    expect(message?.channelId).toBe(ORG_MESSAGES_CHANNEL_ID);
+    expect(message?.title).toBe('New message from Acme Care');
+    expect(message?.body).toBe('Open BridgeHive to read it.');
+    expect(message?.data).toEqual({
+      type: ORG_WORKER_MESSAGE_PUSH_TYPE,
+      conversationId,
+      url: `bridgehive://messages/${conversationId}`,
+    });
+    expect(JSON.stringify(message)).not.toContain('patient');
+    expect(JSON.stringify(message)).not.toContain('bank');
+  });
+
+  it('keeps shift channel for shift_published events', () => {
+    const message = buildExpoPushMessage(claimed);
+    expect(message?.channelId).toBe('new-shifts');
+    expect(buildOrgWorkerMessageNotification({ conversationId })?.data.type).toBe(
+      ORG_WORKER_MESSAGE_PUSH_TYPE,
+    );
   });
 });
 

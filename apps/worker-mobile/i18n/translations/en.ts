@@ -387,6 +387,25 @@ export const en = {
     viewInvoice: 'View invoice',
     money: 'Money',
   },
+  messages: {
+    title: 'Messages',
+    organization: 'Organization',
+    emptyInbox: 'No conversations yet',
+    emptyInboxBody:
+      'Messaging unlocks after an organization approves your completed timesheet.',
+    loadError: 'Could not load messages',
+    loading: 'Loading messages…',
+    composerPlaceholder: 'Write a message…',
+    send: 'Send',
+    pending: 'Sending…',
+    privacy:
+      'Do not share patient information, login credentials, or bank details in messages.',
+    messageOrganization: 'Message organization',
+    demoBlocked: 'Messages unavailable',
+    demoBlockedBody: 'Demo accounts cannot access real conversations.',
+    you: 'You',
+    subtitle: 'Chat with organizations after approved work',
+  },
   profile: {
     title: 'More',
     account: 'Account',

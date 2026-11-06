@@ -109,6 +109,7 @@ export async function getShiftRequirements(shiftId: string) {
 export type AssignmentShiftSummary = Pick<
   Shift,
   | 'id'
+  | 'organization_id'
   | 'title'
   | 'starts_at'
   | 'ends_at'
@@ -135,7 +136,7 @@ export async function getMyAssignments(workerId: string) {
   const { data, error } = await supabase
     .from('shift_assignments')
     .select(
-      '*, shifts ( id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes )',
+      '*, shifts ( id, organization_id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes )',
     )
     .eq('worker_id', workerId)
     .order('accepted_at', { ascending: false });

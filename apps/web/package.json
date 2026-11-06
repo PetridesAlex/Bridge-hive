@@ -49,7 +49,7 @@
     "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react-dom": "^19.3.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.25",
     "jest": "^30.5.1",

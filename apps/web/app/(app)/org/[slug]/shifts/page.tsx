@@ -1,4 +1,5 @@
 import {
+  SHIFT_OCCUPYING_ASSIGNMENT_STATUSES,
   SHIFT_STATUSES,
   WORKER_ROLES,
   WORKER_ROLE_LABELS,
@@ -6,10 +7,11 @@ import {
   countDraftShifts,
   countFilledUpcoming,
   countOpenShifts,
-  filledPositionsLabel,
+  isOccupyingAssignmentStatus,
   filterCalendarShifts,
   isWorkerRole,
   mapShiftToCalendarEvent,
+  positionsAvailabilityLabel,
   type ShiftStatus,
 } from '@bridge-hive/domain';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -37,12 +39,14 @@ import Link from 'next/link';
 
 import { EmptyState } from '@/components/empty-state';
 import { KpiCard } from '@/components/org/dashboard-widgets';
+import { OrgClientFilterForm } from '@/components/org/org-client-filter-form';
 import {
   OrgTableShell,
   orgTableHeadClassName,
   orgTableRowClassName,
 } from '@/components/org/data-table';
 import { ShiftScheduleCalendar } from '@/components/org/shift-schedule-calendar';
+import { ShiftWeekNavigator } from '@/components/org/shift-week-navigator';
 import { ShiftStatusBadge } from '@/components/shift-status-badge';
 import { Button } from '@/components/ui/button';
 import { requireOrgMembership } from '@/lib/auth';
@@ -158,10 +162,10 @@ export default async function ShiftsPage({
   const shiftListSelectLegacy =
     'id, title, status, starts_at, ends_at, required_role, rate_minor, currency, location_id, location:locations(name), ward:wards(name)' as const;
 
-  function buildShiftListQuery(select: string) {
+  function buildShiftListQuery(select: string, withCount = false) {
     let query = supabase
       .from('shifts')
-      .select(select)
+      .select(select, withCount ? { count: 'exact' } : undefined)
       .eq('organization_id', ctx.org.id)
       .order('starts_at', { ascending: range !== 'past' });
 
@@ -179,13 +183,37 @@ export default async function ShiftsPage({
     return query;
   }
 
+  const searchQ = q?.trim() ?? '';
+  const paginateInDb = listView && searchQ.length === 0;
+  const listFrom = (requestedPage: number) => (requestedPage - 1) * PAGE_SIZE;
+  const applyPageRange = (
+    query: ReturnType<typeof buildShiftListQuery>,
+    requestedPage: number,
+  ) => {
+    const from = listFrom(requestedPage);
+    return query.range(from, from + PAGE_SIZE - 1);
+  };
+
+  const emptyList = {
+    data: [] as never[],
+    error: null,
+    count: 0,
+  };
+
   const [
     listPrimary,
     { data: locationsList },
     { data: metricShifts },
     { data: calendarRows, error: calendarError },
   ] = await Promise.all([
-    buildShiftListQuery(shiftListSelectWithPositions),
+    listView
+      ? paginateInDb
+        ? applyPageRange(
+            buildShiftListQuery(shiftListSelectWithPositions, true),
+            page,
+          )
+        : buildShiftListQuery(shiftListSelectWithPositions)
+      : Promise.resolve(emptyList),
     supabase
       .from('locations')
       .select('id, name')
@@ -201,7 +229,7 @@ export default async function ShiftsPage({
       ? Promise.resolve({ data: null, error: null })
       : supabase
           .from('shifts')
-          .select(shiftListSelectLegacy)
+          .select(shiftListSelectWithPositions)
           .eq('organization_id', ctx.org.id)
           .lt('starts_at', fetchEnd)
           .gt('ends_at', fetchStart)
@@ -211,7 +239,14 @@ export default async function ShiftsPage({
   const listResult =
     listPrimary.error &&
     /required_positions/i.test(listPrimary.error.message ?? '')
-      ? await buildShiftListQuery(shiftListSelectLegacy)
+      ? await (listView
+          ? paginateInDb
+            ? applyPageRange(
+                buildShiftListQuery(shiftListSelectLegacy, true),
+                page,
+              )
+            : buildShiftListQuery(shiftListSelectLegacy)
+          : Promise.resolve(emptyList))
       : listPrimary;
   type ShiftListRow = {
     id: string;
@@ -234,46 +269,77 @@ export default async function ShiftsPage({
       ? listResult.error
       : null;
 
-  const qLower = q?.trim().toLowerCase() ?? '';
-  const allFiltered = (shiftsRaw ?? []).filter((shift) => {
-    if (!qLower) return true;
-    const location = Array.isArray(shift.location) ? shift.location[0] : shift.location;
-    const ward = Array.isArray(shift.ward) ? shift.ward[0] : shift.ward;
-    const hay = [
-      shift.title,
-      location && typeof location === 'object' && 'name' in location
-        ? (location as { name: string }).name
-        : '',
-      ward && typeof ward === 'object' && 'name' in ward
-        ? (ward as { name: string }).name
-        : '',
-    ]
-      .join(' ')
-      .toLowerCase();
-    return hay.includes(qLower);
-  });
+  const qLower = searchQ.toLowerCase();
+  const allFiltered = paginateInDb
+    ? (shiftsRaw ?? [])
+    : (shiftsRaw ?? []).filter((shift) => {
+        if (!qLower) return true;
+        const location = Array.isArray(shift.location) ? shift.location[0] : shift.location;
+        const ward = Array.isArray(shift.ward) ? shift.ward[0] : shift.ward;
+        const hay = [
+          shift.title,
+          location && typeof location === 'object' && 'name' in location
+            ? (location as { name: string }).name
+            : '',
+          ward && typeof ward === 'object' && 'name' in ward
+            ? (ward as { name: string }).name
+            : '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return hay.includes(qLower);
+      });
 
-  const total = allFiltered.length;
+  const total = paginateInDb
+    ? (listResult.count ?? allFiltered.length)
+    : allFiltered.length;
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const pageStart = (safePage - 1) * PAGE_SIZE;
-  const pageShifts = allFiltered.slice(pageStart, pageStart + PAGE_SIZE);
+  let pageShifts = paginateInDb
+    ? allFiltered
+    : allFiltered.slice(pageStart, pageStart + PAGE_SIZE);
 
-  const shiftIds = pageShifts.map((s) => s.id);
+  if (paginateInDb && total > 0 && page > pageCount) {
+    const retry = await applyPageRange(
+      buildShiftListQuery(shiftListSelectWithPositions, true),
+      safePage,
+    );
+    const retryResult =
+      retry.error && /required_positions/i.test(retry.error.message ?? '')
+        ? await applyPageRange(
+            buildShiftListQuery(shiftListSelectLegacy, true),
+            safePage,
+          )
+        : retry;
+    pageShifts = (retryResult.data ?? []) as unknown as ShiftListRow[];
+  }
+
+  const shownFrom = total === 0 ? 0 : pageStart + 1;
+  const shownTo = Math.min(pageStart + PAGE_SIZE, total);
+  const shownCount = total === 0 ? 0 : Math.max(0, shownTo - shownFrom + 1);
+  const coveragePct = total === 0 ? 0 : Math.round((shownCount / total) * 100);
+
+  const listShiftIds = pageShifts.map((s) => s.id);
+  const calendarShiftIds = !listView
+    ? ((calendarRows ?? []) as Array<{ id: string }>).map((s) => s.id)
+    : [];
+  const capacityShiftIds = [...new Set([...listShiftIds, ...calendarShiftIds])];
   const { data: assignmentRows } =
-    shiftIds.length > 0
+    capacityShiftIds.length > 0
       ? await supabase
           .from('shift_assignments')
           .select(
             'shift_id, status, worker:worker_profiles!shift_assignments_worker_id_fkey(user_id, worker_role, profile:profiles!worker_profiles_user_id_fkey(full_name))',
           )
-          .in('shift_id', shiftIds)
-          .not('status', 'in', '(withdrawn,cancelled)')
-      : { data: [] as Array<{ shift_id: string; worker: unknown }> };
+          .in('shift_id', capacityShiftIds)
+          .in('status', [...SHIFT_OCCUPYING_ASSIGNMENT_STATUSES])
+      : { data: [] as Array<{ shift_id: string; status: string; worker: unknown }> };
 
   const assigneeByShift = new Map<string, string>();
   const filledCountByShift = new Map<string, number>();
   for (const row of assignmentRows ?? []) {
+    if (!isOccupyingAssignmentStatus(row.status)) continue;
     filledCountByShift.set(
       row.shift_id,
       (filledCountByShift.get(row.shift_id) ?? 0) + 1,
@@ -362,13 +428,25 @@ export default async function ShiftsPage({
     return s ? `/org/${slug}/shifts?${s}` : `/org/${slug}/shifts`;
   };
 
-  const hasFilters = Boolean(
-    q || statusFilter || roleFilter || locationFilter || range || batchFilter,
-  );
+  const activeFilterCount = [
+    q,
+    statusFilter,
+    roleFilter,
+    locationFilter,
+    range,
+    batchFilter,
+  ].filter(Boolean).length;
+  const hasFilters = activeFilterCount > 0;
 
   const toCalendarInput = (shift: (typeof calendarRows extends (infer T)[] | null ? T : never) & object) => {
     const location = Array.isArray(shift.location) ? shift.location[0] : shift.location;
     const ward = Array.isArray(shift.ward) ? shift.ward[0] : shift.ward;
+    const requiredPositions =
+      'required_positions' in shift &&
+      typeof (shift as { required_positions?: unknown }).required_positions ===
+        'number'
+        ? ((shift as { required_positions: number }).required_positions ?? 1)
+        : 1;
     return {
       id: shift.id as string,
       title: shift.title as string | null,
@@ -387,6 +465,8 @@ export default async function ShiftsPage({
         ward && typeof ward === 'object' && 'name' in ward
           ? (ward as { name: string }).name
           : null,
+      required_positions: requiredPositions,
+      filled_positions: filledCountByShift.get(shift.id as string) ?? 0,
     };
   };
 
@@ -420,56 +500,67 @@ export default async function ShiftsPage({
             Create, publish and manage staffing across your locations.
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+        <div className="flex shrink-0 flex-col items-stretch gap-3.5 sm:items-end">
           {ctx.capabilities.canManageShifts && ctx.capabilities.canOperate ? (
-            <div className="flex flex-wrap items-center justify-end gap-2.5">
+            <div className="flex flex-wrap items-center justify-end gap-3">
               <Button
                 asChild
-                className="h-11 rounded-xl border border-[#e4b334]/40 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-3.5 pr-4 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_12px_26px_rgba(7,29,48,0.32)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_58%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_16px_32px_rgba(7,29,48,0.38)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                className="group relative h-14 min-h-14 overflow-hidden rounded-2xl border border-[#e4b334]/55 bg-[linear-gradient(165deg,#f6e2a4_0%,#e4b334_46%,#c9920f_100%)] px-4 pr-5 text-[15px] font-bold tracking-tight text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.62),0_16px_34px_rgba(201,146,15,0.36)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(165deg,#fbeec0_0%,#edbf48_46%,#d4a318_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_20px_40px_rgba(201,146,15,0.46)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 <Link href={`/org/${slug}/shifts/new`}>
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-                    <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -left-6 -top-8 h-20 w-20 rounded-full bg-white/35 blur-2xl"
+                  />
+                  <span
+                    aria-hidden
+                    className="bh-gradient-sheen pointer-events-none absolute inset-0 opacity-70 bg-[linear-gradient(115deg,transparent_12%,rgba(255,255,255,0.55)_48%,transparent_78%)]"
+                  />
+                  <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-[#071d30] text-[#e4b334] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_8px_16px_rgba(7,29,48,0.28)]">
+                    <Plus className="h-[18px] w-[18px]" strokeWidth={2.6} aria-hidden />
                   </span>
-                  Create shift
+                  <span className="relative">Create shift</span>
+                  <ArrowUpRight
+                    className="relative h-4 w-4 text-[#071d30]/70 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
                 </Link>
               </Button>
               <Button
                 asChild
-                className="h-11 rounded-xl border border-white/20 bg-[linear-gradient(155deg,#1ab4c4_0%,#087f8c_52%,#065860_100%)] px-3.5 pr-4 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_12px_26px_rgba(8,127,140,0.34)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#2ec6d4_0%,#0a96a6_52%,#087f8c_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.34),0_16px_32px_rgba(8,127,140,0.42)] focus-visible:ring-white motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                className="group relative h-14 min-h-14 overflow-hidden rounded-2xl border border-white/18 bg-[linear-gradient(155deg,#16384f_0%,#071d30_56%,#0c3a42_100%)] px-4 pr-5 text-[15px] font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(7,29,48,0.38)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_56%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_20px_40px_rgba(7,29,48,0.46)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 <Link href={`/org/${slug}/shifts/new/bulk`}>
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/15 text-white ring-1 ring-white/30">
-                    <Layers className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+                  <span
+                    aria-hidden
+                    className="bh-orb-drift pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-[linear-gradient(90deg,#071d30_0%,#e4b334_52%,#16a6b6_100%)]"
+                  />
+                  <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+                    <Layers className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
                   </span>
-                  Create multiple shifts
+                  <span className="relative">Create multiple shifts</span>
+                  <ArrowUpRight
+                    className="relative h-4 w-4 text-[#f3d27a] transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
                 </Link>
               </Button>
             </div>
           ) : null}
-          <div className="flex items-center gap-2 rounded-2xl border border-bh-border bg-bh-surface px-3 py-2.5 shadow-[0_4px_16px_rgba(7,29,48,0.04)]">
-          <Link
-            href={filterHref({ date: prevWeek, page: undefined })}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-bh-text-muted hover:bg-bh-subtle hover:text-bh-text"
-            aria-label="Previous week"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-bh-accent-blue-soft text-bh-accent-blue">
-            <CalendarDays className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="min-w-[9.5rem] px-1">
-            <p className="text-sm font-semibold text-bh-text">{dateLabel}</p>
-            <p className="text-xs font-medium text-bh-text-muted">{weekLabel}</p>
-          </div>
-          <Link
-            href={filterHref({ date: nextWeek, page: undefined })}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-bh-text-muted hover:bg-bh-subtle hover:text-bh-text"
-            aria-label="Next week"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Link>
-          </div>
+          <ShiftWeekNavigator
+            dateLabel={dateLabel}
+            weekLabel={weekLabel}
+            dateYmd={dateYmd}
+            timeZone={timeZone}
+            prevHref={filterHref({ date: prevWeek, page: undefined })}
+            nextHref={filterHref({ date: nextWeek, page: undefined })}
+            todayHref={filterHref({ date: todayYmd, page: undefined })}
+            initialNowIso={now.toISOString()}
+          />
         </div>
       </div>
 
@@ -552,20 +643,37 @@ export default async function ShiftsPage({
         />
       </div>
 
-      <form
-        method="get"
-        className="overflow-hidden rounded-2xl border border-bh-border/70 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)]"
+      <OrgClientFilterForm
+        pathname={`/org/${slug}/shifts`}
+        className="relative overflow-hidden rounded-2xl border border-[#16384f]/25 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]"
       >
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-bh-border/60 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-3 sm:px-5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-white text-[#16384f] shadow-sm ring-1 ring-bh-border/80">
-              <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+        <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-3.5 sm:px-5">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/35 blur-2xl"
+          />
+          <span
+            aria-hidden
+            className="bh-orb-drift pointer-events-none absolute -bottom-12 right-16 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
+          />
+          <span
+            aria-hidden
+            className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+          />
+          <div className="relative flex min-w-0 items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+              <SlidersHorizontal className="h-4 w-4" strokeWidth={2.4} aria-hidden />
             </span>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-teal-strong">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
                 Filters
+                {hasFilters ? (
+                  <span className="bh-tabular inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e4b334] px-1.5 text-[10px] font-bold tracking-normal text-[#071d30]">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
               </p>
-              <p className="truncate text-sm font-medium text-[#071d30]">
+              <p className="truncate text-sm font-medium text-white/80">
                 Narrow the schedule by status, role, or site
               </p>
             </div>
@@ -573,7 +681,7 @@ export default async function ShiftsPage({
           <div
             role="group"
             aria-label="Shifts view"
-            className="inline-flex rounded-xl border border-bh-border/80 bg-white p-1 shadow-[0_1px_2px_rgba(7,29,48,0.04)]"
+            className="relative inline-flex rounded-xl bg-white/10 p-1 ring-1 ring-white/20"
           >
             <Link
               href={filterHref({ view: undefined, page: '1' })}
@@ -581,8 +689,8 @@ export default async function ShiftsPage({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200',
                 listView
-                  ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-sm'
-                  : 'text-bh-text-secondary hover:bg-[#f7fafc] hover:text-bh-text',
+                  ? 'bg-[#e4b334] text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.35)]'
+                  : 'text-white/75 hover:bg-white/10 hover:text-white',
               )}
             >
               <LayoutList className="h-3.5 w-3.5" aria-hidden />
@@ -594,8 +702,8 @@ export default async function ShiftsPage({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200',
                 !listView
-                  ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-sm'
-                  : 'text-bh-text-secondary hover:bg-[#f7fafc] hover:text-bh-text',
+                  ? 'bg-[#e4b334] text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.35)]'
+                  : 'text-white/75 hover:bg-white/10 hover:text-white',
               )}
             >
               <CalendarDays className="h-3.5 w-3.5" aria-hidden />
@@ -604,7 +712,7 @@ export default async function ShiftsPage({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 p-4 sm:p-5 lg:flex-row lg:flex-wrap lg:items-center lg:gap-2.5">
+        <div className="relative space-y-3 bg-[linear-gradient(180deg,#d7eef2_0%,#eef6fa_48%,#f4f9fb_100%)] p-4 sm:p-5">
           {viewRaw === 'calendar' ? (
             <input type="hidden" name="view" value="calendar" />
           ) : null}
@@ -612,137 +720,154 @@ export default async function ShiftsPage({
             <input type="hidden" name="date" value={dateYmd} />
           ) : null}
 
-          <div className="relative min-w-0 flex-1 lg:min-w-[240px]">
-            <Search
-              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-bh-text-muted"
-              aria-hidden
-            />
-            <label htmlFor="q" className="sr-only">
-              Search shifts
-            </label>
-            <input
-              id="q"
-              name="q"
-              defaultValue={q ?? ''}
-              placeholder="Search shifts, locations or wards…"
-              className="h-11 w-full rounded-xl border border-bh-border/80 bg-[#f7fafc] pl-10 pr-3.5 text-sm text-bh-text shadow-[inset_0_1px_2px_rgba(7,29,48,0.03)] placeholder:text-bh-text-muted transition-[border-color,box-shadow,background] focus-visible:border-bh-teal focus-visible:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
-            />
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1">
+              <span className="pointer-events-none absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg bg-[#071d30] text-[#e4b334]">
+                <Search className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+              </span>
+              <label htmlFor="q" className="sr-only">
+                Search shifts
+              </label>
+              <input
+                id="q"
+                name="q"
+                defaultValue={q ?? ''}
+                placeholder="Search shifts, locations or wards…"
+                className="h-11 w-full rounded-xl border-2 border-[#16384f]/15 bg-white pl-11 pr-3.5 text-sm font-medium text-[#071d30] shadow-[0_8px_20px_rgba(7,29,48,0.06)] placeholder:text-bh-text-muted transition-[border-color,box-shadow] focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/30"
+              />
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <Button
+                type="submit"
+                variant="honey"
+                size="lg"
+                className="group min-h-11 rounded-xl border border-[#e4b334]/40 bg-[#e4b334] px-5 font-semibold text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_22px_rgba(228,179,52,0.38)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f0c14a] hover:shadow-[0_14px_28px_rgba(228,179,52,0.48)] motion-reduce:hover:translate-y-0"
+              >
+                Apply
+                <ArrowUpRight
+                  className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </Button>
+              {hasFilters ? (
+                <Link
+                  href={filterHref({
+                    q: undefined,
+                    status: undefined,
+                    role: undefined,
+                    location: undefined,
+                    range: undefined,
+                    batch: undefined,
+                    page: undefined,
+                  })}
+                  className="inline-flex h-11 items-center gap-1.5 rounded-xl border-2 border-[#16384f]/20 bg-white px-3.5 text-sm font-semibold text-[#071d30] shadow-[0_8px_20px_rgba(7,29,48,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/40 hover:bg-[#071d30] hover:text-white motion-reduce:hover:translate-y-0"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                  Clear
+                </Link>
+              ) : null}
+            </div>
           </div>
 
-          {(
-            [
-              {
-                id: 'status',
-                name: 'status',
-                label: 'Status',
-                value: statusFilter ?? '',
-                options: [
-                  { value: '', label: 'All statuses' },
-                  ...SHIFT_STATUSES.map((s) => ({
-                    value: s,
-                    label: s.replace(/_/g, ' '),
-                  })),
-                ],
-              },
-              {
-                id: 'role',
-                name: 'role',
-                label: 'Role',
-                value: roleFilter ?? '',
-                options: [
-                  { value: '', label: 'All roles' },
-                  ...WORKER_ROLES.map((role) => ({
-                    value: role,
-                    label: WORKER_ROLE_LABELS[role],
-                  })),
-                ],
-              },
-              {
-                id: 'location',
-                name: 'location',
-                label: 'Location',
-                value: locationFilter ?? '',
-                options: [
-                  { value: '', label: 'All locations' },
-                  ...locations.map((loc) => ({
-                    value: loc.id,
-                    label: loc.name,
-                  })),
-                ],
-              },
-              {
-                id: 'range',
-                name: 'range',
-                label: 'Date',
-                value: range ?? '',
-                options: [
-                  { value: '', label: 'All dates' },
-                  { value: 'upcoming', label: 'Upcoming' },
-                  { value: 'past', label: 'Past' },
-                ],
-              },
-            ] as const
-          ).map((field) => (
-            <label
-              key={field.id}
-              htmlFor={field.id}
-              className="group relative min-w-0 sm:min-w-[9.5rem]"
-            >
-              <span className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
-                {field.label}
-              </span>
-              <select
-                id={field.id}
-                name={field.name}
-                defaultValue={field.value}
-                aria-label={field.label}
-                className="h-11 w-full appearance-none truncate rounded-xl border border-bh-border/80 bg-white py-2 pl-3 pr-9 text-sm font-medium text-[#071d30] shadow-[0_1px_2px_rgba(7,29,48,0.03)] transition-[border-color,box-shadow,background] hover:border-[#16384f]/25 hover:bg-[#f7fafc] focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/20"
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {(
+              [
+                {
+                  id: 'status',
+                  name: 'status',
+                  label: 'Status',
+                  value: statusFilter ?? '',
+                  options: [
+                    { value: '', label: 'All statuses' },
+                    ...SHIFT_STATUSES.map((s) => ({
+                      value: s,
+                      label: s.replace(/_/g, ' '),
+                    })),
+                  ],
+                },
+                {
+                  id: 'role',
+                  name: 'role',
+                  label: 'Role',
+                  value: roleFilter ?? '',
+                  options: [
+                    { value: '', label: 'All roles' },
+                    ...WORKER_ROLES.map((role) => ({
+                      value: role,
+                      label: WORKER_ROLE_LABELS[role],
+                    })),
+                  ],
+                },
+                {
+                  id: 'location',
+                  name: 'location',
+                  label: 'Location',
+                  value: locationFilter ?? '',
+                  options: [
+                    { value: '', label: 'All locations' },
+                    ...locations.map((loc) => ({
+                      value: loc.id,
+                      label: loc.name,
+                    })),
+                  ],
+                },
+                {
+                  id: 'range',
+                  name: 'range',
+                  label: 'Date',
+                  value: range ?? '',
+                  options: [
+                    { value: '', label: 'All dates' },
+                    { value: 'upcoming', label: 'Upcoming' },
+                    { value: 'past', label: 'Past' },
+                  ],
+                },
+              ] as const
+            ).map((field) => (
+              <label
+                key={field.id}
+                htmlFor={field.id}
+                className="group relative min-w-0"
               >
-                {field.options.map((option) => (
-                  <option key={`${field.id}-${option.value || 'all'}`} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <span className="pointer-events-none absolute bottom-3.5 right-3 text-bh-text-muted transition-colors group-hover:text-[#071d30]">
-                <ChevronDown className="h-3.5 w-3.5" aria-hidden />
-              </span>
-            </label>
-          ))}
-
-          <div className="flex flex-wrap items-end gap-2 lg:ml-auto lg:pl-1">
-            <Button
-              type="submit"
-              variant="honey"
-              size="lg"
-              className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.24)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.34)] motion-reduce:hover:translate-y-0"
-            >
-              Apply
-              <ArrowUpRight
-                className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </Button>
-            {hasFilters ? (
-              <Link
-                href={filterHref({
-                  q: undefined,
-                  status: undefined,
-                  role: undefined,
-                  location: undefined,
-                  range: undefined,
-                  batch: undefined,
-                  page: undefined,
-                })}
-                className="inline-flex h-11 items-center gap-1.5 rounded-xl border border-bh-border/80 bg-white px-3.5 text-sm font-semibold text-bh-text-secondary shadow-[0_1px_2px_rgba(7,29,48,0.03)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] hover:text-[#071d30] motion-reduce:hover:translate-y-0"
-              >
-                <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-                Clear
-              </Link>
-            ) : null}
+                <span
+                  className={cn(
+                    'mb-1 block text-[10px] font-semibold uppercase tracking-[0.14em]',
+                    field.value ? 'text-[#c9920f]' : 'text-[#071d30]',
+                  )}
+                >
+                  {field.label}
+                </span>
+                <select
+                  id={field.id}
+                  name={field.name}
+                  defaultValue={field.value}
+                  aria-label={field.label}
+                  className={cn(
+                    'h-11 w-full appearance-none truncate rounded-xl border-2 py-2 pl-3 pr-9 text-sm font-semibold text-[#071d30] transition-[border-color,box-shadow,background] focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/30',
+                    field.value
+                      ? 'border-[#e4b334]/70 bg-[#fff8e8] shadow-[0_8px_18px_rgba(228,179,52,0.18)]'
+                      : 'border-[#16384f]/15 bg-white shadow-[0_8px_20px_rgba(7,29,48,0.06)] hover:border-[#16384f]/35',
+                  )}
+                >
+                  {field.options.map((option) => (
+                    <option key={`${field.id}-${option.value || 'all'}`} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span
+                  className={cn(
+                    'pointer-events-none absolute bottom-3.5 right-3 transition-colors',
+                    field.value ? 'text-[#c9920f]' : 'text-bh-teal-strong group-hover:text-[#071d30]',
+                  )}
+                >
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden />
+                </span>
+              </label>
+            ))}
           </div>
         </div>
-      </form>
+      </OrgClientFilterForm>
 
       {!listView ? (
         <ShiftScheduleCalendar
@@ -853,9 +978,9 @@ export default async function ShiftsPage({
                     typeof shift.required_positions === 'number'
                       ? shift.required_positions
                       : 1;
-                  const capacityLabel = filledPositionsLabel(
-                    filledForShift,
+                  const capacityLabel = positionsAvailabilityLabel(
                     requiredForShift,
+                    filledForShift,
                   );
                   const initials = (assignee ?? 'U')
                     .split(/\s+/)
@@ -1030,7 +1155,10 @@ export default async function ShiftsPage({
                         </p>
                         <p className="mt-1 text-xs text-bh-text-muted">
                           {requiredForShift > 1
-                            ? filledPositionsLabel(filledForShift, requiredForShift)
+                            ? positionsAvailabilityLabel(
+                                requiredForShift,
+                                filledForShift,
+                              )
                             : (assignee ?? 'Unassigned')}
                         </p>
                       </div>
@@ -1046,13 +1174,40 @@ export default async function ShiftsPage({
             })}
           </ul>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-bh-text-secondary">
-              Showing{' '}
-              <span className="font-semibold text-bh-text">
-                {total === 0 ? 0 : pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, total)}
-              </span>{' '}
-              of <span className="font-semibold text-bh-text">{total}</span> shifts
+          <div className="relative overflow-hidden rounded-2xl border border-[#16384f]/20 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-3.5 shadow-[0_16px_36px_rgba(7,29,48,0.22)] sm:px-5">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/30 blur-2xl"
+            />
+            <span
+              aria-hidden
+              className="bh-orb-drift pointer-events-none absolute -bottom-12 right-10 h-28 w-28 rounded-full bg-[#e4b334]/22 blur-2xl"
+            />
+            <span
+              aria-hidden
+              className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+            />
+            <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-white/75">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.32)]">
+                <LayoutList className="h-4 w-4" strokeWidth={2.4} aria-hidden />
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+                On this page
+              </span>
+              <span className="bh-tabular inline-flex items-center rounded-lg bg-white/10 px-2.5 py-1 text-[15px] font-bold tracking-tight text-white ring-1 ring-white/15">
+                {shownFrom}–{shownTo}
+              </span>
+              <span>of</span>
+              <span className="bh-tabular font-bold text-white">{total}</span>
+              <span>shifts</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e4b334]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#f3d27a] ring-1 ring-[#e4b334]/35">
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e4b334] motion-reduce:animate-none"
+                />
+                {coveragePct}% in view
+              </span>
             </p>
             {pageCount > 1 ? (
               <nav
@@ -1065,7 +1220,7 @@ export default async function ShiftsPage({
                   })}
                   aria-disabled={safePage <= 1}
                   className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-lg border border-bh-border text-bh-text-secondary hover:bg-bh-subtle',
+                    'flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white',
                     safePage <= 1 && 'pointer-events-none opacity-40',
                   )}
                 >
@@ -1087,7 +1242,7 @@ export default async function ShiftsPage({
                     n < 0 ? (
                       <span
                         key={`e-${idx}`}
-                        className="px-1 text-bh-text-muted"
+                        className="px-1 text-white/40"
                       >
                         …
                       </span>
@@ -1097,10 +1252,10 @@ export default async function ShiftsPage({
                         href={filterHref({ page: String(n) })}
                         aria-current={n === safePage ? 'page' : undefined}
                         className={cn(
-                          'flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm font-semibold',
+                          'flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm font-semibold transition-colors',
                           n === safePage
-                            ? 'bg-bh-sidebar text-white'
-                            : 'border border-bh-border text-bh-text-secondary hover:bg-bh-subtle',
+                            ? 'bg-[#e4b334] text-[#071d30] shadow-[0_8px_16px_rgba(228,179,52,0.35)]'
+                            : 'border border-white/15 bg-white/5 text-white/80 hover:bg-white/10 hover:text-white',
                         )}
                       >
                         {n}
@@ -1113,7 +1268,7 @@ export default async function ShiftsPage({
                   })}
                   aria-disabled={safePage >= pageCount}
                   className={cn(
-                    'flex h-9 w-9 items-center justify-center rounded-lg border border-bh-border text-bh-text-secondary hover:bg-bh-subtle',
+                    'flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-white/80 transition-colors hover:bg-white/10 hover:text-white',
                     safePage >= pageCount && 'pointer-events-none opacity-40',
                   )}
                 >
@@ -1121,6 +1276,7 @@ export default async function ShiftsPage({
                 </Link>
               </nav>
             ) : null}
+            </div>
           </div>
         </>
       )}

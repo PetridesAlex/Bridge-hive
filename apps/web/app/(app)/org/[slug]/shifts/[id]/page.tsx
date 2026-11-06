@@ -1,7 +1,8 @@
 import {
   credentialTypeLabel,
   estimatedFullCoveragePayMinor,
-  filledPositionsLabel,
+  isOccupyingAssignmentStatus,
+  positionsAvailabilityLabel,
   formatMoneyMinor,
 } from '@bridge-hive/domain';
 import {
@@ -117,33 +118,53 @@ export default async function ShiftDetailPage({
 
   if (!shift) notFound();
 
-  const { data: locations } = await supabase
-    .from('locations')
-    .select('*')
-    .eq('organization_id', ctx.org.id)
-    .order('name');
+  const [{ data: locationRows }, { data: assignmentRows }] = await Promise.all([
+    supabase
+      .from('locations')
+      .select('id, name, wards(id, name, location_id)')
+      .eq('organization_id', ctx.org.id)
+      .order('name'),
+    supabase
+      .from('shift_assignments')
+      .select(
+        '*, worker:worker_profiles!shift_assignments_worker_id_fkey(user_id, worker_role), timesheet:timesheets(*)',
+      )
+      .eq('shift_id', shift.id)
+      .not('status', 'in', '(withdrawn,cancelled)')
+      .order('accepted_at', { ascending: true }),
+  ]);
 
-  const locationIds = (locations ?? []).map((location) => location.id);
-  const { data: wards } =
-    locationIds.length > 0
-      ? await supabase
-          .from('wards')
-          .select('id, name, location_id')
-          .in('location_id', locationIds)
-          .order('name')
-      : { data: [] as Array<{ id: string; name: string; location_id: string }> };
-
-  const { data: assignmentRows } = await supabase
-    .from('shift_assignments')
-    .select(
-      '*, worker:worker_profiles!shift_assignments_worker_id_fkey(user_id, worker_role), timesheet:timesheets(*)',
-    )
-    .eq('shift_id', shift.id)
-    .not('status', 'in', '(withdrawn,cancelled)')
-    .order('accepted_at', { ascending: true });
+  const locations = (locationRows ?? []).map((location) => ({
+    id: location.id,
+    name: location.name,
+  }));
+  const wards = (locationRows ?? []).flatMap((location) => {
+    const nested = Array.isArray(location.wards) ? location.wards : [];
+    return nested.flatMap((ward) =>
+      ward &&
+      typeof ward === 'object' &&
+      'id' in ward &&
+      'name' in ward &&
+      typeof ward.id === 'string' &&
+      typeof ward.name === 'string'
+        ? [
+            {
+              id: ward.id,
+              name: ward.name,
+              location_id:
+                'location_id' in ward && typeof ward.location_id === 'string'
+                  ? ward.location_id
+                  : location.id,
+            },
+          ]
+        : [],
+    );
+  });
 
   const assignments = assignmentRows ?? [];
-  const filledCount = assignments.length;
+  const filledCount = assignments.filter((row) =>
+    isOccupyingAssignmentStatus(row.status),
+  ).length;
   const requiredPositions = shift.required_positions ?? 1;
   const openPositions = Math.max(0, requiredPositions - filledCount);
   const estimatedFullPayMinor = estimatedFullCoveragePayMinor({
@@ -256,7 +277,7 @@ export default async function ShiftDetailPage({
           <MetaTile label="Role" value={roleLabel(shift.required_role)} />
           <MetaTile
             label="Positions"
-            value={filledPositionsLabel(filledCount, requiredPositions)}
+            value={positionsAvailabilityLabel(requiredPositions, filledCount)}
           />
           <MetaTile
             label="Hourly rate"
@@ -345,8 +366,8 @@ export default async function ShiftDetailPage({
           </div>
           <ShiftForm
             slug={slug}
-            locations={locations ?? []}
-            wards={(wards ?? []).map((ward) => ({
+            locations={locations}
+            wards={wards.map((ward) => ({
               id: ward.id,
               name: ward.name,
               locationId: ward.location_id,
@@ -363,7 +384,7 @@ export default async function ShiftDetailPage({
         title="Assignments"
         description={
           filledCount > 0
-            ? `${filledPositionsLabel(filledCount, requiredPositions)}.`
+            ? `${positionsAvailabilityLabel(requiredPositions, filledCount)}.`
             : 'No worker has claimed this shift yet.'
         }
         icon={UserRound}

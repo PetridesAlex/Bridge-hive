@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import { ScreenEnter } from '@/components/ui/ScreenEnter';
 import { spacing } from '@/constants/theme';
@@ -30,6 +31,11 @@ type Props = {
   disableEnter?: boolean;
   /** Optional soft tint layered over the shared Hive flow atmosphere. */
   backgroundColor?: string;
+  /**
+   * Add bottom padding so scroll content clears the absolute floating tab bar.
+   * Use on shell screens that live inside `(tabs)`.
+   */
+  clearTabBar?: boolean;
 };
 
 export function AppScreen({
@@ -44,8 +50,11 @@ export function AppScreen({
   contentKind = 'list',
   disableEnter = false,
   backgroundColor,
+  clearTabBar = false,
 }: Props) {
   const { gutter, contentMaxWidth } = useLayout(contentKind);
+  const tabInset = useTabBarScrollInset(spacing.xl);
+  const bottomPad = clearTabBar ? tabInset : spacing.huge;
 
   const columnStyle: StyleProp<ViewStyle> = fullBleed
     ? undefined
@@ -61,7 +70,13 @@ export function AppScreen({
 
   const body = scroll ? (
     <ScrollView
-      contentContainerStyle={[styles.scrollContent, columnStyle, padStyle, contentStyle]}
+      contentContainerStyle={[
+        styles.scrollContent,
+        { paddingBottom: bottomPad },
+        columnStyle,
+        padStyle,
+        contentStyle,
+      ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       refreshControl={refreshControl}
@@ -104,7 +119,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.huge,
     flexGrow: 1,
   },
 });

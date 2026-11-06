@@ -1,8 +1,6 @@
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, router, Tabs } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
 
-import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
 import {
   AnimatedTabButton,
   AnimatedTabIcon,
@@ -11,7 +9,6 @@ import {
   TabBarBackground,
   useAdaptiveTabBarStyle,
 } from '@/components/navigation/AnimatedTabBar';
-import { colors } from '@/constants/theme';
 import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -26,25 +23,19 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const tabBarStyle = useAdaptiveTabBarStyle();
 
-  if (loading) {
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <HiveFlowBackground />
-        <ActivityIndicator color={colors.teal} />
-      </View>
-    );
-  }
-
   if (!session) {
     return <Redirect href="/auth/worker/login" />;
   }
 
-  if (accountRejectionReason) {
-    return <Redirect href="/auth/worker/rejected" />;
-  }
-
-  if (!canAccessWorkerShell) {
-    return <Redirect href={homeRoute as never} />;
+  // Show the workspace shell immediately after login. Profile hydrate may still
+  // be in flight — only redirect away once the bundle has settled.
+  if (!loading) {
+    if (accountRejectionReason) {
+      return <Redirect href="/auth/worker/rejected" />;
+    }
+    if (!canAccessWorkerShell) {
+      return <Redirect href={homeRoute as never} />;
+    }
   }
 
   return (
@@ -54,8 +45,11 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: 'transparent' },
         tabBarShowLabel: true,
         tabBarStyle,
+        tabBarActiveBackgroundColor: 'transparent',
+        tabBarInactiveBackgroundColor: 'transparent',
         tabBarItemStyle: {
           paddingHorizontal: 0,
+          backgroundColor: 'transparent',
         },
         tabBarBackground: () => <TabBarBackground />,
         tabBarButton: (props) => <AnimatedTabButton {...props} />,
@@ -83,6 +77,12 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="shifts"
+        listeners={{
+          tabPress: () => {
+            // Always land on the marketplace list (not calendar / detail).
+            router.navigate('/(tabs)/shifts');
+          },
+        }}
         options={{
           title: t('tabs.shifts'),
           tabBarAccessibilityLabel: t('tabs.shifts'),
@@ -94,7 +94,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              icon="calendar-outline"
+              icon="calendar-clear-outline"
               iconFocused="calendar"
               accent={TAB_ACCENTS.shifts}
             />
@@ -106,17 +106,15 @@ export default function TabsLayout() {
         options={{
           title: t('tabs.myShifts'),
           tabBarAccessibilityLabel: t('tabs.myShifts'),
-          // Center action button: no text label, the raised honey button is the tab.
+          // Center FAB only — do NOT set tabBarShowLabel: false here; that option
+          // applies to the whole bar while this tab is focused and hides Home/Shifts/etc.
           tabBarLabel: () => null,
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              variant="fab"
-              focused={focused}
-              icon="briefcase-outline"
-              iconFocused="briefcase"
-              accent={TAB_ACCENTS.work}
-            />
-          ),
+          tabBarIcon: () => null,
+          tabBarItemStyle: {
+            paddingHorizontal: 0,
+            backgroundColor: 'transparent',
+            overflow: 'visible',
+          },
         }}
       />
       <Tabs.Screen
@@ -132,8 +130,8 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              icon="wallet-outline"
-              iconFocused="wallet"
+              icon="cash-outline"
+              iconFocused="cash"
               accent={TAB_ACCENTS.finances}
             />
           ),
@@ -159,13 +157,15 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              icon="grid-outline"
-              iconFocused="grid"
+              icon="apps-outline"
+              iconFocused="apps"
               accent={TAB_ACCENTS.more}
             />
           ),
         }}
       />
+      {/* Shell destinations — keep tab bar, hide from the tab strip. */}
+      <Tabs.Screen name="support" options={{ href: null, title: t('profile.support') }} />
     </Tabs>
   );
 }

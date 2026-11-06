@@ -64,6 +64,7 @@ export function ContextualActionCard({
   const nudge = useSharedValue(0);
   const wash = useSharedValue(0);
   const orb = useSharedValue(0);
+  const eyebrowGlow = useSharedValue(reduced ? 0.5 : 0);
 
   useEffect(() => {
     if (reduced) {
@@ -105,6 +106,18 @@ export function ContextualActionCard({
 
   useEffect(() => {
     if (reduced) {
+      eyebrowGlow.value = 0.5;
+      return;
+    }
+    eyebrowGlow.value = withRepeat(
+      withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [eyebrowGlow, reduced]);
+
+  useEffect(() => {
+    if (reduced) {
       nudge.value = 0;
       return;
     }
@@ -141,6 +154,16 @@ export function ContextualActionCard({
 
   const arrowStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: interpolate(nudge.value, [0, 1], [0, 3]) }],
+  }));
+
+  const eyebrowPulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(eyebrowGlow.value, [0, 1], [0.55, 1]),
+    transform: [{ scale: interpolate(eyebrowGlow.value, [0, 1], [0.96, 1]) }],
+  }));
+
+  const eyebrowDotStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(eyebrowGlow.value, [0, 1], [0.55, 1]),
+    transform: [{ scale: interpolate(eyebrowGlow.value, [0, 1], [0.85, 1.2]) }],
   }));
 
   const ctaScan = useSharedValue(0);
@@ -228,9 +251,27 @@ export function ContextualActionCard({
 
           <View style={styles.headerCopy}>
             <View style={styles.metaRow}>
-              <Text style={[styles.eyebrow, emphasis && styles.eyebrowEmphasis]} numberOfLines={1}>
-                {eyebrow}
-              </Text>
+              <Animated.View
+                style={[
+                  styles.eyebrowPill,
+                  emphasis && styles.eyebrowPillEmphasis,
+                  eyebrowPulseStyle,
+                ]}
+              >
+                <Animated.View
+                  style={[
+                    styles.eyebrowDot,
+                    emphasis && styles.eyebrowDotEmphasis,
+                    eyebrowDotStyle,
+                  ]}
+                />
+                <Text
+                  style={[styles.eyebrow, emphasis && styles.eyebrowEmphasis]}
+                  numberOfLines={1}
+                >
+                  {eyebrow}
+                </Text>
+              </Animated.View>
               {live ? (
                 <View style={[styles.livePill, emphasis && styles.livePillEmphasis]}>
                   <View style={[styles.liveDot, emphasis && styles.liveDotEmphasis]} />
@@ -409,16 +450,41 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
+  eyebrowPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    maxWidth: '100%',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 210, 90, 0.2)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 210, 90, 0.55)',
+  },
+  eyebrowPillEmphasis: {
+    backgroundColor: 'rgba(255, 210, 90, 0.28)',
+    borderColor: 'rgba(255, 210, 90, 0.72)',
+  },
+  eyebrowDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.yellow,
+  },
+  eyebrowDotEmphasis: {
+    backgroundColor: colors.yellow,
+  },
   eyebrow: {
     flexShrink: 1,
     fontFamily: typography.fonts.bold,
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: 12,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
     color: colors.yellow,
   },
   eyebrowEmphasis: {
-    color: colors.yellow,
+    color: '#FFE29A',
   },
   livePill: {
     flexDirection: 'row',

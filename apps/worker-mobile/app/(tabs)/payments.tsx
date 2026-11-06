@@ -1,7 +1,7 @@
 import { payoutSummaryLabel } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
@@ -239,7 +239,7 @@ function PayoutAccountCard({
     <Animated.View style={shellStyle}>
       <Pressable
         style={styles.accountCard}
-        onPress={() => router.push('/payout-setup')}
+        onPress={() => router.push('/profile/payout-setup')}
         onPressIn={() => {
           if (!reduced) press.value = withSpring(0.985, { damping: 18, stiffness: 380 });
         }}
@@ -304,6 +304,9 @@ function PayoutAccountCard({
 export default function MoneyScreen() {
   const { user, isAppReviewDemo } = useAuth();
   const { t } = useTranslation();
+  const pathname = usePathname();
+  const fromAccount = pathname.includes('/profile/');
+  const invoiceBase = fromAccount ? '/profile/invoices' : '/invoices';
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { payouts, account, loading: payoutLoading, error: payoutError, refresh: refreshPayouts } =
     usePayouts(user?.id);
@@ -349,9 +352,11 @@ export default function MoneyScreen() {
   return (
     <AppScreen scroll={false} edges={['top']}>
       <ScreenHeader
-        eyebrow={t('payments.eyebrow')}
+        eyebrow={fromAccount ? undefined : t('payments.eyebrow')}
         title={t('payments.moneyTitle')}
         subtitle={t('payments.subtitle')}
+        showBack={fromAccount}
+        titleSize={fromAccount ? 'detail' : 'page'}
       />
       {isAppReviewDemo ? (
         <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
@@ -449,7 +454,7 @@ export default function MoneyScreen() {
           renderItem={({ item }) => (
             <InvoiceCard
               invoice={item}
-              onPress={() => router.push(`/invoices/${item.id}`)}
+              onPress={() => router.push(`${invoiceBase}/${item.id}`)}
             />
           )}
         />

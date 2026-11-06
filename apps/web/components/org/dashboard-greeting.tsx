@@ -1,5 +1,12 @@
 import { CalendarDays } from 'lucide-react';
 
+function initialsFor(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  const letters =
+    words.length > 1 ? `${words[0][0]}${words[1][0]}` : (words[0] ?? '').slice(0, 2);
+  return letters.toUpperCase() || 'BH';
+}
+
 export function DashboardGreeting({
   firstName,
   orgName,
@@ -15,78 +22,67 @@ export function DashboardGreeting({
   greeting: string;
 }) {
   return (
-    <div
-      className={[
-        'relative overflow-hidden border border-[#14324a]/80',
-        'bg-[linear-gradient(145deg,#0a2538_0%,#071d30_48%,#0c3a42_100%)]',
-        'shadow-[0_18px_48px_rgba(7,29,48,0.18)]',
-        '-mx-4 -mt-6 w-[calc(100%+2rem)] rounded-none sm:-mx-6 sm:w-[calc(100%+3rem)] sm:rounded-2xl lg:-mx-8 lg:-mt-8 lg:w-[calc(100%+4rem)]',
-      ].join(' ')}
-    >
-      <div
+    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-6 text-white shadow-[0_18px_40px_rgba(7,29,48,0.28)] sm:px-6 sm:py-7 lg:px-8">
+      <span
         aria-hidden
-        className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-bh-teal/20 blur-3xl"
+        className="bh-orb-drift pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-bh-teal/30 blur-3xl"
       />
-      <div
+      <span
         aria-hidden
-        className="pointer-events-none absolute -bottom-24 left-10 h-52 w-52 rounded-full bg-[#f5c518]/18 blur-3xl"
+        className="bh-orb-drift pointer-events-none absolute -bottom-16 right-8 h-36 w-36 rounded-full bg-[#e4b334]/20 blur-3xl"
+        style={{ animationDelay: '-7s' }}
       />
-      <div
+      <span
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_18%_22%,rgba(255,255,255,0.08)_0_1px,transparent_1.5px),radial-gradient(circle_at_72%_64%,rgba(255,255,255,0.06)_0_1px,transparent_1.5px)] [background-size:28px_28px]"
+        className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
       />
 
-      <div className="relative z-10 flex min-h-[200px] flex-col justify-end gap-6 p-6 sm:min-h-[220px] sm:p-8 lg:min-h-[240px] lg:flex-row lg:items-end lg:justify-between lg:p-10">
-        <div className="max-w-2xl">
-          <div className="flex items-center gap-3">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f5c518]">
-              Welcome back
-            </p>
-            <span className="h-px w-12 bg-[#f5c518]/75 sm:w-16" aria-hidden />
+      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <div
+            aria-hidden
+            className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#e4b334] text-[15px] font-bold tracking-[0.08em] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_22px_rgba(228,179,52,0.35)] sm:flex"
+          >
+            {initialsFor(orgName)}
           </div>
-
-          <h1 className="mt-3 text-[30px] font-semibold leading-[1.05] tracking-[-0.02em] text-white sm:text-[38px] lg:text-[44px]">
-            <span className="bh-greeting-sheen-text inline">
-              {greeting},{' '}
-            </span>
-            <span className="relative inline-block align-bottom">
-              <span className="bh-greeting-sheen-text font-bold uppercase tracking-[0.08em]">
-                {firstName}
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f3d27a]">
+              Organization workspace
+              <span className="mx-2 text-white/40" aria-hidden>
+                ·
               </span>
-              <span className="bh-greeting-wave-underline" aria-hidden />
-            </span>
-            <span
-              className="bh-greeting-wave-hand ml-2.5 inline-flex select-none align-middle text-[1.05em] leading-none drop-shadow-[0_6px_14px_rgba(245,197,24,0.28)] sm:ml-3.5 sm:text-[1.15em]"
-              aria-hidden
-            >
-              👋
-            </span>
-          </h1>
-
-          <p className="mt-3 max-w-xl text-[15px] leading-7 text-white/80 sm:text-base">
-            Here’s what needs attention at{' '}
-            <span className="font-semibold tracking-wide text-white underline decoration-[#f5c518]/70 decoration-2 underline-offset-[5px]">
-              {orgName}
-            </span>
-            .
-          </p>
-        </div>
-
-        <div className="inline-flex shrink-0 items-center gap-3 self-start rounded-2xl border border-white/25 bg-white/12 px-4 py-3 shadow-[0_10px_30px_rgba(7,29,48,0.22)] backdrop-blur-xl lg:self-end">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white">
-            <CalendarDays className="h-5 w-5" aria-hidden />
-          </span>
-          <div>
-            <p className="text-sm font-semibold tracking-wide text-white">
-              {dateLabel}
+              <span className="text-white/70">{orgName}</span>
             </p>
-            {weekLabel ? (
-              <p className="mt-0.5 text-xs font-medium tracking-[0.06em] text-white/70">
-                {weekLabel}
-              </p>
-            ) : null}
+            <h1 className="mt-1.5 truncate text-[28px] font-bold leading-none tracking-[-0.04em] text-white sm:text-[34px]">
+              {greeting}, {firstName}
+            </h1>
+            <p className="mt-2 text-[15px] text-white/75">
+              Overview of shifts, timesheets, and coverage for today.
+            </p>
           </div>
         </div>
+
+        <dl className="flex shrink-0 items-stretch self-start overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/15 backdrop-blur-md lg:self-center">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30]">
+              <CalendarDays className="h-4 w-4" strokeWidth={2.4} aria-hidden />
+            </span>
+            <div>
+              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
+                Today
+              </dt>
+              <dd className="text-sm font-semibold text-white">{dateLabel}</dd>
+            </div>
+          </div>
+          {weekLabel ? (
+            <div className="flex flex-col justify-center border-l border-white/15 px-4 py-3">
+              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/55">
+                Period
+              </dt>
+              <dd className="bh-tabular text-sm font-semibold text-white">{weekLabel}</dd>
+            </div>
+          ) : null}
+        </dl>
       </div>
     </div>
   );

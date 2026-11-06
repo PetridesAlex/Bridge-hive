@@ -10,6 +10,7 @@ import { clampShiftPositions } from './shift-positions';
 
 export type OrgNavItemId =
   | 'dashboard'
+  | 'messages'
   | 'shifts'
   | 'timesheets'
   | 'locations'
@@ -48,6 +49,15 @@ export function orgNavItemsForCapabilities(
       group: 'overview',
     },
   ];
+
+  if (caps.canOperate && (caps.canManageShifts || caps.canReviewTimesheets)) {
+    items.push({
+      id: 'messages',
+      href: `${base}/messages`,
+      label: 'Messages',
+      group: 'overview',
+    });
+  }
 
   if (caps.canOperate && (caps.canManageShifts || caps.canReviewTimesheets)) {
     items.push({

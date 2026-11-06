@@ -267,6 +267,12 @@ export async function updateShiftDraftAction(
           'The required worker role cannot be changed after a shift is published.',
       };
     }
+    if (error.message?.includes('CAPACITY_BELOW_OCCUPIED')) {
+      return {
+        error:
+          'Positions cannot be lower than the number of workers already occupying this shift.',
+      };
+    }
     return { error: 'Unable to update this shift. Please try again.' };
   }
 

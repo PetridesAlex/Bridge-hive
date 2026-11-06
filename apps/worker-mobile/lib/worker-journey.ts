@@ -37,7 +37,13 @@ export type WorkerJourneySnapshot = {
   marketplaceUnlocked: boolean;
   primaryAction: {
     label: string;
-    href: '/documents' | '/payout-setup' | '/auth/worker/pending' | '/(tabs)/shifts' | '/support';
+    href:
+      | '/documents'
+      | '/payout-setup'
+      | '/auth/worker/pending'
+      | '/(tabs)/shifts'
+      | '/support'
+      | '/profile/support';
   } | null;
 };
 
@@ -139,7 +145,7 @@ export function buildWorkerJourneySnapshot(params: {
   if (marketplaceUnlocked) {
     primaryAction = { label: 'Browse open shifts', href: '/(tabs)/shifts' };
   } else if (accountStatus === 'restricted') {
-    primaryAction = { label: 'Contact support', href: '/support' };
+    primaryAction = { label: 'Contact support', href: '/profile/support' };
   } else if (accountStatus === 'action_required') {
     if (params.payoutStatus === 'rejected' || params.payoutStatus === 'failed') {
       primaryAction = {

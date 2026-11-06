@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 
 import { OrganizationShell } from '@/components/org/organization-shell';
+
 import type { SwitcherOrg } from '@/components/org/organization-switcher';
 import { getAuthBundle, requireOrgMembership } from '@/lib/auth';
-import { createClient } from '@/lib/supabase/server';
-import { isOwnedOrganizationLogoPath } from '@bridge-hive/domain';
+import { signedOrgLogoUrl } from '@/lib/org-signed-logo.server';
 
 export async function generateMetadata({
   params,
@@ -18,20 +18,6 @@ export async function generateMetadata({
   } catch {
     return { title: 'Organization · Bridge Hive' };
   }
-}
-
-async function signedLogoUrl(
-  organizationId: string,
-  logoPath: string | null | undefined,
-): Promise<string | null> {
-  if (!logoPath || !isOwnedOrganizationLogoPath(organizationId, logoPath)) {
-    return null;
-  }
-  const supabase = await createClient();
-  const { data } = await supabase.storage
-    .from('organization-logos')
-    .createSignedUrl(logoPath, 60 * 15);
-  return data?.signedUrl ?? null;
 }
 
 export default async function OrgLayout({
@@ -52,11 +38,13 @@ export default async function OrgLayout({
       displayName: m.organization.display_name,
       status: m.organization.status,
       role: m.role,
-      logoUrl: await signedLogoUrl(m.organization.id, m.organization.logo_path),
+      logoUrl: await signedOrgLogoUrl(m.organization.id, m.organization.logo_path),
     })),
   );
 
-  const currentLogoUrl = await signedLogoUrl(ctx.org.id, ctx.org.logo_path);
+  const currentLogoUrl =
+    memberships.find((m) => m.id === ctx.org.id)?.logoUrl ??
+    (await signedOrgLogoUrl(ctx.org.id, ctx.org.logo_path));
 
   const current: SwitcherOrg = {
     id: ctx.org.id,

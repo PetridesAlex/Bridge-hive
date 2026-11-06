@@ -10,15 +10,15 @@ import {
   PlusJakartaSans_700Bold,
   PlusJakartaSans_800ExtraBold,
 } from '@expo-google-fonts/plus-jakarta-sans';
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, type ReactElement } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { APP_BOOT_BG, AppBootCover } from '@/components/brand/AppBootCover';
+import { APP_BOOT_BG } from '@/components/brand/AppBootCover';
 import {
   getStripePublishableKey,
   getStripeUrlScheme,
@@ -26,6 +26,7 @@ import {
 } from '@/constants/stripe';
 import { colors } from '@/constants/theme';
 import { LocaleProvider } from '@/i18n/locale-provider';
+import { StripeProvider } from '@/lib/stripe-native';
 import { AuthProvider } from '@/providers/AuthProvider';
 import { UnverifiedRouteGuard } from '@/components/auth/UnverifiedRouteGuard';
 import { PushNotificationController } from '@/components/push/PushNotificationController';
@@ -50,7 +51,6 @@ function OptionalStripeProvider({
 }
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
-// Fade navy-only native splash into the JS boot cover (no extra delay).
 SplashScreen.setOptions({ fade: true, duration: 300 });
 
 export default function RootLayout() {
@@ -66,24 +66,21 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded || fontError) {
-      // Hide native splash only once the navy JS boot cover is already mounted.
       SplashScreen.hideAsync().catch(() => undefined);
     }
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) {
     return (
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
-        <LocaleProvider>
-          <StatusBar style="light" />
-          <AppBootCover />
-        </LocaleProvider>
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
+        <StatusBar style="dark" />
+        <View style={{ flex: 1, backgroundColor: colors.background }} />
       </GestureHandlerRootView>
     );
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: APP_BOOT_BG }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.background }}>
       <SafeAreaProvider>
         <LocaleProvider>
           <OptionalStripeProvider>
@@ -98,47 +95,40 @@ export default function RootLayout() {
                     animation: 'slide_from_right',
                   }}
                 >
-              {/* Navy first-launch journey: navy content + fade so no light flash between screens. */}
-              <Stack.Screen
-                name="index"
-                options={{ contentStyle: { backgroundColor: APP_BOOT_BG }, animation: 'fade' }}
-              />
-              <Stack.Screen
-                name="welcome"
-                options={{ contentStyle: { backgroundColor: APP_BOOT_BG }, animation: 'fade' }}
-              />
-              <Stack.Screen
-                name="auth/worker/index"
-                options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
-              />
-              <Stack.Screen
-                name="auth/worker/login"
-                options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
-              />
-              <Stack.Screen
-                name="auth/worker/register"
-                options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
-              />
-              <Stack.Screen name="auth/worker/forgot-password" />
-              <Stack.Screen name="auth/worker/check-email" />
-              <Stack.Screen name="auth/worker/choose-role" />
-              <Stack.Screen name="auth/worker/reset-password" />
-              <Stack.Screen name="auth/worker/pending" />
-              <Stack.Screen name="auth/worker/restricted" />
-              <Stack.Screen name="auth/worker/rejected" />
-              <Stack.Screen name="auth/callback" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="shifts/[id]" />
-              <Stack.Screen name="shifts/calendar" />
-              <Stack.Screen name="invoices/[id]" />
-              <Stack.Screen name="notifications" />
-              <Stack.Screen name="documents" />
-              <Stack.Screen name="payout-setup" />
-              <Stack.Screen name="profile/account" />
-              <Stack.Screen name="profile/personal-information" />
-              <Stack.Screen name="profile/app-information" />
-              <Stack.Screen name="profile/notification-preferences" />
-                  <Stack.Screen name="support" />
+                  {/* Welcome/auth landing keep navy content — login exits straight to dashboard. */}
+                  <Stack.Screen
+                    name="index"
+                    options={{ contentStyle: { backgroundColor: colors.background }, animation: 'fade' }}
+                  />
+                  <Stack.Screen
+                    name="welcome"
+                    options={{ contentStyle: { backgroundColor: APP_BOOT_BG }, animation: 'fade' }}
+                  />
+                  <Stack.Screen
+                    name="auth/worker/index"
+                    options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
+                  />
+                  <Stack.Screen
+                    name="auth/worker/login"
+                    options={{ contentStyle: { backgroundColor: colors.background } }}
+                  />
+                  <Stack.Screen
+                    name="auth/worker/register"
+                    options={{ contentStyle: { backgroundColor: APP_BOOT_BG } }}
+                  />
+                  <Stack.Screen name="auth/worker/forgot-password" />
+                  <Stack.Screen name="auth/worker/check-email" />
+                  <Stack.Screen name="auth/worker/choose-role" />
+                  <Stack.Screen name="auth/worker/reset-password" />
+                  <Stack.Screen name="auth/worker/pending" />
+                  <Stack.Screen name="auth/worker/restricted" />
+                  <Stack.Screen name="auth/worker/rejected" />
+                  <Stack.Screen name="auth/callback" />
+                  <Stack.Screen name="(tabs)" />
+                  {/* Outside tabs so Account Setup can open them before shell access. */}
+                  <Stack.Screen name="documents" />
+                  <Stack.Screen name="notifications" />
+                  <Stack.Screen name="payout-setup" />
                 </Stack>
               </UnverifiedRouteGuard>
             </AuthProvider>

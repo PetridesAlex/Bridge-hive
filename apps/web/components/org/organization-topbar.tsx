@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 
 import { OrgBreadcrumbBar } from '@/components/org/org-breadcrumb-bar';
@@ -11,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { OrgNavCapabilities } from '@bridge-hive/domain';
+import { orgDisplayFont } from '@/lib/org-display-font';
 import { cn } from '@/lib/utils';
 
 export function OrganizationTopbar({
@@ -34,9 +36,16 @@ export function OrganizationTopbar({
 }) {
   void orgLogoUrl;
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const onDashboard = pathname === `/org/${slug}/dashboard`;
 
   return (
-    <header className="relative sticky top-0 z-30 flex h-[76px] items-center gap-3 overflow-hidden border-b border-[#d4e2eb] px-4 sm:h-[80px] sm:px-6 lg:px-8">
+    <header
+      className={cn(
+        'relative sticky top-0 z-30 flex h-[76px] items-center gap-3 overflow-hidden border-b border-[#d4e2eb] px-4 sm:h-[80px] sm:px-6 lg:px-8',
+        onDashboard && 'min-[1180px]:hidden',
+      )}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-white/78 backdrop-blur-2xl"
@@ -114,7 +123,10 @@ export function OrganizationTopbar({
         <DialogContent
           showClose
           id="org-mobile-nav"
-          className="left-0 top-0 h-full max-h-full w-[min(100%,280px)] translate-x-0 translate-y-0 rounded-none border-0 bg-[#071d30] p-0 sm:max-w-[280px]"
+          className={cn(
+            orgDisplayFont.variable,
+            'left-0 top-0 h-full max-h-full w-[min(100%,280px)] translate-x-0 translate-y-0 rounded-none border-0 bg-[#071d30] p-0 sm:max-w-[280px]',
+          )}
         >
           <DialogTitle className="sr-only">Organization navigation</DialogTitle>
           <OrganizationSidebar

@@ -28,64 +28,84 @@ export default async function BulkNewShiftsPage({
   }
 
   const supabase = await createClient();
-  const { data: locations } = await supabase
-    .from('locations')
-    .select('id, name, timezone')
-    .eq('organization_id', ctx.org.id)
-    .order('name');
+  const [{ data: locations }, templateShiftResult] = await Promise.all([
+    supabase
+      .from('locations')
+      .select('id, name, timezone, wards(id, name, location_id)')
+      .eq('organization_id', ctx.org.id)
+      .order('name'),
+    template
+      ? supabase
+          .from('shifts')
+          .select(
+            'location_id, ward_id, required_role, starts_at, ends_at, break_minutes, rate_minor, currency, title, notes, acceptance_deadline, required_positions, location:locations(timezone)',
+          )
+          .eq('id', template)
+          .eq('organization_id', ctx.org.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
-  const locationIds = (locations ?? []).map((l) => l.id);
-  const { data: wards } =
-    locationIds.length > 0
-      ? await supabase
-          .from('wards')
-          .select('id, name, location_id')
-          .in('location_id', locationIds)
-          .order('name')
-      : { data: [] as Array<{ id: string; name: string; location_id: string }> };
+  const wards = (locations ?? []).flatMap((location) => {
+    const nested = Array.isArray(location.wards) ? location.wards : [];
+    return nested.flatMap((ward) =>
+      ward &&
+      typeof ward === 'object' &&
+      'id' in ward &&
+      'name' in ward &&
+      typeof ward.id === 'string' &&
+      typeof ward.name === 'string'
+        ? [
+            {
+              id: ward.id,
+              name: ward.name,
+              location_id:
+                'location_id' in ward && typeof ward.location_id === 'string'
+                  ? ward.location_id
+                  : location.id,
+            },
+          ]
+        : [],
+    );
+  });
 
   let defaults: BulkTemplateDefaults | null = null;
-  if (template) {
-    const { data: shift } = await supabase
-      .from('shifts')
-      .select(
-        'location_id, ward_id, required_role, starts_at, ends_at, break_minutes, rate_minor, currency, title, notes, acceptance_deadline, location:locations(timezone)',
-      )
-      .eq('id', template)
-      .eq('organization_id', ctx.org.id)
-      .maybeSingle();
-
-    if (shift) {
-      const loc =
-        shift.location && typeof shift.location === 'object' && 'timezone' in shift.location
-          ? (shift.location as { timezone: string })
-          : null;
-      const tz = loc?.timezone ?? 'Europe/Nicosia';
-      const startHm = formatInTimeZone(new Date(shift.starts_at), tz, 'HH:mm');
-      const endHm = formatInTimeZone(new Date(shift.ends_at), tz, 'HH:mm');
-      let deadlineHours: number | null = null;
-      if (shift.acceptance_deadline) {
-        const ms =
-          new Date(shift.starts_at).getTime() -
-          new Date(shift.acceptance_deadline).getTime();
-        if (ms > 0) {
-          deadlineHours = Math.round(ms / (60 * 60 * 1000));
-        }
+  const shift = templateShiftResult.data;
+  if (shift) {
+    const loc =
+      shift.location && typeof shift.location === 'object' && 'timezone' in shift.location
+        ? (shift.location as { timezone: string })
+        : null;
+    const tz = loc?.timezone ?? 'Europe/Nicosia';
+    const startHm = formatInTimeZone(new Date(shift.starts_at), tz, 'HH:mm');
+    const endHm = formatInTimeZone(new Date(shift.ends_at), tz, 'HH:mm');
+    let deadlineHours: number | null = null;
+    if (shift.acceptance_deadline) {
+      const ms =
+        new Date(shift.starts_at).getTime() -
+        new Date(shift.acceptance_deadline).getTime();
+      if (ms > 0) {
+        deadlineHours = Math.round(ms / (60 * 60 * 1000));
       }
-      defaults = {
-        locationId: shift.location_id,
-        wardId: shift.ward_id,
-        requiredRole: shift.required_role as WorkerRole,
-        startHm,
-        endHm,
-        breakMinutes: shift.break_minutes,
-        rateMinor: shift.rate_minor,
-        currency: shift.currency,
-        title: shift.title,
-        notes: shift.notes,
-        deadlineHoursBefore: deadlineHours,
-      };
     }
+    defaults = {
+      locationId: shift.location_id,
+      wardId: shift.ward_id,
+      requiredRole: shift.required_role as WorkerRole,
+      startHm,
+      endHm,
+      breakMinutes: shift.break_minutes,
+      rateMinor: shift.rate_minor,
+      currency: shift.currency,
+      title: shift.title,
+      notes: shift.notes,
+      deadlineHoursBefore: deadlineHours,
+      requiredPositions:
+        typeof shift.required_positions === 'number' &&
+        Number.isFinite(shift.required_positions)
+          ? Math.min(100, Math.max(1, Math.trunc(shift.required_positions)))
+          : 1,
+    };
   }
 
   const wardOptions = (wards ?? []).map((w) => ({

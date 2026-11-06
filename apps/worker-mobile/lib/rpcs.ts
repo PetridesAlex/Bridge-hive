@@ -1,6 +1,10 @@
 import type { Tables } from '@bridge-hive/supabase-types';
 import { claimErrorMessage as mapClaimError } from '@bridge-hive/domain';
 
+import {
+  metadataOnlyShiftDetailsCapacity,
+  normalizeShiftDetailsCapacity,
+} from '@/lib/shift-availability';
 import { supabase } from '@/lib/supabase';
 
 export type ShiftAssignment = Tables<'shift_assignments'>;
@@ -23,7 +27,22 @@ export type WorkerShiftDetails = {
   break_minutes: number;
   acceptance_deadline: string | null;
   required_positions: number;
-  open_positions: number;
+  /**
+   * Authoritative remaining seats from get_worker_shift_details.
+   * null = unknown — never treat as 0 or as "all open".
+   */
+  open_positions: number | null;
+  /** True only when open_positions came from the security-definer RPC. */
+  availability_known: boolean;
+  /** Set when capacity could not be loaded; claim stays disabled. */
+  availability_error: string | null;
+  location_address_line1: string | null;
+  location_address_line2: string | null;
+  location_city: string | null;
+  location_postal_code: string | null;
+  location_country_code: string | null;
+  location_latitude: number | null;
+  location_longitude: number | null;
 };
 
 /** Scheduled working minutes for a shift (duration minus break). */
@@ -97,8 +116,9 @@ export async function submitPayoutAccount(params: {
 }
 
 /**
- * Prefer the dedicated RPC when available (migration 014).
- * Falls back to raw shift row if the RPC is not yet applied.
+ * Prefer security-definer get_worker_shift_details (open_positions via
+ * shift_open_positions). Never recount peer assignments under worker RLS.
+ * If the RPC is missing or omits capacity, availability stays unknown.
  */
 export async function getWorkerShiftDetails(shiftId: string): Promise<{
   data: WorkerShiftDetails | null;
@@ -109,27 +129,23 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
   } as never);
 
   if (!error) {
-    const row = (Array.isArray(data) ? data[0] : data) as WorkerShiftDetails | undefined;
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | Parameters<typeof normalizeShiftDetailsCapacity>[0]
+      | undefined;
     if (row?.shift_id) {
-      const required = row.required_positions ?? 1;
-      return {
-        data: {
-          ...row,
-          required_positions: required,
-          open_positions:
-            typeof row.open_positions === 'number' ? row.open_positions : required,
-        },
-      };
+      return { data: normalizeShiftDetailsCapacity(row) as WorkerShiftDetails };
     }
     return { data: null };
   }
 
-  const missingFunction = /PGRST202|Could not find the function|schema cache/i.test(error.message ?? '');
+  const missingFunction = /PGRST202|Could not find the function|schema cache/i.test(
+    error.message ?? '',
+  );
   if (!missingFunction) {
     return { data: null, error: error.message };
   }
 
-  // Fallback before migration 014 / 031 RPCs are applied
+  // Metadata-only fallback: never invent capacity from RLS-limited assignment rows.
   const { data: shift, error: shiftError } = await supabase
     .from('shifts')
     .select('*')
@@ -137,42 +153,27 @@ export async function getWorkerShiftDetails(shiftId: string): Promise<{
     .maybeSingle();
 
   if (shiftError || !shift) {
-    return { data: null, error: shiftError?.message ?? error?.message ?? 'Shift not found' };
+    return {
+      data: null,
+      error: shiftError?.message ?? error.message ?? 'Shift not found',
+    };
   }
 
-  const requiredPositions = shift.required_positions ?? 1;
-  const { count: activeCount } = await supabase
-    .from('shift_assignments')
-    .select('id', { count: 'exact', head: true })
-    .eq('shift_id', shiftId)
-    .in('status', [
-      'accepted',
-      'checked_in',
-      'checked_out',
-      'submitted',
-      'approved',
-    ]);
-  const openPositions = Math.max(0, requiredPositions - (activeCount ?? 0));
-
   return {
-    data: {
-      shift_id: shift.id,
-      organization_name: 'Organization',
-      location_name: 'Location',
-      ward_name: null,
+    data: metadataOnlyShiftDetailsCapacity({
+      shiftId: shift.id,
       title: shift.title,
-      starts_at: shift.starts_at,
-      ends_at: shift.ends_at,
-      rate_minor: shift.rate_minor,
+      startsAt: shift.starts_at,
+      endsAt: shift.ends_at,
+      rateMinor: shift.rate_minor,
       currency: shift.currency,
-      required_role: shift.required_role,
+      requiredRole: shift.required_role,
       status: shift.status,
       notes: shift.notes,
-      break_minutes: shift.break_minutes,
-      acceptance_deadline: shift.acceptance_deadline,
-      required_positions: requiredPositions,
-      open_positions: openPositions,
-    },
+      breakMinutes: shift.break_minutes,
+      acceptanceDeadline: shift.acceptance_deadline,
+      requiredPositions: shift.required_positions,
+    }) as WorkerShiftDetails,
   };
 }
 

@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 
 type ClockParts = {
-  time: string;
-  seconds: string;
+  hours: string;
+  minutes: string;
+  seconds: number;
   date: string;
   week: string;
+  dayProgress: number;
 };
+
+const RING_RADIUS = 12;
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 function isoWeekNumber(date: Date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -18,31 +23,35 @@ function isoWeekNumber(date: Date) {
 }
 
 function readClock(now = new Date()): ClockParts {
-  const time = new Intl.DateTimeFormat(undefined, {
+  const timeParts = new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
     minute: '2-digit',
-    hour12: false,
-  }).format(now);
-
-  const seconds = String(now.getSeconds()).padStart(2, '0');
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const hours = timeParts.find((p) => p.type === 'hour')?.value ?? '--';
+  const minutes = timeParts.find((p) => p.type === 'minute')?.value ?? '--';
 
   const date = new Intl.DateTimeFormat(undefined, {
     weekday: 'long',
     day: 'numeric',
     month: 'short',
-    year: 'numeric',
   }).format(now);
 
+  const elapsed = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
   return {
-    time,
-    seconds,
+    hours,
+    minutes,
+    seconds: now.getSeconds(),
     date,
     week: `Week ${isoWeekNumber(now)}`,
+    dayProgress: elapsed / 86400,
   };
 }
 
 export function SidebarLiveClock() {
   const [parts, setParts] = useState<ClockParts | null>(null);
+  const gradientId = useId();
 
   useEffect(() => {
     const tick = () => setParts(readClock());
@@ -51,44 +60,91 @@ export function SidebarLiveClock() {
     return () => window.clearInterval(id);
   }, []);
 
+  const seconds = parts?.seconds ?? 0;
+  const ringOffset = RING_CIRCUMFERENCE * (1 - (seconds + 1) / 60);
+  const dayPct = Math.round((parts?.dayProgress ?? 0) * 100);
+
   return (
     <div
-      className="relative mt-3 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.07] via-bh-sidebar-raised to-[#0a2438] px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+      className="min-w-0 rounded-lg bg-white/[0.03] px-2.5 py-2"
       aria-live="polite"
       aria-atomic="true"
     >
-      <div
-        className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-bh-honey/15 blur-2xl"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -bottom-10 left-0 h-20 w-20 rounded-full bg-bh-teal/20 blur-2xl"
-        aria-hidden
-      />
-
-      <div className="relative flex items-center justify-between gap-2">
-        <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-bh-honey">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="bh-soft-pulse absolute inline-flex h-full w-full rounded-full bg-bh-honey opacity-75" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-bh-honey" />
+      <div className="flex min-w-0 items-center gap-2.5">
+        <p className="bh-tabular flex shrink-0 items-baseline text-[22px] font-semibold leading-none tracking-tight text-white">
+          <span>{parts?.hours ?? '--'}</span>
+          <span
+            className="bh-clock-colon mx-px text-bh-teal/90"
+            aria-hidden
+          >
+            :
           </span>
-          Live
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-sidebar-muted">
-          {parts?.week ?? '—'}
-        </span>
+          <span>{parts?.minutes ?? '--'}</span>
+        </p>
+
+        <div className="relative h-8 w-8 shrink-0" aria-hidden>
+          <svg viewBox="0 0 36 36" className="h-8 w-8 -rotate-90">
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="#16a6b6" />
+                <stop offset="100%" stopColor="#e0aa18" />
+              </linearGradient>
+            </defs>
+            <circle
+              cx="18"
+              cy="18"
+              r={RING_RADIUS}
+              fill="none"
+              stroke="rgba(255,255,255,0.08)"
+              strokeWidth="2"
+            />
+            <circle
+              cx="18"
+              cy="18"
+              r={RING_RADIUS}
+              fill="none"
+              stroke={`url(#${gradientId})`}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray={RING_CIRCUMFERENCE}
+              strokeDashoffset={parts ? ringOffset : RING_CIRCUMFERENCE}
+              className={
+                seconds === 0 || !parts
+                  ? ''
+                  : 'transition-[stroke-dashoffset] duration-1000 ease-linear'
+              }
+            />
+          </svg>
+          <span
+            key={seconds}
+            className="bh-clock-tick bh-tabular absolute inset-0 flex items-center justify-center text-[9px] font-medium text-white/75"
+          >
+            {parts ? String(seconds).padStart(2, '0') : ''}
+          </span>
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-medium text-bh-sidebar-muted">
+            {parts?.date ?? 'Updating…'}
+          </p>
+          <p className="mt-0.5 flex items-center justify-between gap-2 text-[10px] text-white/45">
+            <span className="truncate">{parts?.week ?? '—'}</span>
+            <span className="bh-tabular shrink-0 font-medium">
+              {parts ? `${dayPct}%` : ''}
+            </span>
+          </p>
+        </div>
       </div>
 
-      <p className="bh-tabular relative mt-2 flex items-baseline gap-1.5 text-[28px] font-bold leading-none tracking-tight text-white">
-        <span>{parts?.time ?? '--:--'}</span>
-        <span className="text-[15px] font-semibold text-bh-honey/90">
-          {parts ? `:${parts.seconds}` : ''}
-        </span>
-      </p>
-
-      <p className="relative mt-1.5 truncate text-[12px] font-medium tracking-wide text-bh-sidebar-muted">
-        {parts?.date ?? 'Updating…'}
-      </p>
+      <div
+        className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/[0.06]"
+        aria-hidden
+      >
+        <div
+          className="h-full rounded-full bg-bh-teal/60 transition-[width] duration-1000 ease-linear"
+          style={{ width: `${(parts?.dayProgress ?? 0) * 100}%` }}
+        />
+      </div>
     </div>
   );
 }

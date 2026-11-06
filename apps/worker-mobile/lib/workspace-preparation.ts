@@ -14,9 +14,17 @@ export function canDismissWorkspacePreparation(params: {
   return params.ready && params.minElapsed;
 }
 
-/** After the first successful cold-launch enter in this JS runtime, skip the artificial minimum. */
-export function workspacePreparationMinMs(consumed: boolean): number {
-  return consumed ? 0 : WORKSPACE_PREPARATION_MINIMUM_MS;
+/**
+ * Artificial minimum only applies to signed-out cold launch (Welcome / login).
+ * Signed-in users go straight to the dashboard as soon as auth is ready.
+ * After the first successful enter in this JS runtime, skip the minimum entirely.
+ */
+export function workspacePreparationMinMs(
+  consumed: boolean,
+  hasSession = false,
+): number {
+  if (consumed || hasSession) return 0;
+  return WORKSPACE_PREPARATION_MINIMUM_MS;
 }
 
 let workspacePreparationConsumed = false;

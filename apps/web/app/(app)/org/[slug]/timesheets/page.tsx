@@ -50,7 +50,7 @@ export default async function TimesheetsPage({
       id,
       worker_id,
       status,
-      timesheet:timesheets(id, status, submitted_minutes, approved_minutes, submitted_at, updated_at),
+      timesheet:timesheets!inner(id, status, submitted_minutes, approved_minutes, submitted_at, updated_at),
       shift:shifts!inner(
         id,
         title,
@@ -64,6 +64,7 @@ export default async function TimesheetsPage({
     )
     .eq('shift.organization_id', ctx.org.id)
     .not('status', 'in', '(withdrawn,cancelled)')
+    .in('timesheet.status', ['submitted', 'approved', 'rejected'])
     .order('updated_at', { ascending: false });
 
   const items = (rows ?? [])

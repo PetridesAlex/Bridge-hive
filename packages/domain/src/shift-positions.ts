@@ -4,6 +4,43 @@ import { grossFromRateAndMinutes } from './money';
 export const SHIFT_POSITIONS_MIN = 1;
 export const SHIFT_POSITIONS_MAX = 100;
 
+/**
+ * Assignment statuses that occupy one position on a multi-worker shift.
+ * Must stay aligned with `shift_active_assignment_count` in
+ * `supabase/migrations/031_shift_positions_capacity.sql`.
+ *
+ * Not occupying: withdrawn, cancelled, rejected, no_show.
+ */
+export const SHIFT_OCCUPYING_ASSIGNMENT_STATUSES = [
+  'accepted',
+  'checked_in',
+  'checked_out',
+  'submitted',
+  'approved',
+] as const;
+
+export type ShiftOccupyingAssignmentStatus =
+  (typeof SHIFT_OCCUPYING_ASSIGNMENT_STATUSES)[number];
+
+export function isOccupyingAssignmentStatus(
+  status: string | null | undefined,
+): status is ShiftOccupyingAssignmentStatus {
+  if (!status) return false;
+  return (SHIFT_OCCUPYING_ASSIGNMENT_STATUSES as readonly string[]).includes(
+    status,
+  );
+}
+
+/** Count assignments that currently occupy capacity. */
+export function countOccupyingAssignments(
+  statuses: ReadonlyArray<string | null | undefined>,
+): number {
+  return statuses.reduce(
+    (sum, status) => sum + (isOccupyingAssignmentStatus(status) ? 1 : 0),
+    0,
+  );
+}
+
 export function clampShiftPositions(value: number): number {
   if (!Number.isFinite(value)) return SHIFT_POSITIONS_MIN;
   return Math.min(
@@ -51,6 +88,49 @@ export function filledPositionsLabel(
     Math.trunc(requiredPositions || SHIFT_POSITIONS_MIN),
   );
   return `${filled} / ${required} positions filled`;
+}
+
+/**
+ * Organization availability copy.
+ * Example: "4 positions · 2 filled · 2 available"
+ * Fully booked: "4 positions · 4 filled · Fully booked"
+ */
+export function positionsAvailabilityLabel(
+  requiredPositions: number,
+  filledCount: number,
+): string {
+  const required = Math.max(
+    SHIFT_POSITIONS_MIN,
+    Math.trunc(requiredPositions || SHIFT_POSITIONS_MIN),
+  );
+  const filled = Math.min(
+    required,
+    Math.max(0, Math.trunc(filledCount)),
+  );
+  const open = remainingOpenPositions(required, filled);
+  const positionsWord = required === 1 ? 'position' : 'positions';
+  if (open === 0) {
+    return `${required} ${positionsWord} · ${filled} filled · Fully booked`;
+  }
+  return `${required} ${positionsWord} · ${filled} filled · ${open} available`;
+}
+
+/** Compact calendar / chip label: "2/4" or "Full". */
+export function positionsCompactLabel(
+  requiredPositions: number,
+  filledCount: number,
+): string {
+  const required = Math.max(
+    SHIFT_POSITIONS_MIN,
+    Math.trunc(requiredPositions || SHIFT_POSITIONS_MIN),
+  );
+  const filled = Math.min(
+    required,
+    Math.max(0, Math.trunc(filledCount)),
+  );
+  const open = remainingOpenPositions(required, filled);
+  if (open === 0) return 'Full';
+  return `${filled}/${required}`;
 }
 
 export function remainingOpenPositions(

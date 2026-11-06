@@ -10,4 +10,15 @@ export const NEW_SHIFTS_CHANNEL = {
   color: '#0B2A43',
 } as const;
 
+/** Android channel for organization messages (generic title, no chat body). */
+export const ORG_MESSAGES_CHANNEL = {
+  id: 'org-messages',
+  name: 'Organization messages',
+  importance: 'high',
+  sound: 'default',
+  vibration: true,
+  lightColor: '#16A6B6',
+  color: '#0B2A43',
+} as const;
+
 export const PUSH_EXPLAINER_DISMISSED_KEY = 'bridgehive.push.explainerDismissed';

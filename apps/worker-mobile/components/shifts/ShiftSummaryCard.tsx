@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Easing,
+  FadeInDown,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -53,6 +54,11 @@ type Props = {
   accessibilityLabel: string;
   /** Rendered inside the card under the CTA (e.g. progress toggle). */
   children?: React.ReactNode;
+  /**
+   * `compact` = dense marketplace row (more shifts visible).
+   * `full` = detailed card for next-shift / assignment surfaces.
+   */
+  density?: 'full' | 'compact';
 };
 
 const INK = colors.navy;
@@ -91,21 +97,33 @@ export function ShiftSummaryCard({
   onPress,
   accessibilityLabel,
   children,
+  density = 'full',
 }: Props) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
   const [cardWidth, setCardWidth] = useState(0);
+  const compact = density === 'compact';
   const minutes = Math.max(
     0,
     Math.round((new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60000) -
       breakMinutes,
   );
-  const dateLabel = formatDate(startsAt, { year: 'numeric' });
+  const dateLabel = compact
+    ? formatDate(startsAt, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : formatDate(startsAt, { year: 'numeric' });
   const timeLabel = formatTimeRange(startsAt, endsAt);
   const durationLabel = formatDurationMinutes(minutes).toLowerCase();
   const rateLabel = formatMoney(rateMinor, currency);
   const estimateLabel = formatMoney(Math.round((rateMinor * minutes) / 60), currency);
   const twoColumn = cardWidth === 0 || cardWidth >= TWO_COLUMN_MIN_WIDTH;
+  const availability = extraRows?.find((row) => row.label === 'Availability')?.value;
+  const orgLabel = org?.trim() || null;
+  const locationLabel = location?.trim() || null;
 
   const rows: SummaryRow[] = [
     { icon: 'calendar-outline', label: 'Date', value: dateLabel },
@@ -121,6 +139,120 @@ export function ShiftSummaryCard({
     const next = Math.round(e.nativeEvent.layout.width);
     if (next !== cardWidth) setCardWidth(next);
   };
+
+  if (compact) {
+    return (
+      <Animated.View style={[styles.card, styles.cardCompact, motionStyle]}>
+        <Pressable
+          onPress={onPress}
+          onPressIn={() => {
+            if (!reduced) scale.value = withSpring(0.985, { damping: 18, stiffness: 420 });
+          }}
+          onPressOut={() => {
+            scale.value = withSpring(1, { damping: 14, stiffness: 260 });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={accessibilityLabel}
+          style={({ pressed }) => [
+            styles.pressCompact,
+            pressed && styles.cardPressed,
+          ]}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={['rgba(11, 42, 67, 0.03)', 'rgba(20, 169, 181, 0.06)', 'transparent']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+
+          <View style={styles.compactTop}>
+            <View style={styles.compactTitleCol}>
+              <Text style={styles.compactTitle} numberOfLines={1}>
+                {title}
+              </Text>
+              <View style={styles.compactMetaRow}>
+                <View style={styles.compactTimeChip}>
+                  <Ionicons name="time" size={12} color={TILE_ICON} />
+                  <Text style={styles.compactTimeText} numberOfLines={1}>
+                    {timeLabel}
+                  </Text>
+                </View>
+                {availability ? (
+                  <View style={styles.compactAvailChip}>
+                    <View style={styles.compactAvailDot} />
+                    <Text style={styles.compactAvailText} numberOfLines={1}>
+                      {availability}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              {orgLabel || locationLabel ? (
+                <View style={styles.compactPlaceBlock}>
+                  {orgLabel ? (
+                    <CompactPlaceChip
+                      tone="org"
+                      icon="business"
+                      label={orgLabel}
+                      delay={40}
+                      reduced={reduced}
+                    />
+                  ) : null}
+                  {locationLabel ? (
+                    <CompactPlaceChip
+                      tone="location"
+                      icon="location"
+                      label={locationLabel}
+                      delay={90}
+                      reduced={reduced}
+                    />
+                  ) : null}
+                </View>
+              ) : null}
+            </View>
+            <View style={styles.compactAside}>
+              {pill ? <ShiftStatusPill pill={pill} compact /> : null}
+              <View style={styles.compactRateChip}>
+                <Text style={styles.compactRate} numberOfLines={1}>
+                  {rateLabel}
+                </Text>
+                <Text style={styles.compactRateUnit}>/hr</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.compactFooter}>
+            <View style={styles.compactDateRow}>
+              <LinearGradient
+                colors={['#2A6BD6', '#123A5C']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.compactDateMark}
+              >
+                <Ionicons name="calendar" size={11} color={colors.white} />
+              </LinearGradient>
+              <Text style={styles.compactDate} numberOfLines={1}>
+                {dateLabel}
+              </Text>
+            </View>
+            <View style={styles.compactEarn}>
+              <Text style={styles.compactEarnLabel}>Est.</Text>
+              <Text style={styles.compactEarnValue}>{estimateLabel}</Text>
+              <LinearGradient
+                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+                start={{ x: 0.1, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.compactChevron}
+              >
+                <Ionicons name="chevron-forward" size={14} color={colors.white} />
+              </LinearGradient>
+            </View>
+          </View>
+        </Pressable>
+        {children ? <View style={styles.compactChildren}>{children}</View> : null}
+      </Animated.View>
+    );
+  }
 
   return (
     <Animated.View style={[styles.card, motionStyle]}>
@@ -251,7 +383,13 @@ export function ShiftSummaryCard({
  * Animated assignment status: springs in, shows a live pulsing ring for active
  * states, and a soft sheen sweeps across every few seconds. Static under Reduce Motion.
  */
-function ShiftStatusPill({ pill }: { pill: SummaryPill }) {
+function ShiftStatusPill({
+  pill,
+  compact = false,
+}: {
+  pill: SummaryPill;
+  compact?: boolean;
+}) {
   const reduced = useReducedMotion();
   const pulse = useSharedValue(0);
   const sheen = useSharedValue(0);
@@ -293,7 +431,11 @@ function ShiftStatusPill({ pill }: { pill: SummaryPill }) {
   return (
     <Animated.View
       entering={reduced ? undefined : ZoomIn.springify().damping(12).stiffness(200)}
-      style={[styles.pill, { backgroundColor: pill.bg }]}
+      style={[
+        styles.pill,
+        compact && styles.pillCompact,
+        { backgroundColor: pill.bg },
+      ]}
       accessibilityRole="text"
       accessibilityLabel={pill.label}
     >
@@ -304,14 +446,75 @@ function ShiftStatusPill({ pill }: { pill: SummaryPill }) {
             style={[styles.pillRing, { backgroundColor: pill.fg }, ringStyle]}
           />
         ) : null}
-        <Ionicons name={pill.icon} size={18} color={pill.fg} />
+        <Ionicons name={pill.icon} size={compact ? 14 : 18} color={pill.fg} />
       </View>
-      <Text style={[styles.pillText, { color: pill.fg }]} numberOfLines={1}>
+      <Text
+        style={[styles.pillText, compact && styles.pillTextCompact, { color: pill.fg }]}
+        numberOfLines={1}
+      >
         {pill.label}
       </Text>
-      {!reduced ? (
+      {!reduced && !compact ? (
         <Animated.View pointerEvents="none" style={[styles.pillSheen, sheenStyle]} />
       ) : null}
+    </Animated.View>
+  );
+}
+
+const PLACE_TONES = {
+  org: {
+    mark: ['#2A6BD6', '#123A5C'] as [string, string],
+    wash: 'rgba(42, 107, 214, 0.08)',
+    border: 'rgba(42, 107, 214, 0.18)',
+  },
+  location: {
+    mark: [colors.tealStrong, '#0E7A8A'] as [string, string],
+    wash: 'rgba(20, 169, 181, 0.09)',
+    border: 'rgba(20, 169, 181, 0.20)',
+  },
+} as const;
+
+function CompactPlaceChip({
+  tone,
+  icon,
+  label,
+  delay,
+  reduced,
+}: {
+  tone: keyof typeof PLACE_TONES;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  delay: number;
+  reduced: boolean;
+}) {
+  const palette = PLACE_TONES[tone];
+  return (
+    <Animated.View
+      entering={
+        reduced ? undefined : FadeInDown.delay(delay).duration(360).springify().damping(17)
+      }
+      style={[
+        styles.compactPlaceChip,
+        { backgroundColor: palette.wash, borderColor: palette.border },
+      ]}
+    >
+      <LinearGradient
+        colors={palette.mark}
+        start={{ x: 0.15, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+        style={styles.compactPlaceMark}
+      >
+        <Ionicons name={icon} size={11} color={colors.white} />
+      </LinearGradient>
+      <Text
+        style={[
+          styles.compactPlace,
+          tone === 'org' ? styles.compactPlaceOrg : styles.compactPlaceLocation,
+        ]}
+        numberOfLines={2}
+      >
+        {label}
+      </Text>
     </Animated.View>
   );
 }
@@ -349,12 +552,222 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.md,
   },
+  cardCompact: {
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+    overflow: 'hidden',
+    ...shadows.sm,
+  },
+  compactChildren: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    gap: spacing.sm,
+  },
   press: {
     padding: spacing.lg,
     gap: spacing.lg,
   },
+  pressCompact: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: 10,
+  },
   cardPressed: {
     opacity: 0.96,
+  },
+  compactTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  compactTitleCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 6,
+  },
+  compactTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.35,
+    color: INK,
+  },
+  compactMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+  },
+  compactTimeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(42, 107, 214, 0.10)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(42, 107, 214, 0.22)',
+  },
+  compactTimeText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12,
+    letterSpacing: -0.15,
+    color: TILE_ICON,
+  },
+  compactAvailChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(34, 160, 107, 0.10)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(34, 160, 107, 0.28)',
+  },
+  compactAvailDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: colors.success,
+  },
+  compactAvailText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 12,
+    letterSpacing: -0.1,
+    color: '#15803D',
+  },
+  compactPlaceBlock: {
+    gap: 6,
+    marginTop: 2,
+  },
+  compactPlaceChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+  },
+  compactPlaceMark: {
+    width: 22,
+    height: 22,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  compactPlace: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 13,
+    lineHeight: 17,
+    letterSpacing: -0.15,
+  },
+  compactPlaceOrg: {
+    fontFamily: typography.fonts.semibold,
+    color: INK,
+  },
+  compactPlaceLocation: {
+    fontFamily: typography.fonts.medium,
+    color: '#3D5A73',
+  },
+  compactAside: {
+    alignItems: 'flex-end',
+    gap: 8,
+    flexShrink: 0,
+  },
+  compactRateChip: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: 10,
+    backgroundColor: 'rgba(11, 42, 67, 0.05)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+  },
+  compactRate: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 14,
+    letterSpacing: -0.25,
+    color: INK,
+  },
+  compactRateUnit: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    color: SLATE,
+  },
+  compactFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(11, 42, 67, 0.08)',
+  },
+  compactDateRow: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  compactDateMark: {
+    width: 22,
+    height: 22,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactDate: {
+    flex: 1,
+    minWidth: 0,
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 13,
+    letterSpacing: -0.2,
+    color: INK,
+  },
+  compactEarn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  compactEarnLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
+    color: SLATE,
+  },
+  compactEarnValue: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 15,
+    letterSpacing: -0.25,
+    color: colors.success,
+  },
+  compactChevron: {
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 2,
+  },
+  pillCompact: {
+    height: 28,
+    paddingLeft: 8,
+    paddingRight: 10,
+    gap: 4,
+  },
+  pillTextCompact: {
+    fontSize: 12,
   },
   extra: {
     paddingHorizontal: spacing.lg,

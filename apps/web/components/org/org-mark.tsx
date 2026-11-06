@@ -13,13 +13,15 @@ export function OrgMark({
 }: {
   displayName: string;
   logoUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg' | 'display' | 'hero';
+  size?: 'sm' | 'md' | 'lg' | 'display' | 'hero' | 'showcase';
   className?: string;
 }) {
   const [failed, setFailed] = useState(false);
   const initials = organizationInitials(displayName);
   const dims =
-    size === 'hero'
+    size === 'showcase'
+      ? 'h-[5.5rem] w-[5.5rem] text-[28px]'
+      : size === 'hero'
       ? 'h-[4.5rem] w-[4.5rem] text-xl'
       : size === 'display'
         ? 'h-14 w-14 text-base'
@@ -28,7 +30,12 @@ export function OrgMark({
           : size === 'sm'
             ? 'h-9 w-9 text-xs'
             : 'h-10 w-10 text-sm';
-  const radius = size === 'hero' ? 'rounded-[1.15rem]' : 'rounded-2xl';
+  const radius =
+    size === 'showcase'
+      ? 'rounded-[1.6rem]'
+      : size === 'hero'
+        ? 'rounded-[1.15rem]'
+        : 'rounded-2xl';
 
   if (logoUrl && !failed) {
     return (

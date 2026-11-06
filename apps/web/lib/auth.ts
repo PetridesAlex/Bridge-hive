@@ -7,6 +7,7 @@ import {
 import type { Tables } from '@bridge-hive/supabase-types';
 import type { User } from '@supabase/supabase-js';
 import { redirect } from 'next/navigation';
+import { cache } from 'react';
 
 import { createClient } from '@/lib/supabase/server';
 
@@ -82,7 +83,7 @@ function capabilitiesForRole(
   };
 }
 
-export async function getAuthBundle(): Promise<AuthBundle | null> {
+export const getAuthBundle = cache(async function getAuthBundle(): Promise<AuthBundle | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -122,7 +123,7 @@ export async function getAuthBundle(): Promise<AuthBundle | null> {
     });
 
   return { user, profile, memberships };
-}
+});
 
 export async function requireAuthBundle(): Promise<AuthBundle> {
   const bundle = await getAuthBundle();
@@ -132,7 +133,9 @@ export async function requireAuthBundle(): Promise<AuthBundle> {
   return bundle;
 }
 
-export async function requireOrgMembership(slug: string): Promise<OrgContext> {
+export const requireOrgMembership = cache(async function requireOrgMembership(
+  slug: string,
+): Promise<OrgContext> {
   const bundle = await requireAuthBundle();
   const match = bundle.memberships.find((m) => m.organization.slug === slug);
 
@@ -156,4 +159,4 @@ export async function requireOrgMembership(slug: string): Promise<OrgContext> {
     user: bundle.user,
     profile: bundle.profile,
   };
-}
+});

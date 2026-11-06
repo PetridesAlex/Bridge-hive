@@ -287,6 +287,7 @@ export default function WelcomeScreen() {
     return <Redirect href={homeRoute as never} />;
   }
 
+  // Keep navy canvas only while onboarding preference loads — not a post-login gap.
   if (checking) {
     return <View style={styles.root} />;
   }

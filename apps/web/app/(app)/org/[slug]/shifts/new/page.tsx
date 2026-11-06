@@ -21,23 +21,40 @@ export default async function NewShiftPage({
   }
 
   const supabase = await createClient();
-  const { data: locations } = await supabase
+  const { data: locationRows } = await supabase
     .from('locations')
-    .select('*')
+    .select('id, name, wards(id, name, location_id)')
     .eq('organization_id', ctx.org.id)
     .order('name');
 
-  const locationIds = (locations ?? []).map((location) => location.id);
-  const { data: wards } =
-    locationIds.length > 0
-      ? await supabase
-          .from('wards')
-          .select('id, name, location_id')
-          .in('location_id', locationIds)
-          .order('name')
-      : { data: [] as Array<{ id: string; name: string; location_id: string }> };
+  const locations = (locationRows ?? []).map((location) => ({
+    id: location.id,
+    name: location.name,
+  }));
+  const wards = (locationRows ?? []).flatMap((location) => {
+    const nested = Array.isArray(location.wards) ? location.wards : [];
+    return nested.flatMap((ward) =>
+      ward &&
+      typeof ward === 'object' &&
+      'id' in ward &&
+      'name' in ward &&
+      typeof ward.id === 'string' &&
+      typeof ward.name === 'string'
+        ? [
+            {
+              id: ward.id,
+              name: ward.name,
+              location_id:
+                'location_id' in ward && typeof ward.location_id === 'string'
+                  ? ward.location_id
+                  : location.id,
+            },
+          ]
+        : [],
+    );
+  });
 
-  const hasLocations = Boolean(locations?.length);
+  const hasLocations = Boolean(locations.length);
 
   return (
     <div className="space-y-6 bh-fade-up">
@@ -59,8 +76,8 @@ export default async function NewShiftPage({
       ) : (
         <ShiftForm
           slug={slug}
-          locations={locations!}
-          wards={(wards ?? []).map((ward) => ({
+          locations={locations}
+          wards={wards.map((ward) => ({
             id: ward.id,
             name: ward.name,
             locationId: ward.location_id,

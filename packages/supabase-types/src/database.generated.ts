@@ -308,6 +308,8 @@ export type Database = {
           created_at: string
           id: string
           image_path: string | null
+          latitude: number | null
+          longitude: number | null
           name: string
           organization_id: string
           postal_code: string | null
@@ -325,6 +327,8 @@ export type Database = {
           created_at?: string
           id?: string
           image_path?: string | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           organization_id: string
           postal_code?: string | null
@@ -342,6 +346,8 @@ export type Database = {
           created_at?: string
           id?: string
           image_path?: string | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           organization_id?: string
           postal_code?: string | null
@@ -2813,7 +2819,14 @@ export type Database = {
           break_minutes: number
           currency: string
           ends_at: string
+          location_address_line1: string | null
+          location_address_line2: string | null
+          location_city: string | null
+          location_country_code: string | null
+          location_latitude: number | null
+          location_longitude: number | null
           location_name: string
+          location_postal_code: string | null
           notes: string
           open_positions: number
           organization_name: string

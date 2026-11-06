@@ -126,8 +126,8 @@ export function GoogleSignInButton({
     setError(undefined);
     try {
       const result = await signInWithGoogle();
-      if (result.error) {
-        setError(result.error);
+      if (result.error || result.cancelled) {
+        if (result.error) setError(result.error);
         return;
       }
       onSuccess?.();

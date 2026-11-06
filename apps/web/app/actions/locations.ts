@@ -63,6 +63,8 @@ export async function createLocationAction(
     return { error: 'You do not have permission to create locations.' };
   }
 
+  const latRaw = String(formData.get('latitude') ?? '').trim();
+  const lngRaw = String(formData.get('longitude') ?? '').trim();
   const parsed = createLocationSchema.safeParse({
     organizationId: ctx.org.id,
     name: String(formData.get('name') ?? ''),
@@ -75,6 +77,8 @@ export async function createLocationAction(
     contactName: String(formData.get('contactName') ?? '') || undefined,
     contactPhone: String(formData.get('contactPhone') ?? '') || undefined,
     contactEmail: String(formData.get('contactEmail') ?? '') || undefined,
+    latitude: latRaw ? Number(latRaw) : undefined,
+    longitude: lngRaw ? Number(lngRaw) : undefined,
   });
 
   if (!parsed.success) {
@@ -97,6 +101,8 @@ export async function createLocationAction(
       contact_name: v.contactName ?? null,
       contact_phone: v.contactPhone ?? null,
       contact_email: v.contactEmail ?? null,
+      latitude: v.latitude ?? null,
+      longitude: v.longitude ?? null,
     })
     .select('id')
     .single();
@@ -120,6 +126,8 @@ export async function updateLocationAction(
     return { error: 'You do not have permission to update locations.' };
   }
 
+  const latRaw = String(formData.get('latitude') ?? '').trim();
+  const lngRaw = String(formData.get('longitude') ?? '').trim();
   const parsed = createLocationSchema.safeParse({
     organizationId: ctx.org.id,
     name: String(formData.get('name') ?? ''),
@@ -132,6 +140,8 @@ export async function updateLocationAction(
     contactName: String(formData.get('contactName') ?? '') || undefined,
     contactPhone: String(formData.get('contactPhone') ?? '') || undefined,
     contactEmail: String(formData.get('contactEmail') ?? '') || undefined,
+    latitude: latRaw ? Number(latRaw) : undefined,
+    longitude: lngRaw ? Number(lngRaw) : undefined,
   });
 
   if (!parsed.success) {
@@ -153,6 +163,8 @@ export async function updateLocationAction(
       contact_name: v.contactName ?? null,
       contact_phone: v.contactPhone ?? null,
       contact_email: v.contactEmail ?? null,
+      latitude: v.latitude ?? null,
+      longitude: v.longitude ?? null,
     })
     .eq('id', locationId)
     .eq('organization_id', ctx.org.id);

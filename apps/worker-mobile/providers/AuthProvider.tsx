@@ -94,6 +94,8 @@ type AuthContextValue = {
   retryBootstrap: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string; cancelled?: boolean }>;
+  /** Google account was chosen and the session/profile are still being established. */
+  googleSignInCompleting: boolean;
   signUpWorker: (input: WorkerSignUpInput) => Promise<WorkerSignUpResult>;
   resendSignupConfirmation: (email: string) => Promise<{ error?: string }>;
   resetPassword: (
@@ -338,6 +340,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accountRejectionReason, setAccountRejectionReason] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [bootstrapError, setBootstrapError] = useState(false);
+  const [googleSignInCompleting, setGoogleSignInCompleting] = useState(false);
   /** User id whose profile bundle is fully loaded — prevents choose-role flash after login. */
   const [bundleUserId, setBundleUserId] = useState<string | null>(null);
 
@@ -441,10 +444,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
       if (error) return { error: friendlyAuthError(error.message) };
-      // Finish profile hydration before callers navigate, so verified workers
-      // land on the dashboard instead of a brief choose-role / pending flash.
+      // Publish session immediately and hydrate in the background so login can
+      // enter the workspace without waiting on profile round-trips.
       if (data.session) {
-        await hydrate(data.session);
+        void hydrate(data.session);
       }
       return {};
     },
@@ -452,7 +455,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signInWithGoogle = useCallback(async () => {
-    return signInWithGoogleOAuth();
+    try {
+      const result = await signInWithGoogleOAuth(() => setGoogleSignInCompleting(true));
+      if (!result.error && !result.cancelled) {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) setSession(data.session);
+      }
+      return result;
+    } finally {
+      setGoogleSignInCompleting(false);
+    }
   }, []);
 
   const signUpWorker = useCallback(async (input: WorkerSignUpInput) => {
@@ -748,6 +760,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       retryBootstrap,
       signIn,
       signInWithGoogle,
+      googleSignInCompleting,
       signUpWorker,
       resendSignupConfirmation,
       resetPassword,
@@ -778,6 +791,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       retryBootstrap,
       signIn,
       signInWithGoogle,
+      googleSignInCompleting,
       signUpWorker,
       resendSignupConfirmation,
       resetPassword,

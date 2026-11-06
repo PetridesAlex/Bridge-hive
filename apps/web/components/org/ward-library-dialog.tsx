@@ -38,6 +38,7 @@ export function WardLibraryDialog({
   canManage = true,
   triggerLabel = '+ Add from ward library',
   compactTrigger = true,
+  triggerTone = 'navy',
   onCreated,
   autoSelectSingle = true,
 }: {
@@ -48,6 +49,7 @@ export function WardLibraryDialog({
   canManage?: boolean;
   triggerLabel?: string;
   compactTrigger?: boolean;
+  triggerTone?: 'gold' | 'navy';
   /** Called with newly created wards; parent should merge into local wards state. */
   onCreated?: (created: CreatedWardRow[], autoSelectWardId: string | null) => void;
   /** When exactly one new ward is added, return its id for auto-select. */
@@ -175,12 +177,18 @@ export function WardLibraryDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
-          variant={compactTrigger ? 'link' : 'honey'}
+          variant={compactTrigger ? 'link' : triggerTone === 'gold' ? 'honey' : 'default'}
           size={compactTrigger ? 'sm' : 'lg'}
+          data-bh-cta={compactTrigger ? 'link' : triggerTone}
           className={cn(
             compactTrigger
               ? 'h-auto px-0 py-0 text-xs font-medium text-bh-teal-strong transition-colors hover:text-[#071d30]'
-              : 'group min-h-11 justify-between gap-3 rounded-xl px-4 font-semibold shadow-[0_10px_24px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(228,179,52,0.38)] active:translate-y-0 active:shadow-[0_6px_16px_rgba(228,179,52,0.22)] motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+              : cn(
+                  'group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl px-3.5 font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
+                  triggerTone === 'gold'
+                    ? 'border-0 bg-[#e4b334] text-[#071d30] shadow-[0_10px_22px_rgba(228,179,52,0.38)] hover:bg-[#f0c14d] hover:shadow-[0_14px_28px_rgba(228,179,52,0.48)]'
+                    : 'border border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] hover:bg-[linear-gradient(155deg,#1a425c_0%,#0a283c_72%)] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)]',
+                ),
           )}
         >
           {compactTrigger ? (
@@ -188,7 +196,14 @@ export function WardLibraryDialog({
           ) : (
             <>
               <span className="inline-flex items-center gap-2.5">
-                <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30]/10 text-[#071d30] ring-1 ring-[#071d30]/10 transition-colors group-hover:bg-[#071d30]/14">
+                <span
+                  className={cn(
+                    'grid h-7 w-7 place-items-center rounded-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.45)]',
+                    triggerTone === 'gold'
+                      ? 'bg-[#071d30] text-[#e4b334]'
+                      : 'bg-[#e4b334] text-[#071d30]',
+                  )}
+                >
                   <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
                 </span>
                 {triggerLabel.replace(/^\+\s*/, '')}

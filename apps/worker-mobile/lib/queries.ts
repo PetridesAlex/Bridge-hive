@@ -1,7 +1,11 @@
 import type { Tables } from '@bridge-hive/supabase-types';
-import { remainingOpenPositions } from '@bridge-hive/domain';
 
 import { getWorkerShiftDetails } from '@/lib/rpcs';
+import {
+  AVAILABILITY_UNAVAILABLE,
+  availabilityFromOpenPositions,
+  parseRequiredPositions,
+} from '@/lib/shift-availability';
 import { supabase } from '@/lib/supabase';
 
 export type Shift = Tables<'shifts'>;
@@ -13,17 +17,13 @@ export type PayoutAccount = Tables<'payout_accounts'>;
 export type Notification = Tables<'notifications'>;
 export type ShiftRequirement = Tables<'shift_requirements'>;
 
-const ACTIVE_ASSIGNMENT_STATUSES = [
-  'accepted',
-  'checked_in',
-  'checked_out',
-  'submitted',
-  'approved',
-] as const;
-
 export type MarketplaceShift = Shift & {
-  open_positions: number;
-  filled_positions: number;
+  /** Authoritative open count from get_worker_shift_details; null when unknown. */
+  open_positions: number | null;
+  filled_positions: number | null;
+  /** False when details RPC did not return capacity — never display as "0 available". */
+  availability_known: boolean;
+  availability_error: string | null;
   location_name?: string | null;
   ward_name?: string | null;
   organization_name?: string | null;
@@ -44,42 +44,42 @@ export async function getPublishedShifts() {
     return { data: [] as MarketplaceShift[] };
   }
 
-  const shiftIds = data.map((shift) => shift.id);
-  const { data: assignmentRows } = await supabase
-    .from('shift_assignments')
-    .select('shift_id, status')
-    .in('shift_id', shiftIds)
-    .in('status', [...ACTIVE_ASSIGNMENT_STATUSES]);
-
-  const filledByShift = new Map<string, number>();
-  for (const row of assignmentRows ?? []) {
-    filledByShift.set(row.shift_id, (filledByShift.get(row.shift_id) ?? 0) + 1);
-  }
-
-  // Workers cannot read locations/wards via RLS. Use the security-definer
-  // details RPC so marketplace cards can show location (same source as detail).
+  // Workers cannot read locations/wards or other workers' assignments via RLS.
+  // Use security-definer get_worker_shift_details for location labels AND
+  // authoritative open_positions (shift_open_positions). Never recount
+  // shift_assignments under the worker JWT — that undercounts peers and
+  // overstates remaining seats on multi-position shifts.
   const detailRows = await Promise.all(
     data.map(async (shift) => {
       const result = await getWorkerShiftDetails(shift.id);
-      return [shift.id, result.data] as const;
+      return [shift.id, result] as const;
     }),
   );
   const detailsById = new Map(detailRows);
 
   const enriched = data.map((shift) => {
-    const filled = filledByShift.get(shift.id) ?? 0;
-    const required = shift.required_positions ?? 1;
-    const detail = detailsById.get(shift.id);
+    const required = parseRequiredPositions(shift.required_positions);
+    const result = detailsById.get(shift.id);
+    const detail = result?.data;
+    const availability = detail?.availability_known
+      ? availabilityFromOpenPositions(detail.open_positions, detail.required_positions)
+      : availabilityFromOpenPositions(null, required, {
+          error:
+            detail?.availability_error ??
+            result?.error ??
+            AVAILABILITY_UNAVAILABLE,
+        });
+
     return {
       ...shift,
       location_name: detail?.location_name?.trim() || null,
       ward_name: detail?.ward_name?.trim() || null,
       organization_name: detail?.organization_name?.trim() || null,
-      filled_positions: filled,
-      open_positions:
-        typeof detail?.open_positions === 'number'
-          ? detail.open_positions
-          : remainingOpenPositions(required, filled),
+      required_positions: detail?.required_positions ?? required,
+      filled_positions: availability.filled_positions,
+      open_positions: availability.open_positions,
+      availability_known: availability.availability_known,
+      availability_error: availability.availability_error,
     } satisfies MarketplaceShift;
   });
 
@@ -105,20 +105,29 @@ export async function getShiftRequirements(shiftId: string) {
   return { data: (data ?? []) as ShiftRequirement[], error: error?.message };
 }
 
+/** Nested shift summary on assignment lists (Work/Home). */
+export type AssignmentShiftSummary = Pick<
+  Shift,
+  | 'id'
+  | 'organization_id'
+  | 'title'
+  | 'starts_at'
+  | 'ends_at'
+  | 'rate_minor'
+  | 'currency'
+  | 'required_role'
+  | 'status'
+  | 'break_minutes'
+> & {
+  /** Optional display labels when enriched separately (not on shifts row). */
+  location_name?: string | null;
+  ward_name?: string | null;
+  organization_name?: string | null;
+};
+
 /** Assignment row with optional nested shift fields for Work/Home lists. */
 export type AssignmentWithShift = ShiftAssignment & {
-  shifts: Pick<
-    Shift,
-    | 'id'
-    | 'title'
-    | 'starts_at'
-    | 'ends_at'
-    | 'rate_minor'
-    | 'currency'
-    | 'required_role'
-    | 'status'
-    | 'break_minutes'
-  > | null;
+  shifts: AssignmentShiftSummary | null;
 };
 
 export async function getMyAssignments(workerId: string) {
@@ -127,7 +136,7 @@ export async function getMyAssignments(workerId: string) {
   const { data, error } = await supabase
     .from('shift_assignments')
     .select(
-      '*, shifts ( id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes )',
+      '*, shifts ( id, organization_id, title, starts_at, ends_at, rate_minor, currency, required_role, status, break_minutes )',
     )
     .eq('worker_id', workerId)
     .order('accepted_at', { ascending: false });

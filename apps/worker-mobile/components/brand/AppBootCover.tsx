@@ -29,21 +29,22 @@ export const APP_BOOT_BG = '#071A2F';
 export const APP_BOOT_NAVY = APP_BOOT_BG;
 
 const BOOT_MIDNIGHT = '#061528';
-const BOOT_ELEVATED = '#0B2742';
 const BOOT_TEAL = '#0B5266';
 const BOOT_CYAN = '#1596B5';
 const BOOT_GOLD = '#F4C542';
 const BOOT_TEXT = '#F4FAFC';
-const BOOT_TEXT_SECONDARY = '#AFC9D5';
 
-/** Official mark size on the JS “Preparing your workspace” cover. */
-export const APP_BOOT_MARK_SIZE = 220;
+/** Official mark size on the premium launch splash. */
+export const APP_BOOT_MARK_SIZE = 168;
 
-/** Logo breath cycle while workspace is preparing (ms). */
-export const APP_BOOT_BREATH_MS = 3600;
+/** Logo breath cycle (ms). */
+export const APP_BOOT_BREATH_MS = 3200;
 
 /** Background atmosphere drift cycle (ms). */
-export const APP_BOOT_DRIFT_MS = 13000;
+export const APP_BOOT_DRIFT_MS = 12000;
+
+/** Soft orbital ring period (ms). */
+export const APP_BOOT_ORBIT_MS = 10000;
 
 export {
   APP_BOOT_MIN_MS,
@@ -52,10 +53,11 @@ export {
 };
 
 /** Show refined progress after this delay when bootstrap is still running. */
-export const APP_BOOT_SLOW_MS = 1800;
+export const APP_BOOT_SLOW_MS = 500;
 
 /**
  * Holds the launch cover until `ready` and the minimum boot duration have both elapsed.
+ * Kept for callers that still want a timed gate; index no longer uses a fixed hold.
  */
 export function useLaunchGate(ready: boolean, minMs: number = APP_BOOT_MIN_MS): boolean {
   const [minElapsed, setMinElapsed] = useState(minMs <= 0);
@@ -101,66 +103,84 @@ function BootAtmosphere({ reducedMotion }: { reducedMotion: boolean }) {
 
   const poolA = useAnimatedStyle(() => {
     if (reducedMotion) {
-      return { opacity: 0.14, transform: [{ translateX: 0 }, { translateY: 0 }] };
+      return { opacity: 0.16, transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }] };
     }
     return {
-      opacity: interpolate(drift.value, [0, 1], [0.1, 0.18]),
+      opacity: interpolate(drift.value, [0, 1], [0.12, 0.22]),
       transform: [
-        { translateX: interpolate(drift.value, [0, 1], [-10, 14]) },
-        { translateY: interpolate(drift.value, [0, 1], [8, -12]) },
+        { translateX: interpolate(drift.value, [0, 1], [-14, 18]) },
+        { translateY: interpolate(drift.value, [0, 1], [10, -16]) },
+        { scale: interpolate(drift.value, [0, 1], [0.94, 1.08]) },
       ],
     };
   });
 
   const poolB = useAnimatedStyle(() => {
     if (reducedMotion) {
-      return { opacity: 0.1, transform: [{ translateX: 0 }, { translateY: 0 }] };
+      return { opacity: 0.12, transform: [{ translateX: 0 }, { translateY: 0 }, { scale: 1 }] };
     }
     return {
-      opacity: interpolate(drift.value, [0, 1], [0.08, 0.14]),
+      opacity: interpolate(drift.value, [0, 1], [0.09, 0.16]),
       transform: [
-        { translateX: interpolate(drift.value, [0, 1], [12, -8]) },
-        { translateY: interpolate(drift.value, [0, 1], [-6, 16]) },
+        { translateX: interpolate(drift.value, [0, 1], [16, -12]) },
+        { translateY: interpolate(drift.value, [0, 1], [-8, 18]) },
+        { scale: interpolate(drift.value, [0, 1], [1.05, 0.92]) },
       ],
+    };
+  });
+
+  const veil = useAnimatedStyle(() => {
+    if (reducedMotion) return { opacity: 0.35 };
+    return {
+      opacity: interpolate(drift.value, [0, 1], [0.28, 0.42]),
     };
   });
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill} accessibilityElementsHidden>
-      <View style={styles.midnightWash} />
+      <LinearGradient
+        colors={['#071A2F', '#0B2A43', '#0A3D4A']}
+        locations={[0, 0.55, 1]}
+        style={StyleSheet.absoluteFillObject}
+      />
+      <Animated.View style={[styles.midnightWash, veil]} />
       <Animated.View style={[styles.poolCyan, poolA]} />
       <Animated.View style={[styles.poolTeal, poolB]} />
+      <LinearGradient
+        colors={['transparent', 'rgba(7, 26, 47, 0.55)']}
+        style={styles.floorFade}
+      />
     </View>
   );
 }
 
-function PreparationProgress({ active, reducedMotion }: { active: boolean; reducedMotion: boolean }) {
-  const fill = useSharedValue(reducedMotion ? 0.72 : 0.12);
+function LaunchProgress({ active, reducedMotion }: { active: boolean; reducedMotion: boolean }) {
+  const fill = useSharedValue(reducedMotion ? 0.7 : 0.1);
   const sweep = useSharedValue(0);
   const glow = useSharedValue(reducedMotion ? 0.5 : 0);
 
   useEffect(() => {
     if (!active) {
-      fill.value = reducedMotion ? 0.72 : 0.12;
+      fill.value = reducedMotion ? 0.7 : 0.1;
       sweep.value = 0;
       glow.value = reducedMotion ? 0.5 : 0;
       return;
     }
     if (reducedMotion) {
-      fill.value = 0.72;
+      fill.value = 0.7;
       glow.value = 0.5;
       return;
     }
     fill.value = withRepeat(
       withSequence(
-        withTiming(0.88, { duration: 2400, easing: Easing.out(Easing.cubic) }),
-        withTiming(0.28, { duration: 900, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0.9, { duration: 2200, easing: Easing.out(Easing.cubic) }),
+        withTiming(0.32, { duration: 850, easing: Easing.inOut(Easing.quad) }),
       ),
       -1,
       false,
     );
     sweep.value = withRepeat(
-      withTiming(1, { duration: 1600, easing: Easing.inOut(Easing.quad) }),
+      withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.quad) }),
       -1,
       false,
     );
@@ -175,7 +195,7 @@ function PreparationProgress({ active, reducedMotion }: { active: boolean; reduc
   }, [active, fill, glow, reducedMotion, sweep]);
 
   const fillStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: interpolate(fill.value, [0, 1], [0.14, 1]) }],
+    transform: [{ scaleX: interpolate(fill.value, [0, 1], [0.12, 1]) }],
   }));
 
   const sweepStyle = useAnimatedStyle(() => ({
@@ -186,10 +206,6 @@ function PreparationProgress({ active, reducedMotion }: { active: boolean; reduc
   const glowStyle = useAnimatedStyle(() => ({
     opacity: reducedMotion ? 0.28 : interpolate(glow.value, [0, 1], [0.22, 0.55]),
     transform: [{ scaleX: interpolate(glow.value, [0, 1], [0.92, 1.06]) }],
-  }));
-
-  const tipStyle = useAnimatedStyle(() => ({
-    opacity: reducedMotion ? 0.7 : interpolate(glow.value, [0, 1], [0.55, 1]),
   }));
 
   if (!active) return null;
@@ -214,24 +230,18 @@ function PreparationProgress({ active, reducedMotion }: { active: boolean; reduc
               style={StyleSheet.absoluteFill}
             />
           </Animated.View>
-          <Animated.View style={[styles.progressTip, tipStyle]} />
         </Animated.View>
-      </View>
-      <View style={styles.progressMarks}>
-        <View style={styles.progressMark} />
-        <View style={[styles.progressMark, styles.progressMarkMid]} />
-        <View style={styles.progressMark} />
       </View>
     </View>
   );
 }
 
 /**
- * Navy launch cover — first branded BridgeHive experience after the navy-only
- * native splash. Display typography matches the rest of the worker brand.
+ * Premium launch splash — animated BridgeHive mark on navy atmosphere.
+ * No “preparing workspace” copy; brand signal only while auth/fonts settle.
  */
 export function AppBootCover({
-  showSlowIndicator = false,
+  showSlowIndicator = true,
   bootstrapError = false,
   onRetryBootstrap,
 }: AppBootCoverProps) {
@@ -239,7 +249,8 @@ export function AppBootCover({
   const reducedMotion = useReducedMotion();
   const settle = useSharedValue(reducedMotion ? 1 : 0);
   const breath = useSharedValue(reducedMotion ? 0.5 : 0);
-  const rule = useSharedValue(reducedMotion ? 1 : 0);
+  const orbit = useSharedValue(0);
+  const brand = useSharedValue(reducedMotion ? 1 : 0);
   const [showProgress, setShowProgress] = useState(false);
 
   useEffect(() => {
@@ -247,8 +258,7 @@ export function AppBootCover({
       setShowProgress(false);
       return;
     }
-    // Show refined progress during the preparation stage (not spinner-only).
-    const delay = showSlowIndicator ? APP_BOOT_SLOW_MS : 400;
+    const delay = showSlowIndicator ? APP_BOOT_SLOW_MS : 280;
     const timer = setTimeout(() => setShowProgress(true), delay);
     return () => clearTimeout(timer);
   }, [bootstrapError, showSlowIndicator]);
@@ -257,17 +267,16 @@ export function AppBootCover({
     if (reducedMotion) {
       settle.value = 1;
       breath.value = 0.5;
-      rule.value = 1;
+      brand.value = 1;
       return;
     }
-    // Soft entrance, then clear logo breath — mark is introduced here, not continued from native splash.
-    settle.value = withTiming(1, { duration: 700, easing: Easing.out(Easing.cubic) });
-    rule.value = withDelay(
-      280,
-      withTiming(1, { duration: 520, easing: Easing.out(Easing.cubic) }),
+    settle.value = withTiming(1, { duration: 780, easing: Easing.out(Easing.cubic) });
+    brand.value = withDelay(
+      320,
+      withTiming(1, { duration: 560, easing: Easing.out(Easing.cubic) }),
     );
     breath.value = withDelay(
-      280,
+      240,
       withRepeat(
         withSequence(
           withTiming(1, { duration: APP_BOOT_BREATH_MS / 2, easing: Easing.inOut(Easing.sin) }),
@@ -277,67 +286,95 @@ export function AppBootCover({
         false,
       ),
     );
-  }, [breath, reducedMotion, rule, settle]);
+    orbit.value = withRepeat(
+      withTiming(1, { duration: APP_BOOT_ORBIT_MS, easing: Easing.linear }),
+      -1,
+      false,
+    );
+  }, [brand, breath, orbit, reducedMotion, settle]);
 
   const logoMotion = useAnimatedStyle(() => {
     if (reducedMotion) {
       return { transform: [{ scale: 1 }], opacity: 1 };
     }
-    const entrance = interpolate(settle.value, [0, 1], [0.92, 1]);
-    const breathScale = interpolate(breath.value, [0, 1], [1, 1.07]);
-    const breathOpacity = interpolate(breath.value, [0, 1], [0.88, 1]);
+    const entrance = interpolate(settle.value, [0, 1], [0.86, 1]);
+    const breathScale = interpolate(breath.value, [0, 1], [1, 1.055]);
     return {
       transform: [{ scale: entrance * breathScale }],
-      opacity: interpolate(settle.value, [0, 1], [0, 1]) * breathOpacity,
+      opacity: interpolate(settle.value, [0, 1], [0, 1]),
     };
   });
 
   const haloMotion = useAnimatedStyle(() => {
     if (reducedMotion) {
-      return { opacity: 0.18, transform: [{ scale: 1 }] };
+      return { opacity: 0.22, transform: [{ scale: 1 }] };
     }
     return {
-      opacity: interpolate(breath.value, [0, 1], [0.12, 0.34]) * settle.value,
-      transform: [{ scale: interpolate(breath.value, [0, 1], [0.9, 1.14]) }],
+      opacity: interpolate(breath.value, [0, 1], [0.14, 0.38]) * settle.value,
+      transform: [{ scale: interpolate(breath.value, [0, 1], [0.9, 1.16]) }],
     };
   });
 
-  const copyMotion = useAnimatedStyle(() => {
+  const ringMotion = useAnimatedStyle(() => {
     if (reducedMotion) {
-      return { opacity: 1 };
+      return { opacity: 0.4, transform: [{ rotate: '0deg' }] };
     }
     return {
-      opacity: interpolate(settle.value, [0, 1], [0, 1]),
-      transform: [{ translateY: interpolate(settle.value, [0, 1], [10, 0]) }],
+      opacity: interpolate(settle.value, [0, 1], [0, 0.55]),
+      transform: [{ rotate: `${orbit.value * 360}deg` }],
+    };
+  });
+
+  const ringInnerMotion = useAnimatedStyle(() => {
+    if (reducedMotion) {
+      return { opacity: 0.28, transform: [{ rotate: '0deg' }] };
+    }
+    return {
+      opacity: interpolate(settle.value, [0, 1], [0, 0.42]),
+      transform: [{ rotate: `${-orbit.value * 360}deg` }],
+    };
+  });
+
+  const brandMotion = useAnimatedStyle(() => {
+    if (reducedMotion) {
+      return { opacity: 1, transform: [{ translateY: 0 }] };
+    }
+    return {
+      opacity: brand.value,
+      transform: [{ translateY: interpolate(brand.value, [0, 1], [12, 0]) }],
     };
   });
 
   const ruleMotion = useAnimatedStyle(() => ({
-    opacity: rule.value,
-    transform: [{ scaleX: interpolate(rule.value, [0, 1], [0.2, 1]) }],
+    opacity: brand.value,
+    transform: [{ scaleX: interpolate(brand.value, [0, 1], [0.2, 1]) }],
   }));
 
   return (
     <View
       style={styles.root}
       accessibilityRole="progressbar"
-      accessibilityLabel={t('boot.preparing')}
+      accessibilityLabel={t('common.bridgeHive')}
     >
       <BootAtmosphere reducedMotion={reducedMotion} />
 
       <Animated.View style={[styles.logoWrap, logoMotion]}>
         <Animated.View pointerEvents="none" style={[styles.logoHalo, haloMotion]} />
+        <Animated.View pointerEvents="none" style={[styles.ring, ringMotion]}>
+          <View style={styles.ringDot} />
+          <View style={[styles.ringDot, styles.ringDotGold]} />
+        </Animated.View>
+        <Animated.View pointerEvents="none" style={[styles.ringInner, ringInnerMotion]}>
+          <View style={styles.ringDash} />
+        </Animated.View>
         <BridgeHiveMark variant="boot" size={APP_BOOT_MARK_SIZE} />
       </Animated.View>
 
-      <Animated.View style={[styles.copyBlock, copyMotion]}>
-        <Text style={styles.copy} allowFontScaling={false}>
-          {t('boot.preparing')}
+      <Animated.View style={[styles.brandBlock, brandMotion]}>
+        <Text style={styles.brand} allowFontScaling={false}>
+          {t('common.bridgeHive').toUpperCase()}
         </Text>
-        <Animated.View style={[styles.copyRule, ruleMotion]} />
-        <Text style={styles.subcopy} allowFontScaling={false}>
-          {t('boot.preparingSub')}
-        </Text>
+        <Animated.View style={[styles.brandRule, ruleMotion]} />
       </Animated.View>
 
       {bootstrapError ? (
@@ -357,7 +394,7 @@ export function AppBootCover({
           ) : null}
         </View>
       ) : (
-        <PreparationProgress active={showProgress} reducedMotion={reducedMotion} />
+        <LaunchProgress active={showProgress} reducedMotion={reducedMotion} />
       )}
     </View>
   );
@@ -375,79 +412,109 @@ const styles = StyleSheet.create({
   midnightWash: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: BOOT_MIDNIGHT,
-    opacity: 0.35,
   },
   poolCyan: {
     position: 'absolute',
-    width: 340,
-    height: 340,
-    borderRadius: 170,
+    width: 360,
+    height: 360,
+    borderRadius: 180,
     backgroundColor: BOOT_CYAN,
-    top: '18%',
+    top: '14%',
     alignSelf: 'center',
   },
   poolTeal: {
     position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
     backgroundColor: BOOT_TEAL,
-    top: '42%',
-    left: '8%',
+    bottom: '10%',
+    left: '-8%',
+  },
+  floorFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '38%',
   },
   logoWrap: {
     marginBottom: 28,
-    padding: 4,
-    overflow: 'visible',
+    width: APP_BOOT_MARK_SIZE + 64,
+    height: APP_BOOT_MARK_SIZE + 64,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoHalo: {
     position: 'absolute',
-    width: APP_BOOT_MARK_SIZE * 1.35,
-    height: APP_BOOT_MARK_SIZE * 1.35,
-    borderRadius: APP_BOOT_MARK_SIZE * 0.675,
+    width: APP_BOOT_MARK_SIZE * 1.42,
+    height: APP_BOOT_MARK_SIZE * 1.42,
+    borderRadius: APP_BOOT_MARK_SIZE * 0.71,
     backgroundColor: BOOT_CYAN,
   },
-  copyBlock: {
+  ring: {
+    position: 'absolute',
+    width: APP_BOOT_MARK_SIZE + 48,
+    height: APP_BOOT_MARK_SIZE + 48,
+    borderRadius: (APP_BOOT_MARK_SIZE + 48) / 2,
+    borderWidth: 1,
+    borderColor: 'rgba(21, 150, 181, 0.38)',
+    borderStyle: 'dashed',
+  },
+  ringInner: {
+    position: 'absolute',
+    width: APP_BOOT_MARK_SIZE + 28,
+    height: APP_BOOT_MARK_SIZE + 28,
+    borderRadius: (APP_BOOT_MARK_SIZE + 28) / 2,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(244, 197, 66, 0.3)',
+  },
+  ringDot: {
+    position: 'absolute',
+    top: -3,
+    left: '50%',
+    marginLeft: -3,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BOOT_CYAN,
+  },
+  ringDotGold: {
+    top: undefined,
+    bottom: -3,
+    backgroundColor: BOOT_GOLD,
+  },
+  ringDash: {
+    position: 'absolute',
+    right: -2,
+    top: '42%',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+  },
+  brandBlock: {
     alignItems: 'center',
-    gap: 8,
-    width: '100%',
-    maxWidth: 300,
+    gap: 10,
+    marginBottom: 8,
   },
-  copy: {
-    fontFamily: typography.fonts.displayExtra,
-    fontSize: 26,
-    lineHeight: 32,
-    letterSpacing: -0.7,
-    color: BOOT_TEXT,
-    textAlign: 'center',
-    width: '100%',
+  brand: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    letterSpacing: 2.4,
+    color: 'rgba(184, 228, 234, 0.92)',
   },
-  copyRule: {
-    width: 28,
+  brandRule: {
+    width: 34,
     height: 3,
     borderRadius: 2,
     backgroundColor: BOOT_GOLD,
-    marginTop: 2,
-    marginBottom: 2,
-  },
-  subcopy: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 14,
-    lineHeight: 20,
-    letterSpacing: 0.2,
-    color: BOOT_TEXT_SECONDARY,
-    textAlign: 'center',
-    width: '100%',
-    maxWidth: 260,
   },
   progressBlock: {
-    marginTop: 32,
+    marginTop: 36,
     alignItems: 'center',
     width: '100%',
-    maxWidth: 220,
-    gap: 10,
+    maxWidth: 200,
   },
   progressGlow: {
     position: 'absolute',
@@ -479,37 +546,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 48,
-  },
-  progressTip: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 10,
-    backgroundColor: BOOT_GOLD,
-    shadowColor: BOOT_GOLD,
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 0 },
-  },
-  progressMarks: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 2,
-  },
-  progressMark: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-  },
-  progressMarkMid: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: 'rgba(244, 197, 66, 0.55)',
   },
   errorBlock: {
     marginTop: 28,

@@ -302,7 +302,7 @@ export default function PayoutSetupScreen() {
   }
 
   return (
-    <AppScreen>
+    <AppScreen clearTabBar>
       <ScreenHeader
         title={t('payout.title')}
         subtitle={t('payout.subtitle')}

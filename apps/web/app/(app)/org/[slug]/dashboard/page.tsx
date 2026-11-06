@@ -1,4 +1,5 @@
 import {
+  SHIFT_OCCUPYING_ASSIGNMENT_STATUSES,
   buildAttentionQueue,
   buildDashboardQuickActions,
   buildOrgActivitySeries,
@@ -7,7 +8,7 @@ import {
   countFilledUpcoming,
   countOpenShifts,
   filterCalendarShifts,
-  isOwnedOrganizationLogoPath,
+  isOccupyingAssignmentStatus,
   isWorkerRole,
   locationWorkload,
   mapShiftToCalendarEvent,
@@ -21,7 +22,16 @@ import {
   type OrgActivityRangeDays,
   type OrgStatus,
 } from '@bridge-hive/domain';
-import { CalendarDays, ClipboardList, MapPin } from 'lucide-react';
+import {
+  BellRing,
+  Building2,
+  CalendarDays,
+  ClipboardList,
+  Lock,
+  MapPin,
+  TrendingUp,
+  UsersRound,
+} from 'lucide-react';
 import Link from 'next/link';
 
 import { CoverageTrendChart, LocationWorkloadList, RoleCoverageBars } from '@/components/org/charts';
@@ -42,6 +52,7 @@ import {
   resolveCalendarPeriod,
   todayYmdInTimezone,
 } from '@/lib/org-calendar-time';
+import { signedOrgLogoUrl } from '@/lib/org-signed-logo.server';
 import { createClient } from '@/lib/supabase/server';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
@@ -99,15 +110,11 @@ export default async function OrgDashboardPage({
   const [
     calendarResult,
     locationsListResult,
-    { count: locationsCount },
-    { data: locationWardRows },
     { data: upcomingRows },
-    { data: assignmentTimesheets },
+    submittedTimesheetsResult,
     { data: drafts },
     { data: openNear },
-    { data: kpiShifts },
     { data: metricShifts },
-    { data: locationShiftRows },
     activityShiftsResult,
     activityAssignmentsResult,
     activityTimesheetsResult,
@@ -115,7 +122,7 @@ export default async function OrgDashboardPage({
     supabase
       .from('shifts')
       .select(
-        'id, title, status, starts_at, ends_at, required_role, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
+        'id, title, status, starts_at, ends_at, required_role, required_positions, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
       )
       .eq('organization_id', ctx.org.id)
       .lt('starts_at', fetchEnd)
@@ -123,21 +130,13 @@ export default async function OrgDashboardPage({
       .order('starts_at', { ascending: true }),
     supabase
       .from('locations')
-      .select('id, name')
+      .select('id, name, wards(count)')
       .eq('organization_id', ctx.org.id)
       .order('name'),
     supabase
-      .from('locations')
-      .select('*', { count: 'exact', head: true })
-      .eq('organization_id', ctx.org.id),
-    supabase
-      .from('locations')
-      .select('id, wards(count)')
-      .eq('organization_id', ctx.org.id),
-    supabase
       .from('shifts')
       .select(
-        'id, title, starts_at, ends_at, status, required_role, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
+        'id, title, starts_at, ends_at, status, required_role, required_positions, rate_minor, currency, location_id, location:locations(name), ward:wards(name)',
       )
       .eq('organization_id', ctx.org.id)
       .in('status', ['published', 'filled', 'draft', 'in_progress'])
@@ -145,12 +144,13 @@ export default async function OrgDashboardPage({
       .order('starts_at', { ascending: true })
       .limit(5),
     supabase
-      .from('shift_assignments')
+      .from('timesheets')
       .select(
-        'id, timesheet:timesheets(status), shift:shifts!inner(organization_id)',
+        'id, assignment:shift_assignments!inner(shift:shifts!inner(organization_id))',
+        { count: 'exact', head: true },
       )
-      .eq('shift.organization_id', ctx.org.id)
-      .not('status', 'in', '(withdrawn,cancelled)'),
+      .eq('status', 'submitted')
+      .eq('assignment.shift.organization_id', ctx.org.id),
     supabase
       .from('shifts')
       .select('id, title, starts_at')
@@ -168,24 +168,12 @@ export default async function OrgDashboardPage({
       .limit(10),
     supabase
       .from('shifts')
-      .select('id, status, starts_at, required_role, acceptance_deadline')
-      .eq('organization_id', ctx.org.id)
-      .in('status', ['published', 'filled', 'draft'])
-      .gte('starts_at', now.toISOString())
-      .lte('starts_at', inPeriod.toISOString()),
-    supabase
-      .from('shifts')
-      .select('id, title, status, starts_at, required_role, acceptance_deadline')
+      .select(
+        'id, title, status, starts_at, required_role, acceptance_deadline, location_id, location:locations(id, name)',
+      )
       .eq('organization_id', ctx.org.id)
       .gte('starts_at', now.toISOString())
       .lte('starts_at', sixWeeksEnd.toISOString()),
-    supabase
-      .from('shifts')
-      .select('id, location_id, location:locations(id, name)')
-      .eq('organization_id', ctx.org.id)
-      .in('status', ['published', 'filled'])
-      .gte('starts_at', now.toISOString())
-      .lte('starts_at', inPeriod.toISOString()),
     supabase
       .from('shifts')
       .select('id, created_at, status')
@@ -218,33 +206,59 @@ export default async function OrgDashboardPage({
       activityTimesheetsResult.error,
   );
   const rawCalendarShifts = calendarResult.data ?? [];
-
-  let orgLogoUrl: string | null = null;
-  if (isOwnedOrganizationLogoPath(ctx.org.id, ctx.org.logo_path)) {
-    const { data: signed } = await supabase.storage
-      .from('organization-logos')
-      .createSignedUrl(ctx.org.logo_path!, 60 * 15);
-    orgLogoUrl = signed?.signedUrl ?? null;
+  const upcomingRowsSafe = upcomingRows ?? [];
+  const capacityShiftIds = [
+    ...new Set([
+      ...rawCalendarShifts.map((row) => row.id),
+      ...upcomingRowsSafe.map((row) => row.id),
+    ]),
+  ];
+  const { data: capacityAssignmentRows } =
+    capacityShiftIds.length > 0
+      ? await supabase
+          .from('shift_assignments')
+          .select('shift_id, status')
+          .in('shift_id', capacityShiftIds)
+          .in('status', [...SHIFT_OCCUPYING_ASSIGNMENT_STATUSES])
+      : { data: [] as Array<{ shift_id: string; status: string }> };
+  const filledCountByShift = new Map<string, number>();
+  for (const row of capacityAssignmentRows ?? []) {
+    if (!isOccupyingAssignmentStatus(row.status)) continue;
+    filledCountByShift.set(
+      row.shift_id,
+      (filledCountByShift.get(row.shift_id) ?? 0) + 1,
+    );
   }
 
-  const wardTotal = (locationWardRows ?? []).reduce((sum, loc) => {
+  const orgLogoUrl = await signedOrgLogoUrl(ctx.org.id, ctx.org.logo_path);
+
+  const locationRows = locationsListResult.data ?? [];
+  const locationsCount = locationRows.length;
+  const wardTotal = locationRows.reduce((sum, loc) => {
     const c = Array.isArray(loc.wards)
       ? (loc.wards[0] as { count?: number })?.count ?? 0
       : 0;
     return sum + c;
   }, 0);
 
-  const submittedCount = (assignmentTimesheets ?? []).filter((a) => {
-    const ts = Array.isArray(a.timesheet) ? a.timesheet[0] : a.timesheet;
-    return ts && (ts as { status: string }).status === 'submitted';
-  }).length;
+  const submittedCount = submittedTimesheetsResult.count ?? 0;
 
-  const openCount = countOpenShifts(kpiShifts ?? [], now);
-  const filledCount = countFilledUpcoming(kpiShifts ?? [], now, periodDays);
+  const inPeriodMs = inPeriod.getTime();
+  const kpiShifts = (metricShifts ?? []).filter((row) => {
+    if (!['published', 'filled', 'draft'].includes(row.status)) return false;
+    return new Date(row.starts_at).getTime() <= inPeriodMs;
+  });
+  const locationShiftRows = (metricShifts ?? []).filter((row) => {
+    if (!['published', 'filled'].includes(row.status)) return false;
+    return new Date(row.starts_at).getTime() <= inPeriodMs;
+  });
+
+  const openCount = countOpenShifts(kpiShifts, now);
+  const filledCount = countFilledUpcoming(kpiShifts, now, periodDays);
   const trend = buildShiftCoverageTrend(metricShifts ?? [], now, 6);
   const roleCoverage = buildRoleCoverage(metricShifts ?? [], now, 6);
   const workload = locationWorkload(
-    (locationShiftRows ?? []).map((row) => {
+    locationShiftRows.map((row) => {
       const loc = Array.isArray(row.location) ? row.location[0] : row.location;
       return {
         location_id: row.location_id,
@@ -309,6 +323,7 @@ export default async function OrgDashboardPage({
       starts_at: string;
       ends_at: string;
       required_role: string;
+      required_positions?: number | null;
       rate_minor?: number | null;
       currency?: string | null;
       location_id?: string | null;
@@ -338,6 +353,11 @@ export default async function OrgDashboardPage({
         ward && typeof ward === 'object' && 'name' in ward
           ? (ward as { name: string }).name
           : null,
+      required_positions:
+        typeof shift.required_positions === 'number'
+          ? shift.required_positions
+          : 1,
+      filled_positions: filledCountByShift.get(shift.id) ?? 0,
     };
   };
 
@@ -357,7 +377,7 @@ export default async function OrgDashboardPage({
     mapShiftToCalendarEvent(s, slug),
   );
 
-  const upcomingEvents = (upcomingRows ?? [])
+  const upcomingEvents = upcomingRowsSafe
     .map(toCalendarInput)
     .map((s) => mapShiftToCalendarEvent(s, slug));
 
@@ -399,7 +419,7 @@ export default async function OrgDashboardPage({
   const filteredEmpty =
     !calendarLoadError && hasFilters && calendarEvents.length === 0;
 
-  const locations = (locationsListResult.data ?? []).map((l) => ({
+  const locations = locationRows.map((l) => ({
     id: l.id as string,
     name: l.name as string,
   }));
@@ -414,7 +434,7 @@ export default async function OrgDashboardPage({
   const filledSeries = trend.map((b) => b.filled);
 
   return (
-    <div className="space-y-6 bh-fade-up">
+    <div className="bh-org-stack bh-org-enter">
       <DashboardGreeting
         firstName={firstName}
         orgName={ctx.org.display_name}
@@ -456,6 +476,7 @@ export default async function OrgDashboardPage({
               href={`/org/${slug}/shifts?status=published&range=upcoming`}
               icon={CalendarDays}
               tint="info"
+              featured
               series={openSeries}
             />
             <KpiCard
@@ -473,7 +494,7 @@ export default async function OrgDashboardPage({
               supporting={submittedCount > 0 ? 'Needs review' : 'All clear'}
               href={`/org/${slug}/timesheets`}
               icon={ClipboardList}
-              tint={submittedCount > 0 ? 'warning' : 'violet'}
+              tint={submittedCount > 0 ? 'warning' : 'success'}
               highlight={submittedCount > 0}
             />
             <KpiCard
@@ -490,8 +511,8 @@ export default async function OrgDashboardPage({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-12 xl:gap-6">
-            <div className="flex min-w-0 flex-col gap-5 xl:col-span-8 2xl:col-span-9">
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-12">
+            <div className="flex min-w-0 flex-col gap-6 xl:col-span-8 2xl:col-span-9">
               <ShiftScheduleCalendar
                 slug={slug}
                 timeZone={timeZone}
@@ -518,7 +539,7 @@ export default async function OrgDashboardPage({
               />
             </div>
 
-            <aside className="flex min-w-0 flex-col gap-5 xl:col-span-4 2xl:col-span-3">
+            <aside className="flex min-w-0 flex-col gap-6 xl:col-span-4 2xl:col-span-3">
               <UpcomingShiftsRail
                 slug={slug}
                 timeZone={timeZone}
@@ -530,6 +551,9 @@ export default async function OrgDashboardPage({
               <DashboardQuickActions actions={quickActions} />
               <DashboardPanel
                 title="Needs attention"
+                eyebrow="Action queue"
+                icon={BellRing}
+                accent={attention.length > 0 ? 'honey' : 'emerald'}
                 description={
                   attention.length > 0
                     ? `${attention.length} item${attention.length === 1 ? '' : 's'} from live data`
@@ -543,30 +567,73 @@ export default async function OrgDashboardPage({
                   canManageShifts={ctx.capabilities.canManageShifts}
                   canReviewTimesheets={ctx.capabilities.canReviewTimesheets}
                   canManageLocations={ctx.capabilities.canManageLocations}
+                  timeZone={timeZone}
+                  initialNowIso={now.toISOString()}
                 />
               </DashboardPanel>
             </aside>
           </div>
 
-          <section className="space-y-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
-                Upcoming coverage
-              </p>
-              <h2 className="mt-1 text-lg font-bold tracking-tight text-bh-sidebar">
-                Forward-looking staffing
-              </h2>
-              <p className="mt-1 text-sm text-bh-text-secondary">
-                Schedule outlook for the next six weeks — separate from historical
-                organization activity.
-              </p>
+          <section className="overflow-hidden rounded-2xl border border-[#16384f]/18 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]">
+            <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-5 sm:px-6">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -left-10 -top-12 h-36 w-36 rounded-full bg-bh-teal/30 blur-2xl"
+              />
+              <span
+                aria-hidden
+                className="bh-orb-drift pointer-events-none absolute -bottom-16 right-6 h-40 w-40 rounded-full bg-[#e4b334]/22 blur-2xl"
+              />
+              <span
+                aria-hidden
+                className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+              />
+
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div className="flex min-w-0 items-start gap-3.5">
+                  <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_18px_rgba(228,179,52,0.35)]">
+                    <TrendingUp className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+                      Upcoming coverage
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#e4b334]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#f3d27a] ring-1 ring-[#e4b334]/35">
+                        <span
+                          aria-hidden
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e4b334] motion-reduce:animate-none"
+                        />
+                        Outlook
+                      </span>
+                    </p>
+                    <h2 className="mt-1 text-[18px] font-bold leading-tight tracking-tight text-white sm:text-[20px]">
+                      Forward-looking staffing
+                    </h2>
+                    <p className="mt-1.5 max-w-xl text-[13px] leading-5 text-white/75">
+                      Schedule outlook for the next six weeks — separate from
+                      historical organization activity.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/15">
+                    Next 6 weeks
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-[#e4b334] px-2.5 py-1 text-[11px] font-bold text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.32)]">
+                    {periodDays}d sites
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+
+            <div className="grid gap-3.5 bg-[linear-gradient(180deg,#f4f8fb_0%,#eef4f8_100%)] p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-3">
               <DashboardPanel
                 eyebrow="Forecast"
                 title="Shift coverage trend"
                 description="Published and filled · next six weeks"
                 accent="teal"
+                icon={TrendingUp}
+                variant="premium"
+                enterDelayMs={40}
               >
                 <CoverageTrendChart
                   buckets={trend}
@@ -578,6 +645,9 @@ export default async function OrgDashboardPage({
                 title="Coverage by role"
                 description="Required roles · next six weeks"
                 accent="honey"
+                icon={UsersRound}
+                variant="premium"
+                enterDelayMs={120}
               >
                 <RoleCoverageBars
                   coverage={roleCoverage}
@@ -589,6 +659,9 @@ export default async function OrgDashboardPage({
                 title="Location workload"
                 description={`Upcoming published and filled · next ${periodDays} days`}
                 accent="info"
+                icon={Building2}
+                variant="premium"
+                enterDelayMs={200}
                 className="sm:col-span-2 xl:col-span-1"
               >
                 <LocationWorkloadList
@@ -601,7 +674,7 @@ export default async function OrgDashboardPage({
           </section>
         </>
       ) : (
-        <DashboardPanel title="Workspace locked">
+        <DashboardPanel title="Workspace locked" icon={Lock}>
           <p className="text-sm text-bh-text-secondary">
             Operational tools unlock after Bridge Hive activates this organization.
           </p>

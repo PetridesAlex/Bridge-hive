@@ -1,6 +1,7 @@
 import {
   assertSafeShiftPushData,
   buildAssignmentCancelledNotification,
+  buildOrgWorkerMessageNotification,
   buildShiftCancelledNotification,
   buildShiftPublishedBatchNotification,
   buildShiftPublishedNotification,
@@ -11,6 +12,7 @@ import {
 export const EXPO_PUSH_SEND_URL = 'https://exp.host/--/api/v2/push/send';
 export const EXPO_PUSH_RECEIPTS_URL = 'https://exp.host/--/api/v2/push/getReceipts';
 export const NEW_SHIFTS_CHANNEL_ID = 'new-shifts';
+export const ORG_MESSAGES_CHANNEL_ID = 'org-messages';
 
 export type ClaimedPushDelivery = {
   deliveryId: string;
@@ -21,6 +23,7 @@ export type ClaimedPushDelivery = {
   shiftId?: string | null;
   batchId?: string | null;
   assignmentId?: string | null;
+  conversationId?: string | null;
   openPositions: number;
   status: string;
   startsAt?: string | null;
@@ -39,7 +42,7 @@ export type ExpoPushMessage = {
   body: string;
   sound: 'default';
   priority: 'high';
-  channelId: typeof NEW_SHIFTS_CHANNEL_ID;
+  channelId: typeof NEW_SHIFTS_CHANNEL_ID | typeof ORG_MESSAGES_CHANNEL_ID;
   data: WorkerPushData;
 };
 
@@ -77,8 +80,20 @@ export function buildExpoPushMessage(row: ClaimedPushDelivery): ExpoPushMessage 
   const eventType = row.eventType ?? 'shift_published';
 
   let message: { title: string; body: string; data: WorkerPushData } | null = null;
+  let channelId: ExpoPushMessage['channelId'] = NEW_SHIFTS_CHANNEL_ID;
 
-  if (eventType === 'shift_published_batch') {
+  if (eventType === 'org_worker_message') {
+    const conversationId =
+      row.conversationId ??
+      (typeof row.payload?.conversationId === 'string' ? row.payload.conversationId : null);
+    if (!conversationId) return null;
+    message = buildOrgWorkerMessageNotification({
+      conversationId,
+      organizationName: row.organizationName,
+      locale,
+    });
+    channelId = ORG_MESSAGES_CHANNEL_ID;
+  } else if (eventType === 'shift_published_batch') {
     const batchId = row.batchId ?? (typeof row.payload?.batchId === 'string' ? row.payload.batchId : null);
     if (!batchId) return null;
     message = buildShiftPublishedBatchNotification({
@@ -136,7 +151,7 @@ export function buildExpoPushMessage(row: ClaimedPushDelivery): ExpoPushMessage 
     body: message.body,
     sound: 'default',
     priority: 'high',
-    channelId: NEW_SHIFTS_CHANNEL_ID,
+    channelId,
     data,
   };
 }

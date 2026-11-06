@@ -6,7 +6,7 @@ const OFFICIAL_ICON = require('../../assets/images/icon.png');
 
 /**
  * Transparent official mark (navy rounded tile kept; no white canvas).
- * Boot cover only — sits cleanly on the navy “Preparing your workspace” screen.
+ * Boot splash only — transparent mark on the navy launch canvas.
  */
 const BOOT_MARK = require('../../assets/images/splash-icon.png');
 

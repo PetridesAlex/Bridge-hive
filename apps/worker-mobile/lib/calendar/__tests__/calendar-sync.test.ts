@@ -18,8 +18,8 @@ describe('calendar sync policy', () => {
   it('defaults sync off and only writes after claim success paths', () => {
     const mapping = source('lib/calendar/mapping.ts');
     const sync = source('lib/calendar/sync.ts');
-    const detail = source('app/shifts/[id].tsx');
-    const prefs = source('app/profile/notification-preferences.tsx');
+    const detail = source('app/(tabs)/shifts/[id].tsx');
+    const prefs = source('app/(tabs)/profile/notification-preferences.tsx');
 
     expect(mapping).toContain("value === '1'");
     expect(sync).toContain('getCalendarSyncEnabled');
@@ -64,7 +64,7 @@ describe('calendar sync policy', () => {
   });
 
   it('keeps claim success even when calendar write is attempted separately', () => {
-    const detail = source('app/shifts/[id].tsx');
+    const detail = source('app/(tabs)/shifts/[id].tsx');
     expect(detail).toContain('if (result.error)');
     expect(detail).toContain('writeAcceptedShiftToCalendar');
     // Calendar work happens only after a successful claim result.

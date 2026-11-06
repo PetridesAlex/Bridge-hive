@@ -36,7 +36,7 @@ export function claimErrorMessage(
   }
 
   if (upper.includes('SHIFT_ALREADY_FILLED') || upper.includes('SHIFT_IS_FULL')) {
-    return 'This shift is full.';
+    return 'This shift has just been fully booked. Please choose another shift.';
   }
 
   if (upper.includes('SHIFT_DEADLINE_PASSED') || upper.includes('SHIFT_STARTED')) {

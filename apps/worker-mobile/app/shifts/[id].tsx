@@ -8,8 +8,8 @@ import {
 } from '@bridge-hive/domain';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, router } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, AppState, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
   getCalendarPromptSeen,
@@ -57,6 +57,7 @@ import {
   submitTimesheetRpc,
   type WorkerShiftDetails,
 } from '@/lib/rpcs';
+import { canClaimWithAvailability } from '@/lib/shift-availability';
 import { clearPendingShiftRoute, peekPendingShiftRoute } from '@/lib/push/pending-shift';
 import { useAuth } from '@/providers/AuthProvider';
 import {
@@ -128,13 +129,17 @@ export default function ShiftDetailScreen() {
   const [hoursPrefillKey, setHoursPrefillKey] = useState<string | null>(null);
   const demoShift = isAppReviewDemo || isAppReviewDemoShiftId(id);
 
+  const refreshRequestId = useRef(0);
+
   const refresh = useCallback(async () => {
     if (!id) return;
+    const currentRequest = ++refreshRequestId.current;
     setLoading(true);
     setError(undefined);
 
     if (isAppReviewDemo || isAppReviewDemoShiftId(id)) {
       const catalog = await fetchAppReviewDemoCatalog();
+      if (currentRequest !== refreshRequestId.current) return;
       if (catalog.error || !catalog.data) {
         setError(catalog.error ?? 'Demonstration shift unavailable');
         setShift(null);
@@ -149,6 +154,7 @@ export default function ShiftDetailScreen() {
     }
 
     const detail = await getWorkerShiftDetails(id);
+    if (currentRequest !== refreshRequestId.current) return;
     if (detail.error || !detail.data) {
       setError(detail.error ?? 'Shift not found');
       setShift(null);
@@ -159,14 +165,24 @@ export default function ShiftDetailScreen() {
 
     if (user?.id) {
       const mine = await getMyAssignments(user.id);
+      if (currentRequest !== refreshRequestId.current) return;
       const match = mine.data.find((a) => a.shift_id === id) ?? null;
       setAssignment(match);
     }
-    setLoading(false);
+    if (currentRequest === refreshRequestId.current) {
+      setLoading(false);
+    }
   }, [id, user?.id, isAppReviewDemo]);
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refresh();
+    });
+    return () => sub.remove();
   }, [refresh]);
 
   useEffect(() => {
@@ -210,6 +226,7 @@ export default function ShiftDetailScreen() {
       const message = claimErrorMessage(result.error, shift?.required_role);
       setActionError(message);
       Alert.alert(t('shifts.claimFailedTitle'), message);
+      void refresh();
       return;
     }
 
@@ -374,12 +391,18 @@ export default function ShiftDetailScreen() {
   const roleLabel =
     WORKER_ROLE_LABELS[shift.required_role as keyof typeof WORKER_ROLE_LABELS] ??
     shift.required_role;
-  const openPositions = shift.open_positions ?? 0;
-  const canClaim =
-    canPerformLiveMarketplaceActions &&
-    shift.status === 'published' &&
-    !assignment &&
-    openPositions > 0;
+  const openPositionsKnown =
+    shift.availability_known && typeof shift.open_positions === 'number';
+  const openPositions = openPositionsKnown ? shift.open_positions : null;
+  const availabilityUnavailable =
+    !assignment && shift.status === 'published' && !openPositionsKnown;
+  const canClaim = canClaimWithAvailability({
+    liveActionsAllowed: canPerformLiveMarketplaceActions,
+    shiftPublished: shift.status === 'published',
+    alreadyAssigned: Boolean(assignment),
+    availabilityKnown: openPositionsKnown,
+    openPositions,
+  });
   const canComplete =
     canPerformLiveMarketplaceActions &&
     canSubmitCompletedHours(assignment?.status) &&
@@ -393,9 +416,11 @@ export default function ShiftDetailScreen() {
         ? undefined
         : shift.status !== 'published'
           ? 'This shift is no longer open for claims.'
-          : openPositions < 1
-            ? 'All positions on this shift are filled.'
-            : undefined;
+          : availabilityUnavailable
+            ? t('shifts.availabilityUnavailableBody')
+            : openPositionsKnown && (openPositions ?? 0) < 1
+              ? t('shifts.allPositionsFilled')
+              : undefined;
 
   const start = new Date(shift.starts_at);
   const end = new Date(shift.ends_at);
@@ -465,7 +490,13 @@ export default function ShiftDetailScreen() {
                 icon="briefcase-outline"
                 solid
               />
-            ) : openPositions > 0 ? (
+            ) : availabilityUnavailable ? (
+              <StatusBadge
+                label={t('shifts.availabilityChecking')}
+                tone="neutral"
+                icon="refresh-outline"
+              />
+            ) : (openPositions ?? 0) > 0 ? (
               <StatusBadge label="Open" tone="accent" icon="calendar-outline" solid />
             ) : (
               <StatusBadge label="Full" tone="neutral" icon="calendar-outline" />
@@ -523,7 +554,7 @@ export default function ShiftDetailScreen() {
               label="Positions"
               value={
                 shift.status === 'published'
-                  ? openPositionsLabel(openPositions)
+                  ? openPositionsKnown && openPositions != null ? openPositionsLabel(openPositions) : t('shifts.availabilityUnavailableShort')
                   : `${shift.required_positions ?? 1}`
               }
               last
@@ -684,21 +715,29 @@ export default function ShiftDetailScreen() {
         {!canClaim && claimBlockedReason ? (
           <Banner
             variant="warning"
-            title="Claim unavailable"
+            title={
+              availabilityUnavailable
+                ? t('shifts.availabilityUnavailableTitle')
+                : 'Claim unavailable'
+            }
             body={claimBlockedReason}
             actionLabel={
-              !isVerified
-                ? 'Continue account setup'
-                : shift.status !== 'published'
-                  ? 'View invoices'
-                  : undefined
+              availabilityUnavailable
+                ? t('shifts.retryAvailability')
+                : !isVerified
+                  ? 'Continue account setup'
+                  : shift.status !== 'published'
+                    ? 'View invoices'
+                    : undefined
             }
             onAction={
-              !isVerified
-                ? () => router.push('/auth/worker/pending')
-                : shift.status !== 'published'
-                  ? () => router.push('/(tabs)/invoices')
-                  : undefined
+              availabilityUnavailable
+                ? () => void refresh()
+                : !isVerified
+                  ? () => router.push('/auth/worker/pending')
+                  : shift.status !== 'published'
+                    ? () => router.push('/(tabs)/invoices')
+                    : undefined
             }
           />
         ) : null}

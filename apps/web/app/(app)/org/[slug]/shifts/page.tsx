@@ -1,4 +1,5 @@
 import {
+  SHIFT_OCCUPYING_ASSIGNMENT_STATUSES,
   SHIFT_STATUSES,
   WORKER_ROLES,
   WORKER_ROLE_LABELS,
@@ -6,10 +7,11 @@ import {
   countDraftShifts,
   countFilledUpcoming,
   countOpenShifts,
-  filledPositionsLabel,
   filterCalendarShifts,
+  isOccupyingAssignmentStatus,
   isWorkerRole,
   mapShiftToCalendarEvent,
+  positionsAvailabilityLabel,
   type ShiftStatus,
 } from '@bridge-hive/domain';
 import { formatInTimeZone } from 'date-fns-tz';
@@ -259,21 +261,26 @@ export default async function ShiftsPage({
   const pageStart = (safePage - 1) * PAGE_SIZE;
   const pageShifts = allFiltered.slice(pageStart, pageStart + PAGE_SIZE);
 
-  const shiftIds = pageShifts.map((s) => s.id);
+  const listShiftIds = pageShifts.map((s) => s.id);
+  const calendarShiftIds = !listView
+    ? ((calendarRows ?? []) as Array<{ id: string }>).map((s) => s.id)
+    : [];
+  const capacityShiftIds = [...new Set([...listShiftIds, ...calendarShiftIds])];
   const { data: assignmentRows } =
-    shiftIds.length > 0
+    capacityShiftIds.length > 0
       ? await supabase
           .from('shift_assignments')
           .select(
             'shift_id, status, worker:worker_profiles!shift_assignments_worker_id_fkey(user_id, worker_role, profile:profiles!worker_profiles_user_id_fkey(full_name))',
           )
-          .in('shift_id', shiftIds)
-          .not('status', 'in', '(withdrawn,cancelled)')
-      : { data: [] as Array<{ shift_id: string; worker: unknown }> };
+          .in('shift_id', capacityShiftIds)
+          .in('status', [...SHIFT_OCCUPYING_ASSIGNMENT_STATUSES])
+      : { data: [] as Array<{ shift_id: string; status?: string; worker: unknown }> };
 
   const assigneeByShift = new Map<string, string>();
   const filledCountByShift = new Map<string, number>();
   for (const row of assignmentRows ?? []) {
+    if (!isOccupyingAssignmentStatus((row as { status?: string }).status)) continue;
     filledCountByShift.set(
       row.shift_id,
       (filledCountByShift.get(row.shift_id) ?? 0) + 1,
@@ -366,9 +373,14 @@ export default async function ShiftsPage({
     q || statusFilter || roleFilter || locationFilter || range || batchFilter,
   );
 
-  const toCalendarInput = (shift: (typeof calendarRows extends (infer T)[] | null ? T : never) & object) => {
+  const toCalendarInput = (
+    shift: (typeof calendarRows extends (infer T)[] | null ? T : never) &
+      object & { required_positions?: number | null },
+  ) => {
     const location = Array.isArray(shift.location) ? shift.location[0] : shift.location;
     const ward = Array.isArray(shift.ward) ? shift.ward[0] : shift.ward;
+    const requiredPositions =
+      typeof shift.required_positions === 'number' ? shift.required_positions : 1;
     return {
       id: shift.id as string,
       title: shift.title as string | null,
@@ -387,6 +399,8 @@ export default async function ShiftsPage({
         ward && typeof ward === 'object' && 'name' in ward
           ? (ward as { name: string }).name
           : null,
+      required_positions: requiredPositions,
+      filled_positions: filledCountByShift.get(shift.id as string) ?? 0,
     };
   };
 
@@ -853,9 +867,9 @@ export default async function ShiftsPage({
                     typeof shift.required_positions === 'number'
                       ? shift.required_positions
                       : 1;
-                  const capacityLabel = filledPositionsLabel(
-                    filledForShift,
+                  const capacityLabel = positionsAvailabilityLabel(
                     requiredForShift,
+                    filledForShift,
                   );
                   const initials = (assignee ?? 'U')
                     .split(/\s+/)
@@ -1030,7 +1044,7 @@ export default async function ShiftsPage({
                         </p>
                         <p className="mt-1 text-xs text-bh-text-muted">
                           {requiredForShift > 1
-                            ? filledPositionsLabel(filledForShift, requiredForShift)
+                            ? positionsAvailabilityLabel(requiredForShift, filledForShift)
                             : (assignee ?? 'Unassigned')}
                         </p>
                       </div>

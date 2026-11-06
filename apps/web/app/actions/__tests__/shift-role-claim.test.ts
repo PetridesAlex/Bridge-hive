@@ -136,6 +136,12 @@ describe('claimErrorMessage', () => {
     expect(message).not.toContain('ORG_NOT_ACTIVE');
   });
 
+  it('maps a race on the last position to a clear fully-booked message', () => {
+    expect(claimErrorMessage('SHIFT_ALREADY_FILLED')).toBe(
+      'This shift has just been fully booked. Please choose another shift.',
+    );
+  });
+
   it('maps payout and verification failures', () => {
     expect(claimErrorMessage('NOT_ELIGIBLE:payout_account_required')).toBe(
       'Your payout account must be approved.',

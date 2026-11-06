@@ -1,7 +1,8 @@
 import {
   credentialTypeLabel,
   estimatedFullCoveragePayMinor,
-  filledPositionsLabel,
+  isOccupyingAssignmentStatus,
+  positionsAvailabilityLabel,
   formatMoneyMinor,
 } from '@bridge-hive/domain';
 import {
@@ -143,7 +144,9 @@ export default async function ShiftDetailPage({
     .order('accepted_at', { ascending: true });
 
   const assignments = assignmentRows ?? [];
-  const filledCount = assignments.length;
+  const filledCount = assignments.filter((row) =>
+    isOccupyingAssignmentStatus(row.status),
+  ).length;
   const requiredPositions = shift.required_positions ?? 1;
   const openPositions = Math.max(0, requiredPositions - filledCount);
   const estimatedFullPayMinor = estimatedFullCoveragePayMinor({
@@ -256,7 +259,7 @@ export default async function ShiftDetailPage({
           <MetaTile label="Role" value={roleLabel(shift.required_role)} />
           <MetaTile
             label="Positions"
-            value={filledPositionsLabel(filledCount, requiredPositions)}
+            value={positionsAvailabilityLabel(requiredPositions, filledCount)}
           />
           <MetaTile
             label="Hourly rate"
@@ -363,7 +366,7 @@ export default async function ShiftDetailPage({
         title="Assignments"
         description={
           filledCount > 0
-            ? `${filledPositionsLabel(filledCount, requiredPositions)}.`
+            ? `${positionsAvailabilityLabel(requiredPositions, filledCount)}.`
             : 'No worker has claimed this shift yet.'
         }
         icon={UserRound}

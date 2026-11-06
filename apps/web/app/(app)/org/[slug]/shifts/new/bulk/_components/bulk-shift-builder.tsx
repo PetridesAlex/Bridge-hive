@@ -79,6 +79,8 @@ export type BulkTemplateDefaults = {
   title: string | null;
   notes: string | null;
   deadlineHoursBefore: number | null;
+  /** Worker capacity for each generated row; defaults to 1. */
+  requiredPositions?: number;
 };
 
 type LocationOption = { id: string; name: string; timezone: string };
@@ -124,6 +126,11 @@ export function BulkShiftBuilder({
   const [wardOptions, setWardOptions] = useState<WardOption[]>(wards);
 
   const defaultLocationId = defaults?.locationId ?? locations[0]?.id ?? '';
+  const templatePositions =
+    typeof defaults?.requiredPositions === 'number' &&
+    Number.isFinite(defaults.requiredPositions)
+      ? Math.min(100, Math.max(1, Math.trunc(defaults.requiredPositions)))
+      : 1;
   const customRowSeed: BulkCustomRowSeed = {
     startHm: defaults?.startHm ?? '08:00',
     endHm: defaults?.endHm ?? '16:00',
@@ -132,7 +139,7 @@ export function BulkShiftBuilder({
     requiredRole: (defaults?.requiredRole ?? 'registered_nurse') as WorkerRole,
     breakMinutes: defaults?.breakMinutes ?? 30,
     rateEuros: defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
-    positions: 1,
+    positions: templatePositions,
   };
   const [locationId, setLocationId] = useState(defaultLocationId);
   const [wardId, setWardId] = useState(defaults?.wardId ?? '');
@@ -148,7 +155,7 @@ export function BulkShiftBuilder({
     defaults ? minorToEurosInput(defaults.rateMinor) : '25.00',
   );
   const [title, setTitle] = useState(defaults?.title ?? '');
-  const [positions, setPositions] = useState('1');
+  const [positions, setPositions] = useState(String(templatePositions));
   const [deadlineHours, setDeadlineHours] = useState(
     String(defaults?.deadlineHoursBefore ?? 24),
   );

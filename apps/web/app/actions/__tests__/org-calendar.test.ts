@@ -39,10 +39,46 @@ describe('org calendar helpers', () => {
     );
     expect(event.href).toBe('/org/demo/shifts/s1');
     expect(event.coverageLabel).toBe('Open');
+    expect(event.positionsLabel).toBeNull();
     expect(event.tone).toBe('open');
     expect(event).not.toHaveProperty('worker_id');
     expect(event).not.toHaveProperty('iban');
     expect(JSON.stringify(event)).not.toMatch(/credential|iban|storage/i);
+  });
+
+  it('surfaces multi-position availability on calendar events', () => {
+    const partial = mapShiftToCalendarEvent(
+      {
+        id: 's2',
+        title: 'Day RN',
+        status: 'published',
+        starts_at: '2026-09-18T06:00:00.000Z',
+        ends_at: '2026-09-18T14:00:00.000Z',
+        required_role: 'registered_nurse',
+        required_positions: 4,
+        filled_positions: 2,
+      },
+      'demo',
+    );
+    expect(partial.coverageLabel).toBe('2 available');
+    expect(partial.positionsLabel).toBe('2/4');
+    expect(partial.openPositions).toBe(2);
+
+    const full = mapShiftToCalendarEvent(
+      {
+        id: 's3',
+        title: 'Day RN',
+        status: 'filled',
+        starts_at: '2026-09-18T06:00:00.000Z',
+        ends_at: '2026-09-18T14:00:00.000Z',
+        required_role: 'registered_nurse',
+        required_positions: 4,
+        filled_positions: 4,
+      },
+      'demo',
+    );
+    expect(full.coverageLabel).toBe('Fully booked');
+    expect(full.positionsLabel).toBe('Full');
   });
 
   it('applies semantic tones by role and status', () => {
@@ -55,6 +91,12 @@ describe('org calendar helpers', () => {
     expect(calendarEventTone('cancelled', 'ward_assistant')).toBe('danger');
     expect(calendarEventTone('scheduled', 'physiotherapist')).toBe('physio');
     expect(coverageLabelForStatus('filled')).toBe('Filled');
+    expect(
+      coverageLabelForStatus('filled', {
+        requiredPositions: 3,
+        filledPositions: 3,
+      }),
+    ).toBe('Fully booked');
   });
 
   it('layouts overlapping events side by side', () => {

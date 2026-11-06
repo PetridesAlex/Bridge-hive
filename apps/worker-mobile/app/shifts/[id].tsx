@@ -45,7 +45,8 @@ import {
   isAppReviewDemoShiftId,
   workerShiftDetailsFromDemoCatalog,
 } from '@/lib/app-review-demo';
-import { getMyAssignments, type ShiftAssignment } from '@/lib/queries';
+import { getOrCreateConversation } from '@/lib/messaging';
+import { getMyAssignments, getShiftById, type ShiftAssignment } from '@/lib/queries';
 import {
   assignmentActionErrorMessage,
   canSubmitCompletedHours,
@@ -127,6 +128,7 @@ export default function ShiftDetailScreen() {
   const [hoursText, setHoursText] = useState('0');
   const [minutesText, setMinutesText] = useState('0');
   const [hoursPrefillKey, setHoursPrefillKey] = useState<string | null>(null);
+  const [messagingBusy, setMessagingBusy] = useState(false);
   const demoShift = isAppReviewDemo || isAppReviewDemoShiftId(id);
 
   const refreshRequestId = useRef(0);
@@ -653,6 +655,43 @@ export default function ShiftDetailScreen() {
 
         {assignment ? (
           <AssignmentTimeline status={assignment.status} shiftEnded={ended} />
+        ) : null}
+
+        {assignment?.status === 'approved' && !demoShift && user?.id ? (
+          <View style={styles.section}>
+            <PremiumActionButton
+              label={t('messages.messageOrganization')}
+              loading={messagingBusy}
+              disabled={messagingBusy}
+              icon="chatbubbles-outline"
+              onPress={() => {
+                void (async () => {
+                  if (!id || !user.id || messagingBusy) return;
+                  setMessagingBusy(true);
+                  setActionError(undefined);
+                  try {
+                    const shiftRow = await getShiftById(id);
+                    const organizationId = shiftRow.data?.organization_id;
+                    if (!organizationId) {
+                      setActionError(t('messages.loadError'));
+                      return;
+                    }
+                    const created = await getOrCreateConversation(
+                      organizationId,
+                      user.id,
+                    );
+                    if (created.error || !created.data) {
+                      setActionError(created.error ?? t('messages.loadError'));
+                      return;
+                    }
+                    router.push(`/messages/${created.data.id}`);
+                  } finally {
+                    setMessagingBusy(false);
+                  }
+                })();
+              }}
+            />
+          </View>
         ) : null}
 
         {canSubmitCompletedHours(assignment?.status) && !ended ? (

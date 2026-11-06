@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  MessageSquare,
   Settings,
   Wallet,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import {
 
 const ICONS: Record<OrgNavItem['id'], typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
+  messages: MessageSquare,
   shifts: CalendarDays,
   timesheets: ClipboardList,
   locations: MapPin,

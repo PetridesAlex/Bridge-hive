@@ -158,6 +158,17 @@ grant select on public.organization_worker_messages to authenticated;
 grant select on public.organization_worker_conversation_reads to authenticated;
 
 -- ---------------------------------------------------------------------------
+-- Configurable limits (server-enforced; clients may mirror for UX only)
+-- ---------------------------------------------------------------------------
+
+insert into public.platform_settings (key, value_json)
+values
+  ('org_worker_message_max_length', '2000'::jsonb),
+  ('org_worker_message_rate_limit_count', '30'::jsonb),
+  ('org_worker_message_rate_limit_window_seconds', '60'::jsonb)
+on conflict (key) do nothing;
+
+-- ---------------------------------------------------------------------------
 -- Eligibility
 -- ---------------------------------------------------------------------------
 
@@ -628,6 +639,11 @@ declare
   v_body text := trim(coalesce(p_body, ''));
   v_sender_kind text;
   v_preview text;
+  v_max_length integer := public.get_setting_int('org_worker_message_max_length', 2000);
+  v_rate_count integer := public.get_setting_int('org_worker_message_rate_limit_count', 30);
+  v_rate_window_seconds integer :=
+    public.get_setting_int('org_worker_message_rate_limit_window_seconds', 60);
+  v_recent_count integer;
 begin
   if v_uid is null then
     raise exception 'NOT_AUTHENTICATED';
@@ -641,7 +657,11 @@ begin
     raise exception 'MESSAGE_BODY_REQUIRED';
   end if;
 
-  if char_length(v_body) > 2000 then
+  if v_max_length < 1 then
+    v_max_length := 2000;
+  end if;
+
+  if char_length(v_body) > v_max_length then
     raise exception 'MESSAGE_BODY_TOO_LONG';
   end if;
 
@@ -683,6 +703,21 @@ begin
 
   if found then
     return v_existing;
+  end if;
+
+  -- Rate limit new sends only (idempotent retries of the same client_message_id
+  -- return above and do not consume quota).
+  if v_rate_count > 0 and v_rate_window_seconds > 0 then
+    select count(*)::integer
+    into v_recent_count
+    from public.organization_worker_messages m
+    where m.conversation_id = p_conversation_id
+      and m.sender_user_id = v_uid
+      and m.created_at > now() - make_interval(secs => v_rate_window_seconds);
+
+    if v_recent_count >= v_rate_count then
+      raise exception 'MESSAGE_RATE_LIMITED';
+    end if;
   end if;
 
   insert into public.organization_worker_messages (
@@ -805,11 +840,15 @@ begin
               left join public.organization_worker_conversation_reads r
                 on r.conversation_id = c.id
                and r.user_id = v_uid
+              left join public.organization_worker_messages last_read
+                on last_read.id = r.last_read_message_id
+               and last_read.conversation_id = c.id
               where m.conversation_id = c.id
                 and m.sender_user_id <> v_uid
                 and (
-                  r.last_read_at is null
-                  or m.created_at > r.last_read_at
+                  r.last_read_message_id is null
+                  or last_read.id is null
+                  or (m.created_at, m.id) > (last_read.created_at, last_read.id)
                 )
             ),
             0
@@ -935,7 +974,10 @@ declare
   v_uid uuid := auth.uid();
   v_conversation public.organization_worker_conversations;
   v_message public.organization_worker_messages;
+  v_prev public.organization_worker_messages;
+  v_existing public.organization_worker_conversation_reads;
   v_row public.organization_worker_conversation_reads;
+  v_should_advance boolean := true;
 begin
   if v_uid is null then
     raise exception 'NOT_AUTHENTICATED';
@@ -961,6 +1003,7 @@ begin
     raise exception 'MESSAGING_FORBIDDEN';
   end if;
 
+  -- Candidate must belong to this authorized conversation (never trust UUID alone).
   select * into v_message
   from public.organization_worker_messages
   where id = p_message_id
@@ -970,24 +1013,40 @@ begin
     raise exception 'MESSAGE_NOT_FOUND';
   end if;
 
+  select * into v_existing
+  from public.organization_worker_conversation_reads
+  where conversation_id = p_conversation_id
+    and user_id = v_uid;
+
+  if found and v_existing.last_read_message_id is not null then
+    select * into v_prev
+    from public.organization_worker_messages
+    where id = v_existing.last_read_message_id
+      and conversation_id = p_conversation_id;
+
+    if found then
+      -- Authoritative order is (created_at, id), matching list_org_worker_messages.
+      -- A lexicographically larger UUID alone must not advance the cursor.
+      v_should_advance :=
+        (v_message.created_at, v_message.id) > (v_prev.created_at, v_prev.id);
+    end if;
+  end if;
+
+  if not v_should_advance then
+    return v_existing;
+  end if;
+
   insert into public.organization_worker_conversation_reads (
     conversation_id,
     user_id,
     last_read_message_id,
     last_read_at
   )
-  values (p_conversation_id, v_uid, p_message_id, greatest(now(), v_message.created_at))
+  values (p_conversation_id, v_uid, p_message_id, v_message.created_at)
   on conflict (conversation_id, user_id) do update
   set
-    last_read_message_id = case
-      when excluded.last_read_at >= public.organization_worker_conversation_reads.last_read_at
-        then excluded.last_read_message_id
-      else public.organization_worker_conversation_reads.last_read_message_id
-    end,
-    last_read_at = greatest(
-      public.organization_worker_conversation_reads.last_read_at,
-      excluded.last_read_at
-    )
+    last_read_message_id = excluded.last_read_message_id,
+    last_read_at = excluded.last_read_at
   returning * into v_row;
 
   return v_row;

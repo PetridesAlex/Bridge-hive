@@ -79,6 +79,27 @@ describe('organization_worker_messaging migration contract (source)', () => {
     expect(migration).toContain('and r.user_id = v_uid');
   });
 
+  it('enforces configurable server max length and rate limits on send', () => {
+    expect(migration).toContain("'org_worker_message_max_length'");
+    expect(migration).toContain("'org_worker_message_rate_limit_count'");
+    expect(migration).toContain("'org_worker_message_rate_limit_window_seconds'");
+    expect(migration).toContain("get_setting_int('org_worker_message_max_length'");
+    expect(migration).toContain('MESSAGE_RATE_LIMITED');
+    expect(migration).toContain('MESSAGE_BODY_TOO_LONG');
+  });
+
+  it('advances read cursors by (created_at, id) within the same conversation', () => {
+    expect(migration).toContain(
+      '(v_message.created_at, v_message.id) > (v_prev.created_at, v_prev.id)',
+    );
+    expect(migration).toContain('and conversation_id = p_conversation_id');
+    expect(migration).toContain(
+      '(m.created_at, m.id) > (last_read.created_at, last_read.id)',
+    );
+    expect(migration).toContain('v_should_advance');
+    expect(migration).toContain('values (p_conversation_id, v_uid, p_message_id, v_message.created_at)');
+  });
+
   it('rechecks messaging eligibility before dispatching org_worker_message pushes', () => {
     expect(migration).toContain("receipt_error = 'message_unavailable'");
     expect(migration).toContain("e.event_type = 'org_worker_message'");
@@ -131,6 +152,7 @@ describe('messaging access helpers', () => {
     expect(advanced).toEqual({
       lastReadAt: '2026-01-03T00:00:00.000Z',
       lastReadMessageId: 'msg-3',
+      advanced: true,
     });
     const ignored = advanceReadCursor({
       previousAt: '2026-01-03T00:00:00.000Z',
@@ -141,6 +163,7 @@ describe('messaging access helpers', () => {
     expect(ignored).toEqual({
       lastReadAt: '2026-01-03T00:00:00.000Z',
       lastReadMessageId: 'msg-3',
+      advanced: false,
     });
   });
 });

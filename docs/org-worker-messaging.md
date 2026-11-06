@@ -1,6 +1,15 @@
 # Organization–worker messaging
 
-1:1 text chat between an operational organization and a verified worker after shared approved work.
+1:1 **text-only** chat between an operational organization and a verified worker after shared approved work.
+
+## First-version scope (locked)
+
+- Text only (no attachments, calls, groups, community feed)
+- Org send/list: **`org_admin` / `org_scheduler` only** (active membership)
+- **No** `org_billing` messaging
+- **No** platform-admin / broad support message reading
+- **No** staff email digests
+- Retention / deletion: **owner policy decision — not approved as indefinite retention**
 
 ## Eligibility (server-enforced)
 
@@ -17,50 +26,73 @@ Claimed seats, ended shifts, or completed shifts alone are **not** enough. Each 
 
 ## Permissions
 
-- **Worker:** may list/send only on conversations where `worker_id = auth.uid()`
-- **Org staff:** current `organization_members.status = 'active'` with `org_admin` or `org_scheduler` (same people who review timesheets). `org_billing` cannot message by default
-- **Demo workers:** entry points hidden; RPCs raise `APP_REVIEW_DEMO_FORBIDDEN`
-- Writes go through RPCs only (no direct message inserts)
+- **Worker:** conversations where `worker_id = auth.uid()`
+- **Org staff:** `organization_members.status = 'active'` + `org_admin` / `org_scheduler` via `has_org_role`
+- **Demo workers:** RPCs raise `APP_REVIEW_DEMO_FORBIDDEN` (UI hide is not the control)
+- Direct table inserts/updates/deletes revoked for `authenticated`; writes via SECURITY DEFINER RPCs only
+- Realtime publication includes messages/conversations tables; row visibility still follows RLS select policies
 
-## Conversation model
+## Limits (server)
 
-- One conversation per `(organization_id, worker_id)` (unique)
-- Idempotent send via `client_message_id` unique per conversation
-- **Per-user reads** (`organization_worker_conversation_reads`): one staff member reading does not clear unread for others
-- No delivery/read receipts in the UI
-- Text only; max length default **2000** characters
-- Privacy banner: do not share patient information, credentials, or bank details
+Configurable via `platform_settings` (clients may mirror for UX only):
+
+| Key | Default |
+| --- | --- |
+| `org_worker_message_max_length` | `2000` (table CHECK hard ceiling also 2000) |
+| `org_worker_message_rate_limit_count` | `30` |
+| `org_worker_message_rate_limit_window_seconds` | `60` |
+
+`send_org_worker_message` raises `MESSAGE_BODY_TOO_LONG` / `MESSAGE_RATE_LIMITED`. Idempotent retries of the same `client_message_id` do not consume rate quota.
+
+## Read state
+
+- Per-user primary key `(conversation_id, user_id)`
+- Candidate message must exist in the **same** conversation
+- Cursor advances only when `(created_at, id)` is strictly after the previous read message — **not** UUID order alone
+- Unread counts use the same `(created_at, id)` comparison against the stored read message
 
 ## Push (workers only)
 
-- Event type `org_worker_message` via durable outbox
-- Localized title: “New message from {org}” / “Νέο μήνυμα από {org}”
-- Lock-screen body is generic (“Open BridgeHive to read it.”) — **never** the chat body
-- Deep link `bridgehive://messages/<conversationId>` with session + eligibility recheck on open
-- Separate Android channel `org-messages` (not `new-shifts`)
-- Org staff: unread badge + Realtime only (no Expo push)
+- `org_worker_message` outbox; generic lock-screen body (never chat text)
+- Enqueue only when sender is `organization_staff`; publication key = message id
+- Android channel `org-messages`
 
-## Owner-review (not decided in this ship)
+## Owner decisions still open
 
-| Topic | Default now | Needs owner decision |
+| Topic | Current engineering default | Decision needed |
 | --- | --- | --- |
-| Retention / deletion | Keep messages indefinitely | Retention window, worker/org delete rights, GDPR erase path |
-| Support / reporting access | No platform-admin message read path | Whether support may view threads for disputes |
-| `org_billing` messaging | Denied | Whether billing can message workers |
-| Staff email digests | Off | Optional unread email for schedulers |
-| Max length | 2000 | Raise/lower for clinical ops |
-| Attachments / calls / groups | Deferred | Product scope for later phases |
+| Retention / deletion | Rows persist until a policy is chosen | Retention window, erase path — **do not treat as legal approval** |
+| Support read access | None | Whether support may view threads |
+| `org_billing` messaging | Denied | Widen or keep |
+| Staff email digests | Off | Keep off for v1 |
+| Max length / rate | 2000 / 30 per 60s | Tune via settings if needed |
 
-Do not invent approved legal wording for privacy notices beyond the in-product operational warning already shipped.
+Do not invent approved legal wording beyond the in-product operational privacy warning.
 
-## Release notes
+## Post-deployment access / sync checks (required; currently NOT RUN)
 
-Migration: `20261106122837_organization_worker_messaging.sql` (after capacity guard `20261106121000`).
+These are **not** covered by source contract tests. Run only with separate approval; prefer staging / non-production fixtures:
 
-**Do not** mix maps `042` or live PaymentIntent work into the chat migrate/push. Apply chat from the messaging worktree only after capacity approval.
+1. Apply chat migration alone (do not bundle maps `042` or live PaymentIntent). Capacity migration is a **separate** payload — do not assume it is already applied.
+2. As worker A (eligible): create conversation with org O; send message; confirm row + preview.
+3. As worker B (other org / ineligible): cannot list O↔A; send/list RPC returns forbidden / empty.
+4. As `org_billing` on O: no Messages nav effect for messaging RPCs; `MESSAGING_FORBIDDEN`.
+5. As revoked former `org_scheduler`: loses list/send/select.
+6. Demo worker: RPC deny even if UI entry forced.
+7. Double-submit same `client_message_id`: one row; no second push event.
+8. Exceed rate window: `MESSAGE_RATE_LIMITED`; over-length: `MESSAGE_BODY_TOO_LONG`.
+9. Mark-read with older `(created_at, id)` or foreign conversation message id: no advance / `MESSAGE_NOT_FOUND`.
+10. Two staff members: one reading does not clear the other’s unread.
+11. Realtime: open thread, second client inserts, subscriber sees message; unsubscribe on leave.
+12. Push path (non-prod Expo): staff send → worker device generic title/body; tap opens authorized conversation after session.
 
-## Verification (this branch)
+## Capacity vs chat
 
-**RUN:** domain unit tests (eligibility, merge/idempotency helpers, push title/body, deep-link parser), web `org-dashboard` nav tests, mobile messaging gating/i18n tests, root `tsc`, mobile `tsc`, web eslint on messaging files, `git diff --check`, web `next build` (includes `/org/[slug]/messages`).
+- Capacity guard file: `20261106121000_shift_capacity_occupancy_guard.sql` — **separate release**
+- Chat file: `20261106122837_organization_worker_messaging.sql` — later timestamp only; **no functional dependency** on capacity
 
-**NOT RUN:** pgTAP/dblink, hosted Supabase migrate / Realtime, physical device keyboard, lock-screen Expo push, production conversations, EAS / TestFlight, merge to main.
+## Verification on this branch
+
+**RUN:** domain/unit/contract tests listed in PR checks, typecheck, lint, web build, mobile export where noted.
+
+**NOT RUN:** hosted migrate, live RLS isolation suite, hosted Realtime, device keyboard, lock-screen Expo, production conversations.

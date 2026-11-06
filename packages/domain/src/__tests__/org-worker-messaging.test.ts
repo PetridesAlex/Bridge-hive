@@ -1,6 +1,8 @@
 import {
+  advanceReadCursor,
   canOrgStaffMessage,
   filterConversationsByQuery,
+  isMessageAfter,
   isMessagingEligible,
   mergeMessagePage,
   messagePreview,
@@ -136,6 +138,40 @@ describe('filterConversationsByQuery', () => {
     expect(filterConversationsByQuery(rows, 'alex')).toHaveLength(1);
     expect(filterConversationsByQuery(rows, 'νοσηλευ')).toHaveLength(1);
     expect(filterConversationsByQuery(rows, 'zzz')).toHaveLength(0);
+  });
+});
+
+describe('read cursor ordering', () => {
+  it('orders by (createdAt, id) and ignores larger UUID alone', () => {
+    const earlier = {
+      createdAt: '2026-01-02T10:00:00.000Z',
+      id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+    };
+    const later = {
+      createdAt: '2026-01-02T10:00:01.000Z',
+      id: '00000000-0000-4000-8000-000000000001',
+    };
+    expect(isMessageAfter(later, earlier)).toBe(true);
+    expect(isMessageAfter(earlier, later)).toBe(false);
+
+    const sameTimeLowerId = {
+      createdAt: '2026-01-02T10:00:00.000Z',
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    };
+    const sameTimeHigherId = {
+      createdAt: '2026-01-02T10:00:00.000Z',
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+    };
+    expect(isMessageAfter(sameTimeHigherId, sameTimeLowerId)).toBe(true);
+
+    const ignored = advanceReadCursor({
+      previousAt: later.createdAt,
+      previousMessageId: later.id,
+      candidateAt: earlier.createdAt,
+      candidateMessageId: earlier.id,
+    });
+    expect(ignored.advanced).toBe(false);
+    expect(ignored.lastReadMessageId).toBe(later.id);
   });
 });
 

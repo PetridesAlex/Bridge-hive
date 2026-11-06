@@ -162,21 +162,47 @@ export function mergeMessagePage(
   return sortMessagesAscending([...byClient.values()]);
 }
 
-/** Pure helper mirroring mark_org_worker_conversation_read monotonicity. */
+/**
+ * Pure helper mirroring mark_org_worker_conversation_read.
+ * Ordering is (createdAt, id) — never UUID lexicographic order alone.
+ */
+export function isMessageAfter(
+  candidate: { createdAt: string; id: string },
+  previous: { createdAt: string; id: string },
+): boolean {
+  if (candidate.createdAt !== previous.createdAt) {
+    return candidate.createdAt > previous.createdAt;
+  }
+  return candidate.id > previous.id;
+}
+
 export function advanceReadCursor(args: {
   previousAt: string | null;
   previousMessageId: string | null;
   candidateAt: string;
   candidateMessageId: string;
-}): { lastReadAt: string; lastReadMessageId: string } {
-  if (!args.previousAt || args.candidateAt >= args.previousAt) {
+}): { lastReadAt: string; lastReadMessageId: string; advanced: boolean } {
+  if (!args.previousAt || !args.previousMessageId) {
     return {
       lastReadAt: args.candidateAt,
       lastReadMessageId: args.candidateMessageId,
+      advanced: true,
+    };
+  }
+  const shouldAdvance = isMessageAfter(
+    { createdAt: args.candidateAt, id: args.candidateMessageId },
+    { createdAt: args.previousAt, id: args.previousMessageId },
+  );
+  if (!shouldAdvance) {
+    return {
+      lastReadAt: args.previousAt,
+      lastReadMessageId: args.previousMessageId,
+      advanced: false,
     };
   }
   return {
-    lastReadAt: args.previousAt,
-    lastReadMessageId: args.previousMessageId ?? args.candidateMessageId,
+    lastReadAt: args.candidateAt,
+    lastReadMessageId: args.candidateMessageId,
+    advanced: true,
   };
 }

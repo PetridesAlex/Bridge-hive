@@ -3,10 +3,13 @@ import {
   BadgeCheck,
   CircleAlert,
   CircleDashed,
+  ClipboardCheck,
   Clock3,
   FileText,
   FileWarning,
   Fingerprint,
+  History,
+  ShieldAlert,
   ShieldCheck,
   Wallet,
 } from 'lucide-react';
@@ -37,7 +40,12 @@ import {
   isReadyForFinalVerification,
   payoutAccountStatusLabel,
 } from '@/lib/admin/document-status';
-import { credentialTypeLabel } from '@/lib/admin/labels';
+import {
+  auditActionLabel,
+  credentialStatusLabel,
+  credentialTypeLabel,
+  safeAuditMetadata,
+} from '@/lib/admin/labels';
 import { formatDateTime, roleLabel } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
@@ -49,7 +57,6 @@ import {
   type DocumentChecklistItemStatus,
 } from '@bridge-hive/domain';
 import type { WorkerRole } from '@bridge-hive/domain';
-import { auditActionLabel, safeAuditMetadata } from '@/lib/admin/labels';
 
 export default async function VerificationApplicationWorkspacePage({
   params,
@@ -287,6 +294,8 @@ export default async function VerificationApplicationWorkspacePage({
     .map((event) => ({
       id: event.id,
       action: event.action,
+      entityType: event.entity_type,
+      entityId: event.entity_id,
       createdAt: event.created_at,
       meta: safeAuditMetadata(event.after) ?? safeAuditMetadata(event.before),
     }));
@@ -782,39 +791,239 @@ export default async function VerificationApplicationWorkspacePage({
         <Panel
           kicker="Audit"
           title={workerFolderLabel('reviewTimeline', 'en')}
-          description="Existing audit events for this worker. Sensitive values are never shown."
+          description="Review decisions and credential submissions for this worker. Sensitive values are never shown."
+          accent="navy"
+          icon={History}
         >
           {auditEvents.length === 0 ? (
-            <p className="text-sm text-bh-text-secondary">No audit events yet.</p>
+            <p className="rounded-xl border border-dashed border-bh-border px-4 py-8 text-center text-sm text-bh-text-secondary">
+              No review events yet for this worker folder.
+            </p>
           ) : (
-            <ol className="space-y-3">
-              {auditEvents.map((event) => (
-                <li
-                  key={event.id}
-                  className="rounded-xl border border-bh-border/80 bg-bh-subtle/40 px-3.5 py-3"
-                >
-                  <p className="text-sm font-semibold text-bh-text">
-                    {auditActionLabel(event.action)}
+            <div className="overflow-hidden rounded-[1.15rem] border border-bh-border/80 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.04)]">
+              <div
+                aria-hidden
+                className="h-1 bg-gradient-to-r from-bh-sidebar via-bh-teal to-bh-honey"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-bh-border/70 bg-gradient-to-b from-bh-subtle/70 to-bh-surface px-4 py-3 sm:px-5">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-honey-strong">
+                    Activity trail
                   </p>
-                  <p className="mt-0.5 text-xs text-bh-text-muted">
-                    {formatDateTime(event.createdAt)}
+                  <p className="mt-0.5 text-sm text-bh-text-secondary">
+                    Newest first · verification and credential actions only
                   </p>
-                  {event.meta ? (
-                    <p className="mt-1 text-xs text-bh-text-secondary">
-                      {Object.entries(event.meta)
-                        .slice(0, 4)
-                        .map(([k, v]) => `${k}: ${String(v)}`)
-                        .join(' · ')}
-                    </p>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
+                </div>
+                <span className="inline-flex items-center rounded-full border border-bh-border/80 bg-white px-2.5 py-1 text-[11px] font-semibold text-bh-text-muted shadow-sm">
+                  {auditEvents.length} event
+                  {auditEvents.length === 1 ? '' : 's'}
+                </span>
+              </div>
+
+              <ol className="relative divide-y divide-bh-border/60">
+                {auditEvents.map((event, index) => {
+                  const tone = auditActionTone(event.action);
+                  const ToneIcon = tone.Icon;
+                  const details = formatAuditDetails(event.meta);
+                  const entityLabel = formatAuditEntity(
+                    event.entityType,
+                    event.entityId,
+                    workerId,
+                    credentialIdSet,
+                  );
+
+                  return (
+                    <li
+                      key={event.id}
+                      className={cn(
+                        'group/event relative px-4 py-4 transition duration-300 hover:bg-bh-teal-soft/15 sm:px-5 motion-reduce:transition-none',
+                        index === 0 && 'bg-bh-honey-soft/15',
+                      )}
+                    >
+                      <div className="flex gap-3.5">
+                        <span
+                          className={cn(
+                            'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 transition duration-300 group-hover/event:scale-[1.03]',
+                            tone.wrap,
+                          )}
+                        >
+                          <ToneIcon className="h-4 w-4" aria-hidden />
+                        </span>
+
+                        <div className="min-w-0 flex-1 space-y-2.5">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[15px] font-semibold tracking-tight text-bh-text transition-colors group-hover/event:text-bh-teal-strong">
+                                {auditActionLabel(event.action)}
+                              </p>
+                              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                <span
+                                  className={cn(
+                                    'inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]',
+                                    tone.chip,
+                                  )}
+                                >
+                                  {tone.label}
+                                </span>
+                                <span className="inline-flex rounded-full bg-bh-subtle px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-bh-text-secondary">
+                                  {entityLabel}
+                                </span>
+                              </div>
+                            </div>
+                            <time className="shrink-0 rounded-full border border-bh-border/80 bg-white px-2.5 py-1 text-[11px] font-semibold text-bh-text-secondary shadow-sm">
+                              {formatDateTime(event.createdAt)}
+                            </time>
+                          </div>
+
+                          {details.length > 0 ? (
+                            <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                              {details.map((detail) => (
+                                <div
+                                  key={`${event.id}-${detail.key}`}
+                                  className="rounded-xl border border-bh-border/70 bg-gradient-to-b from-bh-subtle/70 to-white px-3 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+                                >
+                                  <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+                                    {detail.label}
+                                  </dt>
+                                  <dd className="mt-1 break-all text-sm font-semibold text-bh-text">
+                                    {detail.value}
+                                  </dd>
+                                </div>
+                              ))}
+                            </dl>
+                          ) : (
+                            <p className="text-xs text-bh-text-muted">
+                              No additional safe metadata for this event.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
           )}
         </Panel>
       ) : null}
     </div>
   );
+}
+
+function auditActionTone(action: string): {
+  Icon: typeof ClipboardCheck;
+  wrap: string;
+  chip: string;
+  label: string;
+} {
+  if (action.includes('reject')) {
+    return {
+      Icon: ShieldAlert,
+      wrap: 'bg-bh-danger-soft text-bh-danger ring-bh-danger/25',
+      chip: 'bg-bh-danger-soft text-bh-danger',
+      label: 'Rejected',
+    };
+  }
+  if (
+    action.includes('approve') ||
+    action === 'set_worker_verification'
+  ) {
+    return {
+      Icon: ClipboardCheck,
+      wrap: 'bg-bh-success-soft text-bh-success ring-bh-success/25',
+      chip: 'bg-bh-success-soft text-bh-success',
+      label: 'Approved',
+    };
+  }
+  if (action.includes('submit')) {
+    return {
+      Icon: FileText,
+      wrap: 'bg-bh-honey-soft text-bh-honey-strong ring-bh-honey/30',
+      chip: 'bg-bh-honey-soft text-bh-honey-strong',
+      label: 'Submitted',
+    };
+  }
+  if (action.includes('payout') || action.includes('credential')) {
+    return {
+      Icon: ShieldCheck,
+      wrap: 'bg-bh-teal-soft text-bh-teal-strong ring-bh-teal/25',
+      chip: 'bg-bh-teal-soft text-bh-teal-strong',
+      label: 'Update',
+    };
+  }
+  return {
+    Icon: History,
+    wrap: 'bg-bh-subtle text-bh-text-secondary ring-bh-border',
+    chip: 'bg-bh-subtle text-bh-text-secondary',
+    label: 'Event',
+  };
+}
+
+function formatAuditEntity(
+  entityType: string,
+  entityId: string | null,
+  workerId: string,
+  credentialIds: Set<string>,
+) {
+  if (entityId === workerId) return 'Worker profile';
+  if (entityId && credentialIds.has(entityId)) return 'Credential';
+  if (entityType.includes('payout')) return 'Payout account';
+  if (entityType.includes('credential')) return 'Credential';
+  return entityType.replaceAll('_', ' ');
+}
+
+function formatAuditDetails(
+  meta: Record<string, unknown> | null,
+): Array<{ key: string; label: string; value: string }> {
+  if (!meta) return [];
+
+  const preferred = [
+    'credential_type',
+    'status',
+    'verification_status',
+    'decision',
+    'expires_at',
+    'verified_at',
+  ];
+  const entries = Object.entries(meta).filter(([, value]) => {
+    if (value === null || value === undefined || value === '') return false;
+    if (typeof value === 'string' && value.toLowerCase() === 'null') return false;
+    return true;
+  });
+
+  entries.sort(([a], [b]) => {
+    const ai = preferred.indexOf(a);
+    const bi = preferred.indexOf(b);
+    if (ai === -1 && bi === -1) return a.localeCompare(b);
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
+
+  return entries.slice(0, 6).map(([key, value]) => {
+    let display = String(value);
+    if (key === 'credential_type' && typeof value === 'string') {
+      display = credentialTypeLabel(value);
+    } else if (
+      (key === 'status' || key === 'verification_status') &&
+      typeof value === 'string'
+    ) {
+      display = credentialStatusLabel(value);
+    } else if (
+      (key === 'expires_at' || key === 'verified_at') &&
+      typeof value === 'string'
+    ) {
+      display = formatDateTime(value);
+    } else if (typeof value === 'boolean') {
+      display = value ? 'Yes' : 'No';
+    }
+
+    return {
+      key,
+      label: key.replaceAll('_', ' '),
+      value: display,
+    };
+  });
 }
 
 function CredentialStatusInline({ status }: { status: string }) {

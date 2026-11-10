@@ -106,6 +106,14 @@ export default async function AdminCredentialDetailPage({
             {profile?.full_name ?? credential.worker_id.slice(0, 8) + '…'}
           </Link>
         </p>
+        <p className="mt-2">
+          <Link
+            href={`/admin/applications/${credential.worker_id}?from=${encodeURIComponent('/admin/credentials')}`}
+            className="text-sm font-semibold text-bh-teal-strong hover:underline"
+          >
+            Open worker folder
+          </Link>
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

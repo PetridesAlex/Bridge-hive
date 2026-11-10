@@ -973,3 +973,92 @@ export function isLikelyValidIbanFormat(iban: string): boolean {
   const normalized = normalizeIbanInput(iban);
   return /^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/.test(normalized);
 }
+
+/** Admin worker-folder queue / review workspace labels (EN + EL). */
+export const WORKER_FOLDER_LABELS = {
+  workerApplications: {
+    en: 'Worker applications',
+    el: 'Αιτήσεις εργαζομένων',
+  },
+  pendingReview: {
+    en: 'Pending review',
+    el: 'Σε αναμονή ελέγχου',
+  },
+  submitted: {
+    en: 'Submitted',
+    el: 'Υποβλήθηκε',
+  },
+  underReview: {
+    en: 'Under review',
+    el: 'Υπό έλεγχο',
+  },
+  needsCorrection: {
+    en: 'Needs correction',
+    el: 'Απαιτείται διόρθωση',
+  },
+  approved: {
+    en: 'Approved',
+    el: 'Εγκρίθηκε',
+  },
+  openReview: {
+    en: 'Open review',
+    el: 'Άνοιγμα ελέγχου',
+  },
+  openWorkerFolder: {
+    en: 'Open worker folder',
+    el: 'Άνοιγμα φακέλου εργαζομένου',
+  },
+  documentsAndCredentials: {
+    en: 'Documents and credentials',
+    el: 'Έγγραφα και διαπιστευτήρια',
+  },
+  reviewStatus: {
+    en: 'Review status',
+    el: 'Κατάσταση ελέγχου',
+  },
+  completeRequirements: {
+    en: 'Complete requirements',
+    el: 'Ολοκληρωμένες απαιτήσεις',
+  },
+  requestCorrection: {
+    en: 'Request correction',
+    el: 'Αίτημα διόρθωσης',
+  },
+  approveWorker: {
+    en: 'Approve worker',
+    el: 'Έγκριση εργαζομένου',
+  },
+  needsAttention: {
+    en: 'Needs attention',
+    el: 'Χρειάζεται προσοχή',
+  },
+  backToWorkerFolders: {
+    en: 'Back to worker folders',
+    el: 'Πίσω στους φακέλους',
+  },
+  identificationValue: {
+    en: 'Identification value',
+    el: 'Τιμή ταυτοποίησης',
+  },
+  reviewTimeline: {
+    en: 'Review timeline',
+    el: 'Χρονολόγιο ελέγχου',
+  },
+  noWorkersMatch: {
+    en: 'No workers match',
+    el: 'Κανένας εργαζόμενος δεν ταιριάζει',
+  },
+  workerFoldersEmptyHint: {
+    en: 'Try clearing filters or wait for workers to submit Account Setup.',
+    el: 'Δοκιμάστε να καθαρίσετε τα φίλτρα ή περιμένετε υποβολές από εργαζομένους.',
+  },
+} as const;
+
+export type WorkerFolderLabelKey = keyof typeof WORKER_FOLDER_LABELS;
+
+export function workerFolderLabel(
+  key: WorkerFolderLabelKey,
+  locale: LocaleCode = 'en',
+): string {
+  return WORKER_FOLDER_LABELS[key][locale] ?? WORKER_FOLDER_LABELS[key].en;
+}

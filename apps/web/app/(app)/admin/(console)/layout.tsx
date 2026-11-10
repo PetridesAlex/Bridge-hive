@@ -9,30 +9,17 @@ export default async function AdminConsoleLayout({
 }) {
   const ctx = await requirePlatformAdmin();
   const supabase = await createClient();
-  const useFunction = ctx.adminRole === 'platform_support';
 
   let credentialCount = 0;
   let applicationCount = 0;
   let organizationsAwaitingReview = 0;
   let unreadOrgNotices = 0;
 
-  if (ctx.capabilities.canViewCredentialMetadata) {
-    if (useFunction) {
-      const { data } = await supabase.rpc('credential_support_view');
-      credentialCount = (data ?? []).filter(
-        (c: { status: string }) =>
-          c.status === 'pending' || c.status === 'under_review',
-      ).length;
-    } else {
-      const { count } = await supabase
-        .from('credentials')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['pending', 'under_review']);
-      credentialCount = count ?? 0;
-    }
-  }
-
-  if (ctx.capabilities.canViewWorkers) {
+  // Worker-folder badges count workers awaiting attention, not individual documents.
+  if (
+    ctx.capabilities.canViewCredentialMetadata ||
+    ctx.capabilities.canViewWorkers
+  ) {
     const { data } = await supabase.rpc(
       'verification_application_dashboard_counts',
     );
@@ -42,8 +29,14 @@ export default async function AdminConsoleLayout({
         ready_for_review?: number;
         under_review?: number;
       };
-      applicationCount =
+      const attention =
         Number(row.ready_for_review ?? 0) + Number(row.under_review ?? 0);
+      if (ctx.capabilities.canViewCredentialMetadata) {
+        credentialCount = attention;
+      }
+      if (ctx.capabilities.canViewWorkers) {
+        applicationCount = attention;
+      }
     }
   }
 

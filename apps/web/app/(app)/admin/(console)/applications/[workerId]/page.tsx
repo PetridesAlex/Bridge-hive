@@ -17,6 +17,7 @@ import { PackageReviewPanel } from '@/components/admin/package-review-panel';
 import {
   AccountStatusBadge,
   ApplicationStatusBadge,
+  CredentialStatusBadge,
   OnboardingStatusBadge,
   VerificationStatusBadge,
 } from '@/components/admin/status-badges';
@@ -39,17 +40,23 @@ import { createClient } from '@/lib/supabase/server';
 import { cn } from '@/lib/utils';
 import {
   credentialRequirementsForRole,
+  isTextCredentialType,
   payoutSummaryLabel,
+  workerFolderLabel,
   type DocumentChecklistItemStatus,
 } from '@bridge-hive/domain';
 import type { WorkerRole } from '@bridge-hive/domain';
+import { auditActionLabel, safeAuditMetadata } from '@/lib/admin/labels';
 
 export default async function VerificationApplicationWorkspacePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workerId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { workerId } = await params;
+  const { from } = await searchParams;
   const ctx = await requirePlatformAdmin();
   if (!ctx.capabilities.canViewWorkers) {
     return (
@@ -59,6 +66,13 @@ export default async function VerificationApplicationWorkspacePage({
       />
     );
   }
+
+  const backHref =
+    from === '/admin/credentials' ? '/admin/credentials' : '/admin/applications';
+  const backLabel =
+    from === '/admin/credentials'
+      ? workerFolderLabel('backToWorkerFolders', 'en')
+      : 'Verification applications';
 
   const supabase = await createClient();
 
@@ -118,6 +132,37 @@ export default async function VerificationApplicationWorkspacePage({
     supabase.rpc('worker_application_last_activity', {
       p_worker_id: workerId,
     }),
+  ]);
+
+  const credentialIds = (credentials ?? []).map((c) => c.id);
+  const auditEntityIds = [workerId, ...credentialIds];
+  const auditResult = ctx.capabilities.canViewAudit
+    ? await supabase
+        .from('audit_events')
+        .select('id, action, entity_type, entity_id, created_at, before, after')
+        .in('entity_id', auditEntityIds)
+        .order('created_at', { ascending: false })
+        .limit(40)
+    : { data: [] as Array<{
+        id: string;
+        action: string;
+        entity_type: string;
+        entity_id: string | null;
+        created_at: string;
+        before: unknown;
+        after: unknown;
+      }> };
+
+  const credentialIdSet = new Set(credentialIds);
+  const reviewActions = new Set([
+    'submit_credential',
+    'submit_credential_for_review',
+    'verify_credential_approve',
+    'verify_credential_reject',
+    'verify_payout_account_approve',
+    'verify_payout_account_reject',
+    'set_worker_verification',
+    'submit_payout_account',
   ]);
 
   const payoutRaw = payoutResult.data;
@@ -194,13 +239,61 @@ export default async function VerificationApplicationWorkspacePage({
         ? (lastActivity[0] as string | null)
         : (lastActivity as string | null);
 
+  const textCredRows = credRows.filter((c) =>
+    isTextCredentialType(c.credential_type),
+  );
+  const fileCredRows = credRows.filter(
+    (c) => !isTextCredentialType(c.credential_type),
+  );
+  const missingRequired = checklist.filter(
+    (item) =>
+      item.isRequired &&
+      (item.status === 'not_uploaded' || item.status === 'draft'),
+  );
+  const rejectedRequired = checklist.filter(
+    (item) => item.isRequired && item.status === 'rejected',
+  );
+  const expiredRequired = checklist.filter(
+    (item) => item.isRequired && item.status === 'expired',
+  );
+  const approveSummary = [
+    `Worker: ${profile?.full_name ?? workerId.slice(0, 8)} (${role ? roleLabel(role) : 'role unset'}).`,
+    `Requirements: ${approved} of ${requiredTotal} approved; ${awaiting} awaiting; ${rejected} rejected.`,
+    `Payout: ${payoutSummaryLabel(payoutAccount?.status as never)}.`,
+    missingRequired.length
+      ? `Missing/incomplete: ${missingRequired.map((m) => credentialTypeLabel(m.credentialType)).join(', ')}.`
+      : 'No missing required credentials.',
+    rejectedRequired.length
+      ? `Rejected: ${rejectedRequired.map((m) => credentialTypeLabel(m.credentialType)).join(', ')}.`
+      : null,
+    expiredRequired.length
+      ? `Expired: ${expiredRequired.map((m) => credentialTypeLabel(m.credentialType)).join(', ')}.`
+      : null,
+    'Effect: unlocks marketplace workspace only if every server-side gate still passes.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const auditEvents = (auditResult.data ?? [])
+    .filter((event) => {
+      if (!reviewActions.has(event.action)) return false;
+      if (event.entity_id === workerId) return true;
+      return Boolean(event.entity_id && credentialIdSet.has(event.entity_id));
+    })
+    .slice(0, 25)
+    .map((event) => ({
+      id: event.id,
+      action: event.action,
+      createdAt: event.created_at,
+      meta: safeAuditMetadata(event.after) ?? safeAuditMetadata(event.before),
+    }));
+
+  const refreshedAt = new Date().toISOString();
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
-        <AdminBackLink
-          href="/admin/applications"
-          label="Verification applications"
-        />
+        <AdminBackLink href={backHref} label={backLabel} />
         <header className="mt-4 overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
           <div
             aria-hidden
@@ -314,6 +407,9 @@ export default async function VerificationApplicationWorkspacePage({
             </dd>
           </div>
         </dl>
+        <p className="mt-3 text-xs text-bh-text-muted">
+          Last refreshed {formatDateTime(refreshedAt)}
+        </p>
       </Panel>
 
       <Panel
@@ -333,8 +429,71 @@ export default async function VerificationApplicationWorkspacePage({
         />
       </Panel>
 
-      <Panel kicker="Documents" title="Document review">
-          {credRows.length === 0 ? (
+      {textCredRows.length > 0 ? (
+        <Panel
+          kicker="Identification"
+          title={workerFolderLabel('identificationValue', 'en')}
+          description="Tax identification and social insurance are text credentials. Values are visible only to authorized platform reviewers."
+          accent="teal"
+        >
+          <div className="space-y-3">
+            {textCredRows.map((cred) => (
+              <div
+                key={cred.id}
+                className="rounded-2xl border border-bh-border/80 bg-bh-subtle/40 px-4 py-3.5"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-bh-text">
+                      {credentialTypeLabel(cred.credential_type)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-bh-text-muted">
+                      Updated{' '}
+                      {cred.created_at ? formatDateTime(cred.created_at) : '—'}
+                    </p>
+                  </div>
+                  <CredentialStatusInline status={cred.status} />
+                </div>
+                {ctx.capabilities.canViewCredentialDocuments ? (
+                  cred.textValue ? (
+                    <p className="mt-3 break-all rounded-xl border border-bh-border/70 bg-bh-surface px-3 py-2.5 font-mono text-sm text-bh-text">
+                      {cred.textValue}
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-sm text-bh-text-secondary">
+                      No text value saved yet.
+                    </p>
+                  )
+                ) : (
+                  <p className="mt-3 text-sm text-bh-text-secondary">
+                    Text value restricted for your role.
+                  </p>
+                )}
+                {cred.rejection_reason ? (
+                  <p className="mt-2 text-sm text-bh-danger">
+                    Reason: {cred.rejection_reason}
+                  </p>
+                ) : null}
+                <div className="mt-3">
+                  <Link
+                    href={`/admin/credentials/${cred.id}`}
+                    className="text-sm font-semibold text-bh-teal-strong hover:underline"
+                  >
+                    Open credential detail
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      ) : null}
+
+      <Panel
+        kicker="Documents"
+        title={workerFolderLabel('documentsAndCredentials', 'en')}
+        description="Uploaded files for this worker. Open documents with short-lived signed URLs only."
+      >
+          {fileCredRows.length === 0 && textCredRows.length === 0 ? (
             <p className="text-sm text-slate-500">No credentials uploaded yet.</p>
           ) : (
             <PackageReviewPanel
@@ -510,10 +669,10 @@ export default async function VerificationApplicationWorkspacePage({
 
               <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
                 <ConfirmDialog
-                  title="Approve worker for marketplace access"
-                  description="The database will recompute every requirement. This does not change individual credential history."
+                  title={workerFolderLabel('approveWorker', 'en')}
+                  description={approveSummary}
                   confirmLabel="Approve for marketplace"
-                  triggerLabel="Approve for marketplace access"
+                  triggerLabel={workerFolderLabel('approveWorker', 'en')}
                   triggerSize="default"
                   triggerClassName="h-11 rounded-full bg-bh-sidebar px-5 font-semibold text-white shadow-[0_10px_24px_rgba(7,29,48,0.28)] transition hover:-translate-y-0.5 hover:bg-bh-sidebar-raised disabled:translate-y-0 disabled:shadow-none"
                   disabled={!canFinalVerify}
@@ -532,12 +691,12 @@ export default async function VerificationApplicationWorkspacePage({
                   action={setWorkerVerificationAction}
                 />
                 <ConfirmDialog
-                  title="Reject worker verification"
-                  description="Requires a reason. Does not delete credentials or the account."
+                  title={workerFolderLabel('requestCorrection', 'en')}
+                  description="Requires a reason. Does not delete credentials or the account. Worker returns to correction flow."
                   confirmLabel="Reject verification"
                   requireReason
                   destructive
-                  triggerLabel="Reject verification"
+                  triggerLabel={workerFolderLabel('requestCorrection', 'en')}
                   triggerVariant="destructive"
                   triggerSize="default"
                   triggerClassName="h-11 rounded-full px-5 font-semibold shadow-[0_8px_18px_rgba(180,35,24,0.18)] transition hover:-translate-y-0.5"
@@ -549,8 +708,48 @@ export default async function VerificationApplicationWorkspacePage({
           </div>
         </Panel>
       ) : null}
+
+      {ctx.capabilities.canViewAudit ? (
+        <Panel
+          kicker="Audit"
+          title={workerFolderLabel('reviewTimeline', 'en')}
+          description="Existing audit events for this worker. Sensitive values are never shown."
+        >
+          {auditEvents.length === 0 ? (
+            <p className="text-sm text-bh-text-secondary">No audit events yet.</p>
+          ) : (
+            <ol className="space-y-3">
+              {auditEvents.map((event) => (
+                <li
+                  key={event.id}
+                  className="rounded-xl border border-bh-border/80 bg-bh-subtle/40 px-3.5 py-3"
+                >
+                  <p className="text-sm font-semibold text-bh-text">
+                    {auditActionLabel(event.action)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-bh-text-muted">
+                    {formatDateTime(event.createdAt)}
+                  </p>
+                  {event.meta ? (
+                    <p className="mt-1 text-xs text-bh-text-secondary">
+                      {Object.entries(event.meta)
+                        .slice(0, 4)
+                        .map(([k, v]) => `${k}: ${String(v)}`)
+                        .join(' · ')}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+          )}
+        </Panel>
+      ) : null}
     </div>
   );
+}
+
+function CredentialStatusInline({ status }: { status: string }) {
+  return <CredentialStatusBadge status={status} />;
 }
 
 function workerMark(name: string) {

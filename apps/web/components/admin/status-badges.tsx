@@ -131,14 +131,12 @@ export function ApplicationStatusBadge({
     return (
       <span
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border border-bh-success/35 bg-gradient-to-r from-[#e7f6ed] to-[#d4f0e0] px-2.5 py-1 text-[11px] font-semibold tracking-tight text-bh-success shadow-[0_0_0_3px_rgba(25,135,84,0.12),0_4px_12px_rgba(25,135,84,0.12)]',
+          'inline-flex items-center gap-1.5 rounded-full border border-bh-success/25 bg-bh-success-soft/80 px-2.5 py-1 text-[11px] font-semibold tracking-tight text-bh-success',
           className,
         )}
         title="Fully verified — marketplace access approved"
       >
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-bh-success text-white shadow-sm">
-          <CheckCircle2 className="h-3 w-3" strokeWidth={2.5} aria-hidden />
-        </span>
+        <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
         {label}
       </span>
     );

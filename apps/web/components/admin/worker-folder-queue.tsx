@@ -31,11 +31,11 @@ function workerMark(name: string) {
 
 function QueueStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-bh-surface px-4 py-3.5 sm:px-5">
-      <dt className="text-[11px] font-bold uppercase tracking-[0.12em] text-bh-text-muted">
+    <div className="min-w-0">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
         {label}
       </dt>
-      <dd className="mt-1 text-sm font-semibold leading-5 text-bh-text">
+      <dd className="mt-1 truncate text-sm font-medium leading-5 text-bh-text">
         {value}
       </dd>
     </div>
@@ -269,122 +269,122 @@ export function WorkerFolderQueue({
               ? roleLabel(card.workerRole as WorkerRole)
               : 'Role not set';
             const needsAttention = card.awaitingReviewCount > 0;
+            const contactBits = [
+              showContact && card.email ? card.email : null,
+              showContact && card.phone ? card.phone : null,
+            ].filter(Boolean) as string[];
 
             return (
               <article
                 key={card.workerId}
-                className="group/card overflow-hidden rounded-[1.25rem] border border-bh-border/90 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.05)] transition duration-300 hover:-translate-y-0.5 hover:border-bh-border-strong hover:shadow-[0_14px_36px_rgba(7,29,48,0.08)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                className="group/card relative overflow-hidden rounded-2xl border border-bh-border/70 bg-bh-surface/95 shadow-[0_6px_24px_rgba(7,29,48,0.04)] transition duration-500 ease-out hover:-translate-y-0.5 hover:border-bh-teal/35 hover:shadow-[0_18px_40px_rgba(7,29,48,0.09)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
-                <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex min-w-0 flex-1 gap-3.5">
+                <div
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-[3px] origin-top scale-y-75 bg-gradient-to-b from-bh-sidebar via-bh-teal to-bh-honey opacity-70 transition duration-500 group-hover/card:scale-y-100 group-hover/card:opacity-100"
+                />
+                <div className="flex flex-col gap-5 p-5 pl-6 sm:p-6 sm:pl-7 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="flex min-w-0 flex-1 gap-4">
                     <span
-                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-bh-sidebar text-sm font-semibold tracking-wide text-white shadow-[0_4px_12px_rgba(7,29,48,0.22)] ring-1 ring-black/5"
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-bh-sidebar text-[12px] font-semibold tracking-[0.08em] text-white shadow-[0_6px_16px_rgba(7,29,48,0.18)] transition duration-500 group-hover/card:scale-[1.03] group-hover/card:shadow-[0_10px_22px_rgba(7,29,48,0.22)]"
                       aria-hidden
                     >
                       {workerMark(card.fullName ?? 'Worker')}
                     </span>
-                    <div className="min-w-0 flex-1 space-y-2.5">
-                      <div className="space-y-2">
-                        <h3 className="break-words text-base font-semibold tracking-tight text-bh-text sm:text-[1.05rem]">
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                        <h3 className="break-words text-[1.05rem] font-semibold tracking-tight text-bh-text">
                           {card.fullName ?? 'Worker'}
                         </h3>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <ApplicationStatusBadge
-                            status={card.applicationStatus}
-                          />
-                          <span className="inline-flex rounded-full border border-bh-border/80 bg-bh-subtle/80 px-2.5 py-1 text-[11px] font-semibold text-bh-text-secondary">
-                            {roleText}
+                        <ApplicationStatusBadge
+                          status={card.applicationStatus}
+                          className="!shadow-none"
+                        />
+                        {needsAttention ? (
+                          <span className="text-[11px] font-semibold tracking-wide text-bh-honey-strong">
+                            · {copy.needsAttention}
                           </span>
-                          {needsAttention ? (
-                            <span className="inline-flex rounded-full border border-bh-honey/40 bg-bh-honey-soft px-2.5 py-1 text-[11px] font-bold text-bh-honey-strong">
-                              {copy.needsAttention}
-                            </span>
-                          ) : null}
-                          <span className="inline-flex rounded-full border border-bh-border/80 bg-white px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.08em] text-bh-text-muted">
-                            Ref {card.applicationRef}
-                          </span>
-                        </div>
+                        ) : null}
                       </div>
 
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-bh-text-secondary">
+                        <span className="font-medium text-bh-text">
+                          {roleText}
+                        </span>
+                        <span className="text-bh-border-strong" aria-hidden>
+                          ·
+                        </span>
+                        <span className="font-mono text-[11px] tracking-[0.1em] text-bh-text-muted">
+                          {card.applicationRef}
+                        </span>
+                      </p>
+
                       {showContact ? (
-                        <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-                          {card.email ? (
-                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-bh-border/80 bg-white px-2.5 py-1.5 text-xs font-medium text-bh-text shadow-sm">
-                              <Mail
-                                className="h-3.5 w-3.5 shrink-0 text-bh-teal-strong"
-                                aria-hidden
-                              />
-                              <span className="break-all">{card.email}</span>
-                            </span>
-                          ) : null}
-                          {card.phone ? (
-                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-bh-border/80 bg-white px-2.5 py-1.5 text-xs font-medium text-bh-text shadow-sm">
-                              <Phone
-                                className="h-3.5 w-3.5 shrink-0 text-bh-honey-strong"
-                                aria-hidden
-                              />
-                              <span className="whitespace-nowrap">
-                                {card.phone}
+                        contactBits.length > 0 ? (
+                          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-bh-text-muted">
+                            {card.email ? (
+                              <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+                                <Mail
+                                  className="h-3 w-3 shrink-0 opacity-70"
+                                  aria-hidden
+                                />
+                                <span className="truncate">{card.email}</span>
                               </span>
-                            </span>
-                          ) : null}
-                          {!card.email && !card.phone ? (
-                            <span className="text-xs font-medium text-bh-text-muted">
-                              No contact on file
-                            </span>
-                          ) : null}
-                        </div>
+                            ) : null}
+                            {card.phone ? (
+                              <span className="inline-flex items-center gap-1.5">
+                                <Phone
+                                  className="h-3 w-3 shrink-0 opacity-70"
+                                  aria-hidden
+                                />
+                                <span className="whitespace-nowrap">
+                                  {card.phone}
+                                </span>
+                              </span>
+                            ) : null}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-bh-text-muted">
+                            No contact on file
+                          </p>
+                        )
                       ) : null}
                     </div>
                   </div>
 
                   <Link
                     href={`/admin/applications/${card.workerId}?from=${encodeURIComponent(basePath)}`}
-                    className="group relative inline-flex h-11 w-full shrink-0 items-center justify-center gap-2 self-stretch overflow-hidden rounded-full bg-gradient-to-r from-bh-sidebar via-bh-teal to-bh-honey px-5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(11,42,67,0.28)] transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(11,42,67,0.34)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:w-auto lg:self-center"
+                    className="group/cta inline-flex h-10 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-bh-sidebar px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.16)] transition duration-300 hover:bg-bh-sidebar-raised hover:shadow-[0_12px_24px_rgba(7,29,48,0.22)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal motion-reduce:transition-none sm:w-auto lg:self-center"
                   >
-                    <span
+                    <span>{actionLabel}</span>
+                    <ArrowRight
+                      className="h-3.5 w-3.5 transition duration-300 group-hover/cta:translate-x-0.5"
                       aria-hidden
-                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition duration-700 group-hover:translate-x-full"
                     />
-                    <span className="relative">{actionLabel}</span>
-                    <span
-                      aria-hidden
-                      className="relative inline-flex h-6 w-6 items-center justify-center rounded-full bg-white/20 transition duration-300 group-hover:translate-x-0.5 group-hover:bg-white/30"
-                    >
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </span>
                   </Link>
                 </div>
 
-                <dl className="grid gap-px border-t border-bh-border/80 bg-bh-border/80 sm:grid-cols-2 lg:grid-cols-3">
+                <dl className="grid gap-4 border-t border-bh-border/60 bg-gradient-to-b from-bh-subtle/40 to-transparent px-5 py-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
                   <QueueStat
-                    label={copy.completeRequirements}
-                    value={`${card.submittedFileCount} of ${card.requiredTotal} requirements submitted`}
+                    label="Requirements"
+                    value={`${card.submittedFileCount}/${card.requiredTotal} submitted`}
                   />
                   <QueueStat
-                    label="Review progress"
-                    value={`${card.awaitingReviewCount} awaiting · ${card.approvedCount} approved · ${card.rejectedCount} rejected`}
+                    label="Review"
+                    value={`${card.awaitingReviewCount} awaiting · ${card.approvedCount} approved`}
                   />
                   <QueueStat
-                    label="Payout account"
+                    label="Payout"
                     value={payoutSummaryLabel(card.payoutStatus as never)}
                   />
                   <QueueStat
-                    label={copy.reviewStatus}
-                    value={card.applicationStatusLabel}
-                  />
-                  <QueueStat
-                    label="Submitted"
-                    value={
-                      card.submittedAt ? formatDateTime(card.submittedAt) : '—'
-                    }
-                  />
-                  <QueueStat
-                    label="Last activity"
+                    label="Activity"
                     value={
                       card.lastActivityAt
                         ? formatDateTime(card.lastActivityAt)
-                        : '—'
+                        : card.submittedAt
+                          ? formatDateTime(card.submittedAt)
+                          : '—'
                     }
                   />
                 </dl>

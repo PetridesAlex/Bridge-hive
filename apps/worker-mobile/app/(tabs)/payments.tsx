@@ -26,7 +26,6 @@ import { MoneySummaryTile } from '@/components/payments/MoneySummaryTile';
 import { PayoutCard } from '@/components/payments/PayoutCard';
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
-import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -437,19 +436,20 @@ export default function MoneyScreen() {
           contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
           ListEmptyComponent={
-            <EmptyState
+            <InvoiceEmptyPanel
               title={t('invoices.empty')}
               description={t('payments.emptyInvoicesBody')}
+              actionLabel={t('payments.openFullList')}
+              onAction={() => router.push('/(tabs)/invoices')}
             />
           }
           ListHeaderComponent={
-            <Button
-              label={t('payments.openFullList')}
-              variant="ghost"
-              size="sm"
-              onPress={() => router.push('/(tabs)/invoices')}
-              style={styles.fullListLink}
-            />
+            invoices.length > 0 ? (
+              <InvoiceLedgerLink
+                label={t('payments.openFullList')}
+                onPress={() => router.push('/(tabs)/invoices')}
+              />
+            ) : null
           }
           renderItem={({ item }) => (
             <InvoiceCard
@@ -460,6 +460,158 @@ export default function MoneyScreen() {
         />
       )}
     </AppScreen>
+  );
+}
+
+function InvoiceLedgerLink({
+  label,
+  onPress,
+}: {
+  label: string;
+  onPress: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const press = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: press.value }],
+  }));
+
+  return (
+    <Animated.View style={[styles.ledgerWrap, pressStyle]}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        onPressIn={() => {
+          if (reduced) return;
+          press.value = withSpring(0.98, { damping: 18, stiffness: 420 });
+        }}
+        onPressOut={() => {
+          press.value = withSpring(1, { damping: 14, stiffness: 260 });
+        }}
+        style={styles.ledgerCard}
+      >
+        <LinearGradient
+          pointerEvents="none"
+          colors={['#0B2A43', '#0C3E56', '#0E5A66']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.ledgerIcon}>
+          <Ionicons name="receipt-outline" size={16} color={colors.navy} />
+        </View>
+        <View style={styles.ledgerCopy}>
+          <Text style={styles.ledgerEyebrow}>Invoice ledger</Text>
+          <Text style={styles.ledgerLabel}>{label}</Text>
+        </View>
+        <View style={styles.ledgerChevron}>
+          <Ionicons name="arrow-forward" size={14} color={colors.navy} />
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function InvoiceEmptyPanel({
+  title,
+  description,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  const reduced = useReducedMotion();
+  const breath = useSharedValue(reduced ? 0.5 : 0);
+  const press = useSharedValue(1);
+
+  useEffect(() => {
+    if (reduced) {
+      breath.value = 0.5;
+      return;
+    }
+    breath.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    );
+  }, [breath, reduced]);
+
+  const iconMotion = useAnimatedStyle(() => ({
+    transform: [{ scale: interpolate(breath.value, [0, 1], [1, 1.05]) }],
+    opacity: interpolate(breath.value, [0, 1], [0.9, 1]),
+  }));
+
+  const haloMotion = useAnimatedStyle(() => ({
+    opacity: interpolate(breath.value, [0, 1], [0.16, 0.38]),
+    transform: [{ scale: interpolate(breath.value, [0, 1], [0.92, 1.08]) }],
+  }));
+
+  const ctaMotion = useAnimatedStyle(() => ({
+    transform: [{ scale: press.value }],
+  }));
+
+  return (
+    <View style={styles.emptyCard} accessibilityRole="summary">
+      <LinearGradient
+        colors={['rgba(228,247,249,0.95)', colors.card, 'rgba(255,245,214,0.45)']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.emptyRail} />
+
+      <View style={styles.emptyIconStage}>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.emptyHalo, haloMotion]}
+        />
+        <Animated.View style={[styles.emptyIconWrap, iconMotion]}>
+          <LinearGradient
+            colors={['#0B2A43', '#0C3E56', colors.tealStrong]}
+            start={{ x: 0.15, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Ionicons name="receipt-outline" size={22} color={colors.white} />
+        </Animated.View>
+      </View>
+
+      <Text style={styles.emptyEyebrow}>Commission invoices</Text>
+      <Text style={styles.emptyTitle}>{title}</Text>
+      <Text style={styles.emptyBody}>{description}</Text>
+
+      <Animated.View style={[styles.emptyCtaWrap, ctaMotion]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={actionLabel}
+          onPress={onAction}
+          onPressIn={() => {
+            if (reduced) return;
+            press.value = withSpring(0.97, { damping: 18, stiffness: 420 });
+          }}
+          onPressOut={() => {
+            press.value = withSpring(1, { damping: 14, stiffness: 260 });
+          }}
+          style={styles.emptyCta}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={['#0B2A43', '#0C3E56', colors.tealStrong]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text style={styles.emptyCtaLabel}>{actionLabel}</Text>
+          <View style={styles.emptyCtaIcon}>
+            <Ionicons name="arrow-forward" size={14} color={colors.navy} />
+          </View>
+        </Pressable>
+      </Animated.View>
+    </View>
   );
 }
 
@@ -661,7 +813,161 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     gap: spacing.sm,
   },
-  fullListLink: {
+  ledgerWrap: {
     marginBottom: spacing.sm,
+  },
+  ledgerCard: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.lg,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  ledgerIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.yellow,
+  },
+  ledgerCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  ledgerEyebrow: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 10,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+    color: colors.yellow,
+  },
+  ledgerLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    letterSpacing: -0.1,
+    color: colors.white,
+  },
+  ledgerChevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.yellow,
+  },
+  emptyCard: {
+    overflow: 'hidden',
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+    minHeight: 210,
+    paddingVertical: spacing.lg + 4,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#0B2A43',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  emptyRail: {
+    position: 'absolute',
+    left: 0,
+    top: 16,
+    bottom: 16,
+    width: 4,
+    borderTopRightRadius: 3,
+    borderBottomRightRadius: 3,
+    backgroundColor: colors.tealStrong,
+  },
+  emptyIconStage: {
+    width: 68,
+    height: 68,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xs,
+  },
+  emptyHalo: {
+    position: 'absolute',
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: colors.teal,
+  },
+  emptyIconWrap: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#0B2A43',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  emptyEyebrow: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  emptyTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 20,
+    lineHeight: 26,
+    letterSpacing: -0.3,
+    color: colors.navy,
+    textAlign: 'center',
+  },
+  emptyBody: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    maxWidth: 320,
+    marginBottom: spacing.xs,
+  },
+  emptyCtaWrap: {
+    marginTop: spacing.sm,
+    alignSelf: 'stretch',
+    maxWidth: 340,
+  },
+  emptyCta: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 10,
+    paddingLeft: 18,
+    paddingRight: 12,
+    borderRadius: radii.full,
+    overflow: 'hidden',
+  },
+  emptyCtaLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    letterSpacing: -0.1,
+    color: colors.white,
+  },
+  emptyCtaIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.yellow,
   },
 });

@@ -123,6 +123,9 @@ export default function AccountHubScreen() {
           credentialType: c.credential_type,
           status: c.status as CredentialSummary['status'],
           hasFile: Boolean(c.storage_path) || paths.length > 0,
+          hasTextValue: Boolean(
+            c.has_text_value ?? c.text_value?.trim(),
+          ),
         };
       }),
     [credentials],

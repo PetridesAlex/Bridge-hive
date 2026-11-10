@@ -91,7 +91,7 @@ export default async function AdminWorkerDetailPage({
       supabase
         .from('credentials')
         .select(
-          'id, credential_type, status, expires_at, verified_at, rejection_reason, storage_path, storage_paths',
+          'id, credential_type, status, expires_at, verified_at, rejection_reason, storage_path, storage_paths, has_text_value',
         )
         .eq('worker_id', workerId)
         .order('created_at', { ascending: false }),

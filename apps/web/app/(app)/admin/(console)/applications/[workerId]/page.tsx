@@ -99,7 +99,7 @@ export default async function VerificationApplicationWorkspacePage({
     supabase
       .from('credentials')
       .select(
-        'id, credential_type, status, expires_at, verified_at, rejection_reason, storage_path, storage_paths, created_at, updated_at',
+        'id, credential_type, status, expires_at, verified_at, rejection_reason, storage_path, storage_paths, text_value, has_text_value, created_at, updated_at',
       )
       .eq('worker_id', workerId)
       .order('created_at', { ascending: false }),
@@ -146,6 +146,12 @@ export default async function VerificationApplicationWorkspacePage({
     const hasFile =
       Boolean(c.storage_path) ||
       (Array.isArray(c.storage_paths) && c.storage_paths.length > 0);
+    const hasTextValue = Boolean(c.has_text_value ?? c.text_value?.trim());
+    // Support roles may receive rows via broader queries in some paths; never
+    // surface raw text unless document capability is granted.
+    const textValue = ctx.capabilities.canViewCredentialDocuments
+      ? (c.text_value?.trim() || null)
+      : null;
     return {
       id: c.id,
       credential_type: c.credential_type,
@@ -155,6 +161,8 @@ export default async function VerificationApplicationWorkspacePage({
       rejection_reason: c.rejection_reason,
       created_at: c.created_at,
       hasFile,
+      hasTextValue,
+      textValue,
       isRequired: requiredTypes.has(c.credential_type as never),
     };
   });
@@ -169,7 +177,7 @@ export default async function VerificationApplicationWorkspacePage({
   const awaiting = credRows.filter(
     (c) =>
       c.isRequired &&
-      c.hasFile &&
+      (c.hasFile || c.hasTextValue) &&
       (c.status === 'pending' || c.status === 'under_review'),
   ).length;
   const optionalCount = requirements.filter((r) => !r.isRequired).length;

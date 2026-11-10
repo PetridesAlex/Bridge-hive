@@ -538,7 +538,7 @@ export default function WorkerAccountSetupScreen() {
     const [credResult, payoutResult] = await Promise.all([
       supabase
         .from('credentials')
-        .select('credential_type, status, storage_path, storage_paths')
+        .select('credential_type, status, storage_path, storage_paths, text_value, has_text_value')
         .eq('worker_id', user.id),
       supabase
         .from('payout_accounts')
@@ -553,6 +553,11 @@ export default function WorkerAccountSetupScreen() {
         hasFile:
           Boolean(row.storage_path) ||
           (Array.isArray(row.storage_paths) && row.storage_paths.length > 0),
+        hasTextValue: Boolean(
+          (row as { has_text_value?: boolean }).has_text_value ??
+            (typeof (row as { text_value?: string | null }).text_value === 'string' &&
+              (row as { text_value?: string | null }).text_value?.trim()),
+        ),
       })),
     );
     setPayoutStatus((payoutResult.data?.status as PayoutStatus) ?? null);

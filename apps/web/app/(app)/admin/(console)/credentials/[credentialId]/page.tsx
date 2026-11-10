@@ -19,7 +19,10 @@ import { requirePlatformAdmin } from '@/lib/admin/auth';
 import { credentialTypeLabel } from '@/lib/admin/labels';
 import { formatDateTime } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
-import { credentialRequiresKnownExpiry } from '@bridge-hive/domain';
+import {
+  credentialRequiresKnownExpiry,
+  isTextCredentialType,
+} from '@bridge-hive/domain';
 
 export default async function AdminCredentialDetailPage({
   params,
@@ -42,7 +45,7 @@ export default async function AdminCredentialDetailPage({
   const { data: credential } = await supabase
     .from('credentials')
     .select(
-      'id, worker_id, credential_type, status, expires_at, storage_path, verified_by, verified_at, rejection_reason, created_at, updated_at',
+      'id, worker_id, credential_type, status, expires_at, storage_path, text_value, has_text_value, verified_by, verified_at, rejection_reason, created_at, updated_at',
     )
     .eq('id', credentialId)
     .maybeSingle();
@@ -188,12 +191,54 @@ export default async function AdminCredentialDetailPage({
       </div>
 
       <section className="space-y-3">
-        <h3 className="text-lg font-medium text-slate-900">Document</h3>
+        <h3 className="text-lg font-medium text-slate-900">
+          {isTextCredentialType(credential.credential_type)
+            ? 'Identification value'
+            : 'Document'}
+        </h3>
         {!ctx.capabilities.canViewCredentialDocuments ? (
           <EmptyState
             title="Document access restricted"
-            description="Only platform verifiers and super admins can open credential documents."
+            description="Only platform verifiers and super admins can open credential documents or text values."
           />
+        ) : isTextCredentialType(credential.credential_type) ? (
+          credential.text_value?.trim() ? (
+            <Card>
+              <CardContent className="space-y-2 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Saved text value
+                </p>
+                <p className="break-all font-mono text-base text-slate-900">
+                  {credential.text_value.trim()}
+                </p>
+                {credential.storage_path ? (
+                  <p className="text-xs text-slate-500">
+                    A legacy uploaded document also remains on file for this requirement.
+                  </p>
+                ) : null}
+                {signedUrl ? (
+                  <a
+                    href={signedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block text-sm font-medium text-amber-700 hover:underline"
+                  >
+                    Open legacy document
+                  </a>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : credential.storage_path ? (
+            <EmptyState
+              title="Legacy document only"
+              description="A previous upload exists, but no text identification value has been saved yet."
+            />
+          ) : (
+            <EmptyState
+              title="No text value saved"
+              description="The worker has not entered this identification value yet."
+            />
+          )
         ) : !credential.storage_path ? (
           <EmptyState
             title="No document uploaded"

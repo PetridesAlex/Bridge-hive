@@ -2,10 +2,13 @@ import {
   accountSetupNextStep,
   canSubmitWorkerVerificationPackage,
   credentialExpiryIsValid,
+  credentialInputKind,
+  credentialPayloadPresent,
   credentialRequirementsForRole,
   credentialRequiresKnownExpiry,
   credentialTypeLabel,
   documentProgressCounts,
+  isTextCredentialType,
   documentsSummaryLabel,
   endOfCyprusBusinessDayIso,
   finalApprovalSummaryLabel,
@@ -20,6 +23,7 @@ import {
   payoutSummaryLabel,
   profileInitials,
   requiredCredentialTypesForRole,
+  validateCredentialTextValue,
   validateCredentialUpload,
   WORKER_ACCOUNT_SETUP_PAYOUT_ROUTE,
   WORKER_ROLE_LABELS,
@@ -144,6 +148,60 @@ describe('credential requirements', () => {
       'Employment certificate',
     );
     expect(credentialTypeLabel('nursing_degree', 'el')).toContain('Πτυχίο');
+    expect(credentialTypeLabel('tax_identification_proof')).toBe('Tax identification');
+    expect(credentialTypeLabel('social_insurance_proof')).toBe('Social insurance');
+    expect(credentialTypeLabel('tax_identification_proof', 'el')).toContain(
+      'φορολογικής',
+    );
+  });
+
+  it('treats tax and social insurance as required text credentials', () => {
+    expect(isTextCredentialType('tax_identification_proof')).toBe(true);
+    expect(isTextCredentialType('social_insurance_proof')).toBe(true);
+    expect(credentialInputKind('nursing_licence')).toBe('file');
+    expect(credentialInputKind('cv')).toBe('file');
+    expect(validateCredentialTextValue('  ABC-123  ')).toEqual({
+      ok: true,
+      value: 'ABC-123',
+    });
+    expect(validateCredentialTextValue('')).toMatchObject({ ok: false });
+    expect(validateCredentialTextValue('uploaded')).toMatchObject({ ok: false });
+    expect(
+      credentialPayloadPresent({ hasFile: false, hasTextValue: true }),
+    ).toBe(true);
+    const counts = documentProgressCounts({
+      role: 'ward_assistant',
+      credentials: [
+        {
+          credentialType: 'identity_document_front',
+          status: 'pending',
+          hasFile: true,
+        },
+        {
+          credentialType: 'identity_document_back',
+          status: 'pending',
+          hasFile: true,
+        },
+        {
+          credentialType: 'employment_certificate',
+          status: 'pending',
+          hasFile: true,
+        },
+        {
+          credentialType: 'tax_identification_proof',
+          status: 'pending',
+          hasFile: false,
+          hasTextValue: true,
+        },
+        {
+          credentialType: 'social_insurance_proof',
+          status: 'pending',
+          hasFile: false,
+          hasTextValue: true,
+        },
+      ],
+    });
+    expect(counts.missing).toBe(0);
   });
 
   it('rejects unsupported file types and oversize files', () => {

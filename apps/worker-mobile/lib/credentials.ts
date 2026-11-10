@@ -1,11 +1,14 @@
 import {
   canWorkerEditCredentialFile,
   credentialExpiryIsValid,
+  credentialPayloadPresent,
   credentialRequiresKnownExpiry,
   credentialRequirementsForRole,
   credentialTypeLabel,
   endOfCyprusBusinessDayIso,
+  isTextCredentialType,
   mapCredentialStatusToChecklistStatus,
+  validateCredentialTextValue,
   validateCredentialUpload,
   type CredentialRequirement,
   type DocumentChecklistItemStatus,
@@ -25,13 +28,25 @@ export type ChecklistRow = CredentialRequirement & {
   itemStatus: DocumentChecklistItemStatus;
   displayName: string;
   fileName: string | null;
+  textValue: string | null;
+  hasTextValue: boolean;
+  hasFile: boolean;
+  inputKind: 'file' | 'text';
 };
 
-function hasStoredFile(credential: Credential | null): boolean {
+export function hasStoredFile(credential: Credential | null): boolean {
   if (!credential) return false;
   if (credential.storage_path) return true;
   const paths = (credential as { storage_paths?: unknown }).storage_paths;
   return Array.isArray(paths) && paths.length > 0;
+}
+
+export function hasStoredTextValue(credential: Credential | null): boolean {
+  if (!credential) return false;
+  if (typeof credential.has_text_value === 'boolean') {
+    return credential.has_text_value;
+  }
+  return Boolean(credential.text_value?.trim());
 }
 
 function pickPreferredCredential(
@@ -68,17 +83,27 @@ export function buildCredentialChecklist(params: {
       req.credentialType,
     );
     const filePresent = hasStoredFile(credential);
+    const textPresent = hasStoredTextValue(credential);
+    const payloadPresent = credentialPayloadPresent({
+      hasFile: filePresent,
+      hasTextValue: textPresent,
+    });
+    const inputKind = isTextCredentialType(req.credentialType) ? 'text' : 'file';
     return {
       ...req,
       credential,
       itemStatus: mapCredentialStatusToChecklistStatus(
         credential?.status,
-        filePresent,
+        payloadPresent,
       ),
       displayName: credentialTypeLabel(req.credentialType, params.locale ?? 'en'),
       fileName: filePresent
         ? (credential?.storage_path ?? '').split('/').pop() || 'Uploaded file'
         : null,
+      textValue: credential?.text_value?.trim() ? credential.text_value.trim() : null,
+      hasTextValue: textPresent,
+      hasFile: filePresent,
+      inputKind,
     };
   });
 }
@@ -242,6 +267,13 @@ export async function uploadCredentialDocument(params: {
   existingCredential?: Credential | null;
   expiresAtYmd?: string | null;
 }): Promise<{ data: Credential | null; error?: string }> {
+  if (isTextCredentialType(params.credentialType)) {
+    return {
+      data: null,
+      error: 'This requirement is entered as text, not a file upload.',
+    };
+  }
+
   const validation = validateCredentialUpload({
     mimeType: params.mimeType,
     sizeBytes: params.sizeBytes,
@@ -393,6 +425,56 @@ export async function deletePendingCredentialFile(params: {
   }
 
   return {};
+}
+
+
+/**
+ * Save a text credential value for the authenticated worker via RPC.
+ * Never logs the value. Authorization is server-side (auth.uid()).
+ */
+export async function saveCredentialTextValue(params: {
+  credentialType: string;
+  value: string;
+}): Promise<{ data: Credential | null; error?: string }> {
+  if (!isTextCredentialType(params.credentialType)) {
+    return { data: null, error: 'This requirement is a file upload, not text.' };
+  }
+
+  const validated = validateCredentialTextValue(params.value);
+  if (!validated.ok) {
+    return { data: null, error: validated.error };
+  }
+
+  const { data, error } = await supabase.rpc('save_my_credential_text_value', {
+    p_credential_type: params.credentialType,
+    p_value: validated.value,
+  });
+
+  if (error) {
+    const message = error.message ?? '';
+    if (message.includes('CREDENTIAL_TEXT_REQUIRED')) {
+      return { data: null, error: 'This field is required.' };
+    }
+    if (message.includes('CREDENTIAL_TEXT_TOO_LONG')) {
+      return { data: null, error: 'Value is too long.' };
+    }
+    if (message.includes('CREDENTIAL_TEXT_INVALID_CHARS')) {
+      return { data: null, error: 'Invalid characters are not allowed.' };
+    }
+    if (message.includes('CREDENTIAL_TEXT_PLACEHOLDER')) {
+      return { data: null, error: 'Enter the actual identification value.' };
+    }
+    if (message.includes('CREDENTIAL_TEXT_LOCKED')) {
+      return {
+        data: null,
+        error: 'This value cannot be edited while under review or after acceptance.',
+      };
+    }
+    // Generic — never echo the submitted value.
+    return { data: null, error: 'Could not save. Please try again.' };
+  }
+
+  return { data: (data as Credential | null) ?? null };
 }
 
 export async function submitCredentialForReview(credentialId: string) {

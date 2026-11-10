@@ -2,16 +2,19 @@ import {
   canWorkerEditCredentialFile,
   credentialRequiresKnownExpiry,
   credentialTypeLabel,
+  validateCredentialTextValue,
   type CredentialSummary,
   type WorkerRole,
 } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -35,6 +38,7 @@ import {
   deletePendingCredentialFile,
   pickCredentialFile,
   pickCredentialImage,
+  saveCredentialTextValue,
   submitCredentialForReview,
   resolveCredentialExpiresAt,
   uploadCredentialDocument,
@@ -161,7 +165,7 @@ function accountStatusIcon(
 
 export default function DocumentsScreen() {
   const { user, workerProfile, isVerified, isAppReviewDemo } = useAuth();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { credentials, loading, error, refresh } = useCredentials(user?.id);
   const {
     account: payoutAccount,
@@ -176,26 +180,49 @@ export default function DocumentsScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [practisingLicenceExpiryYmd, setPractisingLicenceExpiryYmd] =
     useState('');
+  const [textDrafts, setTextDrafts] = useState<Record<string, string>>({});
+  const [textErrors, setTextErrors] = useState<Record<string, string | null>>({});
+  const [textSavedAt, setTextSavedAt] = useState<Record<string, number>>({});
+  const [savingTextType, setSavingTextType] = useState<string | null>(null);
 
   const checklist = useMemo(
     () =>
       buildCredentialChecklist({
         role: workerProfile?.worker_role,
         credentials,
+        locale: language === 'el' ? 'el' : 'en',
       }),
-    [workerProfile?.worker_role, credentials],
+    [workerProfile?.worker_role, credentials, language],
   );
+
+  useEffect(() => {
+    setTextDrafts((prev) => {
+      const next = { ...prev };
+      for (const row of checklist) {
+        if (row.inputKind !== 'text') continue;
+        if (!(row.credentialType in next)) {
+          next[row.credentialType] = row.textValue ?? '';
+        }
+      }
+      return next;
+    });
+  }, [checklist]);
 
   const credentialSummaries = useMemo<CredentialSummary[]>(
     () =>
       credentials.map((credential) => {
         const paths = (credential as { storage_paths?: unknown }).storage_paths;
+        const hasFile =
+          Boolean(credential.storage_path) ||
+          (Array.isArray(paths) && paths.length > 0);
+        const hasTextValue = Boolean(
+          credential.has_text_value ?? credential.text_value?.trim(),
+        );
         return {
           credentialType: credential.credential_type,
           status: credential.status,
-          hasFile:
-            Boolean(credential.storage_path) ||
-            (Array.isArray(paths) && paths.length > 0),
+          hasFile,
+          hasTextValue,
         };
       }),
     [credentials],
@@ -308,6 +335,50 @@ export default function DocumentsScreen() {
     [practisingLicenceExpiryYmd, refresh],
   );
 
+  const handleSaveText = useCallback(
+    async (row: ChecklistRow) => {
+      if (row.inputKind !== 'text') return;
+      if (savingTextType) return;
+
+      const draft = textDrafts[row.credentialType] ?? '';
+      const validated = validateCredentialTextValue(draft);
+      if (!validated.ok) {
+        setTextErrors((prev) => ({
+          ...prev,
+          [row.credentialType]: validated.error,
+        }));
+        return;
+      }
+
+      setTextErrors((prev) => ({ ...prev, [row.credentialType]: null }));
+      setSavingTextType(row.credentialType);
+      const result = await saveCredentialTextValue({
+        credentialType: row.credentialType,
+        value: validated.value,
+      });
+      setSavingTextType(null);
+
+      if (result.error) {
+        setTextErrors((prev) => ({
+          ...prev,
+          [row.credentialType]: result.error ?? t('documents.saveFailed'),
+        }));
+        return;
+      }
+
+      setTextDrafts((prev) => ({
+        ...prev,
+        [row.credentialType]: validated.value,
+      }));
+      setTextSavedAt((prev) => ({
+        ...prev,
+        [row.credentialType]: Date.now(),
+      }));
+      await refresh();
+    },
+    [refresh, savingTextType, t, textDrafts],
+  );
+
   const handleDelete = useCallback(
     async (row: ChecklistRow) => {
       if (!row.credential) return;
@@ -402,8 +473,15 @@ export default function DocumentsScreen() {
           onAction={() => void refreshAll()}
         />
       ) : (
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
+        >
         <ScrollView
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           refreshControl={
             <RefreshControl
               refreshing={loading || payoutLoading}
@@ -429,12 +507,8 @@ export default function DocumentsScreen() {
                 <Ionicons name="documents" size={18} color={colors.white} />
               </LinearGradient>
               <View style={styles.introCopy}>
-                <Text style={styles.introTitle}>Document checklist</Text>
-                <Text style={styles.hint}>
-                  Upload PDF, JPEG, or PNG files up to 10 MB. Identity card front and back are
-                  separate. Tax and social-insurance requirements are proof documents only — do not
-                  type raw numbers here.
-                </Text>
+                <Text style={styles.introTitle}>{t('documents.checklistTitle')}</Text>
+                <Text style={styles.hint}>{t('documents.checklistHint')}</Text>
               </View>
             </View>
             <View style={styles.progressBlock}>
@@ -584,7 +658,15 @@ export default function DocumentsScreen() {
                   </View>
                 </View>
 
-                {row.fileName ? (
+                {row.inputKind === 'text' && row.textValue && !editable ? (
+                  <View style={styles.fileChip}>
+                    <Ionicons name="key-outline" size={14} color={colors.navy} />
+                    <Text style={styles.fileName} numberOfLines={1}>
+                      {row.textValue}
+                    </Text>
+                  </View>
+                ) : null}
+                {row.inputKind === 'file' && row.fileName ? (
                   <View style={styles.fileChip}>
                     <Ionicons name="document-attach-outline" size={14} color={colors.navy} />
                     <Text style={styles.fileName} numberOfLines={1}>
@@ -600,8 +682,117 @@ export default function DocumentsScreen() {
                     {uploadState.error}
                   </Text>
                 ) : null}
+                {textErrors[row.credentialType] ? (
+                  <Text style={styles.reject} accessibilityLiveRegion="polite">
+                    {textErrors[row.credentialType]}
+                  </Text>
+                ) : null}
 
-                {isUploading ? (
+                {row.inputKind === 'text' ? (
+                  editable ? (
+                    <View style={styles.rowActions}>
+                      <TextInput
+                        label={row.displayName}
+                        required={row.isRequired}
+                        value={textDrafts[row.credentialType] ?? ''}
+                        onChangeText={(value) => {
+                          setTextDrafts((prev) => ({
+                            ...prev,
+                            [row.credentialType]: value,
+                          }));
+                          setTextErrors((prev) => ({
+                            ...prev,
+                            [row.credentialType]: null,
+                          }));
+                        }}
+                        placeholder={t('documents.textPlaceholder')}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="numbers-and-punctuation"
+                        textContentType="none"
+                        autoComplete="off"
+                        containerStyle={styles.expiryField}
+                        helpText={
+                          row.hasFile && !row.hasTextValue
+                            ? t('documents.textLegacyHelp')
+                            : t('documents.textHelp')
+                        }
+                        error={textErrors[row.credentialType] ?? undefined}
+                      />
+                      <Pressable
+                        style={[
+                          styles.primaryBtn,
+                          (savingTextType === row.credentialType ||
+                            busyId != null) &&
+                            styles.btnDisabled,
+                        ]}
+                        onPress={() => void handleSaveText(row)}
+                        disabled={
+                          savingTextType != null || busyId != null
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={t('documents.save')}
+                      >
+                        <Text style={styles.primaryBtnText}>
+                          {savingTextType === row.credentialType
+                            ? t('documents.saving')
+                            : t('documents.save')}
+                        </Text>
+                      </Pressable>
+                      {textSavedAt[row.credentialType] &&
+                      !textErrors[row.credentialType] ? (
+                        <Text style={styles.savedMeta}>{t('documents.saved')}</Text>
+                      ) : null}
+                      {row.credential?.status === 'pending' &&
+                      row.hasTextValue ? (
+                        <Pressable
+                          style={styles.primaryBtn}
+                          onPress={() => void handleSubmit(row)}
+                          disabled={rowBusy || savingTextType != null}
+                        >
+                          <Text style={styles.primaryBtnText}>
+                            {rowBusy
+                              ? t('documents.submitting')
+                              : t('documents.submit')}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ) : (
+                    <View
+                      style={[
+                        styles.lockRow,
+                        row.itemStatus === 'verified' && styles.lockRowAccepted,
+                        (row.itemStatus === 'under_review' ||
+                          row.itemStatus === 'submitted') &&
+                          styles.lockRowReview,
+                      ]}
+                    >
+                      <Ionicons
+                        name={
+                          row.itemStatus === 'verified'
+                            ? 'checkmark-circle'
+                            : 'lock-closed'
+                        }
+                        size={14}
+                        color={
+                          row.itemStatus === 'verified'
+                            ? colors.success
+                            : colors.tealStrong
+                        }
+                      />
+                      <Text
+                        style={[
+                          styles.lockText,
+                          row.itemStatus === 'verified' &&
+                            styles.lockTextAccepted,
+                        ]}
+                      >
+                        {lockMessage(row.itemStatus)}
+                      </Text>
+                    </View>
+                  )
+                ) : isUploading ? (
                   <View style={styles.rowActions}>
                     <ActivityIndicator color={colors.navy} />
                     <Text style={styles.meta}>Uploading…</Text>
@@ -628,7 +819,9 @@ export default function DocumentsScreen() {
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={
-                        row.fileName ? 'Replace photo' : 'Upload photo'
+                        row.fileName
+                          ? t('documents.replacePhoto')
+                          : t('documents.uploadPhoto')
                       }
                       accessibilityHint={
                         requiresExpiry && !expiryReady
@@ -643,12 +836,18 @@ export default function DocumentsScreen() {
                       disabled={uploadDisabled}
                     >
                       <Text style={styles.secondaryBtnText}>
-                        {row.fileName ? 'Replace photo' : 'Upload photo'}
+                        {row.fileName
+                          ? t('documents.replacePhoto')
+                          : t('documents.uploadPhoto')}
                       </Text>
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
-                      accessibilityLabel={row.fileName ? 'Replace PDF' : 'Upload PDF'}
+                      accessibilityLabel={
+                        row.fileName
+                          ? t('documents.replacePdf')
+                          : t('documents.uploadPdf')
+                      }
                       accessibilityHint={
                         requiresExpiry && !expiryReady
                           ? 'Enter the licence expiry date first'
@@ -662,7 +861,9 @@ export default function DocumentsScreen() {
                       disabled={uploadDisabled}
                     >
                       <Text style={styles.secondaryBtnText}>
-                        {row.fileName ? 'Replace PDF' : 'Upload PDF'}
+                        {row.fileName
+                          ? t('documents.replacePdf')
+                          : t('documents.uploadPdf')}
                       </Text>
                     </Pressable>
                     {row.credential?.status === 'pending' && row.fileName ? (
@@ -673,7 +874,9 @@ export default function DocumentsScreen() {
                           disabled={rowBusy}
                         >
                           <Text style={styles.primaryBtnText}>
-                            {rowBusy ? 'Submitting…' : 'Submit'}
+                            {rowBusy
+                              ? t('documents.submitting')
+                              : t('documents.submit')}
                           </Text>
                         </Pressable>
                         <Pressable
@@ -681,7 +884,9 @@ export default function DocumentsScreen() {
                           onPress={() => void handleDelete(row)}
                           disabled={rowBusy}
                         >
-                          <Text style={styles.dangerBtnText}>Delete</Text>
+                          <Text style={styles.dangerBtnText}>
+                            {t('documents.delete')}
+                          </Text>
                         </Pressable>
                       </>
                     ) : null}
@@ -728,6 +933,7 @@ export default function DocumentsScreen() {
             );
           })}
         </ScrollView>
+        </KeyboardAvoidingView>
       )}
     </AppScreen>
   );
@@ -1010,6 +1216,11 @@ const styles = StyleSheet.create({
   },
   lockTextAccepted: {
     color: '#146C43',
+  },
+  savedMeta: {
+    fontFamily: typography.fonts.medium,
+    fontSize: typography.size.sm,
+    color: colors.success,
   },
   meta: {
     fontFamily: typography.fonts.regular,

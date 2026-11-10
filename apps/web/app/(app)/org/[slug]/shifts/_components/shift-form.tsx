@@ -78,7 +78,7 @@ const CREDENTIAL_GROUPS: Array<{
   {
     id: 'compliance',
     title: 'Compliance',
-    hint: 'Tax and insurance proofs when finance needs an extra check.',
+    hint: 'Tax and social insurance numbers when finance needs an extra check.',
     icon: ShieldCheck,
     types: ['tax_identification_proof', 'social_insurance_proof'],
   },
@@ -101,8 +101,8 @@ const CREDENTIAL_BLURBS: Partial<Record<CredentialType, string>> = {
   physiotherapist_registration_certificate:
     'Cyprus Physiotherapists Register certificate',
   physiotherapy_practising_licence: 'Current annual practising licence',
-  tax_identification_proof: 'Tax ID documentation',
-  social_insurance_proof: 'Social insurance evidence',
+  tax_identification_proof: 'Tax identification number',
+  social_insurance_proof: 'Social insurance number',
   cv: 'Curriculum vitae',
 };
 

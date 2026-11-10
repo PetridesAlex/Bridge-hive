@@ -111,6 +111,9 @@ export function safeAuditMetadata(
     'secret',
     'tax_id',
     'social_insurance_number',
+    'text_value',
+    'tax_identification',
+    'social_insurance',
     'filename',
     'proof_storage_path',
   ]);

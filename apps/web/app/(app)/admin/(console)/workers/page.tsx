@@ -252,6 +252,7 @@ export default async function AdminWorkersPage({
     status: string;
     storage_path?: string | null;
     storage_paths?: unknown;
+    has_text_value?: boolean | null;
   };
   const [{ data: allCreds }, { data: payoutAccounts }] = workerIds.length
     ? await Promise.all([
@@ -260,7 +261,7 @@ export default async function AdminWorkersPage({
           : supabase
               .from('credentials')
               .select(
-                'worker_id, credential_type, status, storage_path, storage_paths',
+                'worker_id, credential_type, status, storage_path, storage_paths, has_text_value',
               )
               .in('worker_id', workerIds),
         supabase.rpc('list_worker_payout_statuses'),

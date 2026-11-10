@@ -13,6 +13,8 @@ export type AdminCredentialRow = {
   status: string;
   storage_path?: string | null;
   storage_paths?: unknown;
+  text_value?: string | null;
+  has_text_value?: boolean | null;
   rejection_reason?: string | null;
   expires_at?: string | null;
   id?: string;
@@ -23,6 +25,15 @@ function hasFile(row: AdminCredentialRow): boolean {
   return Array.isArray(row.storage_paths) && row.storage_paths.length > 0;
 }
 
+function hasTextValue(row: AdminCredentialRow): boolean {
+  if (typeof row.has_text_value === 'boolean') return row.has_text_value;
+  return Boolean(row.text_value?.trim());
+}
+
+export function credentialRowHasPayload(row: AdminCredentialRow): boolean {
+  return hasFile(row) || hasTextValue(row);
+}
+
 export function toCredentialSummaries(
   credentials: AdminCredentialRow[],
 ): CredentialSummary[] {
@@ -30,6 +41,7 @@ export function toCredentialSummaries(
     credentialType: c.credential_type,
     status: c.status as CredentialSummary['status'],
     hasFile: hasFile(c),
+    hasTextValue: hasTextValue(c),
   }));
 }
 
@@ -94,7 +106,7 @@ export function buildAdminWorkerChecklist(params: {
       isRequired: req.isRequired,
       status: mapCredentialStatusToChecklistStatus(
         row?.status as AdminCredentialRow['status'] as never,
-        row ? hasFile(row) : false,
+        row ? credentialRowHasPayload(row) : false,
       ),
       credentialId: row?.id ?? null,
       rejectionReason: row?.rejection_reason ?? null,

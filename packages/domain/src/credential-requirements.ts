@@ -63,12 +63,12 @@ const CREDENTIAL_TYPE_LABELS: Record<
     el: 'Βεβαίωση από εργασία – τίτλος θέσης',
   },
   tax_identification_proof: {
-    en: 'Tax identification proof',
-    el: 'Απόδειξη φορολογικού αριθμού',
+    en: 'Tax identification',
+    el: 'Αριθμός φορολογικής ταυτότητας',
   },
   social_insurance_proof: {
-    en: 'Social insurance proof',
-    el: 'Απόδειξη κοινωνικής ασφάλισης',
+    en: 'Social insurance',
+    el: 'Αριθμός κοινωνικής ασφάλισης',
   },
   cv: {
     en: 'CV',
@@ -140,6 +140,31 @@ export const ALLOWED_CREDENTIAL_MIME_TYPES = [
 export type AllowedCredentialMimeType =
   (typeof ALLOWED_CREDENTIAL_MIME_TYPES)[number];
 
+/**
+ * Credential types collected as required text values (not Storage uploads).
+ * Stable DB keys remain `*_proof`; input kind and labels differ.
+ */
+export const TEXT_CREDENTIAL_TYPES = [
+  'tax_identification_proof',
+  'social_insurance_proof',
+] as const;
+
+export type TextCredentialType = (typeof TEXT_CREDENTIAL_TYPES)[number];
+
+export type CredentialInputKind = 'file' | 'text';
+
+export const MAX_CREDENTIAL_TEXT_VALUE_LENGTH = 64;
+
+const CREDENTIAL_TEXT_PLACEHOLDER_VALUES = new Set([
+  'uploaded',
+  'verified',
+  'n/a',
+  'na',
+  'none',
+  'null',
+  'undefined',
+]);
+
 /** Backend-derived role checklist. Clients must not invent required types. */
 export function credentialRequirementsForRole(
   role: WorkerRole | null | undefined,
@@ -148,6 +173,45 @@ export function credentialRequirementsForRole(
   if (role === 'ward_assistant') return WARD_REQUIREMENTS;
   if (role === 'physiotherapist') return PHYSIOTHERAPIST_REQUIREMENTS;
   return [];
+}
+
+export function credentialInputKind(
+  credentialType: string,
+): CredentialInputKind {
+  return (TEXT_CREDENTIAL_TYPES as readonly string[]).includes(credentialType)
+    ? 'text'
+    : 'file';
+}
+
+export function isTextCredentialType(credentialType: string): boolean {
+  return credentialInputKind(credentialType) === 'text';
+}
+
+/**
+ * Shared text-credential validation (mirror of SQL save_my_credential_text_value).
+ * Does not invent Cyprus TIN/SI format rules.
+ */
+export function validateCredentialTextValue(
+  raw: string | null | undefined,
+): { ok: true; value: string } | { ok: false; error: string } {
+  const value = (raw ?? '').trim();
+  if (!value) {
+    return { ok: false, error: 'This field is required.' };
+  }
+  if (value.length > MAX_CREDENTIAL_TEXT_VALUE_LENGTH) {
+    return {
+      ok: false,
+      error: `Must be at most ${MAX_CREDENTIAL_TEXT_VALUE_LENGTH} characters.`,
+    };
+  }
+  // Reject C0 controls and DEL (including tab/newline).
+  if (/[\u0000-\u001F\u007F]/.test(value)) {
+    return { ok: false, error: 'Invalid characters are not allowed.' };
+  }
+  if (CREDENTIAL_TEXT_PLACEHOLDER_VALUES.has(value.toLowerCase())) {
+    return { ok: false, error: 'Enter the actual identification value.' };
+  }
+  return { ok: true, value };
 }
 
 export function credentialRequiresKnownExpiry(credentialType: string): boolean {
@@ -304,10 +368,10 @@ export type DocumentChecklistItemStatus =
 
 export function mapCredentialStatusToChecklistStatus(
   status: CredentialStatus | null | undefined,
-  hasFile: boolean,
+  hasPayload: boolean,
 ): DocumentChecklistItemStatus {
   if (!status) return 'not_uploaded';
-  if (status === 'pending') return hasFile ? 'draft' : 'not_uploaded';
+  if (status === 'pending') return hasPayload ? 'draft' : 'not_uploaded';
   if (status === 'under_review') return 'under_review';
   if (status === 'verified') return 'verified';
   if (status === 'rejected') return 'rejected';
@@ -427,13 +491,16 @@ export function workerVerificationApplicationStatus(params: {
   }
 
   const rows = required.map((type) => byType.get(type));
-  const anyFile = rows.some((r) => r != null && r.hasFile);
-  const allFiles = rows.every((r) => r != null && r.hasFile);
+  const anyFile = rows.some((r) => r != null && credentialPayloadPresent(r));
+  const allFiles = rows.every((r) => r != null && credentialPayloadPresent(r));
   const anyRejected = rows.some((r) => r?.status === 'rejected');
   const anyUnderReview = rows.some((r) => r?.status === 'under_review');
-  const anyPending = rows.some((r) => r?.status === 'pending' && r.hasFile);
+  const anyPending = rows.some(
+    (r) => r?.status === 'pending' && credentialPayloadPresent(r),
+  );
   const allVerified = rows.every(
-    (r) => r != null && r.hasFile && r.status === 'verified',
+    (r) =>
+      r != null && credentialPayloadPresent(r) && r.status === 'verified',
   );
 
   if (anyRejected) return 'corrections_required';
@@ -467,14 +534,19 @@ export function workerVerificationApplicationStatus(params: {
   return 'partially_uploaded';
 }
 
-/** Credentials eligible for package approve (pending/under_review + file). */
+/** Credentials eligible for package approve (pending/under_review + payload). */
 export function eligiblePackageApproveCredentialIds(
-  credentials: Array<{ id: string; status: string; hasFile: boolean }>,
+  credentials: Array<{
+    id: string;
+    status: string;
+    hasFile: boolean;
+    hasTextValue?: boolean;
+  }>,
 ): string[] {
   return credentials
     .filter(
       (c) =>
-        c.hasFile &&
+        credentialPayloadPresent(c) &&
         (c.status === 'pending' || c.status === 'under_review'),
     )
     .map((c) => c.id);
@@ -484,7 +556,17 @@ export type CredentialSummary = {
   credentialType: string;
   status: CredentialStatus;
   hasFile: boolean;
+  /** True when a required text credential value is present. */
+  hasTextValue?: boolean;
 };
+
+/** True when a file and/or text value satisfies the credential payload. */
+export function credentialPayloadPresent(params: {
+  hasFile?: boolean | null;
+  hasTextValue?: boolean | null;
+}): boolean {
+  return Boolean(params.hasFile) || Boolean(params.hasTextValue);
+}
 
 export type PayoutAccountStatusInput =
   | 'pending'
@@ -569,11 +651,11 @@ export function workerDocumentPackageLabel(params: {
   if (!anyUploaded) return 'Documents not submitted';
 
   const rejected = rows.some((r) => r?.status === 'rejected');
-  const missing = rows.some((r) => r == null || !r.hasFile);
+  const missing = rows.some((r) => r == null || !credentialPayloadPresent(r));
   if (rejected) return 'Documents rejected';
   if (missing) {
-    const someFiles = rows.some((r) => r?.hasFile);
-    return someFiles ? 'Partially uploaded' : 'Missing required documents';
+    const somePayload = rows.some((r) => r != null && credentialPayloadPresent(r));
+    return somePayload ? 'Partially uploaded' : 'Missing required documents';
   }
 
   const allVerified = rows.every((r) => r?.status === 'verified');
@@ -596,10 +678,10 @@ export function workerDocumentPackageLabel(params: {
   const anyUnderReview = rows.some((r) => r?.status === 'under_review');
   if (anyUnderReview) return 'Under review';
 
-  const allPendingWithFiles = rows.every(
-    (r) => r?.status === 'pending' && r.hasFile,
+  const allPendingWithPayload = rows.every(
+    (r) => r?.status === 'pending' && credentialPayloadPresent(r),
   );
-  if (allPendingWithFiles) return 'Ready to submit';
+  if (allPendingWithPayload) return 'Ready to submit';
 
   const anyPending = rows.some((r) => r?.status === 'pending');
   if (anyPending) return 'Pending credential review';
@@ -622,11 +704,15 @@ export function documentsSummaryLabel(params: {
     }
   }
   const rows = required.map((type) => byType.get(type));
-  if (rows.every((r) => r == null || !r.hasFile)) return 'Missing';
+  if (rows.every((r) => r == null || !credentialPayloadPresent(r))) {
+    return 'Missing';
+  }
   if (rows.some((r) => r?.status === 'rejected')) return 'Rejected';
   if (rows.every((r) => r?.status === 'verified')) return 'Complete';
   if (rows.some((r) => r?.status === 'under_review')) return 'Under review';
-  if (rows.every((r) => r != null && r.hasFile)) return 'Submitted';
+  if (rows.every((r) => r != null && credentialPayloadPresent(r))) {
+    return 'Submitted';
+  }
   return 'Partially uploaded';
 }
 
@@ -667,7 +753,7 @@ export function documentProgressCounts(params: {
   let rejected = 0;
   let approved = 0;
   for (const row of rows) {
-    if (row == null || !row.hasFile) {
+    if (row == null || !credentialPayloadPresent(row)) {
       missing += 1;
       continue;
     }

@@ -200,11 +200,13 @@ export type Database = {
           created_at: string
           credential_type: string
           expires_at: string | null
+          has_text_value: boolean
           id: string
           rejection_reason: string | null
           status: Database["public"]["Enums"]["credential_status"]
           storage_path: string | null
           storage_paths: Json
+          text_value: string | null
           updated_at: string
           verified_at: string | null
           verified_by: string | null
@@ -219,6 +221,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["credential_status"]
           storage_path?: string | null
           storage_paths?: Json
+          text_value?: string | null
           updated_at?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -233,6 +236,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["credential_status"]
           storage_path?: string | null
           storage_paths?: Json
+          text_value?: string | null
           updated_at?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -3493,17 +3497,44 @@ export type Database = {
         Args: { p_shift_id: string }
         Returns: number
       }
+      save_my_credential_text_value: {
+        Args: { p_credential_type: string; p_value: string }
+        Returns: {
+          created_at: string
+          credential_type: string
+          expires_at: string | null
+          has_text_value: boolean
+          id: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["credential_status"]
+          storage_path: string | null
+          storage_paths: Json
+          text_value: string | null
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          worker_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "credentials"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       submit_credential_for_review: {
         Args: { p_credential_id: string }
         Returns: {
           created_at: string
           credential_type: string
           expires_at: string | null
+          has_text_value: boolean
           id: string
           rejection_reason: string | null
           status: Database["public"]["Enums"]["credential_status"]
           storage_path: string | null
           storage_paths: Json
+          text_value: string | null
           updated_at: string
           verified_at: string | null
           verified_by: string | null

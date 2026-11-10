@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from 'react';
 import {
   eligiblePackageApproveCredentialIds,
+  isTextCredentialType,
 } from '@bridge-hive/domain';
 import { BadgeCheck, ClipboardCheck, Shield } from 'lucide-react';
 
@@ -29,6 +30,8 @@ export type PackageReviewCredential = {
   rejection_reason: string | null;
   created_at: string | null;
   hasFile: boolean;
+  hasTextValue: boolean;
+  textValue: string | null;
   isRequired: boolean;
 };
 
@@ -54,6 +57,7 @@ export function PackageReviewPanel({
           id: c.id,
           status: c.status,
           hasFile: c.hasFile,
+          hasTextValue: c.hasTextValue,
         })),
       ),
     [credentials],
@@ -176,12 +180,46 @@ export function PackageReviewPanel({
                       Reason: {cred.rejection_reason}
                     </p>
                   ) : null}
+                  {isTextCredentialType(cred.credential_type) ? (
+                    <div className="mt-2 rounded-xl border border-bh-border bg-bh-subtle/60 px-3 py-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-bh-text-muted">
+                        Text field
+                      </p>
+                      {canViewDocuments && cred.textValue ? (
+                        <p className="mt-1 break-all font-mono text-sm text-bh-text">
+                          {cred.textValue}
+                        </p>
+                      ) : canViewDocuments && cred.hasFile && !cred.hasTextValue ? (
+                        <p className="mt-1 text-sm text-bh-text-secondary">
+                          Legacy document on file — no text value saved yet.
+                        </p>
+                      ) : canViewDocuments ? (
+                        <p className="mt-1 text-sm text-bh-text-secondary">
+                          No text value saved yet.
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-sm text-bh-text-secondary">
+                          Text value restricted for your role.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {canViewDocuments && cred.hasFile ? (
+                  {canViewDocuments &&
+                  cred.hasFile &&
+                  !isTextCredentialType(cred.credential_type) ? (
                     <OpenCredentialDocumentButton credentialId={cred.id} />
                   ) : null}
-                  {canReview && cred.status === 'pending' && cred.hasFile ? (
+                  {canViewDocuments &&
+                  isTextCredentialType(cred.credential_type) &&
+                  cred.hasFile &&
+                  !cred.hasTextValue ? (
+                    <OpenCredentialDocumentButton credentialId={cred.id} />
+                  ) : null}
+                  {canReview &&
+                  cred.status === 'pending' &&
+                  (cred.hasFile || cred.hasTextValue) ? (
                     <form action={submitAction}>
                       <input
                         type="hidden"
@@ -195,7 +233,7 @@ export function PackageReviewPanel({
                   ) : null}
                   {canReview &&
                   (cred.status === 'pending' || cred.status === 'under_review') &&
-                  cred.hasFile ? (
+                  (cred.hasFile || cred.hasTextValue) ? (
                     <>
                       <form action={reviewAction}>
                         <input
@@ -296,8 +334,8 @@ export function PackageReviewPanel({
                     Approve selected reviewed documents
                   </p>
                   <p className="mt-1 max-w-xl text-xs leading-5 text-bh-text-secondary">
-                    Only eligible pending or under-review documents with uploaded
-                    files for this worker. This does not grant marketplace access.
+                    Only eligible pending or under-review items with a saved file or
+                    text value for this worker. This does not grant marketplace access.
                   </p>
                 </div>
               </div>
@@ -327,7 +365,7 @@ export function PackageReviewPanel({
                     Review confirmation
                   </span>
                   <span className="mt-0.5 block text-bh-text-secondary">
-                    I confirm that I reviewed the selected documents and that they
+                    I confirm that I reviewed the selected items and that they
                     satisfy the applicable verification requirements.
                   </span>
                 </span>

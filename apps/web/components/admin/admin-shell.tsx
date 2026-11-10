@@ -1,3 +1,4 @@
+import { AdminBossmanQuote } from '@/components/admin/admin-bossman-quote';
 import { AdminSidebar, type AdminQueueCounts } from '@/components/admin/admin-sidebar';
 import { AdminTopbar } from '@/components/admin/admin-topbar';
 import type { PlatformCapabilities } from '@/lib/admin/capabilities';
@@ -69,6 +70,7 @@ export function AdminShell({
           id="main-content"
           className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8"
         >
+          <AdminBossmanQuote />
           {children}
         </main>
       </div>

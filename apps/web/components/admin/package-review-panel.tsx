@@ -14,6 +14,7 @@ import {
 import {
   ArrowRight,
   BadgeCheck,
+  Check,
   CheckSquare,
   ClipboardCheck,
   FileText,
@@ -86,6 +87,43 @@ function PremiumActionButton({
       <span className="relative z-10 inline-flex items-center gap-1.5">
         {children}
       </span>
+    </button>
+  );
+}
+
+function SelectCheck({
+  checked,
+  onChange,
+  label,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={onChange}
+      className={cn(
+        'group/check relative flex h-6 w-6 items-center justify-center rounded-md border transition duration-300',
+        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bh-teal',
+        'motion-reduce:transition-none',
+        checked
+          ? 'border-bh-teal bg-bh-teal text-white shadow-[0_0_0_3px_rgba(22,166,182,0.18),0_6px_14px_rgba(22,166,182,0.28)]'
+          : 'border-bh-border-strong bg-white text-transparent shadow-sm hover:border-bh-teal hover:bg-bh-teal-soft/40',
+      )}
+    >
+      <Check
+        className={cn(
+          'h-3.5 w-3.5 transition duration-300',
+          checked ? 'scale-100 opacity-100' : 'scale-75 opacity-0',
+        )}
+        strokeWidth={3}
+        aria-hidden
+      />
     </button>
   );
 }
@@ -299,52 +337,46 @@ export function PackageReviewPanel({
                       {canReview ? (
                         <td className="px-4 py-4 align-middle sm:px-5">
                           {eligible ? (
-                            <label className="inline-flex cursor-pointer items-center justify-center">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => toggle(cred.id)}
-                                className="h-4 w-4 rounded border-bh-border text-bh-teal focus:ring-bh-teal/30"
-                                aria-label={`Select ${credentialTypeLabel(cred.credential_type)}`}
-                              />
-                            </label>
+                            <SelectCheck
+                              checked={isSelected}
+                              onChange={() => toggle(cred.id)}
+                              label={`Select ${credentialTypeLabel(cred.credential_type)} for package approve`}
+                            />
                           ) : (
-                            <span className="block h-4 w-4" aria-hidden />
+                            <span
+                              className="flex h-6 w-6 items-center justify-center rounded-md border border-dashed border-bh-border/70 bg-bh-subtle/40"
+                              title="Not eligible for package approve"
+                              aria-hidden
+                            />
                           )}
                         </td>
                       ) : null}
 
                       <td className="px-3 py-4 align-middle">
-                        <div className="min-w-0 space-y-1">
-                          <p className="font-semibold tracking-tight text-bh-text transition-colors group-hover/row:text-bh-teal-strong">
+                        <div className="min-w-0 space-y-1.5">
+                          <p className="text-[15px] font-semibold tracking-tight text-bh-text transition-colors group-hover/row:text-bh-teal-strong">
                             {credentialTypeLabel(cred.credential_type)}
                           </p>
-                          <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-bh-text-muted">
+                          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-bh-text-muted">
                             <span
                               className={cn(
-                                'font-semibold',
+                                'inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em]',
                                 cred.isRequired
-                                  ? 'text-bh-text-secondary'
-                                  : 'text-bh-text-muted',
+                                  ? 'bg-bh-sidebar/8 text-bh-sidebar'
+                                  : 'bg-bh-subtle text-bh-text-muted',
                               )}
                             >
                               {cred.isRequired ? 'Required' : 'Optional'}
                             </span>
                             {cred.created_at ? (
-                              <>
-                                <span aria-hidden>·</span>
-                                <span>
-                                  Submitted {formatDateTime(cred.created_at)}
-                                </span>
-                              </>
+                              <span>
+                                Submitted {formatDateTime(cred.created_at)}
+                              </span>
                             ) : null}
                             {cred.expires_at ? (
-                              <>
-                                <span aria-hidden>·</span>
-                                <span>
-                                  Expires {formatDateTime(cred.expires_at)}
-                                </span>
-                              </>
+                              <span>
+                                Expires {formatDateTime(cred.expires_at)}
+                              </span>
                             ) : null}
                           </p>
                           {cred.rejection_reason ? (
@@ -361,18 +393,18 @@ export function PackageReviewPanel({
 
                       <td className="px-3 py-4 align-middle">
                         {isText ? (
-                          <div className="max-w-[16rem]">
+                          <div className="max-w-[18rem]">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
                               Text field
                             </p>
                             {canViewDocuments && cred.textValue ? (
-                              <p className="mt-1 break-all rounded-lg border border-bh-border/70 bg-bh-subtle/50 px-2.5 py-1.5 font-mono text-xs text-bh-text">
+                              <p className="mt-1.5 break-all rounded-xl border border-bh-border/70 bg-gradient-to-b from-bh-subtle/80 to-white px-3 py-2 font-mono text-[13px] font-semibold leading-5 tracking-wide text-bh-text shadow-[inset_0_1px_0_rgba(255,255,255,0.85)]">
                                 {cred.textValue}
                               </p>
                             ) : canViewDocuments &&
                               cred.hasFile &&
                               !cred.hasTextValue ? (
-                              <div className="mt-1 space-y-2">
+                              <div className="mt-1.5 space-y-2">
                                 <p className="text-xs text-bh-text-secondary">
                                   Legacy document on file
                                 </p>
@@ -381,11 +413,11 @@ export function PackageReviewPanel({
                                 />
                               </div>
                             ) : canViewDocuments ? (
-                              <p className="mt-1 text-xs text-bh-text-secondary">
+                              <p className="mt-1.5 text-xs text-bh-text-secondary">
                                 No text value saved yet
                               </p>
                             ) : (
-                              <p className="mt-1 text-xs text-bh-text-secondary">
+                              <p className="mt-1.5 text-xs text-bh-text-secondary">
                                 Restricted for your role
                               </p>
                             )}
@@ -404,7 +436,7 @@ export function PackageReviewPanel({
                       </td>
 
                       <td className="px-4 py-4 text-right align-middle sm:px-5">
-                        <div className="inline-flex flex-wrap items-center justify-end gap-1.5">
+                        <div className="inline-flex flex-wrap items-center justify-end gap-2">
                           {canMarkPending ? (
                             <form action={submitAction}>
                               <input
@@ -412,15 +444,13 @@ export function PackageReviewPanel({
                                 name="credentialId"
                                 value={cred.id}
                               />
-                              <Button
+                              <button
                                 type="submit"
-                                size="sm"
-                                variant="outline"
                                 disabled={submitPending}
-                                className="h-8 rounded-full border-bh-border/80 bg-white px-3 shadow-sm"
+                                className="inline-flex h-9 items-center rounded-full border border-bh-border/80 bg-white px-3.5 text-xs font-semibold text-bh-text shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-bh-teal/40 hover:bg-bh-teal-soft/35 hover:text-bh-teal-strong disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                               >
-                                Under review
-                              </Button>
+                                {submitPending ? 'Saving…' : 'Under review'}
+                              </button>
                             </form>
                           ) : null}
                           {canAct ? (
@@ -437,22 +467,26 @@ export function PackageReviewPanel({
                                   value="approve"
                                 />
                                 <PremiumActionButton disabled={reviewPending}>
-                                  Approve
+                                  {reviewPending ? 'Saving…' : 'Approve'}
+                                  <Check className="h-3.5 w-3.5" aria-hidden />
                                 </PremiumActionButton>
                               </form>
-                              <Button
+                              <button
                                 type="button"
-                                size="sm"
-                                variant="destructive"
-                                className="h-8 rounded-full px-3 shadow-[0_6px_14px_rgba(180,35,24,0.16)]"
                                 onClick={() =>
                                   setRejectId(
                                     rejectId === cred.id ? null : cred.id,
                                   )
                                 }
+                                className={cn(
+                                  'inline-flex h-9 items-center rounded-full px-3.5 text-xs font-semibold transition duration-300 motion-reduce:transition-none',
+                                  rejectId === cred.id
+                                    ? 'border border-bh-border bg-white text-bh-text shadow-sm hover:bg-bh-subtle'
+                                    : 'bg-bh-danger text-white shadow-[0_8px_16px_rgba(180,35,24,0.22)] hover:-translate-y-0.5 hover:bg-bh-danger/90 motion-reduce:hover:translate-y-0',
+                                )}
                               >
                                 {rejectId === cred.id ? 'Cancel' : 'Reject'}
-                              </Button>
+                              </button>
                             </>
                           ) : (
                             <span className="text-[11px] font-medium text-bh-text-muted">
@@ -593,23 +627,24 @@ export function PackageReviewPanel({
             </div>
 
             <div className="rounded-2xl border border-bh-border/80 bg-bh-subtle/60 px-3.5 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)]">
-              <label className="flex cursor-pointer items-start gap-3 text-sm text-bh-text">
-                <input
-                  type="checkbox"
-                  checked={confirmReviewed}
-                  onChange={(e) => setConfirmReviewed(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-bh-border text-bh-teal focus:ring-bh-teal/30"
-                />
-                <span className="leading-5">
-                  <span className="font-semibold text-bh-text">
+              <div className="flex items-start gap-3 text-sm text-bh-text">
+                <div className="pt-0.5">
+                  <SelectCheck
+                    checked={confirmReviewed}
+                    onChange={() => setConfirmReviewed((v) => !v)}
+                    label="Confirm reviewed selected items"
+                  />
+                </div>
+                <div className="leading-5">
+                  <p className="font-semibold text-bh-text">
                     Review confirmation
-                  </span>
-                  <span className="mt-0.5 block text-bh-text-secondary">
+                  </p>
+                  <p className="mt-0.5 text-bh-text-secondary">
                     I confirm that I reviewed the selected items and that they
                     satisfy the applicable verification requirements.
-                  </span>
-                </span>
-              </label>
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-bh-border/70 pt-4">

@@ -49,4 +49,9 @@ describe('workspace preparation gate', () => {
     expect(hasWorkspacePreparationBeenConsumed()).toBe(true);
     expect(workspacePreparationMinMs(true)).toBe(0);
   });
+
+  it('skips the artificial minimum when a session already exists (dashboard entry)', () => {
+    expect(workspacePreparationMinMs(false, true)).toBe(0);
+    expect(workspacePreparationMinMs(false, false)).toBe(5000);
+  });
 });

@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   ArrowUpRight,
+  BadgeCheck,
   Building2,
   CalendarDays,
   Clock3,
@@ -24,6 +25,7 @@ import {
   orgTableHeadClassName,
   orgTableRowClassName,
 } from '@/components/org/data-table';
+import { OrgClientFilterForm } from '@/components/org/org-client-filter-form';
 import { PageHeader } from '@/components/org/page-header';
 import { PermissionGuard } from '@/components/permission-guard';
 import { Button } from '@/components/ui/button';
@@ -282,19 +284,18 @@ export default async function LocationsPage({
           <PermissionGuard allowed={ctx.capabilities.canManageLocations}>
             <Button
               asChild
-              variant="honey"
               size="lg"
-              className="group min-h-11 justify-between gap-3 rounded-xl px-4 font-semibold shadow-[0_10px_24px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(228,179,52,0.38)] active:translate-y-0 active:shadow-[0_6px_16px_rgba(228,179,52,0.22)] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              className="group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] px-3.5 font-semibold text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1a425c_0%,#0a283c_72%)] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
               <Link href={filterHref(slug, filterState, { new: '1' })}>
                 <span className="inline-flex items-center gap-2.5">
-                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30]/10 text-[#071d30] ring-1 ring-[#071d30]/10 transition-colors group-hover:bg-[#071d30]/14">
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
                     <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
                   </span>
                   Add location
                 </span>
                 <ArrowRight
-                  className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                  className="h-4 w-4 text-white/80 transition-transform duration-200 group-hover:translate-x-0.5"
                   aria-hidden
                 />
               </Link>
@@ -359,7 +360,7 @@ export default async function LocationsPage({
       />
 
       <PermissionGuard allowed={ctx.capabilities.canManageLocations && showNew === '1'}>
-        <Card className="border-bh-border shadow-[0_4px_16px_rgba(7,29,48,0.04)]">
+        <Card className="bh-org-surface border-0 shadow-none">
           <CardHeader>
             <CardTitle>New location</CardTitle>
           </CardHeader>
@@ -373,9 +374,9 @@ export default async function LocationsPage({
         </Card>
       </PermissionGuard>
 
-      <form
-        method="get"
-        className="flex flex-col gap-3 rounded-2xl border border-bh-border bg-bh-surface p-3 shadow-[0_4px_16px_rgba(7,29,48,0.04)] lg:flex-row lg:flex-wrap lg:items-center lg:gap-2.5 lg:p-3.5"
+      <OrgClientFilterForm
+        pathname={`/org/${slug}/locations`}
+        className="bh-org-surface flex flex-col gap-3 p-3 lg:flex-row lg:flex-wrap lg:items-center lg:gap-2.5 lg:p-3.5"
       >
         {listView ? <input type="hidden" name="view" value="list" /> : null}
         {showNew === '1' ? <input type="hidden" name="new" value="1" /> : null}
@@ -461,7 +462,7 @@ export default async function LocationsPage({
             List
           </Link>
         </div>
-      </form>
+      </OrgClientFilterForm>
 
       {!locations.length ? (
         <EmptyState
@@ -471,18 +472,17 @@ export default async function LocationsPage({
             ctx.capabilities.canManageLocations ? (
               <Button
                 asChild
-                variant="honey"
                 size="lg"
-                className="group min-h-11 justify-between gap-3 rounded-xl px-4 font-semibold shadow-[0_10px_24px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_rgba(228,179,52,0.38)] motion-reduce:hover:translate-y-0"
+                className="group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] px-3.5 font-semibold text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1a425c_0%,#0a283c_72%)] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)] motion-reduce:hover:translate-y-0"
               >
                 <Link href={`/org/${slug}/locations?new=1`}>
                   <span className="inline-flex items-center gap-2.5">
-                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30]/10 text-[#071d30] ring-1 ring-[#071d30]/10">
+                    <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
                       <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
                     </span>
                     Add location
                   </span>
-                  <ArrowRight className="h-4 w-4" aria-hidden />
+                  <ArrowRight className="h-4 w-4 text-white/80" aria-hidden />
                 </Link>
               </Button>
             ) : undefined
@@ -566,7 +566,7 @@ export default async function LocationsPage({
                     <td className="px-4 py-4 text-right">
                       <Link
                         href={`/org/${slug}/locations/${location.id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-bh-border bg-bh-surface px-3 py-1.5 text-sm font-semibold text-bh-text hover:bg-bh-subtle"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-[#071d30] px-3.5 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#0b2a40]"
                       >
                         Manage
                         <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
@@ -580,7 +580,7 @@ export default async function LocationsPage({
         </OrgTableShell>
       ) : (
         <ul className="space-y-5">
-          {filtered.map((location) => {
+          {filtered.map((location, index) => {
             const upcoming = upcomingByLocation.get(location.id) ?? 0;
             const staff = staffByLocation.get(location.id)?.size ?? 0;
             const initial = (location.name?.trim()?.[0] ?? 'L').toUpperCase();
@@ -592,118 +592,202 @@ export default async function LocationsPage({
               .join(' · ');
             const wardsPreview = location.wards.slice(0, 6);
             const moreWards = location.wards.length - wardsPreview.length;
+            const siteStats = [
+              {
+                icon: Layers,
+                label: 'Wards',
+                value: location.wards.length,
+              },
+              {
+                icon: CalendarDays,
+                label: 'Upcoming shifts',
+                value: upcoming,
+              },
+              {
+                icon: Users,
+                label: 'Assigned staff',
+                value: staff,
+              },
+            ] as const;
 
             return (
               <li
                 key={location.id}
-                className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_4px_16px_rgba(7,29,48,0.04)]"
+                className="bh-org-enter group/site relative overflow-hidden rounded-2xl border border-[#16384f]/25 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(7,29,48,0.18)] motion-reduce:transform-none motion-reduce:hover:translate-y-0"
+                style={{ animationDelay: `${index * 90}ms` }}
               >
-                <div className="flex flex-col gap-4 border-b border-bh-border/70 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
-                  <div className="flex min-w-0 items-start gap-3.5">
-                    {location.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={location.imageUrl}
-                        alt=""
-                        className="h-28 w-40 shrink-0 rounded-2xl object-cover shadow-md ring-1 ring-bh-border sm:h-32 sm:w-48"
-                      />
-                    ) : (
-                      <span
-                        className="flex h-28 w-28 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-bh-accent-blue-soft via-bh-teal-soft to-bh-honey-soft text-2xl font-bold text-bh-sidebar shadow-md ring-1 ring-bh-border sm:h-32 sm:w-32"
-                        aria-hidden
-                      >
-                        {initial}
-                      </span>
-                    )}
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="truncate text-lg font-bold tracking-tight text-bh-text">
+                <div className="relative overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-4 text-white sm:px-5 sm:py-5">
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/35 blur-2xl"
+                  />
+                  <span
+                    aria-hidden
+                    className="bh-orb-drift pointer-events-none absolute -bottom-12 right-10 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
+                  />
+                  <span
+                    aria-hidden
+                    className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+                  />
+
+                  <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-3.5">
+                      {location.imageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={location.imageUrl}
+                          alt=""
+                          className="h-16 w-16 shrink-0 rounded-2xl object-cover ring-2 ring-[#e4b334]/80 sm:h-[4.5rem] sm:w-[4.5rem]"
+                        />
+                      ) : (
+                        <span
+                          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#e4b334] text-[22px] font-bold text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_22px_rgba(228,179,52,0.35)] sm:h-[4.5rem] sm:w-[4.5rem]"
+                          aria-hidden
+                        >
+                          {initial}
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <p className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span
+                              className="bh-soft-pulse h-1.5 w-1.5 rounded-full bg-[#e4b334] shadow-[0_0_8px_rgba(228,179,52,0.85)]"
+                              aria-hidden
+                            />
+                            Added location
+                          </span>
+                          <span className="text-white/35" aria-hidden>
+                            ·
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[#b8f0d0]">
+                            <span
+                              className="bh-soft-pulse h-1.5 w-1.5 rounded-full bg-[#b8f0d0]"
+                              aria-hidden
+                            />
+                            Active
+                          </span>
+                        </p>
+                        <h2 className="mt-1.5 truncate text-[22px] font-bold leading-none tracking-[-0.03em] text-white">
                           {location.name}
                         </h2>
-                        <span className="inline-flex items-center rounded-full bg-bh-success-soft px-2.5 py-0.5 text-[11px] font-bold text-bh-success">
-                          Active
-                        </span>
+                        <p className="mt-1.5 flex items-center gap-1.5 truncate text-sm text-white/70">
+                          <MapPin className="h-3.5 w-3.5 shrink-0 text-[#e4b334]" aria-hidden />
+                          {addressLine || 'No address set'}
+                        </p>
                       </div>
-                      <p className="mt-1 truncate text-sm text-bh-text-secondary">
-                        {addressLine || 'No address set'}
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-bh-accent-blue-soft px-2.5 py-1 text-xs font-semibold text-bh-accent-blue">
-                          <Layers className="h-3.5 w-3.5" aria-hidden />
-                          {location.wards.length} Ward
-                          {location.wards.length === 1 ? '' : 's'}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-bh-honey-soft px-2.5 py-1 text-xs font-semibold text-bh-warning">
-                          <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                          {upcoming} Upcoming shift{upcoming === 1 ? '' : 's'}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-bh-accent-violet-soft px-2.5 py-1 text-xs font-semibold text-violet-700">
-                          <Users className="h-3.5 w-3.5" aria-hidden />
-                          {staff} Assigned staff
-                        </span>
-                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href={`/org/${slug}/locations/${location.id}`}
+                        className="group/manage inline-flex items-center gap-2 rounded-xl bg-[#e4b334] px-4 py-2.5 text-sm font-semibold text-[#071d30] shadow-[0_10px_22px_rgba(228,179,52,0.38)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f0c14d] hover:shadow-[0_14px_28px_rgba(228,179,52,0.48)] motion-reduce:hover:translate-y-0"
+                      >
+                        Manage
+                        <ArrowUpRight
+                          className="h-4 w-4 transition-transform duration-200 group-hover/manage:translate-x-0.5 group-hover/manage:-translate-y-0.5"
+                          aria-hidden
+                        />
+                      </Link>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 rounded-xl text-white/70 hover:bg-white/10 hover:text-white"
+                      >
+                        <Link
+                          href={`/org/${slug}/locations/${location.id}`}
+                          aria-label={`More for ${location.name}`}
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Link>
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Button asChild variant="outline" className="rounded-xl font-semibold">
-                      <Link href={`/org/${slug}/locations/${location.id}`}>
-                        Manage
-                      </Link>
-                    </Button>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-xl text-bh-text-muted"
-                    >
-                      <Link
-                        href={`/org/${slug}/locations/${location.id}`}
-                        aria-label={`More for ${location.name}`}
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                  </div>
+                  <dl className="relative mt-4 grid grid-cols-3 gap-2">
+                    {siteStats.map((stat, statIndex) => {
+                      const Icon = stat.icon;
+                      return (
+                        <div
+                          key={stat.label}
+                          className="bh-drop-in rounded-xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15 backdrop-blur-sm"
+                          style={{ animationDelay: `${120 + statIndex * 70}ms` }}
+                        >
+                          <dt className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">
+                            <Icon className="h-3.5 w-3.5 text-[#e4b334]" aria-hidden />
+                            {stat.label}
+                          </dt>
+                          <dd className="bh-tabular mt-1 text-[22px] font-bold leading-none tracking-tight text-white">
+                            {stat.value}
+                          </dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
                 </div>
 
-                <div className="p-4 sm:p-5">
+                <div className="bg-[linear-gradient(180deg,rgba(22,166,182,0.1)_0%,rgba(232,242,250,0.45)_48%,#ffffff_100%)] p-4 sm:p-5">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-bold text-bh-text">
+                    <h3 className="flex items-center gap-2 text-sm font-bold text-[#071d30]">
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-bh-teal-soft text-bh-teal-strong">
+                        <Layers className="h-3.5 w-3.5" aria-hidden />
+                      </span>
                       Wards ({location.wards.length})
                     </h3>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
                       <Link
                         href={`/org/${slug}/locations/${location.id}`}
-                        className="text-sm font-semibold text-bh-accent-blue hover:underline"
+                        className="inline-flex items-center rounded-xl bg-[#071d30] px-3 py-1.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0b2a40] motion-reduce:hover:translate-y-0"
                       >
                         View all wards
                       </Link>
                       {ctx.capabilities.canManageLocations ? (
-                        <Button asChild size="sm" variant="outline" className="h-8 rounded-lg">
-                          <Link href={`/org/${slug}/locations/${location.id}`}>
-                            <Plus className="h-3.5 w-3.5" aria-hidden />
-                            Add ward
-                          </Link>
-                        </Button>
+                        <Link
+                          href={`/org/${slug}/locations/${location.id}`}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-xl bg-[#e4b334] px-3 text-sm font-semibold text-[#071d30] shadow-[0_8px_16px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f0c14d] motion-reduce:hover:translate-y-0"
+                        >
+                          <Plus className="h-3.5 w-3.5" aria-hidden />
+                          Add ward
+                        </Link>
                       ) : null}
                     </div>
                   </div>
 
                   {!location.wards.length ? (
-                    <p className="rounded-xl border border-dashed border-bh-border bg-bh-subtle/40 px-4 py-6 text-center text-sm text-bh-text-secondary">
-                      No wards yet. Add wards so shifts can target departments.
-                    </p>
+                    <div className="relative overflow-hidden rounded-2xl border border-[#16384f]/10 bg-white/80 px-5 py-8 text-center shadow-[0_10px_24px_rgba(7,29,48,0.05)]">
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/20 blur-2xl"
+                      />
+                      <span
+                        aria-hidden
+                        className="bh-orb-drift pointer-events-none absolute -bottom-10 right-8 h-20 w-20 rounded-full bg-[#e4b334]/20 blur-2xl"
+                      />
+                      <span className="relative mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_20px_rgba(228,179,52,0.35)]">
+                        <Layers className="h-5 w-5" strokeWidth={2.4} aria-hidden />
+                      </span>
+                      <p className="relative mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
+                        <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                        Site on file
+                      </p>
+                      <h4 className="relative mt-1 text-base font-bold tracking-tight text-[#071d30]">
+                        No wards on this location yet
+                      </h4>
+                      <p className="relative mx-auto mt-1 max-w-sm text-sm leading-6 text-bh-text-secondary">
+                        {location.name} is added. Add wards so shifts can target
+                        departments.
+                      </p>
+                    </div>
                   ) : (
                     <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {wardsPreview.map((ward, idx) => {
                         const wardUpcoming = upcomingByWard.get(ward.id) ?? 0;
                         const tone = WARD_ICON_TONES[idx % WARD_ICON_TONES.length]!;
                         return (
-                          <li key={ward.id}>
+                          <li key={ward.id} className="bh-drop-in" style={{ animationDelay: `${idx * 60}ms` }}>
                             <Link
                               href={`/org/${slug}/locations/${location.id}`}
-                              className="flex h-full flex-col rounded-xl border border-bh-border bg-bh-surface p-3.5 transition-[border-color,box-shadow] hover:border-bh-border-strong hover:shadow-sm"
+                              className="flex h-full flex-col rounded-xl bg-white/85 p-3.5 ring-1 ring-[#16384f]/10 transition-[transform,box-shadow,background-color] duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_24px_rgba(7,29,48,0.1)] motion-reduce:hover:translate-y-0"
                             >
                               <span
                                 className={cn(
@@ -744,7 +828,7 @@ export default async function LocationsPage({
                         <li>
                           <Link
                             href={`/org/${slug}/locations/${location.id}`}
-                            className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-xl border border-dashed border-bh-border bg-bh-subtle/30 p-3.5 text-sm font-semibold text-bh-accent-blue hover:bg-bh-subtle"
+                            className="flex h-full min-h-[120px] flex-col items-center justify-center rounded-xl bg-[#071d30] p-3.5 text-sm font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0b2a40] motion-reduce:hover:translate-y-0"
                           >
                             +{moreWards} more
                           </Link>

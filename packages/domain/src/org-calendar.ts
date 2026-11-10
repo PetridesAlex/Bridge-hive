@@ -3,6 +3,10 @@
  * Pure functions — timezone wall-clock conversion stays in the web layer.
  */
 
+import {
+  positionsCompactLabel,
+  remainingOpenPositions,
+} from './shift-positions';
 import { WORKER_ROLE_LABELS, type WorkerRole } from './types';
 
 export type CalendarViewMode = 'day' | 'week' | 'month';
@@ -20,6 +24,10 @@ export type CalendarShiftInput = {
   location_id?: string | null;
   location_name?: string | null;
   ward_name?: string | null;
+  /** Total worker capacity when known. */
+  required_positions?: number | null;
+  /** Occupying assignment count when known. */
+  filled_positions?: number | null;
 };
 
 export type CalendarEvent = {
@@ -35,6 +43,11 @@ export type CalendarEvent = {
   rateMinor: number | null;
   currency: string | null;
   coverageLabel: string;
+  /** Compact capacity chip (e.g. "2/4" or "Full"); null when unknown. */
+  positionsLabel: string | null;
+  requiredPositions: number | null;
+  filledPositions: number | null;
+  openPositions: number | null;
   /** Semantic style key for UI */
   tone: CalendarEventTone;
   href: string;
@@ -65,14 +78,39 @@ export function parseCalendarDateParam(raw: string | null | undefined): string |
   return raw;
 }
 
-export function coverageLabelForStatus(status: string): string {
+export function coverageLabelForStatus(
+  status: string,
+  options?: {
+    requiredPositions?: number | null;
+    filledPositions?: number | null;
+  },
+): string {
+  const required =
+    typeof options?.requiredPositions === 'number' &&
+    Number.isFinite(options.requiredPositions)
+      ? Math.max(1, Math.trunc(options.requiredPositions))
+      : null;
+  const filled =
+    typeof options?.filledPositions === 'number' &&
+    Number.isFinite(options.filledPositions)
+      ? Math.max(0, Math.trunc(options.filledPositions))
+      : null;
+
   switch (status) {
     case 'draft':
       return 'Draft';
-    case 'published':
+    case 'published': {
+      if (required != null && filled != null) {
+        const open = remainingOpenPositions(required, filled);
+        if (open === 0) return 'Fully booked';
+        if (required > 1) {
+          return open === 1 ? '1 available' : `${open} available`;
+        }
+      }
       return 'Open';
+    }
     case 'filled':
-      return 'Filled';
+      return required != null && required > 1 ? 'Fully booked' : 'Filled';
     case 'in_progress':
       return 'In progress';
     case 'awaiting_approval':
@@ -114,6 +152,25 @@ export function mapShiftToCalendarEvent(
     shift.ward_name?.trim() ||
     WORKER_ROLE_LABELS[role as WorkerRole] ||
     'Shift';
+  const requiredPositions =
+    typeof shift.required_positions === 'number' &&
+    Number.isFinite(shift.required_positions)
+      ? Math.max(1, Math.trunc(shift.required_positions))
+      : null;
+  const filledPositions =
+    typeof shift.filled_positions === 'number' &&
+    Number.isFinite(shift.filled_positions)
+      ? Math.max(0, Math.trunc(shift.filled_positions))
+      : null;
+  const openPositions =
+    requiredPositions != null && filledPositions != null
+      ? remainingOpenPositions(requiredPositions, filledPositions)
+      : null;
+  const positionsLabel =
+    requiredPositions != null && filledPositions != null
+      ? positionsCompactLabel(requiredPositions, filledPositions)
+      : null;
+
   return {
     id: shift.id,
     title,
@@ -126,7 +183,14 @@ export function mapShiftToCalendarEvent(
     wardName: shift.ward_name ?? null,
     rateMinor: shift.rate_minor ?? null,
     currency: shift.currency ?? null,
-    coverageLabel: coverageLabelForStatus(shift.status),
+    coverageLabel: coverageLabelForStatus(shift.status, {
+      requiredPositions,
+      filledPositions,
+    }),
+    positionsLabel,
+    requiredPositions,
+    filledPositions,
+    openPositions,
     tone: calendarEventTone(shift.status, role),
     href: `/org/${slug}/shifts/${shift.id}`,
   };

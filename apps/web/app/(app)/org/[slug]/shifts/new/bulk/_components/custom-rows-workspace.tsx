@@ -47,7 +47,7 @@ type LocationOption = { id: string; name: string; timezone: string };
 type WardOption = { id: string; name: string; locationId: string };
 
 const fieldInputClass =
-  'h-9 min-w-0 rounded-xl border-bh-border/80 bg-white px-2.5 text-sm font-medium text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow,background] duration-150 focus-visible:border-bh-teal focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-bh-teal/25';
+  'h-9 min-w-0 rounded-xl border-[#16384f]/15 bg-white/95 px-2.5 text-sm font-medium text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(7,29,48,0.04)] transition-[border-color,box-shadow,background,transform] duration-150 hover:border-[#16384f]/30 focus-visible:border-bh-teal focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-bh-teal/25';
 
 const premiumTableHeadClassName =
   'sticky top-0 z-10 border-b border-[#16384f]/12 bg-[linear-gradient(180deg,#16384f_0%,#0d2a3d_100%)] text-[10px] font-semibold uppercase tracking-[0.14em] text-white/72';
@@ -228,21 +228,29 @@ export function CustomRowsWorkspace({
       </div>
 
       <div className="hidden lg:block">
-        <OrgTableShell className="overflow-hidden border-bh-border/80 shadow-[0_10px_32px_rgba(7,29,48,0.08)] ring-1 ring-[rgba(22,56,79,0.05)]">
-          <div className="flex items-center justify-between gap-3 border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-3">
-            <div className="min-w-0">
-              <p className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
-                <span
-                  aria-hidden
-                  className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
-                />
+        <OrgTableShell className="overflow-hidden border-[#16384f]/20 shadow-[0_18px_40px_rgba(7,29,48,0.12)] ring-1 ring-[rgba(22,56,79,0.08)]">
+          <div className="relative flex items-center justify-between gap-3 overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-3.5 text-white">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/30 blur-2xl"
+            />
+            <span
+              aria-hidden
+              className="bh-orb-drift pointer-events-none absolute -bottom-10 right-8 h-20 w-20 rounded-full bg-[#e4b334]/20 blur-2xl"
+            />
+            <span
+              aria-hidden
+              className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+            />
+            <div className="relative min-w-0">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
                 Shift rows
               </p>
-              <p className="mt-1 text-xs text-bh-text-muted">
+              <p className="mt-1 text-xs text-white/70">
                 Edit each opening independently — changes stay in this batch until you review.
               </p>
             </div>
-            <p className="shrink-0 rounded-full border border-bh-border bg-white px-3 py-1 text-[11px] font-semibold text-bh-text-secondary shadow-sm">
+            <p className="relative shrink-0 rounded-full bg-[#e4b334] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.35)]">
               {rows.length} editable
             </p>
           </div>
@@ -360,9 +368,9 @@ function CustomRowTableRow({
   return (
     <tr
       className={cn(
-        'group relative border-b border-bh-border/50 transition-[background-color,box-shadow] duration-150 last:border-0',
-        zebra ? 'bg-[#f5f8fa]/70' : 'bg-white',
-        'hover:bg-bh-teal-soft/35 hover:shadow-[inset_3px_0_0_0_#16a6b6]',
+        'group relative border-b border-[#16384f]/10 transition-[background-color,box-shadow] duration-200 last:border-0',
+        zebra ? 'bg-[rgba(232,242,250,0.55)]' : 'bg-white/85',
+        'hover:bg-white hover:shadow-[inset_3px_0_0_0_#e4b334,0_8px_18px_rgba(7,29,48,0.05)]',
       )}
     >
       <td className="px-1.5 py-3 align-top first:pl-3">
@@ -371,6 +379,25 @@ function CustomRowTableRow({
         </span>
       </td>
       <td className="px-1.5 py-3 align-top">
+        <span
+          className={cn(
+            'mb-1.5 inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[10px] font-bold uppercase tracking-[0.14em]',
+            dayLabel === 'Sat' || dayLabel === 'Sun'
+              ? 'bg-[#e4b334] text-[#071d30]'
+              : 'bg-[#071d30] text-[#f3d27a]',
+          )}
+        >
+          <span
+            className={cn(
+              'h-1.5 w-1.5 rounded-full',
+              dayLabel === 'Sat' || dayLabel === 'Sun'
+                ? 'bg-[#071d30]'
+                : 'bh-soft-pulse bg-[#e4b334]',
+            )}
+            aria-hidden
+          />
+          {dayLabel}
+        </span>
         <Input
           type="date"
           aria-label={`Row ${index + 1} date`}
@@ -378,16 +405,6 @@ function CustomRowTableRow({
           value={row.dateYmd}
           onChange={(e) => onUpdate({ dateYmd: e.target.value })}
         />
-        <span
-          className={cn(
-            'mt-1 inline-flex h-6 items-center rounded-md border px-1.5 text-[10px] font-bold tracking-wide',
-            dayLabel === 'Sat' || dayLabel === 'Sun'
-              ? 'border-[#e4b334]/35 bg-[#fff8e8] text-[#8a6a10]'
-              : 'border-bh-teal/25 bg-bh-teal-soft/60 text-bh-teal-strong',
-          )}
-        >
-          {dayLabel}
-        </span>
         <FieldError message={errors.dateYmd} />
       </td>
       <td className="px-1.5 py-3 align-top">
@@ -422,7 +439,7 @@ function CustomRowTableRow({
         <FieldError message={errors.locationId} />
       </td>
       <td className="px-1.5 py-3 align-top">
-        <div className="min-w-0 space-y-1">
+        <div className="min-w-0 space-y-1 rounded-xl bg-white/90 p-1.5 ring-1 ring-[#16384f]/10">
           <WardUnitSelector
             locationId={row.locationId}
             wardId={row.wardId}

@@ -55,9 +55,16 @@ export function ProfileMenuRow({
   const pill = TONE[tone];
   const a11yLabel = trailing ? `${label}, ${trailing}` : label;
 
-  const motionStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: lift.value }, { scale: scale.value }],
-  }));
+  // Grouped rows skip translate/scale — transforms create a stacking context that
+  // can paint over the absolute tab bar on web when the list sits near the bottom.
+  const motionStyle = useAnimatedStyle(() => {
+    if (grouped) {
+      return { opacity: scale.value < 0.995 ? 0.92 : 1 };
+    }
+    return {
+      transform: [{ translateY: lift.value }, { scale: scale.value }],
+    };
+  });
   const arrowStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: nudge.value }],
   }));

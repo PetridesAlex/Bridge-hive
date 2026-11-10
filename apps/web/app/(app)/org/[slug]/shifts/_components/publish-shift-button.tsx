@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useTransition } from 'react';
 import { toast } from 'sonner';
 
 import { publishShiftAction } from '@/app/actions/shifts';
@@ -12,17 +13,27 @@ export function PublishShiftButton({
   slug: string;
   shiftId: string;
 }) {
+  const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+
   return (
     <Button
       type="button"
-      onClick={async () => {
-        if (!confirm('Publish this shift to the worker marketplace?')) return;
-        const result = await publishShiftAction(slug, shiftId);
-        if (result.error) toast.error(result.error);
-        else toast.success('Shift published');
+      disabled={pending || confirming}
+      onClick={() => {
+        if (pending || confirming) return;
+        setConfirming(true);
+        const allowed = confirm('Publish this shift to the worker marketplace?');
+        setConfirming(false);
+        if (!allowed) return;
+        startTransition(async () => {
+          const result = await publishShiftAction(slug, shiftId);
+          if (result.error) toast.error(result.error);
+          else toast.success('Shift published');
+        });
       }}
     >
-      Publish shift
+      {pending ? 'Publishing…' : 'Publish shift'}
     </Button>
   );
 }

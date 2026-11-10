@@ -18,3 +18,4 @@ export * from './recruitment';
 export * from './ward-library';
 export * from './shift-positions';
 export * from './push-notifications';
+export * from './org-worker-messaging';

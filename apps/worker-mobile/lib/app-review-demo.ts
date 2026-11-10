@@ -77,6 +77,8 @@ export function marketplaceShiftFromDemoCatalog(
     creation_batch_id: null,
     open_positions: 1,
     filled_positions: 0,
+    availability_known: true,
+    availability_error: null,
     location_name: s.location_name,
     ward_name: null,
     organization_name: s.organization_name,
@@ -104,6 +106,15 @@ export function workerShiftDetailsFromDemoCatalog(
     acceptance_deadline: null,
     required_positions: 1,
     open_positions: 1,
+    availability_known: true,
+    availability_error: null,
+    location_address_line1: null,
+    location_address_line2: null,
+    location_city: null,
+    location_postal_code: null,
+    location_country_code: null,
+    location_latitude: null,
+    location_longitude: null,
   };
 }
 

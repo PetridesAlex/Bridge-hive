@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowRight, Check, ImagePlus, Loader2, Upload } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -21,6 +22,17 @@ import {
 } from '@/lib/location-image';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@bridge-hive/supabase-types';
+
+const LocationMapPinPicker = dynamic(
+  () =>
+    import('./location-map-pin-picker').then((m) => m.LocationMapPinPicker),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[280px] animate-pulse rounded-2xl border border-bh-border/70 bg-[#f7fafc]/70" />
+    ),
+  },
+);
 
 type Location = Tables<'locations'> & { image_path?: string | null };
 
@@ -335,6 +347,11 @@ export function LocationForm({
           />
         </div>
       </div>
+
+      <LocationMapPinPicker
+        initialLatitude={location?.latitude}
+        initialLongitude={location?.longitude}
+      />
 
       {state.error ? (
         <p className="text-sm text-bh-danger" role="alert">

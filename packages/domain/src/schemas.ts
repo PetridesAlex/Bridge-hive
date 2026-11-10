@@ -86,19 +86,35 @@ export const financialSnapshotSchema = z.object({
   currency: currencyCodeSchema,
 });
 
-export const createLocationSchema = z.object({
-  organizationId: z.string().uuid(),
-  name: z.string().min(1).max(200),
-  addressLine1: z.string().max(200).optional(),
-  addressLine2: z.string().max(200).optional(),
-  city: z.string().max(120).optional(),
-  postalCode: z.string().max(32).optional(),
-  countryCode: z.string().length(2).default('CY'),
-  timezone: z.string().min(1).default('Europe/Nicosia'),
-  contactName: z.string().max(120).optional(),
-  contactPhone: z.string().max(40).optional(),
-  contactEmail: z.string().email().optional(),
-});
+export const createLocationSchema = z
+  .object({
+    organizationId: z.string().uuid(),
+    name: z.string().min(1).max(200),
+    addressLine1: z.string().max(200).optional(),
+    addressLine2: z.string().max(200).optional(),
+    city: z.string().max(120).optional(),
+    postalCode: z.string().max(32).optional(),
+    countryCode: z.string().length(2).default('CY'),
+    timezone: z.string().min(1).default('Europe/Nicosia'),
+    contactName: z.string().max(120).optional(),
+    contactPhone: z.string().max(40).optional(),
+    contactEmail: z.string().email().optional(),
+    /** Optional WGS84 workplace pin — must be paired with longitude. */
+    latitude: z.number().min(-90).max(90).optional(),
+    /** Optional WGS84 workplace pin — must be paired with latitude. */
+    longitude: z.number().min(-180).max(180).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const hasLat = value.latitude !== undefined;
+    const hasLng = value.longitude !== undefined;
+    if (hasLat !== hasLng) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Latitude and longitude must both be set, or both cleared.',
+        path: hasLat ? ['longitude'] : ['latitude'],
+      });
+    }
+  });
 
 export const createWardSchema = z.object({
   locationId: z.string().uuid(),

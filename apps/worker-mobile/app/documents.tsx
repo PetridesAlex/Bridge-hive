@@ -23,6 +23,7 @@ import {
   View,
 } from 'react-native';
 
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
@@ -166,6 +167,7 @@ function accountStatusIcon(
 export default function DocumentsScreen() {
   const { user, workerProfile, isVerified, isAppReviewDemo } = useAuth();
   const { t, language } = useTranslation();
+  const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { credentials, loading, error, refresh } = useCredentials(user?.id);
   const {
     account: payoutAccount,
@@ -268,12 +270,16 @@ export default function DocumentsScreen() {
     await Promise.all([refresh(), refreshPayout()]);
   }, [refresh, refreshPayout]);
 
-  const goAccountSetup = () => {
-    if (isVerified) {
-      router.replace('/(tabs)');
+  const goBack = () => {
+    if (!isVerified) {
+      router.replace('/auth/worker/pending');
       return;
     }
-    router.replace('/auth/worker/pending');
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace('/(tabs)/profile');
   };
 
   const handlePick = useCallback(
@@ -430,7 +436,7 @@ export default function DocumentsScreen() {
   if (!workerProfile?.worker_role) {
     return (
       <AppScreen scroll={false} edges={['top']}>
-        <ScreenHeader title={t('documents.title')} showBack onBack={goAccountSetup} />
+        <ScreenHeader title={t('documents.title')} showBack onBack={goBack} />
         <EmptyState
           title={t('documents.chooseRoleFirst')}
           description={t('documents.chooseRoleFirstBody')}
@@ -444,7 +450,7 @@ export default function DocumentsScreen() {
       <ScreenHeader
         title={t('documents.title')}
         showBack
-        onBack={goAccountSetup}
+        onBack={goBack}
         subtitle={t('documents.subtitle')}
         right={
           <IconButton
@@ -479,7 +485,7 @@ export default function DocumentsScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         >
         <ScrollView
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           refreshControl={

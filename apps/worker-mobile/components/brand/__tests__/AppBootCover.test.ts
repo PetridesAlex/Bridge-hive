@@ -8,28 +8,26 @@ function read(rel: string) {
 }
 
 describe('AppBootCover contracts', () => {
-  it('uses navy boot background, splash-matched mark size, and 5s workspace minimum', () => {
+  it('uses navy atmosphere, boot mark, and orbital brand motion', () => {
     const src = read('components/brand/AppBootCover.tsx');
     const mark = read('components/brand/BridgeHiveMark.tsx');
-    const prep = read('lib/workspace-preparation.ts');
     expect(src).toMatch(/APP_BOOT_BG\s*=\s*'#071A2F'/);
-    expect(src).toMatch(/APP_BOOT_MARK_SIZE\s*=\s*220/);
-    expect(src).toMatch(/APP_BOOT_BREATH_MS\s*=\s*3600/);
+    expect(src).toMatch(/APP_BOOT_MARK_SIZE\s*=\s*168/);
+    expect(src).toMatch(/APP_BOOT_BREATH_MS\s*=\s*3200/);
+    expect(src).toMatch(/APP_BOOT_ORBIT_MS/);
     expect(src).toMatch(/BootAtmosphere/);
     expect(src).toMatch(/variant="boot"/);
+    expect(src).toMatch(/common\.bridgeHive/);
+    expect(src).not.toMatch(/t\('boot\.preparing'\)/);
+    expect(src).not.toMatch(/t\('boot\.preparingSub'\)/);
     expect(mark).toMatch(/splash-icon\.png/);
     expect(mark).toMatch(/variant\?\s*:\s*'app'\s*\|\s*'boot'/);
-    expect(prep).toMatch(/WORKSPACE_PREPARATION_MINIMUM_MS\s*=\s*5000/);
-    expect(src).toMatch(/t\('boot\.preparing'\)/);
-    expect(src).toMatch(/t\('boot\.preparingSub'\)/);
-    expect(src).toMatch(/useTranslation/);
     expect(src).not.toMatch(/APP_BOOT_BG\s*=\s*'#FFFFFF'/);
-    expect(src).not.toMatch(/75%/);
     expect(src).toMatch(/reducedMotion/);
-    expect(src).toMatch(/PreparationProgress/);
+    expect(src).toMatch(/LaunchProgress/);
   });
 
-  it('keeps native splash navy-only (no square logo) and hides after JS cover is ready', () => {
+  it('keeps native splash navy-only and uses flat navy while fonts load', () => {
     const appJson = read('app.json');
     const layout = read('app/_layout.tsx');
     expect(appJson).toMatch(/"icon":\s*"\.\/assets\/images\/icon\.png"/);
@@ -41,23 +39,29 @@ describe('AppBootCover contracts', () => {
     expect(appJson).toMatch(/expo-localization/);
     expect(appJson).toMatch(/"supportsRTL":\s*false/);
     expect(appJson).not.toMatch(/"backgroundColor":\s*"#FFFFFF"/);
-    expect(layout).toMatch(/AppBootCover/);
+    expect(layout).not.toMatch(/<AppBootCover/);
     expect(layout).toMatch(/SplashScreen\.hideAsync/);
     expect(layout).toMatch(/APP_BOOT_BG/);
     expect(layout).toMatch(/LocaleProvider/);
   });
 
-  it('routes first launch through Welcome then login after dismiss', () => {
+  it('routes first launch through Welcome then login; sign-in goes straight to home', () => {
     const index = read('app/index.tsx');
+    const login = read('app/auth/worker/login.tsx');
     const welcome = read('app/welcome.tsx');
     expect(index).toMatch(/hasCompletedOnboarding/);
     expect(index).toMatch(/\/welcome/);
     expect(index).toMatch(/\/auth\/worker\/login/);
     expect(index).toMatch(/homeRoute/);
-    expect(index).toMatch(/workspacePreparationMinMs/);
-    expect(index).toMatch(/markWorkspacePreparationConsumed/);
+    expect(index).not.toMatch(/<AppBootCover/);
+    expect(index).not.toMatch(/workspacePreparationMinMs/);
+    expect(index).not.toMatch(/useLaunchGate/);
+    expect(index).not.toMatch(/SessionSecuringCover|session-handoff/);
     expect(index).toMatch(/bootstrapError/);
     expect(index).toMatch(/retryBootstrap/);
+    expect(login).not.toMatch(/SessionSecuringCover|beginSessionHandoff/);
+    expect(login).toMatch(/signIn/);
+    expect(read('app/_layout.tsx')).not.toMatch(/SessionHandoffOverlay/);
     expect(welcome).toMatch(/markOnboardingSeen/);
     expect(welcome).toMatch(/welcome\.getStarted|t\('welcome\.getStarted'\)/);
     expect(welcome).toMatch(/welcome\.alreadyHaveAccount|t\('welcome\.alreadyHaveAccount'\)/);

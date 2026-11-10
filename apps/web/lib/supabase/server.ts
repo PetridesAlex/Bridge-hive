@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import type { Database } from '@bridge-hive/supabase-types';
 import { cookies } from 'next/headers';
+import { cache } from 'react';
 
 import { getSupabaseEnv } from './env';
 import {
@@ -9,7 +10,9 @@ import {
   withOrgRememberMeCookieOptions,
 } from './org-remember-me';
 
-export async function createClient(options?: { rememberMe?: boolean }) {
+export const createClient = cache(async function createClient(options?: {
+  rememberMe?: boolean;
+}) {
   const cookieStore = await cookies();
   const { url, anonKey } = getSupabaseEnv();
   const remember =
@@ -36,4 +39,4 @@ export async function createClient(options?: { rememberMe?: boolean }) {
       },
     },
   });
-}
+});

@@ -11,6 +11,7 @@ export const SHIFT_PUBLISHED_PUSH_TYPE = 'shift_published' as const;
 export const SHIFT_PUBLISHED_BATCH_PUSH_TYPE = 'shift_published_batch' as const;
 export const SHIFT_CANCELLED_PUSH_TYPE = 'shift_cancelled' as const;
 export const ASSIGNMENT_CANCELLED_PUSH_TYPE = 'assignment_cancelled' as const;
+export const ORG_WORKER_MESSAGE_PUSH_TYPE = 'org_worker_message' as const;
 
 export type PushLocale = 'en' | 'el';
 
@@ -48,11 +49,18 @@ export type AssignmentCancelledPushData = {
   url: string;
 };
 
+export type OrgWorkerMessagePushData = {
+  type: typeof ORG_WORKER_MESSAGE_PUSH_TYPE;
+  conversationId: string;
+  url: string;
+};
+
 export type WorkerPushData =
   | ShiftPublishedPushData
   | ShiftPublishedBatchPushData
   | ShiftCancelledPushData
-  | AssignmentCancelledPushData;
+  | AssignmentCancelledPushData
+  | OrgWorkerMessagePushData;
 
 export type ShiftPublishedMessageInput = {
   shiftId: string;
@@ -109,6 +117,16 @@ export function batchShiftsNotificationPath(): string {
   return BATCH_SHIFTS_PATH;
 }
 
+export function messageNotificationUrl(conversationId: string): string | null {
+  if (!isShiftUuid(conversationId)) return null;
+  return `bridgehive://messages/${conversationId.toLowerCase()}`;
+}
+
+export function messageNotificationPath(conversationId: string): string | null {
+  if (!isShiftUuid(conversationId)) return null;
+  return `/messages/${conversationId.toLowerCase()}`;
+}
+
 /**
  * Accept only internal BridgeHive routes. Query strings only for the batch list
  * filter. Other schemes and arbitrary URLs are rejected.
@@ -148,6 +166,25 @@ export function shiftRouteFromPushData(data: unknown): string | null {
   return path;
 }
 
+/** Secure deep link for org→worker chat push taps. */
+export function messageRouteFromPushData(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null;
+  const record = data as Record<string, unknown>;
+  if (record.type !== ORG_WORKER_MESSAGE_PUSH_TYPE) return null;
+  const conversationId = record.conversationId;
+  const url = record.url;
+  if (typeof conversationId !== 'string' || typeof url !== 'string') return null;
+  const expectedUrl = messageNotificationUrl(conversationId);
+  const path = messageNotificationPath(conversationId);
+  if (!expectedUrl || !path || url !== expectedUrl) return null;
+  return path;
+}
+
+/** Shift or message deep link from a notification payload. */
+export function appRouteFromPushData(data: unknown): string | null {
+  return messageRouteFromPushData(data) ?? shiftRouteFromPushData(data);
+}
+
 export function shiftPublishedPushData(shiftId: string): ShiftPublishedPushData | null {
   const url = shiftNotificationUrl(shiftId);
   if (!url) return null;
@@ -168,6 +205,16 @@ export function shiftPublishedBatchPushData(batchId: string): ShiftPublishedBatc
 }
 
 export function assertSafeShiftPushData(data: Record<string, unknown>): WorkerPushData {
+  if (data.type === ORG_WORKER_MESSAGE_PUSH_TYPE) {
+    const route = messageRouteFromPushData(data);
+    if (!route) throw new Error('PUSH_DATA_ROUTE');
+    return {
+      type: ORG_WORKER_MESSAGE_PUSH_TYPE,
+      conversationId: String(data.conversationId).toLowerCase(),
+      url: String(data.url),
+    };
+  }
+
   const route = shiftRouteFromPushData(data);
   if (!route) throw new Error('PUSH_DATA_ROUTE');
 
@@ -205,6 +252,40 @@ export function assertSafeShiftPushData(data: Record<string, unknown>): WorkerPu
     type: SHIFT_PUBLISHED_PUSH_TYPE,
     shiftId: String(data.shiftId).toLowerCase(),
     url: String(data.url),
+  };
+}
+
+export type OrgWorkerMessagePushInput = {
+  conversationId: string;
+  organizationName?: string | null;
+  locale?: PushLocale | null;
+};
+
+/**
+ * Generic lock-screen copy for org→worker chat.
+ * Title only identifies the organization; body never includes message text.
+ */
+export function buildOrgWorkerMessageNotification(
+  input: OrgWorkerMessagePushInput,
+): { title: string; body: string; data: OrgWorkerMessagePushData } | null {
+  const locale = normalizePushLocale(input.locale);
+  const url = messageNotificationUrl(input.conversationId);
+  if (!url) return null;
+  const org =
+    (input.organizationName ?? '').trim() ||
+    (locale === 'el' ? 'Οργανισμός' : 'Organization');
+  return {
+    title:
+      locale === 'el' ? `Νέο μήνυμα από ${org}` : `New message from ${org}`,
+    body:
+      locale === 'el'
+        ? 'Ανοίξτε το BridgeHive για να το διαβάσετε.'
+        : 'Open BridgeHive to read it.',
+    data: {
+      type: ORG_WORKER_MESSAGE_PUSH_TYPE,
+      conversationId: input.conversationId.toLowerCase(),
+      url,
+    },
   };
 }
 

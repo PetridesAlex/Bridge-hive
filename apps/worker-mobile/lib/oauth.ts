@@ -190,7 +190,9 @@ export async function createSessionFromUrl(url: string): Promise<{ error?: strin
   }
 }
 
-export async function signInWithGoogleOAuth(): Promise<{ error?: string; cancelled?: boolean }> {
+export async function signInWithGoogleOAuth(
+  onAccountChosen?: () => void,
+): Promise<{ error?: string; cancelled?: boolean }> {
   if (oauthInFlight) {
     return { error: 'Google sign-in is already in progress.' };
   }
@@ -233,6 +235,7 @@ export async function signInWithGoogleOAuth(): Promise<{ error?: string; cancell
       return { error: workerGoogleOAuthErrorMessage('default') };
     }
 
+    onAccountChosen?.();
     return createSessionFromUrl(result.url);
   } catch (e) {
     const message = e instanceof Error ? e.message : '';

@@ -6,18 +6,25 @@ import {
   WORKER_ROLE_LABELS,
   credentialTypeLabel,
   type CredentialType,
+  type WorkerRole,
 } from '@bridge-hive/domain';
 import type { Tables } from '@bridge-hive/supabase-types';
 import {
+  Activity,
+  Building2,
   CalendarClock,
   Check,
   ClipboardList,
   FileBadge2,
   FileText,
+  HeartPulse,
   IdCard,
   MapPin,
+  Minus,
+  Plus,
   ShieldCheck,
   Stethoscope,
+  Users,
   Wallet,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -106,7 +113,7 @@ const CREDENTIAL_BLURBS: Partial<Record<CredentialType, string>> = {
   cv: 'Curriculum vitae',
 };
 
-type Location = Tables<'locations'>;
+type Location = Pick<Tables<'locations'>, 'id' | 'name'>;
 type Shift = Tables<'shifts'>;
 type Requirement = Tables<'shift_requirements'>;
 
@@ -116,21 +123,128 @@ const KNOWN_CREDENTIAL_SET = new Set<string>(CREDENTIAL_TYPES);
 const fieldClass =
   'h-11 rounded-xl border-bh-border bg-bh-surface text-bh-text shadow-none focus-visible:border-bh-teal focus-visible:ring-bh-teal/25';
 
+const fieldClassFeatured =
+  'h-11 rounded-xl border-[#16384f]/15 bg-white/90 text-bh-text shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus-visible:border-bh-teal focus-visible:ring-bh-teal/25';
+
+const ROLE_META: Record<
+  WorkerRole,
+  { icon: typeof Stethoscope; blurb: string }
+> = {
+  registered_nurse: {
+    icon: Stethoscope,
+    blurb: 'Licensed nursing coverage',
+  },
+  ward_assistant: {
+    icon: HeartPulse,
+    blurb: 'Ward support and patient care',
+  },
+  physiotherapist: {
+    icon: Activity,
+    blurb: 'Therapy and rehabilitation',
+  },
+};
+
+function clampPositions(raw: string, delta: number): string {
+  const parsed = Number.parseInt(raw, 10);
+  const base = Number.isFinite(parsed) ? parsed : 1;
+  return String(Math.min(100, Math.max(1, base + delta)));
+}
+
+function PlacementChip({
+  ready,
+  label,
+  value,
+}: {
+  ready: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex min-w-0 max-w-full items-center gap-2 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1',
+        ready
+          ? 'bg-white/12 text-white ring-white/15'
+          : 'bg-white/6 text-white/65 ring-white/10',
+      )}
+    >
+      <span
+        className={cn(
+          'h-1.5 w-1.5 shrink-0 rounded-full',
+          ready
+            ? 'bg-[#e4b334] shadow-[0_0_8px_rgba(228,179,52,0.85)]'
+            : 'bg-white/35',
+        )}
+        aria-hidden
+      />
+      <span className="uppercase tracking-[0.12em] text-white/50">{label}</span>
+      <span className="truncate">{value}</span>
+    </span>
+  );
+}
+
 function Section({
   step,
   title,
   description,
   icon: Icon,
+  featured = false,
+  meta,
   children,
 }: {
   step: number;
   title: string;
   description: string;
   icon: typeof MapPin;
+  featured?: boolean;
+  meta?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  if (featured) {
+    return (
+      <section className="bh-org-enter relative overflow-hidden rounded-2xl border border-[#16384f]/25 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]">
+        <header className="relative overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-4 text-white sm:px-6">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/35 blur-2xl"
+          />
+          <span
+            aria-hidden
+            className="bh-orb-drift pointer-events-none absolute -bottom-12 right-10 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
+          />
+          <span
+            aria-hidden
+            className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+          />
+          <div className="relative flex items-start gap-3.5">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+              <Icon className="h-5 w-5" strokeWidth={2.4} aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+                Step {String(step).padStart(2, '0')}
+                <span className="mx-2 text-white/35" aria-hidden>
+                  ·
+                </span>
+                <span className="text-white/70">Placement</span>
+              </p>
+              <h2 className="mt-1 text-[22px] font-bold leading-none tracking-[-0.03em] text-white">
+                {title}
+              </h2>
+              <p className="mt-1.5 text-sm text-white/75">{description}</p>
+            </div>
+          </div>
+          {meta}
+        </header>
+        <div className="bg-[linear-gradient(180deg,rgba(22,166,182,0.1)_0%,rgba(232,242,250,0.55)_38%,#ffffff_100%)] p-5 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2">{children}</div>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="rounded-2xl border border-bh-border bg-bh-surface p-5 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:p-6">
+    <section className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface p-5 shadow-[0_8px_24px_rgba(7,29,48,0.06)] sm:p-6">
       <div className="mb-5 flex items-start gap-3 border-b border-bh-border/70 pb-4">
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-teal-soft text-bh-teal-strong">
           <Icon className="h-5 w-5" aria-hidden />
@@ -217,6 +331,14 @@ export function ShiftForm({
 
   const locationName =
     locations.find((l) => l.id === locationId)?.name ?? 'Select location';
+  const wardName = wards.find((ward) => ward.id === wardId)?.name;
+  const locationReady = Boolean(locationId);
+  const roleReady = Boolean(requiredRole);
+  const positionsCount = Number.parseInt(requiredPositions, 10);
+  const positionsReady = Number.isFinite(positionsCount) && positionsCount >= 1;
+  const placementReadyCount = [locationReady, roleReady, positionsReady].filter(
+    Boolean,
+  ).length;
 
   useEffect(() => {
     if (state.success) toast.success('Shift saved as draft');
@@ -237,47 +359,128 @@ export function ShiftForm({
           title="Where and who"
           description="Choose the site and the worker role needed for this opening."
           icon={MapPin}
+          featured
+          meta={
+            <div className="relative mt-4 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <PlacementChip
+                  ready={locationReady}
+                  label="Site"
+                  value={locationReady ? locationName : 'Needed'}
+                />
+                <PlacementChip
+                  ready={Boolean(wardName)}
+                  label="Ward"
+                  value={wardName ?? 'Optional'}
+                />
+                <PlacementChip
+                  ready={roleReady}
+                  label="Role"
+                  value={roleReady ? roleLabel(requiredRole) : 'Needed'}
+                />
+                <PlacementChip
+                  ready={positionsReady}
+                  label="Positions"
+                  value={positionsReady ? String(positionsCount) : 'Needed'}
+                />
+                <span
+                  className="ml-auto text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60"
+                  aria-live="polite"
+                >
+                  {placementReadyCount}/3 ready
+                </span>
+              </div>
+              <div
+                className="h-1 overflow-hidden rounded-full bg-white/10"
+                role="progressbar"
+                aria-label="Placement completeness"
+                aria-valuemin={0}
+                aria-valuemax={3}
+                aria-valuenow={placementReadyCount}
+              >
+                <div
+                  className="h-full rounded-full bg-[#e4b334] shadow-[0_0_10px_rgba(228,179,52,0.55)] transition-[width] duration-300 ease-out motion-reduce:transition-none"
+                  style={{ width: `${(placementReadyCount / 3) * 100}%` }}
+                />
+              </div>
+            </div>
+          }
         >
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              id="title"
-              name="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Night RN — ICU"
-              className={fieldClass}
-            />
-            <p className="text-xs text-bh-text-muted">
-              Optional. Workers see this on the shift card.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="requiredPositions">Positions</Label>
-            <Input
-              id="requiredPositions"
-              name="requiredPositions"
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={100}
-              step={1}
-              title="Number of professionals needed for this shift"
-              aria-label="Number of professionals needed for this shift"
-              value={requiredPositions}
-              onChange={(e) => setRequiredPositions(e.target.value)}
-              required
-              className={fieldClass}
-            />
-            <p className="text-xs text-bh-text-muted">
-              How many eligible professionals can accept this shift (1–100).
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+          <div className="grid gap-4 rounded-2xl border border-white/80 bg-white/70 p-4 shadow-[0_8px_24px_rgba(7,29,48,0.05)] backdrop-blur-sm sm:col-span-2 sm:grid-cols-[minmax(0,1fr)_13.5rem]">
             <div className="space-y-1.5">
-              <Label htmlFor="locationId">
+              <Label htmlFor="title" className="text-bh-text">
+                Title
+              </Label>
+              <Input
+                id="title"
+                name="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Night RN — ICU"
+                className={fieldClassFeatured}
+              />
+              <p className="text-xs text-bh-text-muted">
+                Optional. Workers see this on the shift card.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="requiredPositions" className="text-bh-text">
+                Positions
+              </Label>
+              <div className="relative">
+                <Users
+                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bh-teal-strong"
+                  aria-hidden
+                />
+                <Input
+                  id="requiredPositions"
+                  name="requiredPositions"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={100}
+                  step={1}
+                  title="Number of professionals needed for this shift"
+                  aria-label="Number of professionals needed for this shift"
+                  value={requiredPositions}
+                  onChange={(e) => setRequiredPositions(e.target.value)}
+                  required
+                  className={cn(fieldClassFeatured, 'pl-10 pr-[4.75rem]')}
+                />
+                <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 overflow-hidden rounded-lg bg-[#071d30] shadow-[0_6px_14px_rgba(7,29,48,0.2)]">
+                  <button
+                    type="button"
+                    aria-label="Decrease positions"
+                    onClick={() =>
+                      setRequiredPositions((current) => clampPositions(current, -1))
+                    }
+                    className="grid h-8 w-8 place-items-center text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    <Minus className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Increase positions"
+                    onClick={() =>
+                      setRequiredPositions((current) => clampPositions(current, 1))
+                    }
+                    className="grid h-8 w-8 place-items-center border-l border-white/15 text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                  >
+                    <Plus className="h-3.5 w-3.5" aria-hidden />
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-bh-text-muted">
+                How many eligible professionals can accept this shift (1–100).
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 rounded-2xl border border-white/80 bg-white/70 p-4 shadow-[0_8px_24px_rgba(7,29,48,0.05)] backdrop-blur-sm sm:col-span-2 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="locationId" className="inline-flex items-center gap-1.5 text-bh-text">
+                <Building2 className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
                 Location <span className="text-bh-danger">*</span>
               </Label>
               <Select
@@ -294,7 +497,7 @@ export function ShiftForm({
                   );
                   if (!stillValid) setWardId('');
                 }}
-                className={fieldClass}
+                className={fieldClassFeatured}
               >
                 <option value="" disabled>
                   Select location
@@ -308,7 +511,9 @@ export function ShiftForm({
             </div>
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <Label htmlFor="wardId">Ward / Unit</Label>
+                <Label htmlFor="wardId" className="text-bh-text">
+                  Ward / Unit
+                </Label>
                 <WardLibraryDialog
                   slug={slug}
                   locations={locations.map((loc) => ({
@@ -348,14 +553,26 @@ export function ShiftForm({
             </div>
           </div>
 
-          <div className="space-y-2 sm:col-span-2">
-            <Label>
-              Required worker role <span className="text-bh-danger">*</span>
-            </Label>
+          <div className="space-y-3 rounded-2xl border border-white/80 bg-white/70 p-4 shadow-[0_8px_24px_rgba(7,29,48,0.05)] backdrop-blur-sm sm:col-span-2">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <Label className="text-bh-text">
+                Required worker role <span className="text-bh-danger">*</span>
+              </Label>
+              {roleReady ? (
+                <span className="rounded-full bg-[#071d30] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#f3d27a]">
+                  {roleLabel(requiredRole)}
+                </span>
+              ) : (
+                <span className="text-[11px] font-medium text-bh-text-muted">
+                  Select a role to continue
+                </span>
+              )}
+            </div>
             <input type="hidden" name="requiredRole" value={requiredRole} />
-            <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Required worker role">
+            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup" aria-label="Required worker role">
               {WORKER_ROLES.map((role) => {
                 const selected = requiredRole === role;
+                const RoleIcon = ROLE_META[role].icon;
                 return (
                   <button
                     key={role}
@@ -364,40 +581,47 @@ export function ShiftForm({
                     aria-checked={selected}
                     onClick={() => setRequiredRole(role)}
                     className={cn(
-                      'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
+                      'group flex items-center gap-3 rounded-xl border px-4 py-3.5 text-left transition-[background-color,box-shadow,transform,border-color] duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
                       selected
-                        ? 'border-bh-teal bg-bh-teal-soft/70 ring-1 ring-bh-teal/30'
-                        : 'border-bh-border bg-bh-surface hover:border-bh-border-strong hover:bg-bh-subtle/60',
+                        ? 'border-white/15 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] text-white shadow-[0_12px_24px_rgba(7,29,48,0.22)]'
+                        : 'border-[#16384f]/10 bg-white/85 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-white hover:shadow-[0_10px_22px_rgba(7,29,48,0.08)]',
                     )}
                   >
                     <span
                       className={cn(
-                        'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
                         selected
-                          ? 'bg-bh-teal text-white'
-                          : 'bg-bh-subtle text-bh-text-secondary',
+                          ? 'bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]'
+                          : 'bg-bh-teal-soft text-bh-teal-strong',
                       )}
                     >
-                      <Stethoscope className="h-4 w-4" aria-hidden />
+                      <RoleIcon className="h-4 w-4" strokeWidth={2.3} aria-hidden />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-semibold text-bh-text">
+                      <span
+                        className={cn(
+                          'block text-sm font-semibold',
+                          selected ? 'text-white' : 'text-bh-text',
+                        )}
+                      >
                         {WORKER_ROLE_LABELS[role]}
                       </span>
-                      <span className="block text-xs text-bh-text-muted">
-                        Platform credentials still apply
+                      <span
+                        className={cn(
+                          'block text-xs',
+                          selected ? 'text-white/70' : 'text-bh-text-muted',
+                        )}
+                      >
+                        {ROLE_META[role].blurb}
                       </span>
                     </span>
                     {selected ? (
-                      <Check className="ml-auto h-4 w-4 shrink-0 text-bh-teal-strong" aria-hidden />
+                      <Check className="ml-auto h-4 w-4 shrink-0 text-[#e4b334]" aria-hidden />
                     ) : null}
                   </button>
                 );
               })}
             </div>
-            {!requiredRole ? (
-              <p className="text-xs text-bh-text-muted">Select a role to continue.</p>
-            ) : null}
           </div>
         </Section>
 

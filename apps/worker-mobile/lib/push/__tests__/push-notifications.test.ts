@@ -58,7 +58,7 @@ describe('shift notification permission policy', () => {
   });
 
   it('does not throw when device settings cannot be opened', () => {
-    const preferences = source('app/profile/notification-preferences.tsx');
+    const preferences = source('app/(tabs)/profile/notification-preferences.tsx');
     const client = source('lib/push/client.ts');
     const opener = client.slice(client.indexOf('export async function openDeviceNotificationSettings'));
     expect(preferences).not.toContain('Linking.openSettings');
@@ -172,7 +172,7 @@ describe('notification navigation', () => {
 
   it('uses the friendly unavailable title when the shift cannot be opened', () => {
     expect(SHIFT_UNAVAILABLE_TITLE).toBe('This shift is no longer available.');
-    const screen = source('app/shifts/[id].tsx');
+    const screen = source('app/(tabs)/shifts/[id].tsx');
     expect(screen).toContain('SHIFT_UNAVAILABLE_TITLE');
   });
 });

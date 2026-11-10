@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { shiftRouteFromPushData } from '@bridge-hive/domain';
 
+import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { BillingRestrictionAlert } from '@/components/notifications/BillingRestrictionAlert';
 import { ShiftNotificationCard } from '@/components/notifications/ShiftNotificationCard';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -67,6 +68,7 @@ type BillingAlert = {
 export default function NotificationsScreen() {
   const { user, isVerified, isAppReviewDemo } = useAuth();
   const { t } = useTranslation();
+  const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { allInvoices, refresh: refreshInvoices } = useInvoices(user?.id);
   const {
     summary: restrictionSummary,
@@ -191,7 +193,7 @@ export default function NotificationsScreen() {
             if (row.type === 'billing') return row.alert.id;
             return row.item.id + String(index);
           }}
-          contentContainerStyle={styles.list}
+          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
           ListEmptyComponent={
             <EmptyState

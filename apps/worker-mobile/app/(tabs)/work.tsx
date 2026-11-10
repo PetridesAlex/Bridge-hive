@@ -6,15 +6,13 @@ import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { SkeletonCard } from '@/components/ui/Skeleton';
-import { PremiumActionButton } from '@/components/ui/PremiumActionButton';
-import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { AssignmentCard } from '@/components/work/AssignmentCard';
+import { WorkEmptyState } from '@/components/work/WorkEmptyState';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import {
   WORK_SEGMENTS,
@@ -83,38 +81,6 @@ export default function WorkScreen() {
       : segment === 'to_submit'
         ? t('work.toSubmitDesc')
         : t('work.completedDesc');
-
-  const active = useMemo(() => {
-    const needingSubmit = assignments.find(
-      (a) =>
-        canSubmitCompletedHours(a.status) &&
-        a.shifts?.ends_at &&
-        shiftHasEnded(a.shifts.ends_at, now),
-    );
-    if (needingSubmit) return needingSubmit;
-    return assignments.find((a) => canSubmitCompletedHours(a.status)) ?? null;
-  }, [assignments, now]);
-
-  const sticky = useMemo(() => {
-    if (!active) return null;
-    const ended =
-      active.shifts?.ends_at != null && shiftHasEnded(active.shifts.ends_at, now);
-    if (canSubmitCompletedHours(active.status) && ended) {
-      return {
-        label: t('work.submitHours'),
-        icon: 'checkmark-circle-outline' as const,
-        onPress: () => router.push(`/shifts/${active.shift_id}`),
-      };
-    }
-    if (canSubmitCompletedHours(active.status)) {
-      return {
-        label: t('work.openMyShift'),
-        icon: 'arrow-forward' as const,
-        onPress: () => router.push(`/shifts/${active.shift_id}`),
-      };
-    }
-    return null;
-  }, [active, now, t]);
 
   return (
     <AppScreen scroll={false} edges={['top']}>
@@ -201,7 +167,9 @@ export default function WorkScreen() {
           contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} />}
           ListEmptyComponent={
-            <EmptyState
+            <WorkEmptyState
+              key={segment}
+              theme={theme}
               title={
                 segment === 'upcoming'
                   ? t('work.emptyUpcoming')
@@ -210,9 +178,27 @@ export default function WorkScreen() {
                     : t('work.emptyCompleted')
               }
               description={segmentDescription}
-              actionLabel={segment === 'upcoming' ? t('shifts.browse') : undefined}
-              onAction={
-                segment === 'upcoming' ? () => router.push('/(tabs)/shifts') : undefined
+              actionLabel={
+                segment === 'upcoming'
+                  ? t('shifts.browse')
+                  : segment === 'to_submit'
+                    ? t('work.upcoming')
+                    : t('shifts.browse')
+              }
+              onAction={() => {
+                if (segment === 'to_submit') {
+                  setSegment('upcoming');
+                  return;
+                }
+                router.push('/(tabs)/shifts');
+              }}
+              secondaryLabel={
+                segment === 'to_submit' ? t('shifts.browse') : undefined
+              }
+              onSecondary={
+                segment === 'to_submit'
+                  ? () => router.push('/(tabs)/shifts')
+                  : undefined
               }
             />
           }
@@ -229,16 +215,6 @@ export default function WorkScreen() {
           )}
         />
       )}
-
-      {sticky ? (
-        <StickyActionBar>
-          <PremiumActionButton
-            label={sticky.label}
-            onPress={sticky.onPress}
-            icon={sticky.icon}
-          />
-        </StickyActionBar>
-      ) : null}
     </AppScreen>
   );
 }

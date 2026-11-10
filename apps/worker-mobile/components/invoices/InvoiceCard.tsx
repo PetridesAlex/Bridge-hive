@@ -3,12 +3,13 @@ import {
   workerInvoiceStatusLabel,
   type WorkerInvoiceStatus,
 } from '@bridge-hive/domain';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { MoneyAmount } from '@/components/ui/MoneyAmount';
-import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import type { WorkerInvoiceListItem } from '@/lib/invoices';
 import { formatShortDate } from '@/utils/format';
 
@@ -17,19 +18,50 @@ type Props = {
   onPress: () => void;
 };
 
-function toneForStatus(status: WorkerInvoiceStatus): StatusTone {
-  if (status === 'past_due') return 'danger';
-  if (status === 'paid') return 'success';
-  if (status === 'payment_processing') return 'warning';
-  if (status === 'void' || status === 'uncollectible') return 'neutral';
-  return 'info';
-}
-
-function iconForStatus(status: WorkerInvoiceStatus) {
-  if (status === 'past_due') return 'alert-circle' as const;
-  if (status === 'paid') return 'checkmark-circle' as const;
-  if (status === 'payment_processing') return 'time' as const;
-  return 'document-text' as const;
+function toneForStatus(status: WorkerInvoiceStatus): {
+  fg: string;
+  bg: string;
+  mark: [string, string];
+  icon: keyof typeof Ionicons.glyphMap;
+} {
+  if (status === 'past_due') {
+    return {
+      fg: colors.error,
+      bg: colors.errorLight,
+      mark: ['#8F1A12', colors.error],
+      icon: 'alert-circle',
+    };
+  }
+  if (status === 'paid') {
+    return {
+      fg: colors.success,
+      bg: '#D5F0DF',
+      mark: ['#146C43', colors.success],
+      icon: 'checkmark-circle',
+    };
+  }
+  if (status === 'payment_processing') {
+    return {
+      fg: colors.honeyStrong,
+      bg: colors.yellowLight,
+      mark: [colors.navy, colors.honeyStrong],
+      icon: 'time',
+    };
+  }
+  if (status === 'void' || status === 'uncollectible') {
+    return {
+      fg: colors.textSecondary,
+      bg: colors.surfaceSubdued,
+      mark: [colors.navy, '#5B7391'],
+      icon: 'close-circle',
+    };
+  }
+  return {
+    fg: colors.tealStrong,
+    bg: colors.tealSoft,
+    mark: [colors.navy, colors.tealStrong],
+    icon: 'document-text',
+  };
 }
 
 export function InvoiceCard({ invoice, onPress }: Props) {
@@ -41,39 +73,85 @@ export function InvoiceCard({ invoice, onPress }: Props) {
   const title = shift?.title?.trim() || 'Shift';
   const status = invoice.status as WorkerInvoiceStatus;
   const pastDue = status === 'past_due';
+  const tone = toneForStatus(status);
 
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.card, pastDue && styles.cardPastDue]}
+      style={({ pressed }) => [
+        styles.card,
+        pastDue && styles.cardPastDue,
+        pressed && styles.cardPressed,
+      ]}
       accessibilityRole="button"
       accessibilityLabel={`${title}, ${workerInvoiceStatusLabel(status)}`}
     >
-      <View style={styles.row}>
-        <Text style={styles.title} numberOfLines={2}>
-          {title}
-        </Text>
-        <MoneyAmount
-          amountMinor={invoice.commission_amount_minor}
-          currency={invoice.currency}
-          emphasize
-        />
+      <LinearGradient
+        pointerEvents="none"
+        colors={
+          pastDue
+            ? ['rgba(180, 35, 24, 0.06)', 'transparent']
+            : ['rgba(20, 169, 181, 0.07)', 'rgba(11, 42, 67, 0.02)', 'transparent']
+        }
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFillObject}
+      />
+
+      <View style={styles.top}>
+        <View style={styles.titleCol}>
+          <Text style={styles.title} numberOfLines={2}>
+            {title}
+          </Text>
+          <View style={styles.orgRow}>
+            <Ionicons name="business" size={12} color="#1F4E96" />
+            <Text style={styles.org} numberOfLines={1}>
+              {orgName}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.amountCol}>
+          <Text style={styles.amountLabel}>Commission</Text>
+          <MoneyAmount
+            amountMinor={invoice.commission_amount_minor}
+            currency={invoice.currency}
+            emphasize
+          />
+        </View>
       </View>
-      <Text style={styles.meta} numberOfLines={2}>
-        {orgName}
-      </Text>
-      {shift?.starts_at ? (
-        <Text style={styles.meta}>Shift · {formatShortDate(shift.starts_at)}</Text>
-      ) : null}
+
       <View style={styles.footer}>
-        <StatusBadge
-          label={workerInvoiceStatusLabel(status)}
-          tone={toneForStatus(status)}
-          icon={iconForStatus(status)}
-        />
-        <Text style={[styles.due, pastDue ? styles.dueOverdue : null]}>
-          {dueDateCopy(invoice.due_at)}
-        </Text>
+        <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
+          <LinearGradient
+            colors={tone.mark}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.statusMark}
+          >
+            <Ionicons name={tone.icon} size={11} color={colors.white} />
+          </LinearGradient>
+          <Text style={[styles.statusText, { color: tone.fg }]} numberOfLines={1}>
+            {workerInvoiceStatusLabel(status)}
+          </Text>
+        </View>
+
+        <View style={styles.metaRight}>
+          {shift?.starts_at ? (
+            <Text style={styles.meta}>Shift · {formatShortDate(shift.starts_at)}</Text>
+          ) : null}
+          <Text style={[styles.due, pastDue ? styles.dueOverdue : null]} numberOfLines={1}>
+            {dueDateCopy(invoice.due_at)}
+          </Text>
+        </View>
+
+        <LinearGradient
+          colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.chevron}
+        >
+          <Ionicons name="chevron-forward" size={14} color={colors.white} />
+        </LinearGradient>
       </View>
     </Pressable>
   );
@@ -82,49 +160,109 @@ export function InvoiceCard({ invoice, onPress }: Props) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.card,
-    borderRadius: radii.md,
-    padding: spacing.md,
+    borderRadius: radii.xl,
+    padding: spacing.lg,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
-    gap: 4,
+    gap: spacing.md,
+    overflow: 'hidden',
+    ...shadows.md,
   },
   cardPastDue: {
-    borderColor: colors.error,
-    backgroundColor: colors.errorLight,
+    borderColor: 'rgba(180, 35, 24, 0.35)',
   },
-  row: {
+  cardPressed: {
+    opacity: 0.94,
+  },
+  top: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     gap: spacing.md,
   },
-  title: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 15,
-    color: colors.text,
+  titleCol: {
     flex: 1,
+    minWidth: 0,
+    gap: 6,
   },
-  meta: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
-    color: colors.textMuted,
+  title: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: typography.size.lg,
+    color: colors.navy,
+    lineHeight: typography.lineHeight.lg,
+  },
+  orgRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  org: {
+    flex: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: typography.size.sm,
+    color: colors.textSecondary,
+  },
+  amountCol: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  amountLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
   },
   footer: {
-    marginTop: spacing.xs,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  due: {
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radii.full,
+    paddingVertical: 5,
+    paddingLeft: 5,
+    paddingRight: 10,
+  },
+  statusMark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: typography.size.xs,
+  },
+  metaRight: {
+    flex: 1,
+    minWidth: 0,
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  meta: {
     fontFamily: typography.fonts.regular,
-    fontSize: 12,
+    fontSize: typography.size.xs,
     color: colors.textMuted,
-    flexShrink: 1,
-    textAlign: 'right',
+  },
+  due: {
+    fontFamily: typography.fonts.medium,
+    fontSize: typography.size.xs,
+    color: colors.textSecondary,
   },
   dueOverdue: {
     color: colors.error,
     fontFamily: typography.fonts.semibold,
+  },
+  chevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

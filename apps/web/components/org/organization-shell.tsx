@@ -2,31 +2,17 @@ import { OrganizationSidebar } from '@/components/org/organization-sidebar';
 import { OrganizationTopbar } from '@/components/org/organization-topbar';
 import type { SwitcherOrg } from '@/components/org/organization-switcher';
 import type { OrgNavCapabilities } from '@bridge-hive/domain';
+import { orgDisplayFont } from '@/lib/org-display-font';
 
-/** Same continuous hive-flow plane used by marketing audience / capabilities bands. */
-function OrganizationFlowBackground() {
+/** Animated navy–light-blue workspace canvas behind org pages. */
+function OrganizationWorkspaceBackground() {
   return (
-    <div
-      aria-hidden
-      className="pointer-events-none absolute inset-0 z-0 overflow-hidden bg-[#eef5fb] bg-cover bg-center bg-no-repeat lg:bg-fixed"
-      style={{ backgroundImage: "url('/marketing/flow-bg.jpg')" }}
-    >
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `
-            linear-gradient(
-              180deg,
-              rgba(248, 251, 253, 0.38) 0%,
-              rgba(255, 255, 255, 0.22) 20%,
-              rgba(248, 251, 253, 0.26) 50%,
-              rgba(255, 255, 255, 0.24) 78%,
-              rgba(247, 250, 252, 0.46) 100%
-            ),
-            radial-gradient(ellipse 72% 50% at 50% 42%, rgba(255, 255, 255, 0.34), transparent 74%)
-          `,
-        }}
-      />
+    <div aria-hidden className="bh-org-canvas pointer-events-none absolute inset-0 z-0 overflow-hidden">
+      <div className="bh-org-canvas-mesh absolute inset-0" />
+      <span className="bh-org-canvas-orb bh-org-canvas-orb-a" />
+      <span className="bh-org-canvas-orb bh-org-canvas-orb-b" />
+      <span className="bh-org-canvas-orb bh-org-canvas-orb-c" />
+      <div className="bh-org-canvas-grid absolute inset-0" />
     </div>
   );
 }
@@ -53,7 +39,7 @@ export function OrganizationShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-dvh bg-[#eef5fb]">
+    <div className={`${orgDisplayFont.variable} bh-org relative flex min-h-dvh bg-[#c9dcea]`}>
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-bh-surface focus:px-3 focus:py-2 focus:shadow"
@@ -75,7 +61,7 @@ export function OrganizationShell({
       </div>
 
       <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
-        <OrganizationFlowBackground />
+        <OrganizationWorkspaceBackground />
         <OrganizationTopbar
           slug={slug}
           orgName={orgName}
@@ -88,7 +74,7 @@ export function OrganizationShell({
         />
         <main
           id="main-content"
-          className="relative z-10 mx-auto w-full max-w-[1440px] flex-1 px-4 pb-6 pt-6 sm:px-6 lg:px-8 lg:pt-8"
+          className="relative z-10 mx-auto w-full max-w-[1440px] flex-1 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8"
         >
           {children}
         </main>

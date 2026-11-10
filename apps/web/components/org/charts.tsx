@@ -1,179 +1,57 @@
-import { Activity, Stethoscope, Users } from 'lucide-react';
+import { Activity, ArrowUpRight, Building2, Stethoscope, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
 import type {
   OrgActivitySeries,
   RoleCoverage,
-  WeekBucket,
 } from '@bridge-hive/domain';
 
-export function CoverageTrendChart({
-  buckets,
-  emptyHref,
+export { CoverageTrendChart } from '@/components/org/coverage-trend-chart';
+
+const ROW_TONES = {
+  teal: {
+    border: 'border-[#13a3b4]/25',
+    chip: 'bg-[linear-gradient(140deg,#0b6f7c_0%,#2cc7d6_100%)] text-white shadow-[0_6px_12px_rgba(19,163,180,0.32)]',
+    bar: 'bg-[linear-gradient(90deg,#0b6f7c_0%,#13a3b4_55%,#2cc7d6_100%)] shadow-[0_0_10px_rgba(19,163,180,0.45)]',
+    text: 'text-[#0b6f7c]',
+  },
+  info: {
+    border: 'border-[#2f6cf0]/25',
+    chip: 'bg-[linear-gradient(140deg,#1e3fae_0%,#5b9bff_100%)] text-white shadow-[0_6px_12px_rgba(47,108,240,0.32)]',
+    bar: 'bg-[linear-gradient(90deg,#1e3fae_0%,#2f6cf0_55%,#5b9bff_100%)] shadow-[0_0_10px_rgba(47,108,240,0.45)]',
+    text: 'text-[#1e3fae]',
+  },
+  navy: {
+    border: 'border-[#16485f]/20',
+    chip: 'bg-[linear-gradient(140deg,#050f1a_0%,#16485f_100%)] text-[#f3d27a] shadow-[0_6px_12px_rgba(7,29,48,0.28)]',
+    bar: 'bg-[linear-gradient(90deg,#c27c00_0%,#e0aa18_55%,#f6cd4f_100%)] shadow-[0_0_10px_rgba(224,170,24,0.45)]',
+    text: 'text-[#16384f]',
+  },
+} as const;
+
+function SummaryStrip({
+  label,
+  value,
+  className,
 }: {
-  buckets: WeekBucket[];
-  emptyHref: string;
+  label: string;
+  value: string;
+  className: string;
 }) {
-  const totals = buckets.reduce(
-    (acc, b) => {
-      acc.published += b.published;
-      acc.filled += b.filled;
-      acc.cancelled += b.cancelled;
-      return acc;
-    },
-    { published: 0, filled: 0, cancelled: 0 },
-  );
-  const max = Math.max(
-    1,
-    ...buckets.flatMap((b) => [b.published + b.filled, b.cancelled]),
-  );
-  const hasData = buckets.some((b) => b.published + b.filled + b.cancelled > 0);
-
-  if (!hasData) {
-    return (
-      <div className="rounded-2xl border border-dashed border-bh-teal/25 bg-bh-teal-soft/30 px-4 py-8 text-center">
-        <p className="text-sm font-semibold text-bh-text">No shift activity yet</p>
-        <p className="mt-1 text-sm text-bh-text-secondary">
-          Trends appear after you publish openings.
-        </p>
-        <Link
-          href={emptyHref}
-          className="mt-3 inline-flex text-sm font-semibold text-bh-teal-strong hover:underline"
-        >
-          Create shift →
-        </Link>
-      </div>
-    );
-  }
-
-  const width = 360;
-  const height = 148;
-  const padX = 12;
-  const padTop = 12;
-  const padBottom = 8;
-  const innerW = width - padX * 2;
-  const innerH = height - padTop - padBottom;
-  const step = innerW / Math.max(1, buckets.length - 1);
-
-  const points = buckets.map((b, i) => {
-    const x = padX + i * step;
-    const y = padTop + innerH - ((b.published + b.filled) / max) * innerH;
-    return { x, y, value: b.published + b.filled };
-  });
-  const line = points.map((p) => `${p.x},${p.y}`).join(' ');
-  const area = [
-    `${padX},${padTop + innerH}`,
-    ...points.map((p) => `${p.x},${p.y}`),
-    `${padX + (buckets.length - 1) * step},${padTop + innerH}`,
-  ].join(' ');
-
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-bh-teal/20 bg-bh-teal-soft/50 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-bh-teal-strong">
-            Open
-          </p>
-          <p className="bh-tabular mt-0.5 text-lg font-bold text-bh-sidebar">
-            {totals.published}
-          </p>
-        </div>
-        <div className="rounded-xl border border-bh-success/20 bg-bh-success-soft/60 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-bh-success">
-            Filled
-          </p>
-          <p className="bh-tabular mt-0.5 text-lg font-bold text-bh-sidebar">
-            {totals.filled}
-          </p>
-        </div>
-        <div className="rounded-xl border border-bh-border bg-bh-subtle/70 px-2.5 py-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-bh-text-muted">
-            Cancelled
-          </p>
-          <p className="bh-tabular mt-0.5 text-lg font-bold text-bh-sidebar">
-            {totals.cancelled}
-          </p>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-bh-border/70 bg-bh-surface/80 px-2 pt-2">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="h-36 w-full"
-          role="img"
-          aria-label="Weekly published and filled shift counts for the next six weeks"
-        >
-          <defs>
-            <linearGradient id="coverage-fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#16A6B6" stopOpacity="0.35" />
-              <stop offset="100%" stopColor="#16A6B6" stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-          {[0.25, 0.5, 0.75].map((t) => (
-            <line
-              key={t}
-              x1={padX}
-              x2={width - padX}
-              y1={padTop + innerH * (1 - t)}
-              y2={padTop + innerH * (1 - t)}
-              stroke="#E1E7EA"
-              strokeWidth="1"
-            />
-          ))}
-          <polygon fill="url(#coverage-fill)" points={area} />
-          <polyline
-            fill="none"
-            stroke="#087F8C"
-            strokeWidth="2.75"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            points={line}
-          />
-          {points.map((p, i) => (
-            <circle
-              key={buckets[i]!.weekStartIso}
-              cx={p.x}
-              cy={p.y}
-              r="4"
-              fill="#fff"
-              stroke="#16A6B6"
-              strokeWidth="2"
-            />
-          ))}
-        </svg>
-        <div className="flex justify-between px-1 pb-2 text-[10px] font-medium text-bh-text-muted">
-          {buckets.map((b) => (
-            <span key={b.weekStartIso} className="min-w-0 truncate text-center">
-              {b.label}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="sr-only">
-      <table>
-        <caption>Shift coverage by week</caption>
-        <thead>
-          <tr>
-            <th>Week</th>
-            <th>Published</th>
-            <th>Filled</th>
-            <th>Cancelled</th>
-          </tr>
-        </thead>
-        <tbody>
-          {buckets.map((b) => (
-            <tr key={b.weekStartIso}>
-              <td>{b.label}</td>
-              <td>{b.published}</td>
-              <td>{b.filled}</td>
-              <td>{b.cancelled}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      </div>
+    <div
+      className={cn(
+        'relative flex items-center justify-between overflow-hidden rounded-xl px-3.5 py-2.5',
+        className,
+      )}
+    >
+      <span
+        aria-hidden
+        className="bh-gradient-sheen pointer-events-none absolute inset-0 opacity-60 bg-[linear-gradient(110deg,transparent_25%,rgba(255,255,255,0.3)_50%,transparent_75%)]"
+      />
+      <p className="relative text-[11px] font-bold uppercase tracking-[0.12em] opacity-85">{label}</p>
+      <p className="bh-tabular relative text-sm font-extrabold">{value}</p>
     </div>
   );
 }
@@ -188,10 +66,24 @@ export function RoleCoverageBars({
   const total = coverage[0]?.total ?? 0;
   if (total === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-bh-honey/30 bg-bh-honey-soft/40 px-4 py-8 text-center">
-        <p className="text-sm font-semibold text-bh-text">No role demand yet</p>
-        <p className="mt-1 text-sm text-bh-text-secondary">
-          Role mix appears once shifts are scheduled for {periodLabel.toLowerCase()}.
+      <div className="relative overflow-hidden rounded-2xl border border-[#16384f]/12 bg-[linear-gradient(165deg,#fffbf2_0%,#f7f3e8_100%)] px-4 py-8 text-center">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-6 -top-8 h-20 w-20 rounded-full bg-[#e4b334]/25 blur-2xl"
+        />
+        <span
+          aria-hidden
+          className="bh-orb-drift pointer-events-none absolute -bottom-10 -right-6 h-24 w-24 rounded-full bg-[#071d30]/10 blur-2xl"
+        />
+        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#f3d27a] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
+          <Users className="h-4 w-4" aria-hidden />
+        </span>
+        <p className="relative mt-3 text-sm font-semibold text-[#071d30]">
+          No role demand yet
+        </p>
+        <p className="relative mt-1 text-sm text-bh-text-secondary">
+          Role mix appears once shifts are scheduled for{' '}
+          {periodLabel.toLowerCase()}.
         </p>
       </div>
     );
@@ -199,40 +91,33 @@ export function RoleCoverageBars({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between rounded-xl border border-bh-honey/25 bg-bh-honey-soft/50 px-3 py-2.5">
-        <p className="text-xs font-medium text-bh-text-secondary">{periodLabel}</p>
-        <p className="bh-tabular text-sm font-bold text-bh-sidebar">
-          {total} shift{total === 1 ? '' : 's'}
-        </p>
-      </div>
+      <SummaryStrip
+        label={periodLabel}
+        value={`${total} shift${total === 1 ? '' : 's'}`}
+        className="bg-[linear-gradient(120deg,#c27c00_0%,#e0aa18_60%,#f6cd4f_100%)] text-[#2a1a00] shadow-[0_8px_18px_rgba(224,170,24,0.3)]"
+      />
 
       <div className="space-y-3">
-        {coverage.map((row) => {
+        {coverage.map((row, index) => {
           const pct = total > 0 ? Math.round((row.count / total) * 100) : 0;
           const isRn = row.role === 'registered_nurse';
           const isPhysio = row.role === 'physiotherapist';
           const Icon = isRn ? Stethoscope : isPhysio ? Activity : Users;
+          const tone = isRn ? ROW_TONES.teal : isPhysio ? ROW_TONES.info : ROW_TONES.navy;
           return (
             <div
               key={row.role}
               className={cn(
-                'rounded-2xl border px-3.5 py-3',
-                isRn
-                  ? 'border-bh-teal/25 bg-gradient-to-br from-bh-teal-soft/70 to-bh-surface'
-                  : isPhysio
-                    ? 'border-bh-accent-blue/25 bg-gradient-to-br from-bh-accent-blue-soft/70 to-bh-surface'
-                    : 'border-bh-honey/30 bg-gradient-to-br from-bh-honey-soft/80 to-bh-surface',
+                'bh-rail-item group rounded-2xl bg-bh-subtle/35 px-3.5 py-3 transition-colors duration-200 hover:bg-bh-subtle/55 motion-reduce:transition-none',
+                row.count === 0 && 'opacity-70 hover:opacity-100',
               )}
+              style={{ animationDelay: `${120 + index * 80}ms` }}
             >
               <div className="mb-2.5 flex items-center gap-2.5">
                 <span
                   className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm',
-                    isRn
-                      ? 'bg-bh-teal'
-                      : isPhysio
-                        ? 'bg-bh-accent-blue'
-                        : 'bg-bh-sidebar',
+                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-6 motion-reduce:transition-none',
+                    tone.chip,
                   )}
                 >
                   <Icon className="h-4 w-4" aria-hidden />
@@ -243,19 +128,15 @@ export function RoleCoverageBars({
                     {row.count} opening{row.count === 1 ? '' : 's'}
                   </p>
                 </div>
-                <p className="bh-tabular text-lg font-bold text-bh-sidebar">{pct}%</p>
+                <p className={cn('bh-tabular text-lg font-extrabold', tone.text)}>{pct}%</p>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-bh-surface/90 ring-1 ring-bh-border/60">
+              <div className="h-2.5 overflow-hidden rounded-full bg-[#071d30]/[0.06]">
                 <div
-                  className={cn(
-                    'h-full rounded-full transition-[width]',
-                    isRn
-                      ? 'bg-bh-teal'
-                      : isPhysio
-                        ? 'bg-bh-accent-blue'
-                        : 'bg-bh-honey',
-                  )}
-                  style={{ width: `${Math.max(pct, row.count > 0 ? 6 : 0)}%` }}
+                  className={cn('bh-cal-bar h-full rounded-full', tone.bar)}
+                  style={{
+                    width: `${Math.max(pct, row.count > 0 ? 6 : 0)}%`,
+                    animationDelay: `${300 + index * 80}ms`,
+                  }}
                 />
               </div>
             </div>
@@ -388,7 +269,7 @@ export function OrganizationActivityChart({
         ))}
       </ul>
 
-      <div className="overflow-x-auto rounded-2xl border border-bh-border/70 bg-bh-surface/80 px-2 pt-3">
+      <div className="overflow-x-auto rounded-xl bg-bh-subtle/35 px-2 pt-3">
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="h-56 w-full min-w-[320px]"
@@ -515,14 +396,28 @@ export function LocationWorkloadList({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-bh-info/25 bg-bh-info-soft/40 px-4 py-8 text-center">
-        <p className="text-sm font-semibold text-bh-text">No location load yet</p>
-        <p className="mt-1 text-sm text-bh-text-secondary">
-          Published and filled shifts in the next {periodDays} days will rank here.
+      <div className="relative overflow-hidden rounded-2xl border border-[#16384f]/12 bg-[linear-gradient(165deg,#f5f8fc_0%,#eaf0f7_100%)] px-4 py-8 text-center">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-6 -top-8 h-20 w-20 rounded-full bg-[#2f6cf0]/18 blur-2xl"
+        />
+        <span
+          aria-hidden
+          className="bh-orb-drift pointer-events-none absolute -bottom-10 -right-6 h-24 w-24 rounded-full bg-[#e4b334]/16 blur-2xl"
+        />
+        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#f3d27a] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
+          <Building2 className="h-4 w-4" aria-hidden />
+        </span>
+        <p className="relative mt-3 text-sm font-semibold text-[#071d30]">
+          No location load yet
+        </p>
+        <p className="relative mt-1 text-sm text-bh-text-secondary">
+          Published and filled shifts in the next {periodDays} days will rank
+          here.
         </p>
         <Link
           href={`/org/${slug}/locations`}
-          className="mt-3 inline-flex text-sm font-semibold text-bh-info hover:underline"
+          className="relative mt-3.5 inline-flex items-center rounded-full bg-[#071d30] px-3.5 py-1.5 text-[12px] font-semibold text-white shadow-[0_8px_16px_rgba(7,29,48,0.22)] transition-transform duration-200 hover:-translate-y-0.5 hover:bg-[#0c2a42] motion-reduce:hover:translate-y-0"
         >
           Manage locations →
         </Link>
@@ -535,41 +430,56 @@ export function LocationWorkloadList({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between rounded-xl border border-bh-info/20 bg-bh-info-soft/50 px-3 py-2.5">
-        <p className="text-xs font-medium text-bh-text-secondary">
-          Next {periodDays} days
-        </p>
-        <p className="bh-tabular text-sm font-bold text-bh-sidebar">
-          {total} shift{total === 1 ? '' : 's'}
-        </p>
-      </div>
+      <SummaryStrip
+        label={`Next ${periodDays} days`}
+        value={`${total} shift${total === 1 ? '' : 's'}`}
+        className="bg-[linear-gradient(120deg,#1e3fae_0%,#2f6cf0_60%,#5b9bff_100%)] text-white shadow-[0_8px_18px_rgba(47,108,240,0.3)]"
+      />
 
       <ul className="space-y-2" aria-label="Upcoming shifts by location">
         {rows.map((row, index) => {
           const pct = Math.round((row.count / max) * 100);
           return (
-            <li key={row.locationId}>
+            <li
+              key={row.locationId}
+              className="bh-rail-item"
+              style={{ animationDelay: `${120 + index * 80}ms` }}
+            >
               <Link
                 href={`/org/${slug}/locations/${row.locationId}`}
-                className="group block rounded-2xl border border-bh-border/80 bg-gradient-to-r from-bh-info-soft/40 to-bh-surface px-3.5 py-3 transition-[border-color,box-shadow] hover:border-bh-info/40 hover:shadow-sm"
+                className="group block rounded-2xl bg-bh-subtle/35 px-3.5 py-3 transition-colors duration-200 hover:bg-bh-subtle/55 motion-reduce:transition-none"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-bh-sidebar text-[11px] font-bold text-bh-sidebar-text">
+                    <span
+                      className={cn(
+                        'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-[11px] font-bold transition-transform duration-200 group-hover:scale-110 motion-reduce:transition-none',
+                        index === 0
+                          ? 'bg-[linear-gradient(140deg,#c27c00_0%,#f6cd4f_100%)] text-[#2a1a00] shadow-[0_6px_12px_rgba(224,170,24,0.35)]'
+                          : 'bg-[linear-gradient(140deg,#050f1a_0%,#16485f_100%)] text-white shadow-[0_6px_12px_rgba(7,29,48,0.25)]',
+                      )}
+                    >
                       {index + 1}
                     </span>
-                    <span className="truncate text-sm font-semibold text-bh-text group-hover:text-bh-info">
+                    <span className="truncate text-sm font-semibold text-bh-text group-hover:text-[#1e3fae]">
                       {row.name}
                     </span>
                   </div>
-                  <span className="bh-tabular shrink-0 text-sm font-bold text-bh-sidebar">
+                  <span className="bh-tabular inline-flex shrink-0 items-center gap-1 text-sm font-extrabold text-[#1e3fae]">
                     {row.count}
+                    <ArrowUpRight
+                      className="h-3.5 w-3.5 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
+                      aria-hidden
+                    />
                   </span>
                 </div>
-                <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-bh-surface ring-1 ring-bh-border/50">
+                <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#071d30]/[0.06]">
                   <div
-                    className="h-full rounded-full bg-bh-info"
-                    style={{ width: `${Math.max(pct, 8)}%` }}
+                    className="bh-cal-bar h-full rounded-full bg-[linear-gradient(90deg,#1e3fae_0%,#2f6cf0_55%,#5b9bff_100%)] shadow-[0_0_10px_rgba(47,108,240,0.45)]"
+                    style={{
+                      width: `${Math.max(pct, 8)}%`,
+                      animationDelay: `${300 + index * 80}ms`,
+                    }}
                   />
                 </div>
               </Link>

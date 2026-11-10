@@ -7,11 +7,13 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  MessageSquare,
   Settings,
   Wallet,
 } from 'lucide-react';
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
+import { OrgNavLink } from '@/components/org/org-nav-link';
 
 import { signOutAction } from '@/app/actions/auth';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
@@ -32,6 +34,7 @@ import {
 
 const ICONS: Record<OrgNavItem['id'], typeof LayoutDashboard> = {
   dashboard: LayoutDashboard,
+  messages: MessageSquare,
   shifts: CalendarDays,
   timesheets: ClipboardList,
   locations: MapPin,
@@ -39,6 +42,15 @@ const ICONS: Record<OrgNavItem['id'], typeof LayoutDashboard> = {
   recruitment: Briefcase,
   settings: Settings,
 };
+
+function initialsFor(label: string): string {
+  return (label || 'U')
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+}
 
 export function OrganizationSidebar({
   slug,
@@ -73,47 +85,39 @@ export function OrganizationSidebar({
       )}
     >
       {/* Matches OrganizationTopbar height + shared bottom edge */}
-      <div className="relative flex h-[76px] shrink-0 items-center overflow-hidden border-b border-white/10 px-4 sm:h-[80px] sm:px-5">
-        <div
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(105deg,rgba(20,169,181,0.14)_0%,transparent_45%,rgba(228,179,52,0.12)_100%)]"
-          aria-hidden
-        />
-        <div className="relative flex min-w-0 items-center gap-3.5">
+      <div className="relative flex h-[76px] shrink-0 items-center overflow-hidden px-4 sm:h-[80px] sm:px-5">
+        <div className="relative flex min-w-0 items-center gap-3">
           <BridgeHiveMark
-            size={52}
+            size={44}
             priority
-            className="h-[52px] w-[52px] shrink-0 rounded-2xl shadow-[0_10px_22px_rgba(0,0,0,0.35)] ring-1 ring-white/20"
+            className="h-11 w-11 shrink-0 rounded-xl"
           />
           <div className="min-w-0">
-            <p className="text-[17px] font-extrabold leading-none tracking-[-0.03em]">
+            <p className="truncate text-[16px] font-bold leading-none tracking-[-0.02em]">
               <span className="text-white">Bridge</span>{' '}
               <span className="text-bh-honey">Hive</span>
             </p>
-            <p className="mt-1.5 truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-sidebar-muted">
+            <p className="mt-1 truncate text-[10px] font-medium uppercase tracking-[0.12em] text-bh-sidebar-muted">
               Organization workspace
             </p>
           </div>
         </div>
       </div>
 
-      <div className="px-3.5 py-4">
-        <OrganizationSwitcher current={current} memberships={memberships} />
-        <SidebarLiveClock />
+      <div className="min-w-0 space-y-2 px-3 pb-3">
+        <div className="space-y-2 rounded-xl bg-white/[0.03] p-2">
+          <OrganizationSwitcher current={current} memberships={memberships} />
+          <SidebarLiveClock />
+        </div>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-5" aria-label="Organization">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-3 pb-4" aria-label="Organization">
         {groups.map((group) => (
-          <div key={group} className="mb-6">
-            <div className="mb-2.5 flex items-center gap-2.5 px-2.5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-bh-sidebar-muted">
-                {ORG_NAV_GROUP_LABELS[group]}
-              </p>
-              <span
-                aria-hidden
-                className="h-px flex-1 bg-[linear-gradient(90deg,rgba(22,166,182,0.45),rgba(228,179,52,0.2),transparent)]"
-              />
-            </div>
-            <ul className="space-y-1.5">
+          <div key={group} className="mb-4 last:mb-0">
+            <p className="mb-1.5 px-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-sidebar-muted">
+              {ORG_NAV_GROUP_LABELS[group]}
+            </p>
+            <ul className="space-y-0.5 rounded-lg bg-white/[0.03] p-1">
               {items
                 .filter((item) => item.group === group)
                 .map((item) => {
@@ -122,71 +126,34 @@ export function OrganizationSidebar({
                     pathname === item.href || pathname.startsWith(`${item.href}/`);
                   return (
                     <li key={item.id}>
-                      <Link
+                      <OrgNavLink
                         href={item.href}
+                        eager={item.id === 'dashboard'}
                         aria-current={active ? 'page' : undefined}
                         onClick={onNavigate}
                         className={cn(
-                          'group relative flex min-h-12 items-center gap-3 overflow-hidden rounded-2xl px-2.5 py-2.5 text-[15px] font-semibold tracking-tight',
-                          'border transition-all duration-300 ease-out',
-                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/70',
+                          'group flex h-10 items-center gap-2.5 overflow-hidden rounded-md px-2 text-[13px] font-medium tracking-tight',
+                          'transition-colors duration-150',
+                          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/70 focus-visible:ring-offset-0',
                           'motion-reduce:transition-none',
                           active
-                            ? 'border-bh-teal/35 bg-[linear-gradient(125deg,rgba(22,166,182,0.28)_0%,rgba(10,37,56,0.95)_48%,rgba(228,179,52,0.12)_100%)] text-white shadow-[0_12px_28px_rgba(22,166,182,0.22),inset_0_1px_0_rgba(255,255,255,0.12)]'
-                            : 'border-transparent text-bh-sidebar-muted hover:translate-x-0.5 hover:border-white/10 hover:bg-white/[0.05] hover:text-bh-sidebar-text hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] motion-reduce:hover:translate-x-0',
+                            ? 'bg-bh-teal/20 text-white'
+                            : 'text-bh-sidebar-muted hover:bg-white/[0.05] hover:text-bh-sidebar-text',
                         )}
                       >
-                        {active ? (
-                          <>
-                            <span
-                              aria-hidden
-                              className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-[linear-gradient(180deg,#16a6b6_0%,#e0aa18_100%)] shadow-[0_0_12px_rgba(22,166,182,0.65)]"
-                            />
-                            <span
-                              aria-hidden
-                              className="bh-gradient-sheen pointer-events-none absolute inset-0 opacity-40 bg-[linear-gradient(110deg,transparent_20%,rgba(255,255,255,0.12)_48%,transparent_72%)]"
-                            />
-                          </>
-                        ) : (
-                          <span
-                            aria-hidden
-                            className="absolute inset-y-2.5 left-0 w-[2px] scale-y-0 rounded-full bg-bh-teal/70 opacity-0 transition-all duration-300 group-hover:scale-y-100 group-hover:opacity-100"
-                          />
-                        )}
-
                         <span
                           className={cn(
-                            'relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-300',
+                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150',
                             active
-                              ? 'bg-[linear-gradient(145deg,rgba(22,166,182,0.55)_0%,rgba(7,29,48,0.9)_55%,rgba(228,179,52,0.35)_130%)] text-white shadow-[0_8px_16px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.2)] ring-1 ring-white/20'
-                              : 'bg-white/[0.04] text-bh-sidebar-muted ring-1 ring-white/8 group-hover:bg-white/[0.08] group-hover:text-bh-teal group-hover:ring-bh-teal/30',
+                              ? 'bg-bh-teal/25 text-white'
+                              : 'text-bh-sidebar-muted group-hover:text-bh-teal',
                           )}
                         >
-                          <Icon
-                            className={cn(
-                              'h-[18px] w-[18px] transition-transform duration-300',
-                              active
-                                ? 'scale-105'
-                                : 'group-hover:scale-110 motion-reduce:group-hover:scale-100',
-                            )}
-                            aria-hidden
-                          />
+                          <Icon className="h-[16px] w-[16px]" aria-hidden />
                         </span>
 
-                        <span className="relative min-w-0 flex-1 truncate">
-                          {item.label}
-                        </span>
-
-                        <span
-                          aria-hidden
-                          className={cn(
-                            'relative h-1.5 w-1.5 shrink-0 rounded-full transition-all duration-300',
-                            active
-                              ? 'bg-bh-honey shadow-[0_0_10px_rgba(224,170,24,0.85)]'
-                              : 'bg-transparent group-hover:bg-bh-teal/70',
-                          )}
-                        />
-                      </Link>
+                        <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                      </OrgNavLink>
                     </li>
                   );
                 })}
@@ -195,54 +162,76 @@ export function OrganizationSidebar({
         ))}
       </nav>
 
-      <div className="mt-auto shrink-0 border-t border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.02)_0%,rgba(0,0,0,0.18)_100%)] p-3.5">
-        <div className="mb-2.5 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.06] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-          <div className="flex items-center gap-3">
-            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(145deg,#16384f_0%,#0c3a42_45%,#e4b334_100%)] text-[13px] font-bold tracking-wide text-white shadow-[0_8px_18px_rgba(228,179,52,0.22)] ring-1 ring-white/20">
-              {(userLabel || 'U')
-                .split(/\s+/)
-                .map((p) => p[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase()}
-              <span
-                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-bh-success ring-2 ring-[#071d30]"
-                aria-hidden
-              />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold tracking-tight text-white">
-                {userLabel}
-              </p>
-              {userEmail ? (
-                <p className="mt-0.5 truncate text-[11px] text-white/55">
-                  {userEmail}
+      <div className="relative mt-auto shrink-0 overflow-hidden p-3">
+        <span
+          aria-hidden
+          className="bh-org-topbar-line pointer-events-none absolute inset-x-3 top-0 h-[2px]"
+        />
+        <span
+          aria-hidden
+          className="bh-orb-drift pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/25 blur-2xl"
+        />
+        <span
+          aria-hidden
+          className="bh-orb-drift pointer-events-none absolute -bottom-12 right-0 h-20 w-20 rounded-full bg-[#e4b334]/20 blur-2xl"
+          style={{ animationDelay: '-6s' }}
+        />
+
+        <div className="relative space-y-2">
+          <div className="group/account relative overflow-hidden rounded-xl bg-white/[0.06] p-2.5 ring-1 ring-white/10 transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+            <span
+              aria-hidden
+              className="bh-gradient-sheen pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(255,255,255,0.16)_50%,transparent_78%)] opacity-0 transition-opacity duration-300 group-hover/account:opacity-100 motion-reduce:opacity-0"
+            />
+            <div className="relative flex min-w-0 items-center gap-2.5">
+              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e4b334] text-[12px] font-bold tracking-[0.04em] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.28)]">
+                {initialsFor(userLabel)}
+                <span
+                  className="bh-soft-pulse absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#7dffb3] ring-2 ring-[#071d30] shadow-[0_0_8px_rgba(125,255,179,0.7)]"
+                  aria-hidden
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f3d27a]">
+                  Signed in
                 </p>
-              ) : null}
-              <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-honey ring-1 ring-white/10">
-                <span className="h-1 w-1 rounded-full bg-bh-honey" aria-hidden />
-                Signed in
-              </p>
+                <p
+                  className="truncate text-[13px] font-semibold leading-tight text-white"
+                  title={userLabel}
+                >
+                  {userLabel}
+                </p>
+                {userEmail ? (
+                  <p
+                    className="truncate text-[11px] text-white/55"
+                    title={userEmail}
+                  >
+                    {userEmail}
+                  </p>
+                ) : null}
+              </div>
             </div>
           </div>
-        </div>
-        <form
-          action={async () => {
-            clearOrganizationLogoUrlCache();
-            await signOutAction();
-          }}
-        >
-          <Button
-            type="submit"
-            size="sm"
-            className="group h-11 w-full justify-start gap-3 rounded-xl border border-white/15 bg-white/[0.08] px-3 text-[14px] font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:border-bh-teal/50 hover:bg-bh-teal/35 hover:text-white hover:shadow-[0_12px_24px_rgba(20,184,166,0.28)] active:translate-y-0 motion-reduce:hover:translate-y-0"
+
+          <form
+            action={async () => {
+              clearOrganizationLogoUrlCache();
+              await signOutAction();
+            }}
           >
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/12 text-white ring-1 ring-white/20 transition-all duration-200 group-hover:scale-105 group-hover:bg-bh-teal/40 group-hover:text-white group-hover:ring-bh-teal/45 motion-reduce:group-hover:scale-100">
-              <LogOut className="h-3.5 w-3.5 transition-transform duration-200 group-hover:-translate-x-0.5" aria-hidden />
-            </span>
-            Sign out
-          </Button>
-        </form>
+            <Button
+              type="submit"
+              size="sm"
+              variant="ghost"
+              className="group/out h-10 w-full justify-start gap-2.5 rounded-xl bg-white/[0.05] px-2.5 text-[13px] font-semibold text-white/85 ring-1 ring-white/10 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.1] hover:text-white hover:ring-[#e4b334]/40 focus-visible:ring-2 focus-visible:ring-bh-teal/70 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            >
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition-transform duration-200 group-hover/out:-translate-x-0.5 motion-reduce:transform-none">
+                <LogOut className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
+              </span>
+              Sign out
+            </Button>
+          </form>
+        </div>
       </div>
     </aside>
   );

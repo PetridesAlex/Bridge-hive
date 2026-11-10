@@ -3,12 +3,11 @@ import { PlatformPressable } from '@react-navigation/elements';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo } from 'react';
-import { Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Platform, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
-  FadeIn,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -19,7 +18,12 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg';
+import Svg, {
+  Defs,
+  LinearGradient as SvgGradient,
+  Path,
+  Stop,
+} from 'react-native-svg';
 
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { colors, spacing, typography } from '@/constants/theme';
@@ -35,8 +39,8 @@ export type TabAccent = {
 const ACTIVE = colors.white;
 const INACTIVE = '#8FA9C4';
 const INDICATOR = '#F5B21A';
-const FAB_GRADIENT: [string, string] = ['#FFCB45', '#F59E0B'];
-const HIGHLIGHT_GRADIENT: [string, string] = ['rgba(255, 255, 255, 0.2)', 'rgba(255, 255, 255, 0.09)'];
+const WELL_GRADIENT: [string, string, string] = [colors.navy, '#0C3E56', colors.tealStrong];
+const WELL_IDLE = 'rgba(255, 255, 255, 0.06)';
 
 /** Bar-wide accent: the active tab always reads navy with a honey indicator. */
 const BAR_ACCENT: TabAccent = {
@@ -56,11 +60,16 @@ export const TAB_ACCENTS = {
 
 const SPRING = { damping: 18, stiffness: 280, mass: 0.75 };
 const TAB_COUNT = 5;
-const GLYPH_BOX = 26;
-const HIGHLIGHT_PAD = 9;
-const TOP_RADIUS = 30;
+const GLYPH_BOX = 24;
+const HIGHLIGHT_PAD = 6;
+const TOP_RADIUS = 20;
 const SHADOW_BLEED = 6;
-const CAPTION_WIDTH = 80;
+const ICON_COL_GAP = 2;
+const INDICATOR_HEIGHT = 3;
+const INDICATOR_MARGIN_TOP = 2;
+const INDICATOR_BLOCK = INDICATOR_HEIGHT + INDICATOR_MARGIN_TOP;
+const SIDE_TAB_GAP = 3;
+const LABEL_MARGIN_TOP = 1;
 
 type Density = 'narrow' | 'regular' | 'wide';
 
@@ -99,14 +108,20 @@ function useTabMetrics(): TabMetrics {
     const density: Density =
       slotWidth < 70 ? 'narrow' : slotWidth < 84 ? 'regular' : 'wide';
 
-    const topPad = 8;
-    const contentHeight = density === 'narrow' ? 58 : 64;
-    const bottomPad = Math.max(insets.bottom, 10);
-    const labelSize = density === 'narrow' ? 11 : 12;
-    const labelLine = labelSize + 3;
-    const gap = 3;
-    const fabSize = density === 'narrow' ? 58 : density === 'regular' ? 64 : 68;
-    const fabCenterY = fabSize / 2 + 2;
+    // Compact navy strip; honey FAB intentionally taller than the chrome.
+    const topPad = 6;
+    const bottomPad = Math.max(insets.bottom, 8);
+    const labelSize = density === 'narrow' ? 10 : 11;
+    const labelLine = labelSize + 2;
+    const gap = 1;
+    const highlightWidth = Math.min(slotWidth - 16, density === 'narrow' ? 36 : 40);
+    const wellSize = Math.max(highlightWidth, GLYPH_BOX + HIGHLIGHT_PAD + 2);
+    // Side tab column: well + iconCol gap + indicator (+margin) + column gap + label (+margin).
+    const contentHeight =
+      wellSize + ICON_COL_GAP + INDICATOR_BLOCK + SIDE_TAB_GAP + labelLine + LABEL_MARGIN_TOP;
+    const fabSize = density === 'narrow' ? 78 : density === 'regular' ? 88 : 92;
+    // Sit the disc mostly above the slim navy strip (not buried in the bar).
+    const fabCenterY = Math.max(16, Math.round(fabSize * 0.28));
 
     return {
       density,
@@ -117,17 +132,19 @@ function useTabMetrics(): TabMetrics {
       contentHeight,
       barHeight: topPad + contentHeight + bottomPad,
       buttonMinHeight: contentHeight,
-      iconGlyph: density === 'narrow' ? 21 : 24,
+      iconGlyph: density === 'narrow' ? 19 : 21,
       labelSize,
       labelLine,
       gap,
-      highlightWidth: Math.min(slotWidth - 6, 70),
-      highlightHeight: GLYPH_BOX + gap + labelLine + HIGHLIGHT_PAD * 2,
+      highlightWidth,
+      // Icon plate only — never extend into the label row (avoids line/text overlap).
+      highlightHeight: GLYPH_BOX + HIGHLIGHT_PAD,
       fabSize,
       fabCenterY,
       fabLift: -(topPad + contentHeight / 2 - fabCenterY),
-      notchRadius: fabSize / 2 + 7,
-      fabGlyph: density === 'narrow' ? 26 : 30,
+      // Tight cradle — avoid a navy ring reading as a second button behind the FAB.
+      notchRadius: fabSize / 2 + 1.5,
+      fabGlyph: density === 'narrow' ? 34 : 40,
       useShortLabels: slotWidth < 82,
       focusedLabelOnly: slotWidth < 62,
     };
@@ -155,6 +172,8 @@ export function useAdaptiveTabBarStyle() {
       right: 0,
       bottom: 0,
       overflow: 'visible' as const,
+      // Keep bar above transformed list rows without changing chrome.
+      zIndex: 100,
     }),
     [metrics],
   );
@@ -167,6 +186,24 @@ export function useTabBarScrollInset(extra: number = spacing.lg): number {
   return height + extra;
 }
 
+/** Pointy-top honeycomb path — Bridge Hive FAB silhouette (not a disc). */
+function honeycombPath(size: number, inset = 1.5): string {
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = size / 2 - inset;
+  const pts = Array.from({ length: 6 }, (_, i) => {
+    const angle = ((Math.PI / 180) * (60 * i - 30));
+    return {
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+    };
+  });
+  return `M${pts[0].x} ${pts[0].y} ${pts
+    .slice(1)
+    .map((p) => `L${p.x} ${p.y}`)
+    .join(' ')} Z`;
+}
+
 /** Bar outline with a rounded U-shaped notch that cradles the center button. */
 function barPath(
   w: number,
@@ -177,8 +214,8 @@ function barPath(
   dy: number,
 ): string {
   const r = TOP_RADIUS;
-  const shoulder = 26;
-  const rise = 20;
+  const shoulder = 18;
+  const rise = 14;
   const top = dy;
   return [
     `M0 ${h + dy}`,
@@ -229,6 +266,8 @@ type AnimatedTabIconProps = {
   accent?: TabAccent;
   /** `fab` renders the raised honey button that sits in the bar notch. */
   variant?: 'default' | 'fab';
+  /** Bump to trigger a one-shot spin on the FAB disc. */
+  spinTick?: number;
 };
 
 export function AnimatedTabIcon({
@@ -236,12 +275,13 @@ export function AnimatedTabIcon({
   icon,
   iconFocused,
   variant = 'default',
+  spinTick = 0,
 }: AnimatedTabIconProps) {
   const reduced = useReducedMotion();
   const m = useTabMetrics();
   const progress = useSharedValue(focused ? 1 : 0);
-  const glow = useSharedValue(0);
   const shine = useSharedValue(0);
+  const spin = useSharedValue(0);
 
   useEffect(() => {
     progress.value = reduced
@@ -252,15 +292,10 @@ export function AnimatedTabIcon({
   }, [focused, progress, reduced]);
 
   useEffect(() => {
-    if (variant !== 'fab' || reduced || !focused) {
-      glow.value = 0;
+    if (variant !== 'fab' || reduced) {
+      shine.value = 0;
       return;
     }
-    glow.value = withRepeat(
-      withTiming(1, { duration: 1900, easing: Easing.out(Easing.quad) }),
-      -1,
-      false,
-    );
     shine.value = withRepeat(
       withSequence(
         withDelay(1800, withTiming(1, { duration: 900, easing: Easing.inOut(Easing.quad) })),
@@ -269,50 +304,112 @@ export function AnimatedTabIcon({
       -1,
       false,
     );
-  }, [focused, glow, reduced, shine, variant]);
+  }, [reduced, shine, variant]);
 
-  const highlightStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ scale: interpolate(progress.value, [0, 1], [0.92, 1], Extrapolation.CLAMP) }],
+  useEffect(() => {
+    if (variant !== 'fab' || reduced || spinTick <= 0) return;
+    spin.value = 0;
+    spin.value = withTiming(360, {
+      duration: 560,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [reduced, spin, spinTick, variant]);
+
+  const bounce = useSharedValue(1);
+  const idleBreath = useSharedValue(reduced ? 0.5 : 0);
+
+  useEffect(() => {
+    if (variant === 'fab' || reduced || !focused) return;
+    bounce.value = withSequence(
+      withSpring(1.16, { damping: 10, stiffness: 420 }),
+      withSpring(1, { damping: 14, stiffness: 260 }),
+    );
+  }, [bounce, focused, reduced, variant]);
+
+  useEffect(() => {
+    if (variant === 'fab' || reduced) {
+      idleBreath.value = 0.5;
+      return;
+    }
+    if (focused) {
+      idleBreath.value = withTiming(0.5, { duration: 200 });
+      return;
+    }
+    idleBreath.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+      ),
+      -1,
+      false,
+    );
+  }, [focused, idleBreath, reduced, variant]);
+
+  const wellStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0.55, 1], Extrapolation.CLAMP),
+    transform: [
+      {
+        scale:
+          bounce.value *
+          interpolate(progress.value, [0, 1], [0.92, 1], Extrapolation.CLAMP),
+      },
+    ],
+  }));
+  const wellGlowStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0, 0.55], Extrapolation.CLAMP),
+    transform: [
+      { scale: interpolate(progress.value, [0, 1], [0.7, 1.08], Extrapolation.CLAMP) },
+    ],
   }));
   const indicatorStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ scaleX: interpolate(progress.value, [0, 1], [0.3, 1], Extrapolation.CLAMP) }],
-  }));
-  const glyphStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateY: interpolate(progress.value, [0, 1], [0, -1], Extrapolation.CLAMP) },
-      { scale: interpolate(progress.value, [0, 1], [1, 1.04], Extrapolation.CLAMP) },
+      { scaleX: interpolate(progress.value, [0, 1], [0.15, 1], Extrapolation.CLAMP) },
+      { translateY: interpolate(progress.value, [0, 1], [4, 0], Extrapolation.CLAMP) },
     ],
   }));
-  const backdropStyle = useAnimatedStyle(() => ({
+  const outlineGlyphStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [1, 0], Extrapolation.CLAMP),
+    transform: [
+      {
+        translateY: interpolate(
+          idleBreath.value,
+          [0, 1],
+          [0.6, -0.6],
+          Extrapolation.CLAMP,
+        ),
+      },
+      { scale: interpolate(progress.value, [0, 1], [1, 0.86], Extrapolation.CLAMP) },
+    ],
+  }));
+  const filledGlyphStyle = useAnimatedStyle(() => ({
     opacity: progress.value,
-    transform: [{ scale: interpolate(progress.value, [0, 1], [0.55, 1], Extrapolation.CLAMP) }],
-  }));
-  const fabScaleStyle = useAnimatedStyle(() => ({
     transform: [
-      { scale: interpolate(progress.value, [0, 1], [1, 1.08], Extrapolation.CLAMP) },
+      { translateY: interpolate(progress.value, [0, 1], [3, 0], Extrapolation.CLAMP) },
+      {
+        scale:
+          bounce.value *
+          interpolate(progress.value, [0, 1], [0.82, 1], Extrapolation.CLAMP),
+      },
     ],
-    shadowOpacity: interpolate(progress.value, [0, 1], [0.4, 0.62], Extrapolation.CLAMP),
+  }));
+  const fabShellStyle = useAnimatedStyle(() => ({
+    shadowOpacity: interpolate(progress.value, [0, 1], [0.36, 0.52], Extrapolation.CLAMP),
+    transform: [{ rotate: `${spin.value}deg` }],
   }));
   const shineStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(shine.value, [0, 0.2, 0.8, 1], [0, 0.85, 0.85, 0]),
+    opacity: interpolate(shine.value, [0, 0.2, 0.8, 1], [0, 0.35, 0.35, 0]),
     transform: [
       { translateX: interpolate(shine.value, [0, 1], [-34, 60]) },
       { rotate: '20deg' },
     ],
   }));
-  const captionStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: interpolate(progress.value, [0, 1], [-4, 0], Extrapolation.CLAMP) }],
-  }));
-  const ringStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(glow.value, [0, 1], [0.35, 0]),
-    transform: [{ scale: interpolate(glow.value, [0, 1], [1, 1.5]) }],
-  }));
-
   if (variant === 'fab') {
-    const disc = m.notchRadius * 2;
+    // Logo-forward honeycomb — brand mark sits on a hex shell, not a honey disc.
+    const markSize = Math.round(m.fabSize * 0.62);
+    const hexOuter = honeycombPath(m.fabSize, 1);
+    const hexInner = honeycombPath(m.fabSize, 6);
+    const hexCore = honeycombPath(m.fabSize, 11);
     return (
       <View
         style={{ width: m.fabSize, height: m.fabSize, transform: [{ translateY: m.fabLift }] }}
@@ -320,111 +417,114 @@ export function AnimatedTabIcon({
         importantForAccessibility="no-hide-descendants"
       >
         <Animated.View
-          pointerEvents="none"
           style={[
-            styles.fabBackdrop,
-            {
-              width: disc,
-              height: disc,
-              borderRadius: disc / 2,
-              left: (m.fabSize - disc) / 2,
-              top: (m.fabSize - disc) / 2,
-            },
-            backdropStyle,
+            styles.fabShadow,
+            { width: m.fabSize, height: m.fabSize },
+            fabShellStyle,
           ]}
         >
-          <LinearGradient
-            colors={['#FFF4D6', '#FFE2A0']}
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-        {focused && !reduced ? (
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.fabRing,
-              { width: m.fabSize, height: m.fabSize, borderRadius: m.fabSize / 2 },
-              ringStyle,
-            ]}
-          />
-        ) : null}
-        <Animated.View
-          style={[styles.fabShadow, { borderRadius: m.fabSize / 2 }, glyphStyle, fabScaleStyle]}
-        >
-          <LinearGradient
-            colors={focused ? ['#FFD25A', '#F08C00'] : FAB_GRADIENT}
-            start={{ x: 0.2, y: 0 }}
-            end={{ x: 0.8, y: 1 }}
-            style={[
-              styles.fab,
-              { width: m.fabSize, height: m.fabSize, borderRadius: m.fabSize / 2 },
-            ]}
-          >
-            <View style={styles.fabMarkWrap}>
-              <BridgeHiveMark
-                variant="boot"
-                size={Math.round(m.fabSize * 0.72)}
-                style={focused ? styles.fabMarkFocused : undefined}
-              />
-            </View>
-            {!reduced ? (
-              <Animated.View pointerEvents="none" style={[styles.fabShine, shineStyle]} />
-            ) : null}
-          </LinearGradient>
-        </Animated.View>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.fabCaptionWrap,
-            { top: m.fabSize + 6, left: -(CAPTION_WIDTH - m.fabSize) / 2 },
-            captionStyle,
-          ]}
-        >
-          <Text
-            allowFontScaling={false}
-            style={[styles.fabCaption, { fontSize: m.labelSize }]}
-          >
-            My shifts
-          </Text>
+          <Svg width={m.fabSize} height={m.fabSize} style={StyleSheet.absoluteFillObject}>
+            <Defs>
+              <SvgGradient id="fabHoney" x1="0.15" y1="0" x2="0.85" y2="1">
+                <Stop offset="0" stopColor="#FFE08A" />
+                <Stop offset="0.45" stopColor="#FFCB45" />
+                <Stop offset="1" stopColor="#F59E0B" />
+              </SvgGradient>
+              <SvgGradient id="fabHoneyEdge" x1="0" y1="0" x2="1" y2="1">
+                <Stop offset="0" stopColor="rgba(255,255,255,0.55)" />
+                <Stop offset="1" stopColor="rgba(180, 100, 0, 0.35)" />
+              </SvgGradient>
+            </Defs>
+            <Path d={hexOuter} fill="url(#fabHoney)" />
+            <Path d={hexCore} fill="rgba(255,255,255,0.16)" />
+            <Path
+              d={hexOuter}
+              fill="none"
+              stroke="url(#fabHoneyEdge)"
+              strokeWidth={2}
+            />
+            <Path
+              d={hexInner}
+              fill="none"
+              stroke="rgba(11, 42, 67, 0.16)"
+              strokeWidth={1.25}
+            />
+          </Svg>
+          <View style={styles.fabMarkWrap}>
+            <BridgeHiveMark variant="boot" size={markSize} style={styles.fabMark} />
+          </View>
+          {!reduced ? (
+            <Animated.View pointerEvents="none" style={[styles.fabShine, shineStyle]} />
+          ) : null}
         </Animated.View>
       </View>
     );
   }
 
+  const wellSize = Math.max(m.highlightWidth, GLYPH_BOX + HIGHLIGHT_PAD + 2);
+
   return (
     <View
-      style={styles.iconBox}
+      style={styles.iconCol}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.highlight,
-          {
-            width: m.highlightWidth,
-            height: m.highlightHeight,
-            left: (GLYPH_BOX - m.highlightWidth) / 2,
-            top: -HIGHLIGHT_PAD,
-          },
-          highlightStyle,
-        ]}
-      >
-        <LinearGradient
-          colors={HIGHLIGHT_GRADIENT}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
+      <View style={[styles.iconBox, { width: wellSize, height: wellSize }]}>
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.wellGlow,
+            {
+              width: wellSize + 10,
+              height: wellSize + 10,
+              borderRadius: (wellSize + 10) * 0.34,
+            },
+            wellGlowStyle,
+          ]}
         />
-        <Animated.View style={[styles.indicator, indicatorStyle]} />
-      </Animated.View>
-      <Animated.View style={glyphStyle}>
-        <Ionicons
-          name={focused ? iconFocused : icon}
-          size={m.iconGlyph}
-          color={focused ? ACTIVE : INACTIVE}
+        <Animated.View
+          style={[
+            styles.iconWell,
+            {
+              width: wellSize,
+              height: wellSize,
+              borderRadius: wellSize * 0.34,
+            },
+            wellStyle,
+          ]}
+        >
+          <LinearGradient
+            pointerEvents="none"
+            colors={focused ? WELL_GRADIENT : [WELL_IDLE, WELL_IDLE]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+            style={[StyleSheet.absoluteFillObject, { borderRadius: wellSize * 0.34 }]}
+          />
+          {!focused ? (
+            <View
+              pointerEvents="none"
+              style={[
+                styles.wellIdleRing,
+                { borderRadius: wellSize * 0.34 },
+              ]}
+            />
+          ) : null}
+          <View style={styles.glyphStack}>
+            <Animated.View style={[styles.glyphLayer, outlineGlyphStyle]}>
+              <Ionicons name={icon} size={m.iconGlyph} color={INACTIVE} />
+            </Animated.View>
+            <Animated.View style={[styles.glyphLayer, filledGlyphStyle]}>
+              <Ionicons name={iconFocused} size={m.iconGlyph} color={ACTIVE} />
+            </Animated.View>
+          </View>
+        </Animated.View>
+      </View>
+      <Animated.View style={[styles.indicator, indicatorStyle]}>
+        <LinearGradient
+          colors={['#FFE08A', INDICATOR, '#F59E0B']}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={StyleSheet.absoluteFillObject}
         />
       </Animated.View>
     </View>
@@ -442,9 +542,27 @@ export function AnimatedTabLabel({
   /** Shorter label used when tab slots are tight. */
   compactLabel?: string;
 }) {
+  const reduced = useReducedMotion();
   const m = useTabMetrics();
   const label = m.useShortLabels && compactLabel ? compactLabel : children;
   const hidden = m.focusedLabelOnly && !focused;
+  const progress = useSharedValue(focused ? 1 : 0);
+
+  useEffect(() => {
+    progress.value = reduced
+      ? focused
+        ? 1
+        : 0
+      : withSpring(focused ? 1 : 0, SPRING);
+  }, [focused, progress, reduced]);
+
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0, 1], [0.72, 1], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(progress.value, [0, 1], [2, 0], Extrapolation.CLAMP) },
+      { scale: interpolate(progress.value, [0, 1], [0.96, 1], Extrapolation.CLAMP) },
+    ],
+  }));
 
   if (hidden) {
     return <View style={{ height: 0 }} />;
@@ -454,22 +572,58 @@ export function AnimatedTabLabel({
     <Animated.Text
       style={[
         styles.label,
+        labelStyle,
         {
           color: focused ? ACTIVE : INACTIVE,
           fontSize: m.labelSize,
           lineHeight: m.labelLine,
-          maxWidth: Math.max(m.slotWidth - 6, 48),
+          maxWidth: Math.max(m.slotWidth - 10, 44),
           fontFamily: focused ? typography.fonts.displaySemibold : typography.fonts.semibold,
         },
       ]}
       numberOfLines={1}
       adjustsFontSizeToFit
-      minimumFontScale={0.8}
+      minimumFontScale={0.75}
       allowFontScaling={false}
     >
       {label}
     </Animated.Text>
   );
+}
+
+type SideTabChrome = {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconFocused: keyof typeof Ionicons.glyphMap;
+};
+
+/** Map tab href → single icon pair (avoids Navigation stacking outline+filled glyphs). */
+function resolveSideTabChrome(href: BottomTabBarButtonProps['href']): SideTabChrome | null {
+  if (typeof href !== 'string') return null;
+  if (/(?:^|\/)shifts(?:\/|$|\?)/.test(href)) {
+    return { icon: 'calendar-clear-outline', iconFocused: 'calendar' };
+  }
+  if (/(?:^|\/)payments(?:\/|$|\?)/.test(href)) {
+    return { icon: 'cash-outline', iconFocused: 'cash' };
+  }
+  if (/(?:^|\/)profile(?:\/|$|\?)/.test(href)) {
+    return { icon: 'apps-outline', iconFocused: 'apps' };
+  }
+  // Home is the tabs index: "/", "/(tabs)", "/(tabs)/", etc. — not other named routes.
+  if (
+    href === '/' ||
+    href === '/(tabs)' ||
+    href === '/(tabs)/' ||
+    /(?:^|\/)\(tabs\)\/?$/.test(href) ||
+    /(?:^|\/)index(?:\/|$|\?)/.test(href)
+  ) {
+    return { icon: 'home-outline', iconFocused: 'home' };
+  }
+  return null;
+}
+
+function isFabTabHref(href: BottomTabBarButtonProps['href']): boolean {
+  if (typeof href !== 'string') return false;
+  return /(?:^|\/)work(?:\/|$|\?)/.test(href);
 }
 
 export function AnimatedTabButton({
@@ -486,9 +640,18 @@ export function AnimatedTabButton({
   const reduced = useReducedMotion();
   const m = useTabMetrics();
   const scale = useSharedValue(1);
+  const lift = useSharedValue(0);
+  const isFab = isFabTabHref(href);
+  const focused = Boolean(accessibilityState?.selected);
+  const sideChrome = !isFab ? resolveSideTabChrome(href) : null;
+  const [fabSpinTick, setFabSpinTick] = useState(0);
+  const labelText =
+    typeof accessibilityLabel === 'string' && accessibilityLabel.trim().length > 0
+      ? accessibilityLabel
+      : null;
 
   const pressStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
+    transform: [{ translateY: lift.value }, { scale: scale.value }],
   }));
 
   return (
@@ -500,27 +663,74 @@ export function AnimatedTabButton({
       accessibilityState={accessibilityState}
       onPressIn={() => {
         if (reduced) return;
-        scale.value = withSpring(0.93, { damping: 16, stiffness: 420 });
+        if (isFab) {
+          scale.value = withSpring(0.97, { damping: 18, stiffness: 480 });
+          lift.value = withSpring(2, { damping: 16, stiffness: 420 });
+          return;
+        }
+        scale.value = withSpring(0.92, { damping: 16, stiffness: 480 });
+        lift.value = withSpring(1.5, { damping: 16, stiffness: 420 });
       }}
       onPressOut={() => {
-        scale.value = withSpring(1, SPRING);
+        if (isFab) {
+          scale.value = withSequence(
+            withSpring(1.04, { damping: 12, stiffness: 360 }),
+            withSpring(1, SPRING),
+          );
+          lift.value = withSpring(0, SPRING);
+          return;
+        }
+        scale.value = withSequence(
+          withSpring(1.06, { damping: 12, stiffness: 380 }),
+          withSpring(1, SPRING),
+        );
+        lift.value = withSpring(0, SPRING);
       }}
       onPress={(e) => {
+        if (isFab && !reduced) {
+          setFabSpinTick((tick) => tick + 1);
+        }
         if (Platform.OS !== 'web') {
           Haptics.selectionAsync().catch(() => undefined);
         }
         onPress?.(e);
       }}
       onLongPress={onLongPress}
-      style={style}
+      // FAB slot: kill the default tab plate so only the honey disc reads as the control.
+      style={[style, isFab ? styles.fabPressable : null]}
       pressOpacity={1}
       pressColor="transparent"
     >
       <Animated.View
-        entering={reduced ? undefined : FadeIn.duration(240)}
-        style={[styles.tabButtonInner, { minHeight: m.buttonMinHeight }, pressStyle]}
+        style={[
+          styles.tabButtonInner,
+          { minHeight: m.buttonMinHeight },
+          isFab ? styles.fabSlotInner : styles.sideTabInner,
+          pressStyle,
+        ]}
       >
-        {children}
+        {isFab ? (
+          // One FAB only — skip Navigation’s stacked focused+unfocused icon children.
+          <AnimatedTabIcon
+            variant="fab"
+            focused={focused}
+            spinTick={fabSpinTick}
+            icon="briefcase-outline"
+            iconFocused="briefcase"
+          />
+        ) : sideChrome && labelText ? (
+          // One icon + one label column — no stacked glyphs, no indicator/text overlap.
+          <>
+            <AnimatedTabIcon
+              focused={focused}
+              icon={sideChrome.icon}
+              iconFocused={sideChrome.iconFocused}
+            />
+            <AnimatedTabLabel focused={focused}>{labelText}</AnimatedTabLabel>
+          </>
+        ) : (
+          children
+        )}
       </Animated.View>
     </PlatformPressable>
   );
@@ -532,80 +742,78 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
+  iconCol: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: ICON_COL_GAP,
+  },
   iconBox: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wellGlow: {
+    position: 'absolute',
+    backgroundColor: 'rgba(20, 169, 181, 0.35)',
+  },
+  iconWell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  wellIdleRing: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(143, 169, 196, 0.28)',
+  },
+  glyphStack: {
     width: GLYPH_BOX,
     height: GLYPH_BOX,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  highlight: {
-    position: 'absolute',
-    borderRadius: 22,
-    overflow: 'hidden',
+  glyphLayer: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
   },
   indicator: {
-    width: 26,
-    height: 3,
+    width: 16,
+    height: INDICATOR_HEIGHT,
     borderRadius: 2,
-    marginBottom: 5,
-    backgroundColor: INDICATOR,
+    overflow: 'hidden',
+    marginTop: INDICATOR_MARGIN_TOP,
   },
   fabShadow: {
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#F59E0B',
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  fab: {
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
+    shadowOpacity: 0.42,
+    shadowRadius: 10,
+    elevation: 10,
   },
   fabMarkWrap: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fabMarkFocused: {
-    transform: [{ scale: 1.04 }],
-  },
-  fabBackdrop: {
-    position: 'absolute',
-    overflow: 'hidden',
-    shadowColor: '#F5B21A',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
+  fabMark: {
+    // Keep the official mark shape — do not force a circular crop over the logo.
   },
   fabShine: {
     position: 'absolute',
-    top: -10,
-    bottom: -10,
-    width: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-  },
-  fabCaptionWrap: {
-    position: 'absolute',
-    width: CAPTION_WIDTH,
-    alignItems: 'center',
-  },
-  fabCaption: {
-    textAlign: 'center',
-    fontFamily: typography.fonts.displaySemibold,
-    letterSpacing: 0.1,
-    color: ACTIVE,
-  },
-  fabRing: {
-    position: 'absolute',
-    backgroundColor: '#F59E0B',
+    top: -14,
+    bottom: -14,
+    width: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
   },
   label: {
     letterSpacing: 0.1,
     textAlign: 'center',
     alignSelf: 'center',
-    marginTop: 3,
+    marginTop: LABEL_MARGIN_TOP,
   },
   tabButtonInner: {
     flex: 1,
@@ -613,5 +821,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     paddingHorizontal: 1,
+  },
+  sideTabInner: {
+    flexDirection: 'column',
+    gap: SIDE_TAB_GAP,
+    overflow: 'visible',
+  },
+  fabPressable: {
+    backgroundColor: 'transparent',
+    overflow: 'visible',
+    // No filled hit-plate behind the floating disc (esp. on web focus/selected).
+    borderRadius: 0,
+  },
+  fabSlotInner: {
+    backgroundColor: 'transparent',
+    overflow: 'visible',
   },
 });

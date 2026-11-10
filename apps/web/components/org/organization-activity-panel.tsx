@@ -3,6 +3,8 @@
 import {
   Activity,
   CalendarPlus,
+  CalendarRange,
+  Globe2,
   ClipboardCheck,
   TrendingDown,
   TrendingUp,
@@ -12,6 +14,7 @@ import {
 import { useMemo, useState, type ReactNode } from 'react';
 
 import { OrganizationActivityChart } from '@/components/org/charts';
+import { CountUp } from '@/components/org/count-up';
 import { cn } from '@/lib/utils';
 import {
   isOrgActivityRangeDays,
@@ -66,97 +69,118 @@ export function OrganizationActivityPanel({
 
   if (loadError) {
     return (
-      <section className="overflow-hidden rounded-2xl border border-bh-danger/30 bg-bh-surface shadow-[0_12px_36px_rgba(7,29,48,0.08)]">
-        <div className="border-b border-bh-danger/20 bg-bh-danger-soft/40 px-5 py-4 sm:px-6">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-danger">
-            Organization activity
-          </p>
-          <h2 className="mt-1 text-xl font-bold tracking-tight text-bh-text">
-            Couldn’t load activity
-          </h2>
-        </div>
-        <div className="px-5 py-6 sm:px-6">
-          <p className="text-sm text-bh-text-secondary">
-            Historical activity could not be loaded. This is not a zero-activity
-            result — refresh the page to retry.
-          </p>
-        </div>
+      <section className="overflow-hidden rounded-2xl border border-bh-danger/25 bg-white p-5 shadow-[0_16px_36px_rgba(7,29,48,0.08)] sm:p-6">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-danger">
+          Organization activity
+        </p>
+        <h2 className="mt-1 text-lg font-semibold tracking-tight text-bh-text">
+          Couldn’t load activity
+        </h2>
+        <p className="mt-3 text-sm text-bh-text-secondary">
+          Historical activity could not be loaded. This is not a zero-activity
+          result — refresh the page to retry.
+        </p>
       </section>
     );
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface shadow-[0_12px_36px_rgba(7,29,48,0.08)] ring-1 ring-[rgba(22,56,79,0.04)]">
-      <div className="relative border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-5 py-5 sm:px-6 sm:py-6">
-        <div
+    <section className="overflow-hidden rounded-2xl border border-[#16384f]/18 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]">
+      <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-5 sm:px-6 sm:py-6">
+        <span
           aria-hidden
-          className="pointer-events-none absolute -right-12 -top-14 h-40 w-40 rounded-full bg-bh-teal/12 blur-3xl"
+          className="pointer-events-none absolute -left-10 -top-12 h-36 w-36 rounded-full bg-bh-teal/30 blur-2xl"
         />
-        <div
+        <span
           aria-hidden
-          className="pointer-events-none absolute -bottom-16 left-10 h-32 w-32 rounded-full bg-bh-honey/15 blur-3xl"
+          className="bh-orb-drift pointer-events-none absolute -bottom-16 right-8 h-40 w-40 rounded-full bg-[#e4b334]/22 blur-2xl"
+        />
+        <span
+          aria-hidden
+          className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
         />
 
-        <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0 max-w-2xl">
-            <p className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
-              <span
-                aria-hidden
-                className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
-              />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 max-w-2xl items-start gap-3">
+          <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_18px_rgba(228,179,52,0.35)]">
+            <Activity className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
               Historical pulse
-            </p>
-            <div className="mt-2 flex items-start gap-3">
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)] ring-1 ring-white/10">
-                <Activity className="h-5 w-5" aria-hidden />
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#e4b334]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#f3d27a] ring-1 ring-[#e4b334]/35">
+                <span
+                  aria-hidden
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e4b334] motion-reduce:animate-none"
+                />
+                Live
               </span>
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold tracking-tight text-bh-text sm:text-2xl">
-                  Organization activity
-                </h2>
-                <p className="mt-1.5 text-sm leading-6 text-bh-text-secondary">
-                  Shifts created, acceptances, participating workers, and
-                  timesheet approvals in your organization timezone — not page
-                  views.
-                </p>
-                <p className="mt-1.5 text-xs font-semibold text-bh-text-muted">
-                  {series.periodLabel} · {series.timeZone}
-                </p>
-              </div>
+            </p>
+            <h2 className="mt-1 text-[18px] font-bold leading-tight tracking-tight text-white sm:text-[20px]">
+              Organization activity
+            </h2>
+            <p className="mt-1.5 max-w-xl text-[13px] leading-5 text-white/75">
+              Shifts created, acceptances, participating workers, and timesheet
+              approvals in your organization timezone — not page views.
+            </p>
+            <div className="mt-3.5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/15">
+                <CalendarRange className="h-3.5 w-3.5 text-[#f3d27a]" aria-hidden />
+                {series.periodLabel}
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/15">
+                <Globe2 className="h-3.5 w-3.5 text-[#f3d27a]" aria-hidden />
+                {series.timeZone}
+              </span>
+              <span className="bh-tabular inline-flex items-center rounded-full bg-[#e4b334] px-2.5 py-1 text-[11px] font-bold text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.32)]">
+                {series.totals.shiftsCreated} created
+              </span>
+              <span className="bh-tabular inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/15">
+                {series.totals.acceptances} accepted
+              </span>
+              <span className="inline-flex items-center rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-medium text-white/70 ring-1 ring-white/10">
+                Prior {series.priorPeriodLabel}
+              </span>
             </div>
           </div>
+        </div>
 
-          <div
-            className="inline-flex shrink-0 rounded-2xl border border-bh-border/80 bg-white/90 p-1 shadow-sm backdrop-blur-sm"
-            role="group"
-            aria-label="Activity period"
-          >
-            {RANGES.map((days) => {
-              const selected = rangeDays === days;
-              return (
-                <button
-                  key={days}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => {
-                    if (isOrgActivityRangeDays(days)) setRangeDays(days);
-                  }}
-                  className={cn(
-                    'rounded-xl px-3.5 py-2 text-sm font-semibold transition-all duration-200',
-                    selected
-                      ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-[0_8px_18px_rgba(7,29,48,0.2)]'
-                      : 'text-bh-text-secondary hover:bg-bh-subtle hover:text-bh-text',
-                  )}
-                >
-                  {days}d
-                </button>
-              );
-            })}
-          </div>
+        <div
+          className="relative grid h-12 shrink-0 grid-cols-3 self-start rounded-xl bg-white/10 p-1 ring-1 ring-white/15"
+          role="group"
+          aria-label="Activity period"
+        >
+          <span
+            aria-hidden
+            className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-lg bg-[#e4b334] shadow-[0_8px_16px_rgba(228,179,52,0.38)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+            style={{ transform: `translateX(${RANGES.indexOf(rangeDays) * 100}%)` }}
+          />
+          {RANGES.map((days) => {
+            const selected = rangeDays === days;
+            return (
+              <button
+                key={days}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => {
+                  if (isOrgActivityRangeDays(days)) setRangeDays(days);
+                }}
+                className={cn(
+                  'relative z-[1] min-w-[3.5rem] rounded-lg px-3.5 py-2 text-sm font-bold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e4b334] focus-visible:ring-offset-2 focus-visible:ring-offset-[#071d30]',
+                  selected
+                    ? 'text-[#071d30]'
+                    : 'text-white/70 hover:text-white',
+                )}
+              >
+                {days} d
+              </button>
+            );
+          })}
+        </div>
         </div>
       </div>
 
-      <div className="space-y-5 px-5 py-5 sm:px-6 sm:py-6">
+      <div className="space-y-5 bg-[linear-gradient(180deg,#d7eef2_0%,#eef6fa_48%,#f4f9fb_100%)] px-5 py-5 sm:px-6 sm:py-6">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <TotalChip
             label="Shifts created"
@@ -222,7 +246,7 @@ export function OrganizationActivityPanel({
           />
         </div>
 
-        <p className="text-xs text-bh-text-muted">
+        <p className="text-xs font-medium text-[#071d30]/65">
           Tap a card to focus the chart. Prior window: {series.priorPeriodLabel}.
         </p>
 
@@ -236,10 +260,10 @@ export function OrganizationActivityPanel({
                 aria-pressed={selected}
                 onClick={() => setFocus(opt.id)}
                 className={cn(
-                  'rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200',
+                  'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none',
                   selected
-                    ? 'border-transparent bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-[0_6px_14px_rgba(7,29,48,0.18)]'
-                    : 'border-bh-border bg-white text-bh-text-secondary shadow-sm hover:border-bh-border-strong hover:text-bh-text',
+                    ? 'bg-[#e4b334] text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.32)]'
+                    : 'bg-white/80 text-[#071d30]/70 ring-1 ring-[#16384f]/10 hover:bg-white hover:text-[#071d30]',
                 )}
               >
                 {opt.label}
@@ -248,7 +272,7 @@ export function OrganizationActivityPanel({
           })}
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-bh-border/80 bg-[linear-gradient(180deg,#fbfcfd_0%,#ffffff_100%)] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] sm:p-4">
+        <div className="rounded-2xl border border-white/60 bg-white/55 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_28px_rgba(7,29,48,0.06)] sm:p-4">
           <OrganizationActivityChart
             series={series}
             focus={focus}
@@ -260,20 +284,20 @@ export function OrganizationActivityPanel({
         <div>
           <button
             type="button"
-            className="inline-flex items-center rounded-xl border border-bh-border bg-white px-3.5 py-2 text-sm font-semibold text-bh-teal-strong shadow-sm transition-colors hover:bg-bh-subtle"
+            className="inline-flex items-center rounded-xl border border-[#16384f]/15 bg-[#071d30] px-3.5 py-2 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(7,29,48,0.18)] transition-colors hover:bg-[#0c2844]"
             aria-expanded={tableOpen}
             onClick={() => setTableOpen((v) => !v)}
           >
             {tableOpen ? 'Hide data table' : 'Show data table'}
           </button>
           {tableOpen ? (
-            <div className="mt-3 overflow-x-auto rounded-xl border border-bh-border shadow-sm">
+            <div className="mt-3 overflow-x-auto rounded-xl bg-white ring-1 ring-bh-border/60">
               <table className="min-w-full text-left text-sm">
                 <caption className="sr-only">
                   Organization activity by {series.granularity} for{' '}
                   {series.periodLabel}
                 </caption>
-                <thead className="border-b border-[#16384f]/15 bg-[linear-gradient(180deg,#16384f_0%,#0d2a3d_100%)] text-[11px] uppercase tracking-[0.12em] text-white/70">
+                <thead className="border-b border-bh-border bg-bh-subtle/70 text-[11px] uppercase tracking-[0.12em] text-bh-text-muted">
                   <tr>
                     <th className="px-3 py-2.5 font-semibold">Period</th>
                     <th className="px-3 py-2.5 font-semibold">Created</th>
@@ -419,35 +443,36 @@ function TotalChip({
 
   const accents = {
     teal: {
-      shell: 'border-bh-teal/30 bg-[linear-gradient(160deg,#e4f7f9_0%,#ffffff_72%)]',
-      icon: 'bg-bh-teal-soft text-bh-teal-strong',
-      stroke: '#087F8C',
-      fill: '#16A6B6',
       bar: 'bg-bh-teal',
+      icon: 'bg-[linear-gradient(140deg,#0b6f7c_0%,#2cc7d6_100%)] text-white shadow-[0_8px_16px_rgba(19,163,180,0.28)]',
+      stroke: '#087f8c',
+      fill: 'rgba(22,166,182,0.16)',
+      progress: 'bg-bh-teal',
+      delta: 'bg-bh-teal-soft text-bh-teal-strong',
     },
     blue: {
-      shell:
-        'border-bh-accent-blue/30 bg-[linear-gradient(160deg,#eff6ff_0%,#ffffff_72%)]',
-      icon: 'bg-bh-accent-blue-soft text-bh-accent-blue',
-      stroke: '#2563EB',
-      fill: '#3B82F6',
-      bar: 'bg-bh-accent-blue',
+      bar: 'bg-[#16384f]',
+      icon: 'bg-[linear-gradient(140deg,#071d30_0%,#1d4d68_100%)] text-[#f3d27a] shadow-[0_8px_16px_rgba(7,29,48,0.28)]',
+      stroke: '#16384f',
+      fill: 'rgba(7,29,48,0.1)',
+      progress: 'bg-[#16384f]',
+      delta: 'bg-[#071d30]/[0.06] text-[#16384f]',
     },
     honey: {
-      shell:
-        'border-bh-honey/35 bg-[linear-gradient(160deg,#fff8e8_0%,#ffffff_72%)]',
-      icon: 'bg-bh-honey-soft text-bh-honey-strong',
-      stroke: '#C49212',
-      fill: '#E0AA18',
-      bar: 'bg-bh-honey',
+      bar: 'bg-[#e4b334]',
+      icon: 'bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.32)]',
+      stroke: '#c9920f',
+      fill: 'rgba(228,179,52,0.18)',
+      progress: 'bg-[#e4b334]',
+      delta: 'bg-[#fff4d6] text-[#c9920f]',
     },
     navy: {
-      shell:
-        'border-bh-sidebar/20 bg-[linear-gradient(160deg,#edf3f5_0%,#ffffff_72%)]',
-      icon: 'bg-bh-sidebar text-white',
-      stroke: '#0B2A43',
-      fill: '#1B3F5C',
-      bar: 'bg-bh-sidebar',
+      bar: 'bg-[#071d30]',
+      icon: 'bg-[#071d30] text-white shadow-[0_8px_16px_rgba(7,29,48,0.28)]',
+      stroke: '#071d30',
+      fill: 'rgba(7,29,48,0.12)',
+      progress: 'bg-[#071d30]',
+      delta: 'bg-[#071d30]/[0.06] text-[#071d30]',
     },
   } as const;
 
@@ -460,23 +485,23 @@ function TotalChip({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        'group relative overflow-hidden rounded-2xl border px-3.5 py-3.5 text-left shadow-sm transition-all duration-200',
-        'hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(7,29,48,0.1)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal',
+        'group relative overflow-hidden rounded-2xl border border-white/70 bg-white/90 px-3.5 py-3.5 pl-4 text-left shadow-[0_10px_24px_rgba(7,29,48,0.06)] transition-[transform,background-color,box-shadow] duration-200',
+        'hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_16px_32px_rgba(7,29,48,0.12)]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e4b334] focus-visible:ring-offset-2',
         'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
-        theme.shell,
-        selected && 'ring-2 ring-bh-sidebar/25 shadow-[0_14px_28px_rgba(7,29,48,0.12)]',
+        selected &&
+          'bg-white ring-2 ring-inset ring-[#e4b334]/70 shadow-[0_16px_32px_rgba(228,179,52,0.18)]',
       )}
     >
-      <div
+      <span
         aria-hidden
-        className="pointer-events-none absolute -right-6 -top-8 h-20 w-20 rounded-full bg-white/50 blur-2xl transition-opacity group-hover:opacity-90"
+        className={cn('absolute inset-y-3 left-0 w-[3px] rounded-full', theme.bar)}
       />
 
       <div className="relative flex items-start justify-between gap-2">
         <span
           className={cn(
-            'grid h-9 w-9 place-items-center rounded-xl shadow-sm ring-1 ring-black/5',
+            'grid h-9 w-9 place-items-center rounded-xl',
             theme.icon,
           )}
         >
@@ -485,11 +510,7 @@ function TotalChip({
         <span
           className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
-            flat
-              ? 'bg-white/80 text-bh-text-muted'
-              : up
-                ? 'bg-bh-success-soft text-bh-success'
-                : 'bg-bh-danger-soft text-bh-danger',
+            theme.delta,
           )}
         >
           {flat ? null : up ? (
@@ -501,11 +522,11 @@ function TotalChip({
         </span>
       </div>
 
-      <p className="relative mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+      <p className="relative mt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#071d30]/55">
         {label}
       </p>
-      <p className="relative bh-tabular mt-1 text-2xl font-bold tracking-tight text-bh-text">
-        {value}{' '}
+      <p className="relative bh-tabular mt-1 text-2xl font-bold tracking-tight text-[#071d30]">
+        <CountUp value={value} />{' '}
         <span className="text-sm font-semibold text-bh-text-secondary">{unit}</span>
       </p>
 
@@ -517,23 +538,19 @@ function TotalChip({
         />
       </div>
 
-      <div className="relative mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
+      <div className="relative mt-2 h-1.5 overflow-hidden rounded-full bg-bh-subtle">
         <div
-          className={cn(
-            'h-full rounded-full transition-[width] duration-500',
-            theme.bar,
-            !up && !flat && 'bg-bh-danger',
-          )}
+          className={cn('bh-cal-bar h-full rounded-full', theme.progress)}
           style={{ width: `${flat ? 12 : barWidth}%` }}
         />
       </div>
 
-      <p className="relative mt-2 text-xs font-semibold text-bh-text-secondary">
+      <p className="relative mt-2 text-xs font-semibold text-bh-text">
         {flat
           ? 'Same as prior period'
           : `${delta > 0 ? '+' : ''}${delta} vs prior period`}
       </p>
-      <p className="relative mt-1 text-[11px] leading-4 text-bh-text-muted">
+      <p className="relative mt-1 text-[11px] leading-4 text-bh-text-secondary">
         {hint}
       </p>
     </button>

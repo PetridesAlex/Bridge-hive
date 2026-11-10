@@ -2,7 +2,7 @@
 -- Auth, cross-tenant, bounds, rollback, idempotency, draft not worker-visible.
 
 begin;
-select plan(26);
+select plan(28);
 
 -- ---------------------------------------------------------------------------
 -- Seed: Org A (active) + Org B (active) + suspended org + users
@@ -214,6 +214,7 @@ as $$
       'location_id', p_location_id,
       'ward_id', p_ward_id,
       'required_role', 'registered_nurse',
+      'required_positions', 3,
       'starts_at', (now() + interval '2 days')::text,
       'ends_at', case
         when p_bad_end then (now() + interval '1 day')::text
@@ -229,6 +230,7 @@ as $$
       'location_id', p_location_id,
       'ward_id', p_ward_id,
       'required_role', 'ward_assistant',
+      'required_positions', 2,
       'starts_at', (now() + interval '3 days')::text,
       'ends_at', (now() + interval '3 days' + interval '8 hours')::text,
       'break_minutes', 0,
@@ -411,6 +413,36 @@ select is(
   ),
   2,
   'draft batch inserts two draft shifts'
+);
+
+select is(
+  (
+    select required_positions
+    from public.shifts
+    where creation_batch_id = (
+      select id from public.shift_creation_batches
+      where request_key = 'req-draft-1'
+        and organization_id = 'c0c0c0c0-c0c0-40c0-80c0-c0c0c0c0c0c0'
+    )
+      and title = 'Bulk morning'
+  ),
+  3,
+  'bulk create persists required_positions=3 for morning row'
+);
+
+select is(
+  (
+    select required_positions
+    from public.shifts
+    where creation_batch_id = (
+      select id from public.shift_creation_batches
+      where request_key = 'req-draft-1'
+        and organization_id = 'c0c0c0c0-c0c0-40c0-80c0-c0c0c0c0c0c0'
+    )
+      and title = 'Bulk afternoon'
+  ),
+  2,
+  'bulk create persists required_positions=2 for afternoon row'
 );
 
 -- Idempotent replay

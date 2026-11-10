@@ -24,29 +24,22 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow ? (
-          <p className="mb-2.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
-            <span
-              aria-hidden
-              className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
-            />
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
             {eyebrow}
           </p>
-        ) : (
-          <div
-            aria-hidden
-            className="mb-2.5 h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
-          />
-        )}
-        <h1 className="text-[2rem] font-extrabold leading-[1.1] tracking-[-0.04em] text-[#071d30]">
+        ) : null}
+        <h1 className="text-[1.75rem] font-semibold leading-[1.15] tracking-[-0.03em] text-[#071d30] sm:text-[2rem]">
           {title}
         </h1>
         {subtitle ? (
-          <p className="mt-3 max-w-xl border-l-2 border-[#e4b334] pl-3 text-[15px] leading-6 tracking-[-0.011em] text-bh-text-secondary">
+          <p className="mt-2 max-w-xl text-[15px] leading-6 text-bh-text-secondary">
             {subtitle}
           </p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+      ) : null}
     </div>
   );
 }
@@ -67,24 +60,23 @@ export function Breadcrumbs({
             return (
               <li key={`${item.label}-${index}`} className="flex items-center gap-2">
                 {index > 0 ? (
-                  <span
-                    aria-hidden
-                    className="h-1 w-1 rounded-full bg-[linear-gradient(135deg,#16a6b6,#e0aa18)] shadow-[0_0_8px_rgba(22,166,182,0.45)]"
-                  />
+                  <span aria-hidden className="text-bh-text-muted">
+                    /
+                  </span>
                 ) : null}
                 {item.href && !last ? (
                   <Link
                     href={item.href}
-                    className="rounded-full border border-[#071d30]/8 bg-white/55 px-3 py-1 text-[13px] font-semibold text-[#3d5564] shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] transition-all duration-200 hover:-translate-y-0.5 hover:border-bh-teal/40 hover:bg-bh-teal-soft/80 hover:text-bh-teal-strong motion-reduce:hover:translate-y-0"
+                    className="rounded-full bg-white/70 px-3 py-1 text-[13px] font-semibold text-bh-text-secondary transition-colors hover:bg-bh-teal-soft hover:text-bh-teal-strong"
                   >
                     {item.label}
                   </Link>
                 ) : (
                   <span
                     className={cn(
-                      'rounded-full px-3.5 py-1 text-[13px] font-bold tracking-tight',
+                      'rounded-full px-3 py-1 text-[13px] font-semibold tracking-tight',
                       last
-                        ? 'border border-bh-teal/25 bg-[linear-gradient(120deg,#071d30_0%,#0e4a5c_55%,#16a6b6_120%)] text-white shadow-[0_8px_18px_rgba(7,29,48,0.18)]'
+                        ? 'bg-[#071d30] text-white'
                         : 'text-bh-text-muted',
                     )}
                     aria-current={last ? 'page' : undefined}

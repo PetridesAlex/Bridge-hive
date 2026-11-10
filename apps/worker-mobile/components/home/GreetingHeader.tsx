@@ -407,7 +407,7 @@ export function GreetingHeader({
                 ? `Notifications, ${unreadCount} alert${unreadCount === 1 ? '' : 's'}`
                 : 'Notifications'
             }
-            onPress={() => router.push('/notifications')}
+            onPress={() => router.push('/profile/notifications')}
             count={unreadCount}
             tone={alertTone}
             ring={unreadCount > 0}

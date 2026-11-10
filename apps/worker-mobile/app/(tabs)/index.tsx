@@ -235,7 +235,8 @@ export default function HomeScreen() {
         onPressCard: () => router.push(`/shifts/${nextShift.shift_id}`),
         icon: 'calendar-outline' as const,
         variant: 'light' as const,
-        live: false,
+        live: true,
+        liveLabel: 'Upcoming',
       };
     }
     if (openShiftCount > 0) {

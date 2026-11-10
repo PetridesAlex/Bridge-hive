@@ -17,6 +17,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { AuthHandoffLoader } from '@/components/auth/AuthHandoffLoader';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
@@ -202,12 +203,16 @@ function FooterEmailLink({ onPress }: { onPress: () => void }) {
 }
 
 export default function WorkerAuthLandingScreen() {
-  const { session, loading, homeRoute } = useAuth();
+  const { session, loading, homeRoute, googleSignInCompleting } = useAuth();
   const { t } = useTranslation();
   const reduced = useReducedMotion();
   const density = useAuthDensity();
 
-  if (!loading && session) {
+  if (googleSignInCompleting || (session && loading)) {
+    return <AuthHandoffLoader />;
+  }
+
+  if (session) {
     return <Redirect href={homeRoute as never} />;
   }
 

@@ -1,9 +1,19 @@
-import React from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, {
+  Easing,
+  FadeInDown,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 import { IconButton } from '@/components/ui/IconButton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Props = {
   title: string;
@@ -36,8 +46,31 @@ export function ScreenHeader({
   titleSize,
 }: Props) {
   const router = useRouter();
+  const reduced = useReducedMotion();
   const size = titleSize ?? (showBack ? 'detail' : 'page');
   const titleStyle = size === 'detail' ? styles.titleDetail : styles.titlePage;
+  const enter = useSharedValue(reduced ? 1 : 0);
+
+  useEffect(() => {
+    if (reduced) {
+      enter.value = 1;
+      return;
+    }
+    enter.value = withTiming(1, {
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [enter, reduced, title]);
+
+  const motionStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: interpolate(enter.value, [0, 1], [6, 0]) }],
+  }));
+
+  const ruleStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: interpolate(enter.value, [0, 1], [0.35, 1]) }],
+    opacity: enter.value,
+  }));
 
   if (showBack) {
     return (
@@ -46,7 +79,16 @@ export function ScreenHeader({
           <IconButton
             icon="chevron-back"
             accessibilityLabel="Go back"
-            onPress={onBack ?? (() => router.back())}
+            onPress={
+              onBack ??
+              (() => {
+                if (router.canGoBack()) {
+                  router.back();
+                  return;
+                }
+                router.replace('/(tabs)/profile');
+              })
+            }
             color={colors.navy}
             backgroundColor={colors.surfaceSubdued}
           />
@@ -60,7 +102,14 @@ export function ScreenHeader({
         <Text style={titleStyle} numberOfLines={3}>
           {title}
         </Text>
-        <View style={styles.rule} />
+        <Animated.View style={[styles.ruleTrack, ruleStyle]}>
+          <LinearGradient
+            colors={[colors.yellow, colors.honeyStrong]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.ruleFill}
+          />
+        </Animated.View>
         {subtitle ? (
           <Text style={styles.subtitle} numberOfLines={3}>
             {subtitle}
@@ -71,8 +120,17 @@ export function ScreenHeader({
   }
 
   return (
-    <View style={styles.rootWrap}>
-      <View style={styles.rootWash} pointerEvents="none" />
+    <Animated.View
+      style={[styles.rootWrap, motionStyle]}
+      entering={reduced ? undefined : FadeInDown.duration(380).springify().damping(18)}
+    >
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(11, 42, 67, 0.05)', 'rgba(20, 169, 181, 0.07)', 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.rootWash}
+      />
       {eyebrow ? (
         <View style={styles.eyebrowRow}>
           <View style={styles.eyebrowDot} />
@@ -87,13 +145,20 @@ export function ScreenHeader({
         </Text>
         {right ? <View style={styles.rightSlot}>{right}</View> : null}
       </View>
-      <View style={styles.rule} />
+      <Animated.View style={[styles.ruleTrack, ruleStyle]}>
+        <LinearGradient
+          colors={[colors.yellow, colors.honeyStrong]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 1, y: 0.5 }}
+          style={styles.ruleFill}
+        />
+      </Animated.View>
       {subtitle ? (
         <Text style={styles.subtitle} numberOfLines={3}>
           {subtitle}
         </Text>
       ) : null}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -103,23 +168,18 @@ export const DetailHeader = ScreenHeader;
 
 const styles = StyleSheet.create({
   rootWrap: {
-    paddingTop: spacing.md,
+    paddingTop: spacing.md + 2,
     marginBottom: spacing.lg,
-    gap: 8,
+    gap: 10,
     position: 'relative',
     overflow: 'hidden',
     borderRadius: radii.lg,
-    paddingBottom: spacing.md,
-    paddingHorizontal: 2,
+    paddingBottom: spacing.md + 2,
+    paddingHorizontal: spacing.xs,
   },
   rootWash: {
-    position: 'absolute',
-    top: 0,
-    left: -8,
-    right: -8,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     borderRadius: radii.lg,
-    backgroundColor: 'rgba(20, 169, 181, 0.05)',
   },
   detailWrap: {
     paddingTop: spacing.sm,
@@ -139,16 +199,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eyebrowDot: {
-    width: 7,
-    height: 7,
+    width: 8,
+    height: 8,
     borderRadius: 4,
     backgroundColor: colors.yellow,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.65)',
   },
   eyebrow: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 12,
-    lineHeight: 16,
-    letterSpacing: 1,
+    fontFamily: typography.fonts.bold,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 1.4,
     textTransform: 'uppercase',
     color: colors.tealStrong,
   },
@@ -164,32 +226,37 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   titlePage: {
-    fontFamily: typography.fonts.display,
-    fontSize: 30,
-    lineHeight: 36,
-    letterSpacing: -0.5,
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 32,
+    lineHeight: 38,
+    letterSpacing: -0.7,
     color: colors.navy,
   },
   titleDetail: {
-    fontFamily: typography.fonts.display,
-    fontSize: 24,
-    lineHeight: 30,
-    letterSpacing: -0.3,
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 26,
+    lineHeight: 32,
+    letterSpacing: -0.4,
     color: colors.navy,
   },
-  rule: {
-    width: 36,
+  ruleTrack: {
+    width: 44,
     height: 3,
     borderRadius: 2,
-    backgroundColor: colors.yellow,
+    overflow: 'hidden',
     marginTop: 2,
+    alignSelf: 'flex-start',
+  },
+  ruleFill: {
+    flex: 1,
   },
   subtitle: {
-    fontFamily: typography.fonts.regular,
+    fontFamily: typography.fonts.medium,
     fontSize: 15,
     lineHeight: 22,
     color: colors.textSecondary,
-    maxWidth: 360,
+    maxWidth: 380,
+    letterSpacing: -0.1,
   },
   rightSlot: {
     flexDirection: 'row',

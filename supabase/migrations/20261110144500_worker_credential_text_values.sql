@@ -426,6 +426,7 @@ begin
 end;
 $$;
 revoke all on function public.notify_credential_event(uuid, text, text, text) from public;
+grant execute on function public.notify_credential_event(uuid, text, text, text) to authenticated;
 
 -- Patched from latest definition: public.notify_platform_admin_task
 create or replace function public.notify_platform_admin_task(
@@ -477,6 +478,7 @@ begin
 end;
 $$;
 revoke all on function public.notify_platform_admin_task(text, text, text, jsonb) from public;
+grant execute on function public.notify_platform_admin_task(text, text, text, jsonb) to authenticated;
 
 -- Patched from latest definition: public.notify_super_admin_task
 create or replace function public.notify_super_admin_task(
@@ -527,6 +529,7 @@ begin
 end;
 $$;
 revoke all on function public.notify_super_admin_task(text, text, text, jsonb) from public;
+grant execute on function public.notify_super_admin_task(text, text, text, jsonb) to authenticated;
 
 -- Patched from latest definition: public.submit_credential_for_review
 create or replace function public.submit_credential_for_review(
@@ -1046,6 +1049,11 @@ begin
 end;
 $$;
 revoke all on function public.approve_reviewed_worker_credentials(
+  uuid, uuid[], boolean, timestamptz
+) from public;
+grant execute on function public.approve_reviewed_worker_credentials(
+  uuid, uuid[], boolean, timestamptz
+) to authenticated;
 
 -- Patched from latest definition: public.worker_verification_application_status
 create or replace function public.worker_verification_application_status(p_worker_id uuid)
@@ -1385,3 +1393,8 @@ begin
 end;
 $$;
 revoke all on function public.list_verification_applications(
+  text, public.worker_role, text, public.payout_account_status, text, int, int
+) from public;
+grant execute on function public.list_verification_applications(
+  text, public.worker_role, text, public.payout_account_status, text, int, int
+) to authenticated;

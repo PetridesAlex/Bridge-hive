@@ -3,6 +3,7 @@ import {
   CircleAlert,
   CircleDashed,
   Clock3,
+  FileText,
   FileWarning,
   ShieldCheck,
   Wallet,
@@ -491,19 +492,23 @@ export default async function VerificationApplicationWorkspacePage({
       <Panel
         kicker="Documents"
         title={workerFolderLabel('documentsAndCredentials', 'en')}
-        description="Uploaded files for this worker. Open documents with short-lived signed URLs only."
+        description="Uploaded files and text credentials for this worker. Open documents with short-lived signed URLs only."
+        accent="teal"
+        icon={FileText}
       >
-          {fileCredRows.length === 0 && textCredRows.length === 0 ? (
-            <p className="text-sm text-slate-500">No credentials uploaded yet.</p>
-          ) : (
-            <PackageReviewPanel
-              workerId={workerId}
-              credentials={credRows}
-              expectedLastActivity={expectedLastActivity}
-              canReview={ctx.capabilities.canReviewCredentials}
-              canViewDocuments={ctx.capabilities.canViewCredentialDocuments}
-            />
-          )}
+        {fileCredRows.length === 0 && textCredRows.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-bh-border px-4 py-8 text-center text-sm text-bh-text-secondary">
+            No credentials uploaded yet.
+          </p>
+        ) : (
+          <PackageReviewPanel
+            workerId={workerId}
+            credentials={credRows}
+            expectedLastActivity={expectedLastActivity}
+            canReview={ctx.capabilities.canReviewCredentials}
+            canViewDocuments={ctx.capabilities.canViewCredentialDocuments}
+          />
+        )}
       </Panel>
 
       <Panel

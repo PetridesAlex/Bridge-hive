@@ -36,14 +36,16 @@ export default async function OrgMessagesPage({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex min-h-0 flex-col gap-4">
       <PageHeader title={copy.title} subtitle={copy.subtitle} />
-      <OrgMessagesWorkspace
-        organizationId={ctx.org.id}
-        currentUserId={ctx.user.id}
-        locale="en"
-        initialConversationId={query.conversation ?? null}
-      />
+      <div className="min-h-0 w-full">
+        <OrgMessagesWorkspace
+          organizationId={ctx.org.id}
+          currentUserId={ctx.user.id}
+          locale="en"
+          initialConversationId={query.conversation ?? null}
+        />
+      </div>
     </div>
   );
 }

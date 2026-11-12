@@ -1,9 +1,26 @@
-import type {
-  OrgWorkerConversationSummary,
-  OrgWorkerMessageRow,
+import {
+  isMessagingReactionsUnavailableError,
+  isOrgWorkerReactionKey,
+  messageListRpcArgs,
+  parseReactionSummaries,
+  type OrgWorkerConversationSummary,
+  type OrgWorkerMessageReactionSummary,
+  type OrgWorkerMessageRow,
+  type OrgWorkerReactionKey,
 } from '@bridge-hive/domain';
 
 import { supabase } from '@/lib/supabase';
+
+let reactionsUnavailableLogged = false;
+
+function noteReactionsUnavailable(errorMessage: string | null | undefined) {
+  if (!isMessagingReactionsUnavailableError(errorMessage)) return false;
+  if (!reactionsUnavailableLogged) {
+    reactionsUnavailableLogged = true;
+    console.warn('[messaging] reactions unavailable; hiding reaction UI', errorMessage);
+  }
+  return true;
+}
 
 function parseConversations(value: unknown): OrgWorkerConversationSummary[] {
   if (!Array.isArray(value)) return [];
@@ -60,14 +77,14 @@ export async function listMyMessagingConversations() {
   return { data: parseConversations(data) };
 }
 
-export async function listConversationMessages(conversationId: string) {
+export async function listConversationMessages(
+  conversationId: string,
+  cursor?: { createdAt: string; id: string } | null,
+) {
   const { data, error } = await supabase.rpc(
     'list_org_worker_messages' as never,
     {
-      p_conversation_id: conversationId,
-      p_before_created_at: null,
-      p_before_id: null,
-      p_limit: 80,
+      ...messageListRpcArgs(conversationId, cursor),
     } as never,
   );
   if (error) return { data: [] as OrgWorkerMessageRow[], error: error.message };
@@ -129,4 +146,72 @@ export async function isMessagingEligiblePair(organizationId: string, workerId: 
   );
   if (error) return { eligible: false, error: error.message };
   return { eligible: Boolean(data), error: null as string | null };
+}
+
+export async function listMessageReactionSummaries(messageIds: string[]) {
+  if (!messageIds.length) {
+    return {
+      data: [] as OrgWorkerMessageReactionSummary[],
+      error: null as string | null,
+      unavailable: false,
+    };
+  }
+  const { data, error } = await supabase.rpc(
+    'list_org_worker_message_reaction_summaries' as never,
+    { p_message_ids: messageIds } as never,
+  );
+  if (error) {
+    const unavailable = noteReactionsUnavailable(error.message);
+    return {
+      data: [] as OrgWorkerMessageReactionSummary[],
+      error: error.message,
+      unavailable,
+    };
+  }
+  return {
+    data: parseReactionSummaries(data),
+    error: null as string | null,
+    unavailable: false,
+  };
+}
+
+export async function setMessageReaction(
+  messageId: string,
+  reactionKey: OrgWorkerReactionKey,
+) {
+  if (!isOrgWorkerReactionKey(reactionKey)) {
+    return { error: 'INVALID_REACTION_KEY', unavailable: false };
+  }
+  const { error } = await supabase.rpc(
+    'set_org_worker_message_reaction' as never,
+    {
+      p_message_id: messageId,
+      p_reaction_key: reactionKey,
+    } as never,
+  );
+  if (error) {
+    return {
+      error: error.message,
+      unavailable: noteReactionsUnavailable(error.message),
+    };
+  }
+  return { error: null as string | null, unavailable: false };
+}
+
+export async function clearMessageReaction(messageId: string) {
+  const { error } = await supabase.rpc(
+    'clear_org_worker_message_reaction' as never,
+    { p_message_id: messageId } as never,
+  );
+  if (error) {
+    return {
+      error: error.message,
+      unavailable: noteReactionsUnavailable(error.message),
+    };
+  }
+  return { error: null as string | null, unavailable: false };
+}
+
+export function areMessagingReactionsUnavailable() {
+  return reactionsUnavailableLogged;
 }

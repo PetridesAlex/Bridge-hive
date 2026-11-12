@@ -68,6 +68,14 @@ describe('worker messaging gating', () => {
       }),
     ).toBe(false);
   });
+
+  it('subscribes to private reaction Broadcast instead of reactions postgres_changes', () => {
+    const thread = source('app/messages/[id].tsx');
+    expect(thread).toContain('subscribeReactionBroadcast');
+    expect(thread).not.toContain("table: 'organization_worker_message_reactions'");
+    expect(thread).toContain('subscribeMessagingRealtime');
+    expect(thread).toContain("table: 'organization_worker_messages'");
+  });
 });
 
 describe('messages i18n', () => {

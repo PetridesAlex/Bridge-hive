@@ -1,41 +1,29 @@
 import {
-  messagePreview,
+  isMessagingUuid,
+  messagingChannelName,
+  subscribeMessagingRealtime,
   type OrgWorkerConversationSummary,
 } from '@bridge-hive/domain';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import {
-  ActivityIndicator,
-  AppState,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Redirect, router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
+import { InboxView } from '@/components/messages/InboxView';
 import { AppScreen } from '@/components/ui/AppScreen';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useTranslation } from '@/i18n/locale-provider';
 import { listMyMessagingConversations } from '@/lib/messaging';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
-function formatTime(iso?: string | null) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleString();
-}
-
 export default function MessagesInboxScreen() {
-  const { t } = useTranslation();
-  const { isAppReviewDemo, session } = useAuth();
+  const { t, language } = useTranslation();
+  const { isAppReviewDemo, session, loading: authLoading } = useAuth();
   const [rows, setRows] = useState<OrgWorkerConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const loadedOnceRef = useRef(false);
+  const requestRef = useRef(0);
 
   const load = useCallback(async () => {
     if (isAppReviewDemo || !session) {
@@ -43,17 +31,22 @@ export default function MessagesInboxScreen() {
       setLoading(false);
       return;
     }
+    const requestId = ++requestRef.current;
     const result = await listMyMessagingConversations();
+    if (requestId !== requestRef.current) return;
     if (result.error) setError(result.error);
-    else setError(null);
-    setRows(result.data);
+    else {
+      setError(null);
+      setRows(result.data);
+    }
+    loadedOnceRef.current = true;
     setLoading(false);
     setRefreshing(false);
   }, [isAppReviewDemo, session]);
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      if (!loadedOnceRef.current) setLoading(true);
       void load();
       const sub = AppState.addEventListener('change', (state) => {
         if (state === 'active') void load();
@@ -62,169 +55,60 @@ export default function MessagesInboxScreen() {
     }, [load]),
   );
 
-  if (isAppReviewDemo) {
-    return (
-      <AppScreen scroll={false} padded={false}>
-        <ScreenHeader title={t('messages.title')} showBack onBack={() => router.back()} />
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>{t('messages.demoBlocked')}</Text>
-          <Text style={styles.emptyBody}>{t('messages.demoBlockedBody')}</Text>
-        </View>
-      </AppScreen>
-    );
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !isMessagingUuid(userId) || isAppReviewDemo) return;
+    const subscription = subscribeMessagingRealtime({
+      client: supabase,
+      channelName: messagingChannelName('worker-inbox', { userId }),
+      table: 'organization_worker_conversations',
+      filter: `worker_id=eq.${userId}`,
+      onChange: () => void load(),
+      onSubscribed: () => void load(),
+    });
+    return () => subscription.unsubscribe();
+  }, [isAppReviewDemo, load, session?.user?.id]);
+
+  if (!authLoading && !session) {
+    return <Redirect href="/auth/worker/login" />;
   }
 
   return (
-    <AppScreen scroll={false} padded={false}>
-      <ScreenHeader title={t('messages.title')} showBack onBack={() => router.back()} />
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.teal} />
-          <Text style={styles.muted}>{t('messages.loading')}</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={rows}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                void load();
-              }}
-              tintColor={colors.teal}
-            />
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>
-                {error ? t('messages.loadError') : t('messages.emptyInbox')}
-              </Text>
-              <Text style={styles.emptyBody}>
-                {error ? error : t('messages.emptyInboxBody')}
-              </Text>
-              {error ? (
-                <Pressable
-                  onPress={() => {
-                    setLoading(true);
-                    void load();
-                  }}
-                  style={styles.retry}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.retryText}>{t('common.retry')}</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.row}
-              onPress={() => router.push(`/messages/${item.id}`)}
-              accessibilityRole="button"
-              accessibilityLabel={item.organizationName ?? t('messages.title')}
-            >
-              <View style={styles.rowTop}>
-                <Text style={styles.org} numberOfLines={1}>
-                  {item.organizationName?.trim() || t('messages.organization')}
-                </Text>
-                <Text style={styles.time}>{formatTime(item.lastMessageAt)}</Text>
-              </View>
-              <View style={styles.rowBottom}>
-                <Text style={styles.preview} numberOfLines={2}>
-                  {messagePreview(item.lastMessagePreview ?? '', 100) || '—'}
-                </Text>
-                {item.unreadCount > 0 ? (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                      {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-            </Pressable>
-          )}
-        />
-      )}
+    <AppScreen scroll={false} padded={false} edges={['top', 'left', 'right']}>
+      <InboxView
+        rows={isAppReviewDemo ? [] : rows}
+        locale={language}
+        loading={isAppReviewDemo ? false : loading}
+        refreshing={refreshing}
+        error={isAppReviewDemo ? null : error}
+        onBack={() => router.back()}
+        onRefresh={() => {
+          setRefreshing(true);
+          void load();
+        }}
+        onRetry={() => {
+          setLoading(rows.length === 0);
+          void load();
+        }}
+        onOpen={(id) => router.push(`/messages/${id}`)}
+        copy={{
+          title: t('messages.title'),
+          subtitle: t('messages.subtitle'),
+          searchPlaceholder: t('messages.searchPlaceholder'),
+          organization: t('messages.organization'),
+          emptyInbox: isAppReviewDemo ? t('messages.demoBlocked') : t('messages.emptyInbox'),
+          emptyInboxBody: isAppReviewDemo
+            ? t('messages.demoBlockedBody')
+            : t('messages.emptyInboxBody'),
+          loadError: t('messages.loadError'),
+          loading: t('messages.loading'),
+          reconnect: t('messages.reconnect'),
+          retry: t('common.retry'),
+          back: t('common.back'),
+          noMessagesYet: t('messages.noMessagesYet'),
+          newMessages: t('messages.newMessages'),
+        }}
+      />
     </AppScreen>
   );
 }
-
-const styles = StyleSheet.create({
-  list: { padding: spacing.md, paddingBottom: spacing.huge, flexGrow: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  muted: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  empty: { padding: spacing.xl, alignItems: 'center' },
-  emptyTitle: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 16,
-    color: colors.navy,
-    textAlign: 'center',
-  },
-  emptyBody: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
-  retry: {
-    marginTop: spacing.md,
-    backgroundColor: colors.teal,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  retryText: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 14,
-    color: colors.white,
-  },
-  row: {
-    backgroundColor: colors.card,
-    borderRadius: radii.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-  },
-  rowTop: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
-  org: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 15,
-    color: colors.navy,
-    flex: 1,
-  },
-  time: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  rowBottom: { marginTop: spacing.xs, flexDirection: 'row', gap: spacing.sm },
-  preview: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 13,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  badge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.teal,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    fontFamily: typography.fonts.bold,
-    fontSize: 10,
-    color: colors.white,
-  },
-});

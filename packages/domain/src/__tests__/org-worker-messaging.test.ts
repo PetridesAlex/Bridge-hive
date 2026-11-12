@@ -1,14 +1,28 @@
 import {
   advanceReadCursor,
+  applyOptimisticReaction,
   canOrgStaffMessage,
+  canReactToMessage,
+  clampMessageDraft,
   filterConversationsByQuery,
+  insertTextAtSelection,
   isMessageAfter,
   isMessagingEligible,
+  isMessagingReactionsUnavailableError,
+  isOrgWorkerReactionKey,
   mergeMessagePage,
+  mergeReactionSummaries,
   messagePreview,
+  messagingChannelName,
   normalizeMessageBody,
   ORG_WORKER_MESSAGE_MAX_LENGTH,
+  ORG_WORKER_REACTIONS_BROADCAST_EVENT,
+  orgWorkerReactionsBroadcastTopic,
   sortMessagesAscending,
+  subscribeMessagingRealtime,
+  subscribeReactionBroadcast,
+  unicodeCharLength,
+  unicodeSlice,
   type OrgWorkerConversationSummary,
   type OrgWorkerMessageRow,
 } from '../org-worker-messaging';
@@ -47,6 +61,145 @@ describe('isMessagingEligible', () => {
   });
 });
 
+describe('subscribeMessagingRealtime', () => {
+  it('uses a unique channel topic per subscribe so callbacks are never added after subscribe', () => {
+    const topics: string[] = [];
+    const client = {
+      channel(name: string) {
+        topics.push(name);
+        const channel = {
+          on() {
+            return channel;
+          },
+          subscribe(cb?: (status: string) => void) {
+            cb?.('SUBSCRIBED');
+            return channel;
+          },
+        };
+        return channel;
+      },
+      removeChannel() {},
+    };
+    const base = messagingChannelName('worker-inbox', {
+      userId: 'b87a079e-8742-4a37-a17f-4205d858266c',
+    });
+    expect(base).toBe('worker-inbox:b87a079e-8742-4a37-a17f-4205d858266c');
+    const first = subscribeMessagingRealtime({
+      client,
+      channelName: base,
+      table: 'organization_worker_conversations',
+      filter: 'worker_id=eq.b87a079e-8742-4a37-a17f-4205d858266c',
+      onChange() {},
+      onSubscribed() {},
+    });
+    const second = subscribeMessagingRealtime({
+      client,
+      channelName: base,
+      table: 'organization_worker_conversations',
+      filter: 'worker_id=eq.b87a079e-8742-4a37-a17f-4205d858266c',
+      onChange() {},
+      onSubscribed() {},
+    });
+    expect(topics).toHaveLength(2);
+    expect(topics[0]).not.toBe(topics[1]);
+    expect(topics[0]?.startsWith(`${base}:`)).toBe(true);
+    expect(topics[1]?.startsWith(`${base}:`)).toBe(true);
+    first.unsubscribe();
+    second.unsubscribe();
+  });
+});
+
+describe('subscribeReactionBroadcast', () => {
+  const conversationId = 'b87a079e-8742-4a37-a17f-4205d858266c';
+
+  it('opens the exact conversation topic as a private Broadcast channel', () => {
+    const calls: Array<{
+      name: string;
+      opts?: { config: { private?: boolean } };
+    }> = [];
+    const events: Array<{ type: string; filter: object }> = [];
+    const client = {
+      channel(name: string, opts?: { config: { private?: boolean } }) {
+        calls.push({ name, opts });
+        const channel = {
+          on(type: string, filter: object) {
+            events.push({ type, filter });
+            return channel;
+          },
+          subscribe(cb?: (status: string) => void) {
+            cb?.('SUBSCRIBED');
+            return channel;
+          },
+        };
+        return channel;
+      },
+      removeChannel() {},
+    };
+
+    let changed = 0;
+    let subscribed = 0;
+    const sub = subscribeReactionBroadcast({
+      client,
+      conversationId,
+      onChange() {
+        changed += 1;
+      },
+      onSubscribed() {
+        subscribed += 1;
+      },
+    });
+
+    expect(orgWorkerReactionsBroadcastTopic(conversationId)).toBe(
+      `org-worker-reactions:${conversationId}`,
+    );
+    expect(calls).toEqual([
+      {
+        name: `org-worker-reactions:${conversationId}`,
+        opts: { config: { private: true } },
+      },
+    ]);
+    expect(events).toEqual([
+      {
+        type: 'broadcast',
+        filter: { event: ORG_WORKER_REACTIONS_BROADCAST_EVENT },
+      },
+    ]);
+    expect(events[0]?.type).not.toBe('postgres_changes');
+    expect(subscribed).toBe(1);
+    expect(changed).toBe(0);
+    sub.unsubscribe();
+  });
+
+  it('does not open a channel for invalid conversation ids (unrelated/malformed)', () => {
+    const calls: string[] = [];
+    const client = {
+      channel(name: string) {
+        calls.push(name);
+        throw new Error(`unexpected channel ${name}`);
+      },
+      removeChannel() {},
+    };
+    const sub = subscribeReactionBroadcast({
+      client,
+      conversationId: 'not-a-uuid',
+      onChange() {},
+      onSubscribed() {},
+    });
+    expect(calls).toEqual([]);
+    expect(orgWorkerReactionsBroadcastTopic('not-a-uuid')).toBeNull();
+    sub.unsubscribe();
+  });
+
+  it('documents that unrelated orgs cannot share a participant topic string', () => {
+    const a = orgWorkerReactionsBroadcastTopic('11111111-1111-4111-8111-111111111111');
+    const b = orgWorkerReactionsBroadcastTopic('22222222-2222-4222-8222-222222222222');
+    expect(a).not.toBe(b);
+    expect(a).toMatch(/^org-worker-reactions:[0-9a-f-]{36}$/);
+    // Authorization is enforced by realtime.messages RLS + org_worker_can_access_conversation
+    // on the exact topic; a foreign org JWT fails that check at channel join (source contract).
+  });
+});
+
 describe('canOrgStaffMessage', () => {
   it('allows operate + shifts or timesheets; denies billing-only', () => {
     expect(
@@ -80,15 +233,92 @@ describe('canOrgStaffMessage', () => {
   });
 });
 
-describe('normalizeMessageBody / preview / merge', () => {
-  it('trims body and enforces max length', () => {
+describe('unicode length / normalizeMessageBody', () => {
+  it('counts Unicode code points like PostgreSQL char_length', () => {
+    expect(unicodeCharLength('hi')).toBe(2);
+    expect(unicodeCharLength('👍')).toBe(1);
+    expect(unicodeCharLength('🇬🇷')).toBe(2); // regional indicators
+    expect(unicodeCharLength('👨‍👩‍👧‍👦')).toBe(7); // ZWJ family
+    expect(unicodeCharLength('👍🏽')).toBe(2); // base + skin tone
+    expect(unicodeCharLength('Γεια 👍')).toBe(6);
+  });
+
+  it('enforces the 2000 code-point cap (not UTF-16 length)', () => {
     expect(normalizeMessageBody('  hello  ')).toEqual({ ok: true, body: 'hello' });
     expect(normalizeMessageBody('   ')).toEqual({ ok: false, error: 'empty' });
     expect(
       normalizeMessageBody('x'.repeat(ORG_WORKER_MESSAGE_MAX_LENGTH + 1)),
     ).toEqual({ ok: false, error: 'too_long' });
+    const emojiBody = '👍'.repeat(ORG_WORKER_MESSAGE_MAX_LENGTH);
+    expect(normalizeMessageBody(emojiBody)).toEqual({ ok: true, body: emojiBody });
+    expect(
+      normalizeMessageBody(`${emojiBody}👍`),
+    ).toEqual({ ok: false, error: 'too_long' });
+    // UTF-16 length of 2000 astral symbols exceeds 2000; code points do not.
+    expect(emojiBody.length).toBeGreaterThan(ORG_WORKER_MESSAGE_MAX_LENGTH);
+    expect(unicodeCharLength(emojiBody)).toBe(ORG_WORKER_MESSAGE_MAX_LENGTH);
   });
 
+  it('clamps drafts and inserts without splitting code points', () => {
+    expect(clampMessageDraft('👍'.repeat(5), 3)).toBe('👍👍👍');
+    expect(unicodeSlice('🇬🇷ab', 0, 2)).toBe('🇬🇷');
+    const inserted = insertTextAtSelection('ab', '🇬🇷', { start: 1, end: 1 }, 10);
+    expect(inserted.value).toBe('a🇬🇷b');
+    expect(inserted.selection).toEqual({ start: 3, end: 3 });
+  });
+});
+
+describe('reactions helpers', () => {
+  it('validates keys and soft-degrade errors', () => {
+    expect(isOrgWorkerReactionKey('heart')).toBe(true);
+    expect(isOrgWorkerReactionKey('fire')).toBe(false);
+    expect(
+      isMessagingReactionsUnavailableError(
+        'Could not find the function public.set_org_worker_message_reaction',
+      ),
+    ).toBe(true);
+    expect(isMessagingReactionsUnavailableError('network down')).toBe(false);
+  });
+
+  it('applies optimistic set/replace/clear and merges summaries', () => {
+    const messageId = '11111111-1111-4111-8111-111111111111';
+    const afterHeart = applyOptimisticReaction(undefined, messageId, 'heart');
+    expect(afterHeart.reactions).toEqual([
+      { key: 'heart', emoji: '❤️', count: 1, reactedByMe: true },
+    ]);
+    const afterReplace = applyOptimisticReaction(afterHeart, messageId, 'joy');
+    expect(afterReplace.reactions.find((r) => r.key === 'heart')).toBeUndefined();
+    expect(afterReplace.reactions.find((r) => r.key === 'joy')?.reactedByMe).toBe(
+      true,
+    );
+    const cleared = applyOptimisticReaction(afterReplace, messageId, null);
+    expect(cleared.reactions).toEqual([]);
+    expect(
+      mergeReactionSummaries(
+        [afterHeart],
+        [{ messageId, reactions: [{ key: 'tada', emoji: '🎉', count: 2, reactedByMe: false }] }],
+      )[0]?.reactions[0]?.key,
+    ).toBe('tada');
+  });
+
+  it('blocks reactions on temp/pending/failed messages', () => {
+    expect(
+      canReactToMessage({
+        id: '11111111-1111-4111-8111-111111111111',
+        localStatus: 'sent',
+      }),
+    ).toBe(true);
+    expect(canReactToMessage({ id: 'temp-abc' })).toBe(false);
+    expect(
+      canReactToMessage({
+        id: '11111111-1111-4111-8111-111111111111',
+        localStatus: 'pending',
+      }),
+    ).toBe(false);
+  });
+});
+
+describe('normalizeMessageBody / preview / merge', () => {
   it('previews without reordering pages', () => {
     expect(messagePreview('a'.repeat(130)).endsWith('…')).toBe(true);
     const older: OrgWorkerMessageRow = {

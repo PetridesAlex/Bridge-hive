@@ -1,361 +1,390 @@
 import {
-  mergeMessagePage,
+  applyAcceptedSend,
+  applyFailedSend,
+  applyOlderMessagePage,
+  applyOptimisticReaction,
+  beginOutgoingMessage,
+  canReactToMessage,
+  createSendLock,
+  createThreadRequestGuard,
+  isMessagingUuid,
+  mergeReactionSummaries,
+  messagingChannelName,
+  newClientMessageId,
   normalizeMessageBody,
-  ORG_WORKER_MESSAGE_MAX_LENGTH,
+  oldestServerCursor,
+  subscribeMessagingRealtime,
+  subscribeReactionBroadcast,
+  type LocalMessagingMessage,
+  type OrgWorkerMessageReactionSummary,
   type OrgWorkerMessageRow,
+  type OrgWorkerReactionKey,
 } from '@bridge-hive/domain';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  AppState,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppScreen } from '@/components/ui/AppScreen';
-import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { colors, radii, spacing, typography } from '@/constants/theme';
+import { ThreadView } from '@/components/messages/ThreadView';
+import { colors } from '@/constants/theme';
 import { useTranslation } from '@/i18n/locale-provider';
 import {
+  areMessagingReactionsUnavailable,
+  clearMessageReaction,
   listConversationMessages,
+  listMessageReactionSummaries,
   listMyMessagingConversations,
   markConversationRead,
   sendConversationMessage,
+  setMessageReaction,
 } from '@/lib/messaging';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
-type LocalMessage = OrgWorkerMessageRow & {
-  localStatus?: 'pending' | 'failed' | 'sent';
-};
+function summariesToMap(
+  rows: OrgWorkerMessageReactionSummary[],
+): Record<string, OrgWorkerMessageReactionSummary> {
+  const map: Record<string, OrgWorkerMessageReactionSummary> = {};
+  for (const row of rows) map[row.messageId] = row;
+  return map;
+}
 
 export default function MessageThreadScreen() {
-  const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
+  const { t, language } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const conversationId = typeof id === 'string' ? id : '';
-  const { user, isAppReviewDemo, session } = useAuth();
-  const [title, setTitle] = useState(t('messages.organization'));
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
+  const { user, isAppReviewDemo, session, loading: authLoading } = useAuth();
+  const [title, setTitle] = useState('');
+  const [messages, setMessages] = useState<LocalMessagingMessage[]>([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const listRef = useRef<FlatList<LocalMessage>>(null);
+  const [reactionSummaries, setReactionSummaries] = useState<
+    Record<string, OrgWorkerMessageReactionSummary>
+  >({});
+  const [reactionsEnabled, setReactionsEnabled] = useState(true);
+  const activeRef = useRef(true);
+  const sendLockRef = useRef(createSendLock());
+  const guardRef = useRef(createThreadRequestGuard());
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const loadedOnceRef = useRef(false);
+  const reactionGenRef = useRef<Record<string, number>>({});
+  const reactionSnapshotRef = useRef<Record<string, OrgWorkerMessageReactionSummary | undefined>>(
+    {},
+  );
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  const refreshReactions = useCallback(
+    async (rows: OrgWorkerMessageRow[]) => {
+      if (!reactionsEnabled || areMessagingReactionsUnavailable()) {
+        if (areMessagingReactionsUnavailable()) setReactionsEnabled(false);
+        return;
+      }
+      const ids = rows
+        .filter((row) => canReactToMessage(row))
+        .map((row) => row.id);
+      if (!ids.length) return;
+      const result = await listMessageReactionSummaries(ids);
+      if (result.unavailable) {
+        setReactionsEnabled(false);
+        return;
+      }
+      if (result.error) return;
+      setReactionSummaries((prev) => ({
+        ...prev,
+        ...summariesToMap(mergeReactionSummaries(Object.values(prev), result.data)),
+      }));
+    },
+    [reactionsEnabled],
+  );
+
+  const applyPage = useCallback(
+    (incoming: OrgWorkerMessageRow[]) => {
+      setHasOlder(applyOlderMessagePage([], incoming, conversationId).hasOlder);
+      setMessages(
+        (prev) => applyOlderMessagePage(prev, incoming, conversationId).messages as LocalMessagingMessage[],
+      );
+      void refreshReactions(incoming);
+    },
+    [conversationId, refreshReactions],
+  );
 
   const load = useCallback(async () => {
     if (!conversationId || isAppReviewDemo || !session) {
       setLoading(false);
       return;
     }
+    guardRef.current.setScope({ conversationId, organizationId: null });
+    guardRef.current.setActive(activeRef.current);
+    const requestId = guardRef.current.start();
     const [thread, inbox] = await Promise.all([
       listConversationMessages(conversationId),
       listMyMessagingConversations(),
     ]);
+    if (!guardRef.current.isCurrent(requestId, { conversationId })) return;
     if (thread.error) setError(thread.error);
     else setError(null);
-    setMessages((prev) => {
-      const pendingLocal = prev.filter(
-        (m) =>
-          m.conversationId === conversationId &&
-          (m.localStatus === 'pending' || m.localStatus === 'failed'),
-      );
-      return mergeMessagePage(pendingLocal, thread.data) as LocalMessage[];
-    });
+    applyPage(thread.data);
     const conv = inbox.data.find((c) => c.id === conversationId);
     if (conv?.organizationName) setTitle(conv.organizationName);
     const latest = thread.data[thread.data.length - 1];
-    if (latest) {
+    if (
+      latest &&
+      !thread.error &&
+      guardRef.current.shouldMarkRead(requestId, { conversationId })
+    ) {
       await markConversationRead(conversationId, latest.id);
     }
+    loadedOnceRef.current = true;
     setLoading(false);
-  }, [conversationId, isAppReviewDemo, session]);
+  }, [applyPage, conversationId, isAppReviewDemo, session]);
+
+  const loadOlder = useCallback(async () => {
+    if (!conversationId || loadingOlder) return;
+    const cursor = oldestServerCursor(messages);
+    if (!cursor) return;
+    setLoadingOlder(true);
+    const requestAtStart = guardRef.current.snapshot();
+    const thread = await listConversationMessages(conversationId, cursor);
+    if (!guardRef.current.isCurrent(requestAtStart, { conversationId }) && !thread.data.length) {
+      setLoadingOlder(false);
+      return;
+    }
+    if (!thread.error && guardRef.current.isCurrent(requestAtStart, { conversationId })) {
+      setHasOlder(applyOlderMessagePage([], thread.data, conversationId).hasOlder);
+      setMessages(
+        (prev) =>
+          applyOlderMessagePage(prev, thread.data, conversationId).messages as LocalMessagingMessage[],
+      );
+      void refreshReactions(thread.data);
+    }
+    setLoadingOlder(false);
+  }, [conversationId, loadingOlder, messages, refreshReactions]);
 
   useFocusEffect(
     useCallback(() => {
-      setLoading(true);
+      activeRef.current = true;
+      guardRef.current.setActive(true);
+      if (!loadedOnceRef.current) setLoading(true);
       void load();
       const sub = AppState.addEventListener('change', (state) => {
+        activeRef.current = state === 'active';
+        guardRef.current.setActive(state === 'active');
         if (state === 'active') void load();
       });
-      return () => sub.remove();
+      return () => {
+        activeRef.current = false;
+        guardRef.current.setActive(false);
+        sub.remove();
+      };
     }, [load]),
   );
 
+  const priorConversationRef = useRef(conversationId);
+
   useEffect(() => {
-    if (!conversationId || isAppReviewDemo) return;
-    const channel = supabase
-      .channel(`worker-messages:${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'organization_worker_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        () => {
-          void load();
-        },
-      )
-      .subscribe();
+    if (priorConversationRef.current === conversationId) return;
+    priorConversationRef.current = conversationId;
+    loadedOnceRef.current = false;
+    setMessages([]);
+    setReactionSummaries({});
+    setHasOlder(false);
+    setError(null);
+    setLoading(true);
+  }, [conversationId]);
+
+  useEffect(() => {
+    if (!isMessagingUuid(conversationId) || isAppReviewDemo || !session) return;
+    const messagesSub = subscribeMessagingRealtime({
+      client: supabase,
+      channelName: messagingChannelName('worker-thread', { conversationId }),
+      table: 'organization_worker_messages',
+      filter: `conversation_id=eq.${conversationId}`,
+      event: 'INSERT',
+      onChange: () => void load(),
+      onSubscribed: () => void load(),
+    });
+    const reactionsSub = subscribeReactionBroadcast({
+      client: supabase,
+      conversationId,
+      onChange: () => {
+        void refreshReactions(messagesRef.current);
+      },
+      onSubscribed: () => {
+        void refreshReactions(messagesRef.current);
+      },
+    });
     return () => {
-      void supabase.removeChannel(channel);
+      messagesSub.unsubscribe();
+      reactionsSub.unsubscribe();
     };
-  }, [conversationId, isAppReviewDemo, load]);
+  }, [conversationId, isAppReviewDemo, load, refreshReactions, session]);
 
   const send = async (clientMessageId: string, body: string) => {
+    if (!sendLockRef.current.acquire()) return;
+    setSending(true);
     const result = await sendConversationMessage(conversationId, body, clientMessageId);
+    sendLockRef.current.release();
+    setSending(false);
     if (result.error || !result.data) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.clientMessageId === clientMessageId ? { ...m, localStatus: 'failed' } : m,
-        ),
-      );
+      setMessages((prev) => applyFailedSend(prev, clientMessageId));
       return;
     }
-    setMessages((prev) =>
-      mergeMessagePage(
-        prev.filter((m) => m.clientMessageId !== clientMessageId),
-        [{ ...result.data!, localStatus: 'sent' }],
-      ) as LocalMessage[],
-    );
+    setMessages((prev) => applyAcceptedSend(prev, result.data!, conversationId));
   };
 
   const onSend = async () => {
+    if (sendLockRef.current.held) return;
     const normalized = normalizeMessageBody(draft);
-    if (!normalized.ok || !user?.id) return;
-    const clientMessageId =
-      typeof crypto !== 'undefined' && 'randomUUID' in crypto
-        ? crypto.randomUUID()
-        : `tmp-${Date.now()}`;
-    const optimistic: LocalMessage = {
-      id: `temp-${clientMessageId}`,
+    if (!normalized.ok || !user?.id) {
+      if (!normalized.ok && normalized.error === 'too_long') setError(t('messages.tooLong'));
+      return;
+    }
+    const outgoing = beginOutgoingMessage({
       conversationId,
       senderUserId: user.id,
       senderKind: 'worker',
       body: normalized.body,
-      clientMessageId,
-      createdAt: new Date().toISOString(),
+      clientMessageId: newClientMessageId(),
       senderName: t('messages.you'),
-      localStatus: 'pending',
-    };
-    setMessages((prev) => [...prev, optimistic]);
+    });
+    if ('error' in outgoing) {
+      setError(t('messages.loadError'));
+      return;
+    }
+    setMessages((prev) => [...prev, outgoing.optimistic]);
     setDraft('');
-    await send(clientMessageId, normalized.body);
+    setError(null);
+    await send(outgoing.clientMessageId, normalized.body);
   };
 
-  const data = useMemo(() => messages, [messages]);
-
-  if (isAppReviewDemo) {
-    return (
-      <AppScreen scroll={false} padded={false}>
-        <ScreenHeader title={t('messages.title')} showBack onBack={() => router.back()} />
-        <View style={styles.empty}>
-          <Text style={styles.emptyTitle}>{t('messages.demoBlocked')}</Text>
-        </View>
-      </AppScreen>
+  const onRetryMessage = async (message: LocalMessagingMessage) => {
+    if (sendLockRef.current.held) return;
+    setMessages((prev) =>
+      prev.map((row) =>
+        row.clientMessageId === message.clientMessageId
+          ? { ...row, localStatus: 'pending' }
+          : row,
+      ),
     );
+    await send(message.clientMessageId, message.body);
+  };
+
+  const onToggleReaction = async (messageId: string, key: OrgWorkerReactionKey) => {
+    if (!reactionsEnabled) return;
+    const message = messages.find((row) => row.id === messageId);
+    if (!message || !canReactToMessage(message)) return;
+
+    const current = reactionSummaries[messageId];
+    const mine = current?.reactions.find((chip) => chip.reactedByMe);
+    const desired: OrgWorkerReactionKey | null =
+      mine?.key === key ? null : key;
+
+    const generation = (reactionGenRef.current[messageId] ?? 0) + 1;
+    reactionGenRef.current[messageId] = generation;
+    reactionSnapshotRef.current[messageId] = current;
+
+    setReactionSummaries((prev) => ({
+      ...prev,
+      [messageId]: applyOptimisticReaction(prev[messageId], messageId, desired),
+    }));
+
+    const result =
+      desired == null
+        ? await clearMessageReaction(messageId)
+        : await setMessageReaction(messageId, desired);
+
+    if (reactionGenRef.current[messageId] !== generation) return;
+
+    if (result.unavailable) {
+      setReactionsEnabled(false);
+      setReactionSummaries((prev) => {
+        const next = { ...prev };
+        const snapshot = reactionSnapshotRef.current[messageId];
+        if (snapshot) next[messageId] = snapshot;
+        else delete next[messageId];
+        return next;
+      });
+      return;
+    }
+
+    if (result.error) {
+      setReactionSummaries((prev) => {
+        const next = { ...prev };
+        const snapshot = reactionSnapshotRef.current[messageId];
+        if (snapshot) next[messageId] = snapshot;
+        else delete next[messageId];
+        return next;
+      });
+      return;
+    }
+
+    void refreshReactions(messages.filter((row) => row.id === messageId));
+  };
+
+  if (!authLoading && !session) {
+    return <Redirect href="/auth/worker/login" />;
   }
 
   return (
-    <AppScreen scroll={false} padded={false} edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
-      >
-        <ScreenHeader title={title} showBack onBack={() => router.back()} />
-        <Text style={styles.privacy}>{t('messages.privacy')}</Text>
-        {loading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={colors.teal} />
-          </View>
-        ) : error ? (
-          <View style={styles.center}>
-            <Text style={styles.emptyBody}>{error}</Text>
-            <Pressable
-              onPress={() => {
-                setLoading(true);
-                void load();
-              }}
-              style={styles.retry}
-            >
-              <Text style={styles.retryText}>{t('common.retry')}</Text>
-            </Pressable>
-          </View>
-        ) : (
-          <FlatList
-            ref={listRef}
-            data={data}
-            keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.thread}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-            renderItem={({ item }) => {
-              const mine = item.senderUserId === user?.id;
-              return (
-                <View style={[styles.bubbleRow, mine ? styles.mine : styles.theirs]}>
-                  <View style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}>
-                    {!mine ? (
-                      <Text style={styles.sender}>{item.senderName || t('messages.organization')}</Text>
-                    ) : null}
-                    <Text style={[styles.body, mine && styles.bodyMine]}>{item.body}</Text>
-                    <View style={styles.meta}>
-                      <Text style={[styles.metaText, mine && styles.bodyMine]}>
-                        {new Date(item.createdAt).toLocaleTimeString()}
-                      </Text>
-                      {item.localStatus === 'pending' ? (
-                        <Text style={[styles.metaText, mine && styles.bodyMine]}>
-                          {t('messages.pending')}
-                        </Text>
-                      ) : null}
-                      {item.localStatus === 'failed' ? (
-                        <Pressable onPress={() => void send(item.clientMessageId, item.body)}>
-                          <Text style={[styles.metaText, styles.failed]}>{t('common.retry')}</Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  </View>
-                </View>
-              );
-            }}
-          />
-        )}
-        <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.sm) }]}>
-          <TextInput
-            value={draft}
-            onChangeText={(value) => setDraft(value.slice(0, ORG_WORKER_MESSAGE_MAX_LENGTH))}
-            placeholder={t('messages.composerPlaceholder')}
-            placeholderTextColor={colors.textSecondary}
-            style={styles.input}
-            multiline
-            accessibilityLabel={t('messages.composerPlaceholder')}
-          />
-          <Pressable
-            onPress={() => void onSend()}
-            disabled={!draft.trim()}
-            style={[styles.send, !draft.trim() && styles.sendDisabled]}
-            accessibilityRole="button"
-            accessibilityLabel={t('messages.send')}
-          >
-            <Text style={styles.sendText}>{t('messages.send')}</Text>
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </AppScreen>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
+      <ThreadView
+        title={isAppReviewDemo ? t('messages.demoBlocked') : title || t('messages.organization')}
+        locale={language}
+        messages={isAppReviewDemo ? [] : messages}
+        currentUserId={user?.id}
+        draft={draft}
+        onDraft={setDraft}
+        onSend={() => void onSend()}
+        onRetryMessage={(message) => void onRetryMessage(message)}
+        sending={sending}
+        loading={isAppReviewDemo ? false : loading}
+        error={isAppReviewDemo ? null : error}
+        onRetryLoad={() => {
+          setLoading(messages.length === 0);
+          void load();
+        }}
+        hasOlder={isAppReviewDemo ? false : hasOlder}
+        loadingOlder={loadingOlder}
+        onLoadOlder={() => void loadOlder()}
+        onBack={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/messages');
+        }}
+        reactionSummaries={reactionSummaries}
+        reactionsEnabled={!isAppReviewDemo && reactionsEnabled}
+        onToggleReaction={(messageId, key) => void onToggleReaction(messageId, key)}
+        copy={{
+          organization: t('messages.organization'),
+          conversationSubtitle: t('messages.conversationSubtitle'),
+          privacy: t('messages.privacy'),
+          loading: t('messages.loading'),
+          loadEarlier: t('messages.loadEarlier'),
+          startConversation: isAppReviewDemo
+            ? t('messages.demoBlocked')
+            : t('messages.startConversation'),
+          startConversationBody: isAppReviewDemo
+            ? t('messages.demoBlockedBody')
+            : t('messages.startConversationBody'),
+          composerPlaceholder: t('messages.composerPlaceholder'),
+          sendMessage: t('messages.sendMessage'),
+          pending: t('messages.pending'),
+          sent: t('messages.sent'),
+          failed: t('messages.failed'),
+          retry: t('common.retry'),
+          newMessages: t('messages.newMessages'),
+          back: t('common.back'),
+          loadError: t('messages.loadError'),
+          insertEmoji: t('messages.insertEmoji'),
+          emojiPickerTitle: t('messages.emojiPickerTitle'),
+          react: t('messages.react'),
+          reactionPickerTitle: t('messages.reactionPickerTitle'),
+          clearReaction: t('messages.clearReaction'),
+        }}
+      />
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  privacy: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.sm,
-    padding: spacing.sm,
-    borderRadius: radii.md,
-    backgroundColor: colors.yellowLight,
-    fontFamily: typography.fonts.medium,
-    fontSize: 12,
-    color: colors.navy,
-  },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm },
-  empty: { padding: spacing.xl, alignItems: 'center' },
-  emptyTitle: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 16,
-    color: colors.navy,
-  },
-  emptyBody: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  retry: {
-    marginTop: spacing.md,
-    backgroundColor: colors.teal,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  retryText: { fontFamily: typography.fonts.semibold, color: colors.white },
-  thread: { paddingHorizontal: spacing.md, paddingBottom: spacing.lg, flexGrow: 1 },
-  bubbleRow: { marginBottom: spacing.sm, flexDirection: 'row' },
-  mine: { justifyContent: 'flex-end' },
-  theirs: { justifyContent: 'flex-start' },
-  bubble: {
-    maxWidth: '82%',
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  bubbleMine: {
-    backgroundColor: colors.navy,
-    borderBottomRightRadius: 6,
-  },
-  bubbleTheirs: {
-    backgroundColor: colors.card,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    borderBottomLeftRadius: 6,
-  },
-  sender: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    color: colors.tealStrong,
-    marginBottom: 4,
-  },
-  body: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 15,
-    color: colors.navy,
-  },
-  bodyMine: { color: colors.white },
-  meta: { marginTop: 4, flexDirection: 'row', gap: 8, justifyContent: 'flex-end' },
-  metaText: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 10,
-    color: colors.textSecondary,
-  },
-  failed: { color: colors.error, fontFamily: typography.fonts.semibold },
-  composer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
-    backgroundColor: colors.card,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  input: {
-    flex: 1,
-    minHeight: 44,
-    maxHeight: 120,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: Platform.OS === 'ios' ? spacing.sm : spacing.xs,
-    fontFamily: typography.fonts.regular,
-    fontSize: 15,
-    color: colors.navy,
-  },
-  send: {
-    backgroundColor: colors.teal,
-    borderRadius: radii.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  sendDisabled: { opacity: 0.45 },
-  sendText: { fontFamily: typography.fonts.semibold, color: colors.white, fontSize: 14 },
-});

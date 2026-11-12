@@ -10,7 +10,7 @@ import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { NEW_SHIFTS_CHANNEL } from '@/lib/push/channel';
+import { NEW_SHIFTS_CHANNEL, ORG_MESSAGES_CHANNEL } from '@/lib/push/channel';
 import { supabase } from '@/lib/supabase';
 
 let currentToken: string | null = null;
@@ -46,6 +46,23 @@ async function ensureNewShiftsChannel() {
     lightColor: NEW_SHIFTS_CHANNEL.lightColor,
     sound: null,
   });
+}
+
+async function ensureOrgMessagesChannel() {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync(ORG_MESSAGES_CHANNEL.id, {
+    name: ORG_MESSAGES_CHANNEL.name,
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    enableVibrate: ORG_MESSAGES_CHANNEL.vibration,
+    lightColor: ORG_MESSAGES_CHANNEL.lightColor,
+    sound: null,
+  });
+}
+
+async function ensurePushChannels() {
+  await ensureNewShiftsChannel();
+  await ensureOrgMessagesChannel();
 }
 
 export async function syncPushPreferredLocale(locale: PushLocale): Promise<void> {
@@ -107,7 +124,7 @@ export async function probeNotificationPermission(): Promise<OsNotificationPermi
 /** Presents the OS prompt only after the worker taps Enable notifications. */
 export async function enableShiftNotifications(): Promise<OsNotificationPermission> {
   if (Platform.OS === 'web') return 'denied';
-  await ensureNewShiftsChannel();
+  await ensurePushChannels();
   const settings = await Notifications.requestPermissionsAsync({
     ios: {
       allowAlert: true,
@@ -131,7 +148,7 @@ export async function syncGrantedPushDevice(): Promise<void> {
   const status = await probeNotificationPermission();
   if (notificationEnableAction(status) !== 'none') return;
   try {
-    await ensureNewShiftsChannel();
+    await ensurePushChannels();
     await registerCurrentToken();
     if (!currentToken) return;
     await supabase.rpc(

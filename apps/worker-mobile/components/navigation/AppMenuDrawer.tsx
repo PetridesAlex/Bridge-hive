@@ -13,6 +13,7 @@ import {
   Text,
   View,
   useWindowDimensions,
+  type ViewStyle,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -36,6 +37,15 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAppLocale, useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
+/** Frosted fill. Native has no backdrop blur here, so the wash stays a little denser. */
+const glassSection: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        backgroundColor: 'rgba(255, 255, 255, 0.28)',
+        backdropFilter: 'blur(18px) saturate(1.45)',
+      } as ViewStyle)
+    : { backgroundColor: 'rgba(255, 255, 255, 0.72)' };
+
 type MenuItem = {
   key: string;
   label: string;
@@ -51,53 +61,71 @@ type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 function buildMenuSections(
   t: TranslateFn,
-  extras: { languageTrailing: string; onLanguage: () => void },
+  extras: {
+    languageTrailing: string;
+    onLanguage: () => void;
+    showMessages: boolean;
+  },
 ): { title: string; items: MenuItem[] }[] {
+  const workItems: MenuItem[] = [
+    {
+      key: 'home',
+      label: t('tabs.home'),
+      subtitle: t('profile.homeSubtitle'),
+      icon: 'home',
+      href: '/(tabs)',
+      accent: [colors.navy, colors.tealStrong],
+    },
+    {
+      key: 'shifts',
+      label: t('home.openShifts'),
+      subtitle: t('profile.openShiftsSubtitle'),
+      icon: 'search',
+      href: '/(tabs)/shifts',
+      accent: [colors.tealStrong, '#0E7490'],
+    },
+    {
+      key: 'calendar',
+      label: t('profile.calendarLabel'),
+      subtitle: t('profile.calendarSubtitle'),
+      icon: 'calendar',
+      href: '/shifts/calendar',
+      accent: [colors.navyLift, colors.teal],
+    },
+    {
+      key: 'work',
+      label: t('tabs.myShifts'),
+      subtitle: t('profile.myShiftsSubtitle'),
+      icon: 'briefcase',
+      href: '/(tabs)/work',
+      accent: [colors.honeyStrong, '#C47A12'],
+    },
+  ];
+
+  if (extras.showMessages) {
+    workItems.push({
+      key: 'messages',
+      label: t('messages.title'),
+      subtitle: t('messages.subtitle'),
+      icon: 'chatbubbles',
+      href: '/messages',
+      accent: [colors.tealStrong, colors.navy],
+    });
+  }
+
+  workItems.push({
+    key: 'documents',
+    label: t('profile.credentials'),
+    subtitle: t('profile.credentialsSubtitle'),
+    icon: 'document-text',
+    href: '/profile/documents',
+    accent: [colors.navy, '#1B4F72'],
+  });
+
   return [
     {
       title: t('profile.menuWork'),
-      items: [
-        {
-          key: 'home',
-          label: t('tabs.home'),
-          subtitle: t('profile.homeSubtitle'),
-          icon: 'home',
-          href: '/(tabs)',
-          accent: [colors.navy, colors.tealStrong],
-        },
-        {
-          key: 'shifts',
-          label: t('home.openShifts'),
-          subtitle: t('profile.openShiftsSubtitle'),
-          icon: 'search',
-          href: '/(tabs)/shifts',
-          accent: [colors.tealStrong, '#0E7490'],
-        },
-        {
-          key: 'calendar',
-          label: t('profile.calendarLabel'),
-          subtitle: t('profile.calendarSubtitle'),
-          icon: 'calendar',
-          href: '/shifts/calendar',
-          accent: [colors.navyLift, colors.teal],
-        },
-        {
-          key: 'work',
-          label: t('tabs.myShifts'),
-          subtitle: t('profile.myShiftsSubtitle'),
-          icon: 'briefcase',
-          href: '/(tabs)/work',
-          accent: [colors.honeyStrong, '#C47A12'],
-        },
-        {
-          key: 'documents',
-          label: t('profile.credentials'),
-          subtitle: t('profile.credentialsSubtitle'),
-          icon: 'document-text',
-          href: '/profile/documents',
-          accent: [colors.navy, '#1B4F72'],
-        },
-      ],
+      items: workItems,
     },
     {
       title: t('profile.menuMoney'),
@@ -288,7 +316,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
   const reduced = useReducedMotion();
   const { t } = useTranslation();
   const { language, setLocale } = useAppLocale();
-  const { signOut } = useAuth();
+  const { signOut, isAppReviewDemo } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const { width } = useWindowDimensions();
   const panelWidth = Math.min(348, Math.max(288, width * 0.88));
@@ -422,6 +450,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
   const menuSections = buildMenuSections(t, {
     languageTrailing,
     onLanguage: openLanguageChooser,
+    showMessages: !isAppReviewDemo,
   });
 
   const confirmSignOut = () => {
@@ -523,6 +552,7 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
 
           <ScrollView
             showsVerticalScrollIndicator={false}
+            style={styles.scrollView}
             contentContainerStyle={styles.scroll}
           >
             {/* Remount on open so staggered enters replay each time. */}
@@ -535,8 +565,15 @@ export function AppMenuDrawer({ visible, onClose, firstName, roleLabel }: Props)
                         ? undefined
                         : FadeInDown.delay(60 + sectionIndex * 70).duration(360)
                     }
-                    style={styles.sectionCard}
+                    style={[styles.sectionCard, glassSection]}
                   >
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={['rgba(255,255,255,0.55)', 'rgba(255,255,255,0)']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                      style={styles.sectionSheen}
+                    />
                     <View style={styles.sectionHeader}>
                       <View style={styles.sectionDot} />
                       <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -694,18 +731,32 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     alignSelf: 'flex-start',
   },
+  scrollView: {
+    backgroundColor: colors.background,
+  },
   scroll: {
     paddingBottom: spacing.xxl,
     gap: spacing.md,
   },
   sectionCard: {
-    backgroundColor: colors.card,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
     borderRadius: radii.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.82)',
     padding: spacing.sm,
     gap: 4,
     ...shadows.sm,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  sectionSheen: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 42,
   },
   sectionHeader: {
     flexDirection: 'row',

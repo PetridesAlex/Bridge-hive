@@ -39,7 +39,8 @@ type MarketingStorageNoticeProps = {
 
 /**
  * Informational storage notice for public marketing pages only.
- * Appears after the logo intro finishes; no optional Accept/Reject (no analytics).
+ * Appears after the logo intro finishes. There is no optional tracking choice
+ * because this site does not load analytics or advertising tags.
  */
 export function MarketingStorageNotice({
   storageNotice,
@@ -168,55 +169,27 @@ export function MarketingStorageNotice({
         </div>
 
         {detailsOpen ? (
-          /*
-           * Technical/legal details stay in English pending translation review —
-           * the surrounding chrome (title, lede, buttons) switches with the user
-           * locale, but exact storage keys and cookie behaviour must stay stable.
-           */
           <div
             id={detailsId}
             className="m-storage-notice-panel"
-            lang="en"
+            lang={locale}
             data-bh-storage-details-locale={locale}
           >
             <ul className="m-storage-notice-list">
               <li>
-                <strong>Site intro memory</strong>
-                <span>
-                  A short-lived <code>sessionStorage</code> flag (
-                  <code>bh:m-intro</code>) so the branded logo intro shows once per
-                  browser tab.
-                </span>
+                <strong>{storageNotice.thisNoticeTitle}</strong>
+                <span>{storageNotice.thisNoticeBody}</span>
               </li>
               <li>
-                <strong>This notice</strong>
-                <span>
-                  A <code>localStorage</code> preference (
-                  <code>bh:m-storage-notice</code>) so we do not show this card on
-                  every visit after you acknowledge it.
-                </span>
+                <strong>{storageNotice.signInCookiesTitle}</strong>
+                <span>{storageNotice.signInCookiesBody}</span>
               </li>
               <li>
-                <strong>Recruitment announcement</strong>
-                <span>
-                  A short-lived <code>sessionStorage</code> flag (
-                  <code>bh:m-recruit-promo</code>) so a dismissed recruitment
-                  announcement does not reappear during your visit.
-                </span>
-              </li>
-              <li>
-                <strong>Sign-in cookies (essential)</strong>
-                <span>
-                  Supabase authentication cookies are set only when you sign in. They
-                  keep organization and worker account sessions working and are
-                  required for those services.
-                </span>
+                <strong>{storageNotice.rememberMeTitle}</strong>
+                <span>{storageNotice.rememberMeBody}</span>
               </li>
             </ul>
-            <p className="m-storage-notice-note">
-              There is no separate Cookie Policy page yet. For privacy or terms
-              questions, contact support from the site footer.
-            </p>
+            <p className="m-storage-notice-note">{storageNotice.noteBody}</p>
           </div>
         ) : null}
       </div>

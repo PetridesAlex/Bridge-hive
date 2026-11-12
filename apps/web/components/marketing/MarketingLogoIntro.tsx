@@ -3,42 +3,17 @@
 import Image from 'next/image';
 import { useLayoutEffect, useState } from 'react';
 
-/** Tab/session key: survives refresh + soft nav; cleared when the tab/session ends. */
-export const MARKETING_INTRO_SESSION_KEY = 'bh:m-intro';
-
-function introAlreadyShown(): boolean {
-  try {
-    return sessionStorage.getItem(MARKETING_INTRO_SESSION_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function rememberIntroShown(): void {
-  try {
-    sessionStorage.setItem(MARKETING_INTRO_SESSION_KEY, '1');
-  } catch {
-    /* private mode / blocked storage — still animate once this mount */
-  }
-}
+import { clearRetiredMarketingSessionFlags } from '@/components/marketing/storage-notice';
 
 /**
  * Decorative marketing-page intro; the site remains server-rendered underneath.
- * Shown once per browser tab/session on first entry to public marketing pages.
+ * Plays once per document load. It does not write browser storage.
  */
 export function MarketingLogoIntro() {
-  // Always start mounted so SSR HTML matches the client's first paint; the
-  // beforeInteractive script + CSS hide revisits before paint (no flash).
   const [visible, setVisible] = useState(true);
 
   useLayoutEffect(() => {
-    if (introAlreadyShown()) {
-      document.documentElement.setAttribute('data-m-intro', 'done');
-      setVisible(false);
-      return;
-    }
-
-    rememberIntroShown();
+    clearRetiredMarketingSessionFlags();
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       document.documentElement.setAttribute('data-m-intro', 'done');

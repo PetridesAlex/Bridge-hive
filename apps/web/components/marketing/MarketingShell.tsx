@@ -5,6 +5,7 @@ import { RecruitmentPromo } from '@/components/marketing/RecruitmentPromo';
 import { MarketingStorageNotice } from '@/components/marketing/MarketingStorageNotice';
 import type { MarketingDictionary } from '@/lib/marketing-i18n/dictionaries';
 import type { MarketingLocale } from '@/lib/marketing-i18n/locales';
+import { mayLoadOptionalTracking } from '@/lib/marketing/optional-tracking';
 
 type MarketingShellProps = {
   locale: MarketingLocale;
@@ -17,6 +18,17 @@ export function MarketingShell({
   dictionary,
   children,
 }: MarketingShellProps) {
+  // No analytics or advertising loader is mounted. A true result must fail
+  // closed until a reviewed provider is added at this entry point.
+  if (
+    mayLoadOptionalTracking('analytics') ||
+    mayLoadOptionalTracking('advertising')
+  ) {
+    throw new Error(
+      'Optional tracking is not configured. Do not load a tag from the marketing shell.',
+    );
+  }
+
   return (
     <div className="marketing flex min-h-screen flex-col">
       <MarketingLogoIntro />

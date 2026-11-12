@@ -10730,6 +10730,8 @@ html[data-m-intro="done"] .marketing .m-intro {
 .m-storage-notice-card {
   pointer-events: auto;
   width: min(36rem, 100%);
+  max-height: calc(100dvh - 1.5rem - env(safe-area-inset-bottom, 0px));
+  overflow: auto;
   margin-inline: auto;
   padding: 1.1rem 1.15rem 1.05rem;
   border-radius: 1.15rem;

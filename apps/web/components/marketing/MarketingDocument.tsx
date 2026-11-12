@@ -1,5 +1,4 @@
 import { DM_Sans, Geist, Geist_Mono, Manrope } from 'next/font/google';
-import Script from 'next/script';
 import { Toaster } from 'sonner';
 
 import { MarketingShell } from '@/components/marketing/MarketingShell';
@@ -52,9 +51,6 @@ export function MarketingDocument({
       <body
         className={`${fontVars} min-h-screen bg-bh-canvas text-bh-text antialiased`}
       >
-        <Script id="bh-m-intro-session" strategy="beforeInteractive">
-          {`(function(){try{var p=location.pathname;if(/^\\/(org|admin|sign-in|sign-up|auth|dashboard|activate-organization-account|organization-invitations)\\b/.test(p))return;if(sessionStorage.getItem('bh:m-intro')==='1'){document.documentElement.setAttribute('data-m-intro','done');}}catch(e){}})();`}
-        </Script>
         <MarketingShell locale={locale} dictionary={dictionary}>
           {children}
         </MarketingShell>

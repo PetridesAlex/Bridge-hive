@@ -14,27 +14,9 @@ import {
 
 /** Seconds of active (tab visible) time on the site before the promo appears. */
 export const RECRUITMENT_PROMO_DELAY_SECONDS = 8;
-/** sessionStorage flag so a dismissed promo does not return during this visit. */
-export const RECRUITMENT_PROMO_SESSION_KEY = 'bh:m-recruit-promo';
 
 const TICK_MS = 500;
 const LEAVE_MS = 260;
-
-function wasDismissed(): boolean {
-  try {
-    return sessionStorage.getItem(RECRUITMENT_PROMO_SESSION_KEY) === '1';
-  } catch {
-    return false;
-  }
-}
-
-function rememberDismissed(): void {
-  try {
-    sessionStorage.setItem(RECRUITMENT_PROMO_SESSION_KEY, '1');
-  } catch {
-    /* blocked storage — the promo simply may show again after a reload */
-  }
-}
 
 type RecruitmentPromoProps = {
   promo: MarketingDictionary['recruitmentPromo'];
@@ -45,7 +27,7 @@ type RecruitmentPromoProps = {
  * Friendly announcement that advertises the talent network once a visitor has
  * been active on the public site for a short while. Non-modal (never steals
  * focus), waits for the logo intro and storage notice, and stays out of the way
- * on the recruitment pages themselves.
+ * on the recruitment pages themselves. Dismissal lasts for this document only.
  */
 export function RecruitmentPromo({ promo, locale }: RecruitmentPromoProps) {
   const pathname = usePathname() ?? '/';
@@ -53,13 +35,14 @@ export function RecruitmentPromo({ promo, locale }: RecruitmentPromoProps) {
 
   const [visible, setVisible] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   const onRecruitmentPage =
     stripLocalePrefix(pathname).startsWith('/recruitment');
 
   // Count active time and reveal once eligible.
   useEffect(() => {
-    if (visible || onRecruitmentPage || wasDismissed()) return;
+    if (visible || onRecruitmentPage || dismissed) return;
 
     let activeMs = 0;
     const id = window.setInterval(() => {
@@ -78,10 +61,10 @@ export function RecruitmentPromo({ promo, locale }: RecruitmentPromoProps) {
     }, TICK_MS);
 
     return () => window.clearInterval(id);
-  }, [visible, onRecruitmentPage]);
+  }, [visible, onRecruitmentPage, dismissed]);
 
-  function close(remember = true) {
-    if (remember) rememberDismissed();
+  function close() {
+    setDismissed(true);
     setLeaving(true);
     window.setTimeout(() => {
       setVisible(false);
@@ -146,7 +129,7 @@ export function RecruitmentPromo({ promo, locale }: RecruitmentPromoProps) {
           <Link
             href={applyHref}
             className="m-btn m-btn--primary m-promo-cta"
-            onClick={() => rememberDismissed()}
+            onClick={() => setDismissed(true)}
           >
             <span>{promo.cta}</span>
             <ArrowRight className="m-btn-arrow" size={16} aria-hidden />
@@ -154,7 +137,7 @@ export function RecruitmentPromo({ promo, locale }: RecruitmentPromoProps) {
           <Link
             href={learnHref}
             className="m-promo-secondary"
-            onClick={() => rememberDismissed()}
+            onClick={() => setDismissed(true)}
           >
             {promo.secondary}
           </Link>

@@ -17,12 +17,9 @@ describe('marketing logo intro', () => {
     expect(intro).toMatch(/bridge-hive-logo-v2-512\.png/);
     expect(intro).toMatch(/BridgeHive\s*<span>Medical Recruitment Limited<\/span>/);
     expect(intro).toMatch(/aria-hidden="true"/);
-    expect(intro).toMatch(/sessionStorage/);
-    expect(intro).toMatch(/bh:m-intro/);
-    expect(intro).not.toMatch(/localStorage|loading percentage|Build\. better\. future/);
-    expect(rootLayout).toMatch(/bh-m-intro-session/);
-    expect(rootLayout).toMatch(/beforeInteractive/);
-    expect(rootLayout).toMatch(/bh:m-intro/);
+    expect(intro).toMatch(/clearRetiredMarketingSessionFlags/);
+    expect(intro).not.toMatch(/sessionStorage|localStorage|loading percentage|Build\. better\. future/);
+    expect(rootLayout).not.toMatch(/bh-m-intro-session|sessionStorage/);
     expect(rootLayout).toMatch(/<html[^>]*suppressHydrationWarning/);
     await expect(fs.access(path.join(webRoot, 'public/brand/bridge-hive-logo-v2-512.png'))).resolves.toBeUndefined();
   });

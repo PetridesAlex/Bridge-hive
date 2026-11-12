@@ -63,12 +63,14 @@ function FinancesIntro({
   eyebrow,
   title,
   body,
+  note,
   earningsLabel,
   invoicesLabel,
 }: {
   eyebrow: string;
   title: string;
   body: string;
+  note: string;
   earningsLabel: string;
   invoicesLabel: string;
 }) {
@@ -173,6 +175,10 @@ function FinancesIntro({
           <View style={[styles.introRailDot, styles.introRailDotInvoices]} />
           <Text style={styles.introRailLabel}>{invoicesLabel}</Text>
         </View>
+      </View>
+      <View style={styles.introNote}>
+        <Ionicons name="alert-circle-outline" size={14} color={colors.yellow} />
+        <Text style={styles.introNoteText}>{note}</Text>
       </View>
     </Animated.View>
   );
@@ -367,6 +373,7 @@ export default function MoneyScreen() {
         eyebrow={t('payments.eyebrow')}
         title={t('payments.howPayWorks')}
         body={t('payments.howPayWorksBody')}
+        note={t('payments.unpaidInvoiceSuspendNote')}
         earningsLabel={t('payments.title')}
         invoicesLabel={t('invoices.title')}
       />
@@ -701,6 +708,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.sm,
     marginTop: 2,
+  },
+  introNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 2,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 210, 90, 0.10)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 210, 90, 0.28)',
+  },
+  introNoteText: {
+    flex: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    lineHeight: 17,
+    color: 'rgba(255, 236, 190, 0.92)',
   },
   introRail: {
     flexDirection: 'row',

@@ -35,6 +35,8 @@ type Props = {
   /** Signed profile photo URL when available; falls back to initials. */
   imageUri?: string | null;
   unreadCount?: number;
+  /** Unread organization messages — badge on the Messages action. */
+  messageUnreadCount?: number;
   /** Visual tone for the bell badge (billing vs generic). */
   alertTone?: 'default' | 'money' | 'danger';
   /** Platform-verified worker — shows a check on the avatar (otherwise a pending clock). */
@@ -164,7 +166,7 @@ function HeaderButton({
             ]}
           >
             <Text style={styles.badgeText}>
-              {count > 9 ? '9+' : count}
+              {count > 99 ? '99+' : count}
             </Text>
           </Animated.View>
         ) : null}
@@ -183,6 +185,7 @@ export function GreetingHeader({
   initials,
   imageUri,
   unreadCount = 0,
+  messageUnreadCount = 0,
   alertTone = 'default',
   verified = false,
   scrollY,
@@ -385,7 +388,7 @@ export function GreetingHeader({
         </Animated.View>
 
         <View style={styles.brandBlock}>
-          <BridgeHiveMark size={36} />
+          <BridgeHiveMark size={48} />
           <View style={styles.brandCopy}>
             <Text style={styles.brandName}>Bridge Hive</Text>
             <Animated.Text style={[styles.brandTag, brandTagStyle]}>
@@ -396,9 +399,15 @@ export function GreetingHeader({
 
         <View style={styles.actions}>
           <HeaderButton
-            icon="menu"
-            label="Open navigation menu"
-            onPress={() => setMenuOpen(true)}
+            icon={messageUnreadCount > 0 ? 'chatbubbles' : 'chatbubbles-outline'}
+            label={
+              messageUnreadCount > 0
+                ? `Messages, ${messageUnreadCount} unread`
+                : 'Messages'
+            }
+            onPress={() => router.push('/messages')}
+            count={messageUnreadCount}
+            ring={messageUnreadCount > 0}
           />
           <HeaderButton
             icon={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
@@ -411,6 +420,11 @@ export function GreetingHeader({
             count={unreadCount}
             tone={alertTone}
             ring={unreadCount > 0}
+          />
+          <HeaderButton
+            icon="menu"
+            label="Open navigation menu"
+            onPress={() => setMenuOpen(true)}
           />
         </View>
       </Animated.View>

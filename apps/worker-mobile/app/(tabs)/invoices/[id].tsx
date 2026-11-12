@@ -1,6 +1,5 @@
 import {
   daysUntilDue,
-  dueDateCopy,
   isWorkerInvoicePayable,
   normalizeRouteParam,
   PAYMENT_CONFIRMATION_PENDING,
@@ -12,6 +11,8 @@ import {
   workerInvoiceStatusLabel,
   type WorkerInvoiceStatus,
 } from '@bridge-hive/domain';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -26,20 +27,16 @@ import {
   Text,
   View,
 } from 'react-native';
-
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { KeyValueRow } from '@/components/ui/KeyValueRow';
-import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
-import { MoneySummary } from '@/components/ui/MoneySummary';
+import { MoneyAmount } from '@/components/ui/MoneyAmount';
 import { PremiumActionButton } from '@/components/ui/PremiumActionButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { StickyActionBar } from '@/components/ui/StickyActionBar';
-import { Surface } from '@/components/ui/Surface';
-import { type StatusTone } from '@/components/ui/StatusBadge';
+import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
 import { APP_CONFIG } from '@/constants/config';
 import {
   getPaymentSheetReturnUrl,
@@ -48,7 +45,7 @@ import {
   isStripeTestPublishableKey,
   STRIPE_MERCHANT_COUNTRY_CODE,
 } from '@/constants/stripe';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, shadows, spacing, typography } from '@/constants/theme';
 import { useInvoice } from '@/hooks/useInvoice';
 import { isAppReviewDemoInvoiceId } from '@/lib/app-review-demo';
 import {
@@ -81,19 +78,46 @@ function iconForStatus(status: WorkerInvoiceStatus) {
   return 'document-text' as const;
 }
 
-function invoiceStateLine(
+function dueChipCopy(
   status: WorkerInvoiceStatus,
   dueAt: string,
   paidAt: string | null | undefined,
 ): string {
   if (status === 'paid' && paidAt) {
-    return `Paid on ${formatShortDate(paidAt)}`;
+    return `Paid ${formatShortDate(paidAt)}`;
   }
-  if (status === 'past_due') {
-    const days = Math.abs(daysUntilDue(dueAt));
-    return days === 1 ? 'Past due by 1 day' : `Past due by ${days} days`;
-  }
-  return `Due ${formatShortDate(dueAt)} · ${dueDateCopy(dueAt)}`;
+  const days = daysUntilDue(dueAt);
+  if (days > 1) return `Due ${formatShortDate(dueAt)} · ${days} days left`;
+  if (days === 1) return `Due ${formatShortDate(dueAt)} · 1 day left`;
+  if (days === 0) return 'Due today';
+  if (days === -1) return '1 day overdue';
+  return `${Math.abs(days)} days overdue`;
+}
+
+function FactRow({
+  icon,
+  label,
+  value,
+  last = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.factRow, !last && styles.factRowBorder]}>
+      <View style={styles.factIcon}>
+        <Ionicons name={icon} size={15} color={colors.tealStrong} />
+      </View>
+      <View style={styles.factCopy}>
+        <Text style={styles.factLabel}>{label}</Text>
+        <Text style={styles.factValue} numberOfLines={2}>
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 export default function InvoiceDetailScreen() {
@@ -398,29 +422,62 @@ export default function InvoiceDetailScreen() {
       (pendingHint && status !== 'paid' && pollTimedOut)) &&
     status !== 'paid';
   const payLabel = `Pay ${formatMoney(invoice.commission_amount_minor, invoice.currency)}`;
-  const commissionContext = `${(invoice.commission_rate_bps / 100).toFixed(0)}% of ${formatMoney(
-    invoice.gross_amount_minor,
-    invoice.currency,
-  )} approved gross pay`;
+  const shiftTitle = shift?.title?.trim() ?? '';
+  const showShiftTitle = shiftTitle.length > 0 && shiftTitle.toLowerCase() !== 'shift';
 
+  const dueLine = dueChipCopy(status, invoice.due_at, invoice.paid_at);
+  const heroWash =
+    status === 'past_due'
+      ? (['rgba(180, 35, 24, 0.10)', 'rgba(255, 255, 255, 0)'] as const)
+      : status === 'paid'
+        ? (['rgba(20, 108, 67, 0.10)', 'rgba(255, 255, 255, 0)'] as const)
+        : (['rgba(11, 42, 67, 0.05)', 'rgba(20, 169, 181, 0.12)', 'rgba(255, 255, 255, 0)'] as const);
+  const facts: {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    value: string;
+  }[] = [];
+  if (orgName !== 'Organization') {
+    facts.push({ icon: 'business-outline', label: 'Organization', value: orgName });
+  }
+  const shiftHeadline = showShiftTitle
+    ? shiftTitle
+    : shift?.starts_at
+      ? formatDate(shift.starts_at)
+      : 'Approved shift';
+  if (showShiftTitle && shift?.starts_at) {
+    facts.push({ icon: 'calendar-outline', label: 'Date', value: formatDate(shift.starts_at) });
+  }
+  facts.push({
+    icon: 'time-outline',
+    label: 'Approved hours',
+    value: hoursFromMinutes(invoice.approved_minutes ?? 0),
+  });
+  if (!isSandboxInvoice) {
+    facts.push({
+      icon: 'cash-outline',
+      label: 'Hourly rate',
+      value: `${formatMoney(invoice.rate_minor ?? 0, invoice.currency)} / hour`,
+    });
+  }
   return (
     <AppScreen scroll={false} edges={['top']} contentKind="detail">
-      <ScreenHeader
-        title="Invoice details"
-        subtitle={invoice.invoice_number}
-        showBack
-        onBack={() => router.back()}
-        titleSize="detail"
-      />
-
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: payable ? tabScrollInset + 88 : tabScrollInset },
-          payable ? styles.contentWithSticky : null,
+          { paddingBottom: tabScrollInset },
         ]}
         showsVerticalScrollIndicator={false}
       >
+        <ScreenHeader
+          title="Commission invoice"
+          subtitle={invoice.invoice_number}
+          showBack
+          onBack={() => router.back()}
+          titleSize="detail"
+          motion={false}
+          style={styles.scrollingHeader}
+        />
         {demoInvoice ? <AppReviewDemoBanner /> : null}
         {demoInvoice ? (
           <Banner
@@ -454,141 +511,155 @@ export default function InvoiceDetailScreen() {
           />
         ) : null}
 
-        <MoneySummary
-          label="Bridge Hive commission"
-          amountMinor={invoice.commission_amount_minor}
-          currency={invoice.currency}
-          statusLabel={workerInvoiceStatusLabel(status)}
-          statusTone={toneForStatus(status)}
-          statusIcon={iconForStatus(status)}
-          context={commissionContext}
-          stateLine={invoiceStateLine(status, invoice.due_at, invoice.paid_at)}
-        />
+        <View style={styles.heroCard}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={heroWash}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.heroTop}>
+            <Text style={styles.heroEyebrow}>
+              {status === 'paid' ? 'Commission paid' : 'Commission to pay'}
+            </Text>
+            <StatusBadge
+              label={workerInvoiceStatusLabel(status)}
+              tone={toneForStatus(status)}
+              icon={iconForStatus(status)}
+              pulse={status === 'open' || status === 'payment_processing'}
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Shift</Text>
-          <ListGroup>
-            <View style={styles.groupPad}>
-              <KeyValueRow label="Shift" value={shift?.title?.trim() || 'Shift'} />
+          <View style={styles.heroAmountRow}>
+            <MoneyAmount
+              amountMinor={invoice.commission_amount_minor}
+              currency={invoice.currency}
+              emphasize
+              style={styles.heroAmount}
+            />
+            <View
+              style={styles.heroRateMark}
+              accessibilityRole="text"
+              accessibilityLabel="Platform commission rate"
+            >
+              <Text style={styles.percentIcon}>%</Text>
             </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow label="Organization" value={orgName} />
+          </View>
+
+          <View style={styles.heroMeta}>
+            <Text style={styles.heroMetaText}>
+              Issued {formatShortDate(invoice.issued_at)}
+            </Text>
+            <View style={styles.heroMetaDot} />
+            <Text
+              style={[styles.heroMetaText, status === 'past_due' && styles.heroMetaAlert]}
+            >
+              {dueLine}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.note}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={['#071E33', '#0B2A43', '#0E4A5C']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              'rgba(255,255,255,0.10)',
+              'rgba(20, 169, 181, 0.18)',
+              'rgba(224, 170, 24, 0.10)',
+              'transparent',
+            ]}
+            locations={[0, 0.35, 0.7, 1]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <View style={styles.noteIcon}>
+            <Ionicons name="shield-checkmark" size={15} color={colors.yellow} />
+          </View>
+          <Text style={styles.noteText}>{WORKER_COMMISSION_EXPLAINER}</Text>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardHeaderIcon}>
+              <Ionicons name="briefcase" size={14} color={colors.white} />
             </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Shift date"
-                value={shift?.starts_at ? formatDate(shift.starts_at) : '—'}
+            <View style={styles.cardHeaderCopy}>
+              <Text style={styles.cardEyebrow}>This shift</Text>
+              <Text style={styles.cardHint} numberOfLines={2}>
+                {shiftHeadline}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.facts}>
+            {facts.map((fact, index) => (
+              <FactRow
+                key={fact.label}
+                icon={fact.icon}
+                label={fact.label}
+                value={fact.value}
+                last={index === facts.length - 1}
               />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Approved hours"
-                value={hoursFromMinutes(invoice.approved_minutes ?? 0)}
-              />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Hourly rate"
-                value={
-                  isSandboxInvoice
-                    ? '—'
-                    : `${formatMoney(invoice.rate_minor ?? 0, invoice.currency)} / hour`
-                }
-              />
-            </View>
-          </ListGroup>
+            ))}
+          </View>
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Calculation</Text>
-          <ListGroup>
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Approved gross pay"
-                value={formatMoney(invoice.gross_amount_minor, invoice.currency)}
-              />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
+          <View style={styles.card}>
+            <View style={styles.calcPad}>
               <KeyValueRow
                 label="Commission rate"
-                value={`${(invoice.commission_rate_bps / 100).toFixed(2)}%`}
+                value={
+                  <Text
+                    style={styles.percentIconInline}
+                    accessibilityLabel="Platform commission rate"
+                  >
+                    %
+                  </Text>
+                }
               />
             </View>
-            <View style={styles.finalDivider} />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Bridge Hive commission"
-                value={formatMoney(invoice.commission_amount_minor, invoice.currency)}
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>You pay Bridge Hive</Text>
+              <MoneyAmount
+                amountMinor={invoice.commission_amount_minor}
+                currency={invoice.currency}
                 emphasize
+                style={styles.totalValue}
               />
             </View>
-          </ListGroup>
-        </View>
-
-        <Surface variant="tinted">
-          <Text style={styles.explainer}>{WORKER_COMMISSION_EXPLAINER}</Text>
-        </Surface>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Invoice timeline</Text>
-          <ListGroup>
-            <View style={styles.groupPad}>
-              <KeyValueRow label="Issued" value={formatShortDate(invoice.issued_at)} />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow label="Due" value={formatShortDate(invoice.due_at)} />
-            </View>
-            {invoice.paid_at ? (
-              <>
-                <ListGroupSeparator />
-                <View style={styles.groupPad}>
-                  <KeyValueRow label="Paid" value={formatShortDate(invoice.paid_at)} />
-                </View>
-              </>
-            ) : null}
-          </ListGroup>
+          </View>
         </View>
 
         {status === 'paid' ? (
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>
-              {isSandboxInvoice ? 'TEST receipt' : 'Receipt'}
+              {isSandboxInvoice ? 'Test receipt' : 'Receipt'}
             </Text>
-            <ListGroup>
-              {isSandboxInvoice ? (
-                <>
-                  <View style={styles.groupPad}>
-                    <KeyValueRow label="Type" value="TEST — sandbox only" emphasize />
-                  </View>
-                  <ListGroupSeparator />
-                </>
-              ) : null}
-              <View style={styles.groupPad}>
+            <View style={styles.card}>
+              <View style={styles.calcPad}>
+                {isSandboxInvoice ? (
+                  <KeyValueRow label="Type" value="TEST — sandbox only" emphasize />
+                ) : null}
                 <KeyValueRow label="Invoice" value={invoice.invoice_number} />
-              </View>
-              <ListGroupSeparator />
-              <View style={styles.groupPad}>
                 <KeyValueRow
                   label="Amount paid"
                   value={formatMoney(invoice.commission_amount_minor, invoice.currency)}
                   emphasize
                 />
-              </View>
-              <ListGroupSeparator />
-              <View style={styles.groupPad}>
                 <KeyValueRow
                   label="Paid on"
                   value={invoice.paid_at ? formatShortDate(invoice.paid_at) : '—'}
                 />
-              </View>
-              <ListGroupSeparator />
-              <View style={styles.groupPad}>
                 <KeyValueRow
                   label="Payment reference"
                   value={
@@ -598,40 +669,48 @@ export default function InvoiceDetailScreen() {
                   }
                 />
               </View>
-            </ListGroup>
+            </View>
           </View>
         ) : null}
 
-        <Pressable
-          style={styles.helpRow}
-          onPress={() =>
-            Linking.openURL(
-              `mailto:${APP_CONFIG.supportEmail}?subject=${encodeURIComponent('Commission invoice')}`,
-            )
-          }
-          accessibilityRole="button"
-          accessibilityLabel="Contact support"
-        >
-          <View style={styles.helpCopy}>
-            <Text style={styles.helpTitle}>Need help with this invoice?</Text>
-            <Text style={styles.helpAction}>Contact support</Text>
-          </View>
-        </Pressable>
+        <View style={styles.actionsBlock}>
+          <Pressable
+            style={styles.helpRow}
+            onPress={() =>
+              Linking.openURL(
+                `mailto:${APP_CONFIG.supportEmail}?subject=${encodeURIComponent(`Commission invoice ${invoice.invoice_number}`)}`,
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel="Contact support about this invoice"
+          >
+            <View style={styles.helpIcon}>
+              <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.tealStrong} />
+            </View>
+            <View style={styles.helpCopy}>
+              <Text style={styles.helpTitle}>Need help with this invoice?</Text>
+              <Text style={styles.helpAction}>Contact support</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </Pressable>
 
-        {payError && !payable ? <Text style={styles.error}>{payError}</Text> : null}
+          {payable ? (
+            <View style={styles.payInline}>
+              {payError ? <Text style={styles.error}>{payError}</Text> : null}
+              <PremiumActionButton
+                label={payLabel}
+                loading={paying}
+                onPress={() => void onPay()}
+                icon="card-outline"
+                accessibilityHint="Starts secure checkout for this commission invoice"
+                style={styles.payButton}
+              />
+            </View>
+          ) : null}
+
+          {payError && !payable ? <Text style={styles.error}>{payError}</Text> : null}
+        </View>
       </ScrollView>
-
-      {payable ? (
-        <StickyActionBar clearTabBar>
-          {payError ? <Text style={styles.error}>{payError}</Text> : null}
-          <PremiumActionButton
-            label={payLabel}
-            loading={paying}
-            onPress={() => void onPay()}
-            icon="card-outline"
-          />
-        </StickyActionBar>
-      ) : null}
     </AppScreen>
   );
 }
@@ -641,48 +720,310 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
     gap: spacing.lg,
   },
-  contentWithSticky: {
-    paddingBottom: spacing.huge,
+  scrollingHeader: {
+    marginBottom: 0,
+  },
+  heroCard: {
+    gap: spacing.md,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+    ...shadows.sm,
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  heroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  heroEyebrow: {
+    flex: 1,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
+  },
+  heroAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+  },
+  heroAmount: {
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 36,
+    lineHeight: 40,
+    color: colors.navy,
+    letterSpacing: -0.7,
+  },
+  heroRateMark: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20, 169, 181, 0.12)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.28)',
+  },
+  percentIcon: {
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 15,
+    lineHeight: 18,
+    color: colors.tealStrong,
+  },
+  percentIconInline: {
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 18,
+    lineHeight: 22,
+    color: colors.navy,
+  },
+  heroMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  heroMetaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(11, 42, 67, 0.28)',
+  },
+  heroMetaText: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
+  },
+  heroMetaAlert: {
+    color: colors.error,
+  },
+  note: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: colors.navy,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 210, 90, 0.22)',
+    ...(Platform.OS === 'web'
+      ? ({ backdropFilter: 'blur(16px) saturate(1.35)' } as object)
+      : null),
+  },
+  noteIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 210, 90, 0.28)',
+  },
+  noteText: {
+    flex: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: 14,
+    lineHeight: 20,
+    color: 'rgba(255, 255, 255, 0.92)',
+    letterSpacing: -0.1,
   },
   section: {
     gap: spacing.sm,
   },
   sectionLabel: {
-    fontFamily: typography.fonts.semibold,
+    fontFamily: typography.fonts.displaySemibold,
     fontSize: typography.size.sm,
-    color: colors.textSecondary,
+    color: colors.navy,
+    letterSpacing: -0.1,
     paddingHorizontal: 2,
   },
-  groupPad: {
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+    ...shadows.sm,
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
     paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md + 2,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(11, 42, 67, 0.08)',
   },
-  finalDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderStrong,
-    marginTop: spacing.xs,
+  cardHeaderIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.navy,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 210, 90, 0.22)',
   },
-  explainer: {
-    fontFamily: typography.fonts.regular,
-    fontSize: typography.size.sm,
-    lineHeight: typography.lineHeight.sm,
+  cardHeaderCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  cardEyebrow: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
+  },
+  cardHint: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 16,
+    lineHeight: 21,
+    color: colors.navy,
+    letterSpacing: -0.2,
+  },
+  facts: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: 'rgba(11, 42, 67, 0.03)',
+  },
+  factRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.sm,
+  },
+  factRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(11, 42, 67, 0.07)',
+  },
+  factIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20, 169, 181, 0.14)',
+    flexShrink: 0,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.22)',
+  },
+  factCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 1,
+  },
+  factLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
     color: colors.textSecondary,
+  },
+  factValue: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.navy,
+  },
+  calcPad: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xs,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: 'rgba(11, 42, 67, 0.035)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(11, 42, 67, 0.08)',
+  },
+  totalLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    color: colors.navy,
+    flex: 1,
+  },
+  totalValue: {
+    fontFamily: typography.fonts.display,
+    fontSize: 18,
+    color: colors.navy,
+  },
+  actionsBlock: {
+    gap: spacing.md,
   },
   helpRow: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xs,
-    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    minHeight: 56,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+    ...shadows.sm,
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  payInline: {
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  payButton: {
+    width: 'auto',
+    alignSelf: 'center',
+    minWidth: 188,
+    maxWidth: 240,
+  },
+  helpIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(20, 169, 181, 0.14)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(20, 169, 181, 0.22)',
   },
   helpCopy: {
-    gap: 4,
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
   },
   helpTitle: {
-    fontFamily: typography.fonts.regular,
-    fontSize: typography.size.sm,
-    color: colors.textSecondary,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    color: colors.navy,
   },
   helpAction: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.md,
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
     color: colors.tealStrong,
   },
   error: {

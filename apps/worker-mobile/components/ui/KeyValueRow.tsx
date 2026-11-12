@@ -5,7 +5,7 @@ import { colors, spacing, typography } from '@/constants/theme';
 
 type Props = {
   label: string;
-  value: string;
+  value: React.ReactNode;
   emphasize?: boolean;
   style?: StyleProp<ViewStyle>;
 };
@@ -15,12 +15,16 @@ export function KeyValueRow({ label, value, emphasize = false, style }: Props) {
   return (
     <View style={[styles.row, style]}>
       <Text style={[styles.label, emphasize && styles.labelEmphasize]}>{label}</Text>
-      <Text
-        style={[styles.value, emphasize && styles.valueEmphasize]}
-        numberOfLines={3}
-      >
-        {value}
-      </Text>
+      {typeof value === 'string' || typeof value === 'number' ? (
+        <Text
+          style={[styles.value, emphasize && styles.valueEmphasize]}
+          numberOfLines={3}
+        >
+          {value}
+        </Text>
+      ) : (
+        <View style={styles.valueNode}>{value}</View>
+      )}
     </View>
   );
 }
@@ -57,5 +61,11 @@ const styles = StyleSheet.create({
   valueEmphasize: {
     fontFamily: typography.fonts.bold,
     color: colors.navy,
+  },
+  valueNode: {
+    flexShrink: 1,
+    maxWidth: '55%',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
   },
 });

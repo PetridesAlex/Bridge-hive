@@ -82,54 +82,68 @@ export default function ShiftsScreen() {
     void refreshBilling();
   };
 
+  const showFeed =
+    !(loading && shifts.length === 0) &&
+    !(offline && shifts.length === 0) &&
+    !(error && shifts.length === 0) &&
+    (isVerified || isAppReviewDemo) &&
+    !isRestricted;
+
+  const pageChrome = useMemo(
+    () => (
+      <View>
+        <ScreenHeader
+          motion={false}
+          eyebrow={t('shifts.eyebrow')}
+          title={t('shifts.openTitle')}
+          subtitle={t('shifts.subtitle')}
+          right={
+            isVerified && !isAppReviewDemo ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('shifts.openCalendar')}
+                onPress={() => router.push('/shifts/calendar')}
+                style={({ pressed }) => [styles.calCta, pressed && styles.calCtaPressed]}
+              >
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={[StyleSheet.absoluteFill, styles.calCtaFill]}
+                />
+                <Ionicons name="calendar" size={22} color={colors.white} />
+                <View pointerEvents="none" style={styles.calCtaDot} />
+              </Pressable>
+            ) : undefined
+          }
+        />
+        {isAppReviewDemo ? (
+          <View style={styles.banner}>
+            <AppReviewDemoBanner />
+          </View>
+        ) : null}
+        {offline ? (
+          <Banner
+            variant="warning"
+            title={t('shifts.offlineTitle')}
+            body={t('shifts.offlineBody')}
+            style={styles.banner}
+          />
+        ) : null}
+        {isRestricted && summary ? (
+          <View style={styles.banner}>
+            <BillingRestrictionBanner summary={summary} />
+          </View>
+        ) : null}
+      </View>
+    ),
+    [isAppReviewDemo, isRestricted, isVerified, offline, summary, t],
+  );
+
   return (
     <AppScreen scroll={false} edges={['top']}>
-      <ScreenHeader
-        eyebrow={t('shifts.eyebrow')}
-        title={t('shifts.openTitle')}
-        subtitle={t('shifts.subtitle')}
-        right={
-          isVerified && !isAppReviewDemo ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={t('shifts.openCalendar')}
-              onPress={() => router.push('/shifts/calendar')}
-              style={({ pressed }) => [styles.calCta, pressed && styles.calCtaPressed]}
-            >
-              <LinearGradient
-                pointerEvents="none"
-                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[StyleSheet.absoluteFill, styles.calCtaFill]}
-              />
-              <Ionicons name="calendar" size={22} color={colors.white} />
-              <View pointerEvents="none" style={styles.calCtaDot} />
-            </Pressable>
-          ) : undefined
-        }
-      />
-
-      {isAppReviewDemo ? (
-        <View style={styles.banner}>
-          <AppReviewDemoBanner />
-        </View>
-      ) : null}
-
-      {offline ? (
-        <Banner
-          variant="warning"
-          title={t('shifts.offlineTitle')}
-          body={t('shifts.offlineBody')}
-          style={styles.banner}
-        />
-      ) : null}
-
-      {isRestricted && summary ? (
-        <View style={styles.banner}>
-          <BillingRestrictionBanner summary={summary} />
-        </View>
-      ) : null}
+      {showFeed ? null : pageChrome}
 
       {loading && shifts.length === 0 ? (
         <View style={styles.loading}>
@@ -163,6 +177,7 @@ export default function ShiftsScreen() {
           style={styles.listFlex}
           data={rows}
           keyExtractor={(item) => item.key}
+          ListHeaderComponent={pageChrome}
           contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
           refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
           showsVerticalScrollIndicator={false}

@@ -1,14 +1,23 @@
+import {
+  isMessagingUuid,
+  isWorkerRole,
+  messagingChannelName,
+  subscribeMessagingRealtime,
+  sumConversationUnread,
+  WORKER_ROLE_LABELS,
+} from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AppState,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { router, useFocusEffect } from 'expo-router';
 import Animated, {
   FadeInDown,
   useAnimatedScrollHandler,
@@ -17,37 +26,68 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 
+import { DayShiftCard } from '@/components/home/DayShiftCard';
 import { GreetingHeader } from '@/components/home/GreetingHeader';
+import { NextShiftCard } from '@/components/home/NextShiftCard';
 import { QuickAccess } from '@/components/home/QuickAccess';
+import { ShiftCalendar } from '@/components/home/ShiftCalendar';
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { ShiftNotificationPrompt } from '@/components/push/ShiftNotificationPrompt';
-import { NextShiftCard } from '@/components/home/NextShiftCard';
-import { ShiftCalendar } from '@/components/home/ShiftCalendar';
 import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Banner } from '@/components/ui/Banner';
 import { ContextualActionCard } from '@/components/ui/ContextualActionCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ErrorState } from '@/components/ui/ErrorState';
-import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
-import { ListRow } from '@/components/ui/ListRow';
 import { SkeletonCard } from '@/components/ui/Skeleton';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
-import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useAssignments } from '@/hooks/useAssignments';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useShifts } from '@/hooks/useShifts';
 import { useTranslation } from '@/i18n/locale-provider';
 import { getAvatarSignedUrl } from '@/lib/avatar';
+import { listMyMessagingConversations } from '@/lib/messaging';
 import {
   canSubmitCompletedHours,
   getWorkerShiftDetails,
   shiftHasEnded,
   type WorkerShiftDetails,
 } from '@/lib/rpcs';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { formatDayLabel, formatTimeRange, isoDateFromTimestamp } from '@/utils/format';
+import { formatDayLabel, formatMoney, formatTimeRange, isoDateFromTimestamp } from '@/utils/format';
+
+function shortPlace(raw: string): string {
+  const trimmed = raw.trim().replace(/\s+/g, ' ');
+  const letters = trimmed.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+  const upper = letters.replace(/[^A-ZÀ-ÖØ-Þ]/g, '');
+  const shouted = letters.length > 2 && upper.length / letters.length > 0.85;
+  const formatted = shouted
+    ? trimmed
+        .toLowerCase()
+        .split(' ')
+        .map((word, index) => {
+          if (index > 0 && ['and', 'at', 'in', 'of', 'the'].includes(word)) return word;
+          return word.charAt(0).toUpperCase() + word.slice(1);
+        })
+        .join(' ')
+    : trimmed;
+  const match = formatted.match(/^(.*?)\s+in\s+(.{1,40})$/i);
+  if (!match) return formatted;
+  const site = match[1].trim();
+  const city = match[2].trim();
+  if (!site || !city || city.split(' ').length > 3) return formatted;
+  return `${site}, ${city}`;
+}
+
+function shiftHeadline(title: string | null | undefined, role: string | null | undefined, fallback: string) {
+  const name = title?.trim();
+  if (name && name.toLowerCase() !== 'shift') return name;
+  if (role && isWorkerRole(role)) return WORKER_ROLE_LABELS[role];
+  return fallback;
+}
 
 function assignmentStatusLabel(status: string): string {
   const map: Record<string, string> = {
@@ -77,6 +117,7 @@ export default function HomeScreen() {
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [messageUnreadCount, setMessageUnreadCount] = useState(0);
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -293,11 +334,46 @@ export default function HomeScreen() {
     return count;
   }, [pastDueCount, dueSoon, isRestricted]);
 
+  const refreshMessageUnread = useCallback(async () => {
+    if (isAppReviewDemo || !user?.id) {
+      setMessageUnreadCount(0);
+      return;
+    }
+    const result = await listMyMessagingConversations();
+    if (result.error) return;
+    setMessageUnreadCount(sumConversationUnread(result.data));
+  }, [isAppReviewDemo, user?.id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      void refreshMessageUnread();
+      const sub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') void refreshMessageUnread();
+      });
+      return () => sub.remove();
+    }, [refreshMessageUnread]),
+  );
+
+  useEffect(() => {
+    const userId = user?.id;
+    if (!userId || !isMessagingUuid(userId) || isAppReviewDemo) return;
+    const subscription = subscribeMessagingRealtime({
+      client: supabase,
+      channelName: messagingChannelName('worker-inbox', { userId }),
+      table: 'organization_worker_conversations',
+      filter: `worker_id=eq.${userId}`,
+      onChange: () => void refreshMessageUnread(),
+      onSubscribed: () => void refreshMessageUnread(),
+    });
+    return () => subscription.unsubscribe();
+  }, [isAppReviewDemo, refreshMessageUnread, user?.id]);
+
   const onRefresh = () => {
     void refresh();
     void refreshBilling();
     void refreshInvoices();
     void refreshOpenShifts();
+    void refreshMessageUnread();
   };
 
   return (
@@ -314,6 +390,7 @@ export default function HomeScreen() {
           initials={initials}
           imageUri={avatarUrl}
           unreadCount={notificationAlertCount}
+          messageUnreadCount={messageUnreadCount}
           verified={isVerified}
           alertTone={pastDueCount > 0 || isRestricted ? 'danger' : dueSoon ? 'money' : 'default'}
           scrollY={scrollY}
@@ -369,45 +446,60 @@ export default function HomeScreen() {
             />
           ) : (
             <View style={styles.dayPlan}>
-              <Text style={styles.dayPlanTitle}>{formatDayLabel(selectedDay)}</Text>
-              {dayAssignments.length > 0 ? (
-                <ListGroup>
-                  {dayAssignments.map((assignment, index) => (
-                    <React.Fragment key={assignment.id}>
-                      {index > 0 ? <ListGroupSeparator /> : null}
-                      <ListRow
-                        icon="briefcase"
-                        iconColor={colors.white}
-                        iconBackground={colors.tealStrong}
-                        title={assignment.shifts?.title?.trim() || 'Booked shift'}
-                        subtitle={
-                          assignment.shifts
-                            ? `${formatTimeRange(assignment.shifts.starts_at, assignment.shifts.ends_at)} · ${assignmentStatusLabel(assignment.status)}`
-                            : assignmentStatusLabel(assignment.status)
-                        }
-                        onPress={() => router.push(`/shifts/${assignment.shift_id}`)}
-                      />
-                    </React.Fragment>
-                  ))}
-                </ListGroup>
-              ) : null}
-              {dayOpens.length > 0 ? (
-                <ListGroup>
-                  {dayOpens.map((shift, index) => (
-                    <React.Fragment key={shift.id}>
-                      {index > 0 ? <ListGroupSeparator /> : null}
-                      <ListRow
-                        icon="flash"
-                        iconColor={colors.navy}
-                        iconBackground={colors.yellowLight}
-                        title={shift.title?.trim() || 'Open shift'}
-                        subtitle={`${formatTimeRange(shift.starts_at, shift.ends_at)} · Open to claim`}
-                        onPress={() => router.push(`/shifts/${shift.id}`)}
-                      />
-                    </React.Fragment>
-                  ))}
-                </ListGroup>
-              ) : null}
+              <View style={styles.dayPlanHead}>
+                <Text style={styles.dayPlanTitle}>{formatDayLabel(selectedDay)}</Text>
+                <Text style={styles.dayPlanMeta}>
+                  {[
+                    dayAssignments.length > 0
+                      ? `${dayAssignments.length} booked`
+                      : null,
+                    dayOpens.length > 0 ? `${dayOpens.length} open` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              {dayAssignments.map((assignment) => {
+                const shift = assignment.shifts;
+                const status = assignmentStatusLabel(assignment.status);
+                return (
+                  <DayShiftCard
+                    key={assignment.id}
+                    tone="booked"
+                    title={shiftHeadline(shift?.title, shift?.required_role, 'Booked shift')}
+                    startsAt={shift?.starts_at ?? `${selectedDay}T08:00:00`}
+                    endsAt={shift?.ends_at ?? shift?.starts_at ?? `${selectedDay}T08:00:00`}
+                    status={status}
+                    rate={
+                      shift?.rate_minor
+                        ? `${formatMoney(shift.rate_minor, shift.currency)}/hr`
+                        : null
+                    }
+                    onPress={() => router.push(`/shifts/${assignment.shift_id}`)}
+                  />
+                );
+              })}
+              {dayOpens.map((shift) => (
+                <DayShiftCard
+                  key={shift.id}
+                  tone="open"
+                  title={shiftHeadline(shift.title, shift.required_role, 'Open shift')}
+                  startsAt={shift.starts_at}
+                  endsAt={shift.ends_at}
+                  status="Open to claim"
+                  place={
+                    shift.location_name?.trim()
+                      ? shortPlace(shift.location_name)
+                      : shift.organization_name?.trim() || null
+                  }
+                  rate={
+                    shift.rate_minor
+                      ? `${formatMoney(shift.rate_minor, shift.currency)}/hr`
+                      : null
+                  }
+                  onPress={() => router.push(`/shifts/${shift.id}`)}
+                />
+              ))}
             </View>
           )
         ) : null}
@@ -513,12 +605,24 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
   },
   dayPlan: {
-    gap: spacing.sm,
+    gap: spacing.md,
+  },
+  dayPlanHead: {
+    gap: 2,
+    paddingHorizontal: spacing.xs,
   },
   dayPlanTitle: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
+    fontFamily: typography.fonts.display,
+    fontSize: 22,
+    lineHeight: 28,
+    letterSpacing: -0.4,
     color: colors.navy,
+  },
+  dayPlanMeta: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.textSecondary,
   },
   invoiceCard: {
     flexDirection: 'row',

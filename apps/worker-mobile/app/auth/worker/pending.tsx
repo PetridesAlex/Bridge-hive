@@ -789,6 +789,12 @@ export default function WorkerAccountSetupScreen() {
           busy={refreshing}
           onPress={() => void onRefresh()}
         />
+        <SetupAction
+          label={t('profile.deleteAccount')}
+          icon="trash-outline"
+          tone="navy"
+          onPress={() => router.push('/delete-account')}
+        />
         <SignOutAction onPress={() => void signOut()} />
       </View>
       <Pressable

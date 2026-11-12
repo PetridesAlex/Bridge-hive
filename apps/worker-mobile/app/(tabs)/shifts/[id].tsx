@@ -1,6 +1,4 @@
 import {
-  commissionFromGross,
-  DEFAULT_COMMISSION_RATE_BPS,
   estimatedWorkerShiftPayMinor,
   SHIFT_UNAVAILABLE_TITLE,
   shiftNotificationUrl,
@@ -38,6 +36,7 @@ import { AppScreen } from '@/components/ui/AppScreen';
 import { AssignmentTimeline } from '@/components/ui/AssignmentTimeline';
 import { Ionicons } from '@expo/vector-icons';
 import { Banner } from '@/components/ui/Banner';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { SkeletonCard } from '@/components/ui/Skeleton';
@@ -138,6 +137,7 @@ export default function ShiftDetailScreen() {
   const [successKind, setSuccessKind] = useState<'claim' | 'hours' | null>(null);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [notesExpanded, setNotesExpanded] = useState(false);
+  const [claimConfirmVisible, setClaimConfirmVisible] = useState(false);
   const [hoursText, setHoursText] = useState('0');
   const [minutesText, setMinutesText] = useState('0');
   const [hoursPrefillKey, setHoursPrefillKey] = useState<string | null>(null);
@@ -460,10 +460,6 @@ export default function ShiftDetailScreen() {
     endsAtIso: shift.ends_at,
     breakMinutes: shift.break_minutes,
   });
-  const commissionMinor =
-    estimatedPayMinor > 0 ? commissionFromGross(estimatedPayMinor) : 0;
-  const netAfterCommissionMinor = Math.max(0, estimatedPayMinor - commissionMinor);
-  const commissionPercent = DEFAULT_COMMISSION_RATE_BPS / 100;
   const notesLong = (shift.notes?.length ?? 0) > 160;
   const notesVisible =
     !shift.notes
@@ -481,7 +477,7 @@ export default function ShiftDetailScreen() {
   const primaryAction = canClaim
     ? {
         label: claiming ? t('shifts.claiming') : t('shifts.claim'),
-        onPress: onClaim,
+        onPress: () => setClaimConfirmVisible(true),
         loading: claiming,
         disabled: claiming,
       }
@@ -496,13 +492,18 @@ export default function ShiftDetailScreen() {
 
   return (
     <AppScreen scroll={false} edges={['top']} contentKind="detail">
-      <ScreenHeader title="Shift details" showBack titleSize="detail" />
-
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: tabScrollInset }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <ScreenHeader
+          title="Shift details"
+          showBack
+          titleSize="detail"
+          motion={false}
+          style={styles.scrollingHeader}
+        />
         {demoShift ? <AppReviewDemoBanner /> : null}
         <View style={styles.heroCard}>
           <LinearGradient
@@ -629,79 +630,13 @@ export default function ShiftDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Price overview</Text>
+          <Text style={styles.sectionLabel}>{t('shifts.priceOverview')}</Text>
           <ShiftPriceBreakdown
             rateMinor={shift.rate_minor}
             currency={shift.currency}
             estimatedPayMinor={estimatedPayMinor}
-            commissionMinor={commissionMinor}
-            netMinor={netAfterCommissionMinor}
-            commissionPercent={commissionPercent}
+            durationMinutes={durationMin}
           />
-          <View style={styles.payNote}>
-            <LinearGradient
-              pointerEvents="none"
-              colors={[
-                'rgba(11, 42, 67, 0.06)',
-                'rgba(20, 169, 181, 0.10)',
-                'rgba(224, 170, 24, 0.08)',
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <LinearGradient
-              colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-              start={{ x: 0.1, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.payNoteIcon}
-            >
-              <Ionicons name="shield-checkmark" size={15} color={colors.white} />
-            </LinearGradient>
-            <View style={styles.payNoteCopy}>
-              <Text style={styles.payNoteEyebrow}>{t('payments.howPayWorks')}</Text>
-              <View style={styles.payNoteRule} />
-              <View style={styles.payNoteBullets} accessibilityRole="summary">
-                {(
-                  [
-                    {
-                      key: 'orgPays',
-                      icon: 'wallet' as const,
-                      text: t('payments.howPayWorksBullets.orgPays'),
-                    },
-                    {
-                      key: 'commissionSeparate',
-                      icon: 'receipt' as const,
-                      text: t('payments.howPayWorksBullets.commissionSeparate'),
-                    },
-                    {
-                      key: 'approvedHours',
-                      icon: 'time' as const,
-                      text: t('payments.howPayWorksBullets.approvedHours'),
-                    },
-                  ] as const
-                ).map((item, index, list) => (
-                  <View
-                    key={item.key}
-                    style={[
-                      styles.payNoteBullet,
-                      index < list.length - 1 && styles.payNoteBulletBorder,
-                    ]}
-                  >
-                    <LinearGradient
-                      colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={styles.payNoteBulletMark}
-                    >
-                      <Ionicons name={item.icon} size={11} color={colors.white} />
-                    </LinearGradient>
-                    <Text style={styles.payNoteBulletText}>{item.text}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
         </View>
 
         <View style={styles.section}>
@@ -922,6 +857,33 @@ export default function ShiftDetailScreen() {
           </View>
         ) : null}
       </ScrollView>
+
+      <ConfirmModal
+        visible={claimConfirmVisible}
+        title={t('shifts.acceptConfirmTitle')}
+        confirmLabel={t('shifts.acceptConfirm')}
+        cancelLabel={t('common.cancel')}
+        confirmVariant="brand"
+        onCancel={() => setClaimConfirmVisible(false)}
+        onConfirm={() => {
+          setClaimConfirmVisible(false);
+          void onClaim();
+        }}
+      >
+        <View style={styles.acceptFeeBox}>
+          <Text style={styles.acceptFeeLead}>{t('shifts.acceptConfirmBody')}</Text>
+          <View style={styles.acceptFeeRow}>
+            <View
+              style={styles.acceptPercentMark}
+              accessibilityRole="text"
+              accessibilityLabel="Platform commission rate"
+            >
+              <Text style={styles.acceptPercentIcon}>%</Text>
+            </View>
+            <Text style={styles.acceptFeeStrong}>{t('shifts.acceptConfirmFee')}</Text>
+          </View>
+        </View>
+      </ConfirmModal>
     </AppScreen>
   );
 }
@@ -930,6 +892,9 @@ const styles = StyleSheet.create({
   scroll: {
     paddingBottom: spacing.xxxl,
     gap: spacing.lg,
+  },
+  scrollingHeader: {
+    marginBottom: 0,
   },
   inlineAction: {
     paddingTop: spacing.xs,
@@ -1125,75 +1090,41 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
     paddingHorizontal: 2,
   },
-  payNote: {
+  acceptFeeBox: {
+    gap: spacing.sm,
+  },
+  acceptFeeLead: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  acceptFeeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.md,
-    marginTop: spacing.xs,
-    paddingVertical: spacing.md + 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: colors.card,
-    ...shadows.sm,
+    gap: spacing.sm,
   },
-  payNoteIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+  acceptPercentMark: {
+    marginTop: 1,
+    width: 28,
+    height: 28,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-    marginTop: 1,
+    backgroundColor: 'rgba(20, 169, 181, 0.12)',
   },
-  payNoteCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: 6,
-  },
-  payNoteEyebrow: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 10,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
+  acceptPercentIcon: {
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 16,
+    lineHeight: 20,
     color: colors.tealStrong,
   },
-  payNoteRule: {
-    width: 28,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.yellow,
-  },
-  payNoteBullets: {
-    gap: 0,
-    marginTop: 2,
-  },
-  payNoteBullet: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    paddingVertical: 8,
-  },
-  payNoteBulletBorder: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(11, 42, 67, 0.08)',
-  },
-  payNoteBulletMark: {
-    width: 22,
-    height: 22,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-    flexShrink: 0,
-  },
-  payNoteBulletText: {
+  acceptFeeStrong: {
     flex: 1,
-    fontFamily: typography.fonts.medium,
-    fontSize: 13,
-    lineHeight: 19,
-    letterSpacing: -0.1,
-    color: colors.navySoft,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.navy,
   },
   notes: {
     fontFamily: typography.fonts.regular,

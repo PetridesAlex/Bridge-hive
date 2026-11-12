@@ -29,6 +29,8 @@ type Props = {
   subtitle?: string;
   trailing?: string | null;
   tone?: MenuTone;
+  /** Restrained danger styling for irreversible actions (label + icon). */
+  destructive?: boolean;
   accessibilityHint?: string;
   /** Flat row inside a shared bordered group (no per-row card chrome). */
   grouped?: boolean;
@@ -43,6 +45,7 @@ export function ProfileMenuRow({
   subtitle,
   trailing,
   tone = 'neutral',
+  destructive = false,
   accessibilityHint,
   grouped = false,
   showDivider = false,
@@ -109,7 +112,11 @@ export function ProfileMenuRow({
           />
         ) : null}
         <LinearGradient
-          colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+          colors={
+            destructive
+              ? [colors.error, '#B42318', '#8A1C14']
+              : [colors.navy, '#0C3E56', colors.tealStrong]
+          }
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.iconWrap}
@@ -117,7 +124,10 @@ export function ProfileMenuRow({
           <Ionicons name={icon} size={18} color={colors.white} />
         </LinearGradient>
         <View style={styles.copy}>
-          <Text style={styles.label} numberOfLines={1}>
+          <Text
+            style={[styles.label, destructive && styles.labelDestructive]}
+            numberOfLines={1}
+          >
             {label}
           </Text>
           {subtitle ? (
@@ -193,6 +203,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: -0.3,
     color: colors.navy,
+  },
+  labelDestructive: {
+    color: colors.error,
   },
   subtitle: {
     fontFamily: typography.fonts.regular,

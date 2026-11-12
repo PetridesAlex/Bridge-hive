@@ -375,6 +375,14 @@ export default function AccountHubScreen() {
         <ProfileMenuRow
           grouped
           showDivider
+          destructive
+          icon="trash-outline"
+          label={t('profile.deleteAccount')}
+          onPress={() => router.push('/delete-account')}
+        />
+        <ProfileMenuRow
+          grouped
+          showDivider
           icon="language-outline"
           label={t('profile.language')}
           trailing={languageTrailing}

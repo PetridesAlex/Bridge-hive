@@ -47,6 +47,11 @@ export default function WorkerRestrictedScreen() {
       </View>
       <View style={styles.actions}>
         <Button
+          label={t('profile.deleteAccount')}
+          variant="ghost"
+          onPress={() => router.push('/delete-account')}
+        />
+        <Button
           label={t('profile.signOut')}
           variant="brand"
           onPress={async () => {

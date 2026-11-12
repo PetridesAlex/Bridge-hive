@@ -29,6 +29,11 @@ export default function WorkerRejectedScreen() {
       <Text style={styles.body}>{accountRejectionReason}</Text>
       <View style={styles.actions}>
         <Button
+          label={t('profile.deleteAccount')}
+          variant="ghost"
+          onPress={() => router.push('/delete-account')}
+        />
+        <Button
           label={t('profile.signOut')}
           variant="brand"
           onPress={async () => {

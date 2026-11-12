@@ -37,6 +37,7 @@ import {
   pickPayoutProofImage,
   uploadPayoutProof,
 } from '@/lib/payout';
+import { navigateBack } from '@/lib/navigation';
 import { submitPayoutAccount } from '@/lib/rpcs';
 import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
@@ -200,11 +201,7 @@ export default function PayoutSetupScreen() {
       router.replace('/auth/worker/pending');
       return;
     }
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/profile');
+    navigateBack('/(tabs)/profile');
   };
 
   // Resubmit only when unset or correction required — pending/verified stay view-only.

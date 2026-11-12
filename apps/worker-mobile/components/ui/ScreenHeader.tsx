@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import { useRouter } from 'expo-router';
 import Animated, {
   Easing,
   FadeInDown,
@@ -14,6 +13,8 @@ import Animated, {
 import { IconButton } from '@/components/ui/IconButton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { navigateBack } from '@/lib/navigation';
+import type { Href } from 'expo-router';
 
 type Props = {
   title: string;
@@ -23,6 +24,8 @@ type Props = {
   subtitle?: string;
   showBack?: boolean;
   onBack?: () => void;
+  /** Used when `onBack` is omitted and there is no router history. */
+  backFallback?: Href;
   /** Root: aligned with title row. Detail: aligned with back row. */
   right?: React.ReactNode;
   /** page = root; detail = nested screens */
@@ -47,13 +50,13 @@ export function ScreenHeader({
   subtitle,
   showBack = false,
   onBack,
+  backFallback = '/(tabs)',
   right,
   titleSize,
   motion = true,
   showAccent = true,
   style,
 }: Props) {
-  const router = useRouter();
   const reduced = useReducedMotion();
   const size = titleSize ?? (showBack ? 'detail' : 'page');
   const titleStyle = size === 'detail' ? styles.titleDetail : styles.titlePage;
@@ -87,16 +90,7 @@ export function ScreenHeader({
           <IconButton
             icon="chevron-back"
             accessibilityLabel="Go back"
-            onPress={
-              onBack ??
-              (() => {
-                if (router.canGoBack()) {
-                  router.back();
-                  return;
-                }
-                router.replace('/(tabs)/profile');
-              })
-            }
+            onPress={onBack ?? (() => navigateBack(backFallback))}
             color={colors.navy}
             backgroundColor={colors.surfaceSubdued}
             style={styles.backHit}

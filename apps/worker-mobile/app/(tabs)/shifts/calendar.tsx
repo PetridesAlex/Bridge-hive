@@ -259,6 +259,7 @@ export default function ShiftCalendarScreen() {
         <ScreenHeader
           title="Calendar"
           showBack
+          backFallback="/(tabs)/shifts"
           subtitle={`Open ${roleLabel} shifts and your booked work.`}
           titleSize="detail"
         />

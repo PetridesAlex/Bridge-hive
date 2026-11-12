@@ -91,6 +91,7 @@ export default function InvoicesScreen() {
         title={t('invoices.title')}
         subtitle={t('invoices.subtitle')}
         showBack={fromAccount}
+        backFallback="/(tabs)/profile"
         titleSize={fromAccount ? 'detail' : 'page'}
       />
       {isAppReviewDemo ? <AppReviewDemoBanner /> : null}

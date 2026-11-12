@@ -12,6 +12,7 @@ import { InboxView } from '@/components/messages/InboxView';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { useTranslation } from '@/i18n/locale-provider';
 import { listMyMessagingConversations } from '@/lib/messaging';
+import { navigateBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -81,7 +82,7 @@ export default function MessagesInboxScreen() {
         loading={isAppReviewDemo ? false : loading}
         refreshing={refreshing}
         error={isAppReviewDemo ? null : error}
-        onBack={() => router.back()}
+        onBack={() => navigateBack('/(tabs)')}
         onRefresh={() => {
           setRefreshing(true);
           void load();

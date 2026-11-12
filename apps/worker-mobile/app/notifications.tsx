@@ -176,7 +176,7 @@ export default function NotificationsScreen() {
 
   return (
     <AppScreen scroll={false} edges={['top']}>
-      <ScreenHeader title={t('notifications.title')} showBack />
+      <ScreenHeader title={t('notifications.title')} showBack backFallback="/(tabs)" />
       {loading && listEmpty ? (
         <View style={styles.list}>
           <SkeletonCard lines={2} />

@@ -222,6 +222,7 @@ export default function NotificationPreferencesScreen() {
       <ScreenHeader
         title={t('profile.notificationPreferences')}
         showBack
+        backFallback="/(tabs)/profile"
         titleSize="detail"
         eyebrow={t('profile.prefsEyebrow')}
         subtitle={t('profile.prefsLead')}

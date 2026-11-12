@@ -36,10 +36,20 @@ import {
   type NativeSyntheticEvent,
   type TextInputSelectionChangeEventData,
 } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconButton } from '@/components/ui/IconButton';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Copy = {
   organization: string;
@@ -122,8 +132,63 @@ export function ThreadView({
   const [showJump, setShowJump] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [reactTarget, setReactTarget] = useState<LocalMessagingMessage | null>(null);
+  const [composerFocused, setComposerFocused] = useState(false);
+  const reducedMotion = useReducedMotion();
   const canSend = draft.trim().length > 0 && !sending;
+  const hasDraft = draft.trim().length > 0;
   const name = title.trim() || copy.organization;
+  const focusProgress = useSharedValue(0);
+  const readyProgress = useSharedValue(0);
+  const sendPress = useSharedValue(1);
+  const emojiPress = useSharedValue(1);
+
+  useEffect(() => {
+    focusProgress.value = withTiming(composerFocused ? 1 : 0, {
+      duration: reducedMotion ? 0 : 180,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [composerFocused, focusProgress, reducedMotion]);
+
+  useEffect(() => {
+    readyProgress.value = reducedMotion
+      ? withTiming(canSend ? 1 : 0, { duration: 0 })
+      : withSpring(canSend ? 1 : 0, { damping: 18, stiffness: 240, mass: 0.7 });
+  }, [canSend, readyProgress, reducedMotion]);
+
+  const composerShellStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(
+      focusProgress.value,
+      [0, 1],
+      [colors.border, colors.tealStrong],
+    ),
+    backgroundColor: interpolateColor(
+      focusProgress.value,
+      [0, 1],
+      [colors.surfaceSubdued, colors.white],
+    ),
+    shadowOpacity: interpolate(focusProgress.value, [0, 1], [0, 0.08]),
+    shadowRadius: interpolate(focusProgress.value, [0, 1], [0, 10]),
+    elevation: interpolate(focusProgress.value, [0, 1], [0, 3]),
+  }));
+
+  const sendButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sendPress.value * interpolate(readyProgress.value, [0, 1], [0.94, 1]) }],
+    backgroundColor: interpolateColor(
+      readyProgress.value,
+      [0, 1],
+      ['transparent', colors.navy],
+    ),
+    borderColor: interpolateColor(
+      readyProgress.value,
+      [0, 1],
+      [colors.border, colors.navy],
+    ),
+  }));
+
+  const emojiButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emojiPress.value }],
+    opacity: interpolate(focusProgress.value, [0, 1], [0.72, 1]),
+  }));
 
   useEffect(() => {
     selectionRef.current = selection;
@@ -361,80 +426,111 @@ export function ThreadView({
           ) : null}
         </View>
       )}
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-        <Pressable
-          onPress={() => setEmojiOpen(true)}
-          style={styles.emojiBtn}
-          accessibilityRole="button"
-          accessibilityLabel={copy.insertEmoji}
+      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        <Animated.View
+          style={[
+            styles.composerShell,
+            composerShellStyle,
+            { shadowColor: colors.navy, shadowOffset: { width: 0, height: 4 } },
+          ]}
         >
-          <Ionicons name="happy-outline" size={22} color={colors.tealStrong} />
-        </Pressable>
-        <TextInput
-          ref={inputRef}
-          value={draft}
-          onChangeText={(value) => onDraft(clampMessageDraft(value))}
-          onSelectionChange={(
-            event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
-          ) => {
-            const next = event.nativeEvent.selection;
-            setSelection(next);
-            selectionRef.current = next;
-          }}
-          selection={selection}
-          placeholder={copy.composerPlaceholder}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          multiline
-          scrollEnabled
-          textAlignVertical="center"
-          accessibilityLabel={copy.composerPlaceholder}
-          onKeyPress={(event) => {
-            if (Platform.OS !== 'web') return;
-            const native = event.nativeEvent as {
-              key: string;
-              shiftKey?: boolean;
-              isComposing?: boolean;
-            };
-            if (
-              !composerSendsOnEnter({
-                key: native.key,
-                shiftKey: Boolean(native.shiftKey),
-                composing: Boolean(native.isComposing),
-              })
-            ) {
-              return;
-            }
-            const maybePrevent = event as { preventDefault?: () => void };
-            maybePrevent.preventDefault?.();
-            if (canSend) {
-              ownSendRef.current = true;
-              onSend();
-            }
-          }}
-        />
-        <Pressable
-          onPress={() => {
-            if (!canSend) return;
-            ownSendRef.current = true;
-            onSend();
-          }}
-          disabled={!canSend}
-          style={[styles.send, !canSend && !sending && styles.sendDisabled]}
-          accessibilityRole="button"
-          accessibilityLabel={copy.sendMessage}
-          accessibilityState={{ disabled: !canSend, busy: sending }}
-        >
-          {sending ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <Ionicons
-              name="paper-plane"
-              size={18}
-              color={canSend ? colors.white : colors.textMuted}
-            />
-          )}
-        </Pressable>
+          <Animated.View style={emojiButtonStyle}>
+            <Pressable
+              onPress={() => setEmojiOpen(true)}
+              onPressIn={() => {
+                emojiPress.value = withTiming(0.92, { duration: reducedMotion ? 0 : 90 });
+              }}
+              onPressOut={() => {
+                emojiPress.value = withSpring(1, { damping: 16, stiffness: 320 });
+              }}
+              style={styles.emojiBtn}
+              accessibilityRole="button"
+              accessibilityLabel={copy.insertEmoji}
+            >
+              <Ionicons
+                name="happy-outline"
+                size={20}
+                color={composerFocused || hasDraft ? colors.tealStrong : colors.textMuted}
+              />
+            </Pressable>
+          </Animated.View>
+          <TextInput
+            ref={inputRef}
+            value={draft}
+            onChangeText={(value) => onDraft(clampMessageDraft(value))}
+            onFocus={() => setComposerFocused(true)}
+            onBlur={() => setComposerFocused(false)}
+            onSelectionChange={(
+              event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
+            ) => {
+              const next = event.nativeEvent.selection;
+              setSelection(next);
+              selectionRef.current = next;
+            }}
+            selection={selection}
+            placeholder={copy.composerPlaceholder}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            multiline
+            scrollEnabled
+            textAlignVertical="center"
+            accessibilityLabel={copy.composerPlaceholder}
+            onKeyPress={(event) => {
+              if (Platform.OS !== 'web') return;
+              const native = event.nativeEvent as {
+                key: string;
+                shiftKey?: boolean;
+                isComposing?: boolean;
+              };
+              if (
+                !composerSendsOnEnter({
+                  key: native.key,
+                  shiftKey: Boolean(native.shiftKey),
+                  composing: Boolean(native.isComposing),
+                })
+              ) {
+                return;
+              }
+              const maybePrevent = event as { preventDefault?: () => void };
+              maybePrevent.preventDefault?.();
+              if (canSend) {
+                ownSendRef.current = true;
+                onSend();
+              }
+            }}
+          />
+          <Animated.View style={[styles.send, sendButtonStyle]}>
+            <Pressable
+              onPress={() => {
+                if (!canSend) return;
+                ownSendRef.current = true;
+                onSend();
+              }}
+              onPressIn={() => {
+                if (!canSend) return;
+                sendPress.value = withTiming(0.9, { duration: reducedMotion ? 0 : 80 });
+              }}
+              onPressOut={() => {
+                sendPress.value = withSpring(1, { damping: 14, stiffness: 320 });
+              }}
+              disabled={!canSend}
+              style={styles.sendHit}
+              accessibilityRole="button"
+              accessibilityLabel={copy.sendMessage}
+              accessibilityState={{ disabled: !canSend, busy: sending }}
+            >
+              {sending ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <Ionicons
+                  name="arrow-up"
+                  size={18}
+                  color={canSend ? colors.white : colors.textMuted}
+                />
+              )}
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
       </View>
 
       <Modal
@@ -705,46 +801,60 @@ const styles = StyleSheet.create({
   },
   jumpText: { fontFamily: typography.fonts.semibold, fontSize: 13, color: colors.white },
   composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     backgroundColor: colors.white,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    ...shadows.sticky,
+  },
+  composerShell: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
+    minHeight: 48,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 22,
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingVertical: 4,
   },
   emojiBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceSubdued,
   },
   input: {
     flex: 1,
-    minHeight: 48,
-    maxHeight: 128,
-    borderRadius: 24,
-    backgroundColor: colors.surfaceSubdued,
-    paddingHorizontal: spacing.lg,
-    paddingTop: 14,
-    paddingBottom: 14,
+    minHeight: 40,
+    maxHeight: 120,
+    paddingHorizontal: spacing.sm,
+    paddingTop: Platform.OS === 'ios' ? 10 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     fontFamily: typography.fonts.regular,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 21,
     color: colors.navy,
+    backgroundColor: 'transparent',
   },
   send: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.navy,
+    width: 36,
+    height: 36,
+    marginBottom: 2,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  sendHit: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendDisabled: { backgroundColor: colors.surfaceSubdued },
   sheetBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',

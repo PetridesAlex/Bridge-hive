@@ -361,6 +361,7 @@ export default function MoneyScreen() {
         title={t('payments.moneyTitle')}
         subtitle={t('payments.subtitle')}
         showBack={fromAccount}
+        backFallback="/(tabs)/profile"
         titleSize={fromAccount ? 'detail' : 'page'}
       />
       {isAppReviewDemo ? (

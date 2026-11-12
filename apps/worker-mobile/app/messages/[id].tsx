@@ -38,6 +38,7 @@ import {
   sendConversationMessage,
   setMessageReaction,
 } from '@/lib/messaging';
+import { navigateBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -350,10 +351,7 @@ export default function MessageThreadScreen() {
         hasOlder={isAppReviewDemo ? false : hasOlder}
         loadingOlder={loadingOlder}
         onLoadOlder={() => void loadOlder()}
-        onBack={() => {
-          if (router.canGoBack()) router.back();
-          else router.replace('/messages');
-        }}
+        onBack={() => navigateBack('/messages')}
         reactionSummaries={reactionSummaries}
         reactionsEnabled={!isAppReviewDemo && reactionsEnabled}
         onToggleReaction={(messageId, key) => void onToggleReaction(messageId, key)}

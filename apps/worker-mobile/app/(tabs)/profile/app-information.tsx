@@ -143,6 +143,7 @@ export default function AppInformationScreen() {
       <ScreenHeader
         title={t('profile.appInformation')}
         showBack
+        backFallback="/(tabs)/profile"
         titleSize="detail"
         eyebrow={t('profile.appInfoEyebrow')}
         subtitle={t('profile.appInfoLead')}

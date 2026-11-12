@@ -36,6 +36,7 @@ import { KeyValueRow } from '@/components/ui/KeyValueRow';
 import { MoneyAmount } from '@/components/ui/MoneyAmount';
 import { PremiumActionButton } from '@/components/ui/PremiumActionButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { navigateBack } from '@/lib/navigation';
 import { StatusBadge, type StatusTone } from '@/components/ui/StatusBadge';
 import { APP_CONFIG } from '@/constants/config';
 import {
@@ -351,7 +352,7 @@ export default function InvoiceDetailScreen() {
   if (uiState === 'auth_loading' || uiState === 'invoice_loading') {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={() => navigateBack('/(tabs)/payments')} />
         <ActivityIndicator color={colors.navy} style={{ marginTop: spacing.xl }} />
       </AppScreen>
     );
@@ -360,7 +361,7 @@ export default function InvoiceDetailScreen() {
   if (uiState === 'sign_in_required') {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={() => navigateBack('/(tabs)/payments')} />
         <EmptyState
           title="Sign in again"
           description="Your session is not available on this page. Sign in to view your invoice and payment status."
@@ -374,7 +375,7 @@ export default function InvoiceDetailScreen() {
   if (uiState === 'query_error' || uiState === 'offline') {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={() => navigateBack('/(tabs)/payments')} />
         <EmptyState
           title="Could not load invoice"
           description={error ?? 'Check your connection and try again.'}
@@ -392,7 +393,7 @@ export default function InvoiceDetailScreen() {
   ) {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={() => navigateBack('/(tabs)/payments')} />
         <EmptyState
           title="Invoice not found"
           description="This invoice is unavailable."
@@ -473,7 +474,7 @@ export default function InvoiceDetailScreen() {
           title="Commission invoice"
           subtitle={invoice.invoice_number}
           showBack
-          onBack={() => router.back()}
+          onBack={() => navigateBack('/(tabs)/payments')}
           titleSize="detail"
           motion={false}
           style={styles.scrollingHeader}

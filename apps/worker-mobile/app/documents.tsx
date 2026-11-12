@@ -45,6 +45,7 @@ import {
   uploadCredentialDocument,
   type ChecklistRow,
 } from '@/lib/credentials';
+import { navigateBack } from '@/lib/navigation';
 import {
   buildWorkerJourneySnapshot,
   type WorkerJourneyAccountStatus,
@@ -275,11 +276,7 @@ export default function DocumentsScreen() {
       router.replace('/auth/worker/pending');
       return;
     }
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/profile');
+    navigateBack('/(tabs)/profile');
   };
 
   const handlePick = useCallback(

@@ -5932,6 +5932,70 @@ button.m-nav-btn--worker {
   color: rgba(198, 214, 226, 0.58);
 }
 
+.m-footer-credit {
+  margin: 0.55rem 0 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(198, 214, 226, 0.5);
+}
+
+.m-footer-credit-prefix {
+  font-weight: 500;
+}
+
+.m-footer a.m-footer-credit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: rgba(236, 244, 248, 0.88);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.m-footer-credit-name {
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  background: linear-gradient(
+    105deg,
+    rgba(255, 255, 255, 0.96) 0%,
+    rgba(120, 200, 240, 0.95) 48%,
+    rgba(232, 176, 64, 0.95) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.m-footer-credit-icon {
+  flex-shrink: 0;
+  color: rgba(120, 200, 240, 0.78);
+  transition:
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.m-footer a.m-footer-credit-link:hover,
+.m-footer a.m-footer-credit-link:focus-visible {
+  color: #fff;
+  border-bottom-color: rgba(232, 176, 64, 0.55);
+}
+
+.m-footer a.m-footer-credit-link:hover .m-footer-credit-icon,
+.m-footer a.m-footer-credit-link:focus-visible .m-footer-credit-icon {
+  color: rgba(232, 176, 64, 0.95);
+  transform: translate(1px, -1px);
+}
+
 .m-footer-note-actions {
   display: flex;
   align-items: center;
@@ -6049,14 +6113,18 @@ button.m-nav-btn--worker {
   .m-footer-app-cta-sheen,
   .m-footer-app-cta-icon,
   .m-footer-app-cta-arrow,
-  .m-footer-ext svg {
+  .m-footer-ext svg,
+  .m-footer a.m-footer-credit-link,
+  .m-footer-credit-icon {
     animation: none !important;
     transition: none;
   }
 
   .m-footer-app-cta:hover,
   .m-footer-app-cta:hover .m-footer-app-cta-arrow,
-  .m-footer-ext:hover svg {
+  .m-footer-ext:hover svg,
+  .m-footer a.m-footer-credit-link:hover .m-footer-credit-icon,
+  .m-footer a.m-footer-credit-link:focus-visible .m-footer-credit-icon {
     transform: none;
   }
 }

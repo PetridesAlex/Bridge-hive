@@ -9,12 +9,13 @@ type CookieSettingsButtonProps = {
 
 /** Discreet footer control to reopen the public storage notice. */
 export function CookieSettingsButton({
-  label = 'Cookie settings',
+  label = 'Storage details',
 }: CookieSettingsButtonProps = {}) {
   return (
     <button
       type="button"
       className="m-footer-cookie-settings"
+      aria-haspopup="dialog"
       onClick={() => openStorageNoticePanel()}
     >
       {label}

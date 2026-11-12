@@ -65,7 +65,7 @@ export const en = {
     disclaimer:
       'All rights reserved. Healthcare staffing platform — not a clinical service provider.',
     legalAria: 'Legal',
-    cookieSettings: 'Cookie settings',
+    cookieSettings: 'Storage details',
     privacyTerms: 'Privacy & terms',
     socialAria: 'Social',
     instagram: 'Instagram',
@@ -75,21 +75,21 @@ export const en = {
   storageNotice: {
     title: 'How we use storage on this site',
     lede:
-      'Bridge Hive uses essential cookies and browser storage to run the public website and keep signed-in sessions working. We do not use advertising or optional analytics cookies on this site today.',
+      'Bridge Hive stores a small amount of information in this browser to run the public website and, only after you sign in, to keep your account session working. This site does not load advertising or analytics tags.',
     whatWeStore: 'What we store',
     gotIt: 'Got it',
     close: 'Close',
-    introMemoryTitle: 'Site intro memory',
-    introMemoryBody:
-      'A short-lived sessionStorage flag (bh:m-intro) so the branded logo intro shows once per browser tab.',
     thisNoticeTitle: 'This notice',
     thisNoticeBody:
-      'A localStorage preference (bh:m-storage-notice) so we do not show this card on every visit after you acknowledge it.',
-    signInCookiesTitle: 'Sign-in cookies (essential)',
+      'A localStorage record (bh:m-storage-notice) remembers that you dismissed this information notice. It is an acknowledgement, not permission for analytics. It has no automatic expiry. It stays until you clear site data for this browser, or until the notice version changes and we ask you to read it again.',
+    signInCookiesTitle: 'Sign-in cookies',
     signInCookiesBody:
-      'Supabase authentication cookies are set only when you sign in. They keep organization and worker account sessions working and are required for those services.',
+      'Supabase authentication cookies (names starting with sb-hfnymqjrbppculcofaag-auth-token on this production site) are set only when you sign in. They keep organization and worker sessions working.',
+    rememberMeTitle: 'Remember me',
+    rememberMeBody:
+      'An HttpOnly cookie named bh_org_remember is set when you use organization sign-in. It records whether that sign-in should remain active after you close the browser. It is not an advertising cookie.',
     noteBody:
-      'There is no separate Cookie Policy page yet. For privacy or terms questions, contact support from the site footer.',
+      'There is no Cookie Policy page yet. This notice describes current technical behaviour and still needs legal review. For privacy or terms questions, contact support from the site footer.',
   },
   recruitmentPromo: {
     ariaLabel: 'Recruitment announcement',

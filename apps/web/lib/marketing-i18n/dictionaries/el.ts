@@ -66,6 +66,9 @@ export const el: MarketingDictionary = {
     copyYear: '© {year} Bridge Hive',
     disclaimer:
       'Με επιφύλαξη παντός δικαιώματος. Πλατφόρμα στελέχωσης υγείας — όχι πάροχος κλινικών υπηρεσιών.',
+    developedByPrefix: 'Ανάπτυξη από',
+    developedByName: 'WebRunner Agency',
+    developedByAria: 'Ανάπτυξη από WebRunner Agency (ανοίγει σε νέα καρτέλα)',
     legalAria: 'Νομικά',
     cookieSettings: 'Λεπτομέρειες αποθήκευσης',
     privacyTerms: 'Απόρρητο & όροι',

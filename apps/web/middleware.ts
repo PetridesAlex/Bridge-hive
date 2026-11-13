@@ -62,7 +62,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && (pathname === '/sign-in' || pathname === '/sign-up')) {
+  if (user && pathname === '/sign-up') {
     const redirectUrl = request.nextUrl.clone();
     const next = safeOrgNext(request.nextUrl.searchParams.get('next'));
     applySafeNext(redirectUrl, next, '/dashboard');

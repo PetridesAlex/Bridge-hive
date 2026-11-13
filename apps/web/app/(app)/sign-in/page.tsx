@@ -1,5 +1,8 @@
+import { redirect } from 'next/navigation';
+
 import { AuthFooterLink, AuthShell } from '@/components/auth/AuthShell';
 import { safeOrgNext } from '@/lib/auth-redirect';
+import { getAuthBundle } from '@/lib/auth';
 
 import { SignInForm } from './sign-in-form';
 
@@ -10,6 +13,17 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
   const next = safeOrgNext(params.next);
+  const bundle = await getAuthBundle();
+
+  const nextPath = next.split('?')[0];
+  if (
+    bundle &&
+    bundle.memberships.length > 0 &&
+    nextPath !== '/sign-in' &&
+    nextPath !== '/sign-up'
+  ) {
+    redirect(next);
+  }
 
   return (
     <AuthShell

@@ -1,13 +1,11 @@
 import {
   canWorkerEditCredentialFile,
   credentialRequiresKnownExpiry,
-  credentialTypeLabel,
   validateCredentialTextValue,
   type CredentialSummary,
   type WorkerRole,
 } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -20,6 +18,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput as Field,
   View,
 } from 'react-native';
 
@@ -28,9 +27,9 @@ import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { StickyActionBar } from '@/components/ui/StickyActionBar';
 import { IconButton } from '@/components/ui/IconButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { TextInput } from '@/components/ui/TextInput';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useCredentials } from '@/hooks/useCredentials';
 import { usePayouts } from '@/hooks/usePayouts';
@@ -61,9 +60,11 @@ type UploadState = {
 function statusLabel(
   status: ChecklistRow['itemStatus'],
   isRequired: boolean,
+  inputKind: ChecklistRow['inputKind'] = 'file',
 ): string {
   switch (status) {
     case 'not_uploaded':
+      if (inputKind === 'text') return isRequired ? 'Not entered' : 'Optional';
       return isRequired ? 'Not uploaded' : 'Optional';
     case 'draft':
       return 'Ready to submit';
@@ -135,16 +136,6 @@ function statusTone(status: ChecklistRow['itemStatus']): {
   }
 }
 
-function lockMessage(status: ChecklistRow['itemStatus']): string {
-  if (status === 'verified') {
-    return 'This document is accepted. Account activation and shift access are still separate steps.';
-  }
-  if (status === 'under_review' || status === 'submitted') {
-    return 'Under review. You cannot replace this file until a decision is made.';
-  }
-  return 'This document is locked while under review or after verification.';
-}
-
 function accountStatusIcon(
   status: WorkerJourneyAccountStatus,
 ): keyof typeof Ionicons.glyphMap {
@@ -186,6 +177,7 @@ export default function DocumentsScreen() {
   const [textErrors, setTextErrors] = useState<Record<string, string | null>>({});
   const [textSavedAt, setTextSavedAt] = useState<Record<string, number>>({});
   const [savingTextType, setSavingTextType] = useState<string | null>(null);
+  const [submittingAll, setSubmittingAll] = useState(false);
 
   const checklist = useMemo(
     () =>
@@ -402,36 +394,70 @@ export default function DocumentsScreen() {
     [refresh],
   );
 
-  const handleSubmit = useCallback(
-    async (row: ChecklistRow) => {
-      if (!row.credential) return;
-      setBusyId(row.credential.id);
-      const result = await submitCredentialForReview(row.credential.id);
-      setBusyId(null);
-      if (result.error) {
-        Alert.alert('Submit failed', result.error);
-        return;
-      }
-      await refresh();
-    },
-    [refresh],
-  );
+  const pendingTextDrafts = checklist.filter((row) => {
+    if (row.inputKind !== 'text') return false;
+    if (!canWorkerEditCredentialFile(row.credential?.status)) return false;
+    const draft = (textDrafts[row.credentialType] ?? '').trim();
+    return draft.length > 0 && draft !== (row.textValue ?? '');
+  });
+  const togetherCount = new Set([
+    ...readyToSubmit.map((row) => row.credentialType),
+    ...pendingTextDrafts.map((row) => row.credentialType),
+  ]).size;
 
   const handleSubmitAllReady = useCallback(async () => {
-    for (const row of readyToSubmit) {
-      if (!row.credential) continue;
-      setBusyId(row.credential.id);
-      const result = await submitCredentialForReview(row.credential.id);
+    if (submittingAll || uploadState.uploading) return;
+    setSubmittingAll(true);
+    const ids = new Set(
+      readyToSubmit
+        .map((row) => row.credential?.id)
+        .filter((id): id is string => Boolean(id)),
+    );
+
+    for (const row of checklist) {
+      if (row.inputKind !== 'text') continue;
+      if (!canWorkerEditCredentialFile(row.credential?.status)) continue;
+      const draft = (textDrafts[row.credentialType] ?? '').trim();
+      if (!draft || draft === (row.textValue ?? '')) continue;
+      const saved = await saveCredentialTextValue({
+        credentialType: row.credentialType,
+        value: draft,
+      });
+      if (saved.error || !saved.data) {
+        setSubmittingAll(false);
+        setTextErrors((prev) => ({
+          ...prev,
+          [row.credentialType]: saved.error ?? t('documents.saveFailed'),
+        }));
+        return;
+      }
+      ids.add(saved.data.id);
+    }
+
+    for (const id of ids) {
+      setBusyId(id);
+      const result = await submitCredentialForReview(id);
       if (result.error) {
         setBusyId(null);
+        setSubmittingAll(false);
         Alert.alert('Submit failed', result.error);
         await refresh();
         return;
       }
     }
+
     setBusyId(null);
+    setSubmittingAll(false);
     await refresh();
-  }, [readyToSubmit, refresh]);
+  }, [
+    checklist,
+    readyToSubmit,
+    refresh,
+    submittingAll,
+    t,
+    textDrafts,
+    uploadState.uploading,
+  ]);
 
   if (!workerProfile?.worker_role) {
     return (
@@ -485,7 +511,11 @@ export default function DocumentsScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         >
         <ScrollView
-          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: togetherCount > 0 ? spacing.lg : tabScrollInset },
+          ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           refreshControl={
@@ -495,116 +525,48 @@ export default function DocumentsScreen() {
             />
           }
         >
-          <View style={styles.intro}>
-            <LinearGradient
-              pointerEvents="none"
-              colors={['rgba(255,255,255,0.96)', 'rgba(243,250,252,0.92)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.introTop}>
-              <LinearGradient
-                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.introIcon}
-              >
-                <Ionicons name="documents" size={18} color={colors.white} />
-              </LinearGradient>
-              <View style={styles.introCopy}>
-                <Text style={styles.introTitle}>{t('documents.checklistTitle')}</Text>
-                <Text style={styles.hint}>{t('documents.checklistHint')}</Text>
-              </View>
+          <View style={styles.summary}>
+            <View style={styles.summaryTop}>
+              <Text style={styles.summaryCount}>
+                {verifiedRequired} of {requiredRows.length} accepted
+              </Text>
+              <Text style={styles.summaryMeta}>
+                {reviewRequired} in review · {attentionRequired} open
+              </Text>
             </View>
-            <View style={styles.progressBlock}>
-              <View style={styles.progressMeta}>
-                <Text style={styles.progressLabel}>
-                  {verifiedRequired} of {requiredRows.length} required accepted
-                </Text>
-                <Text style={styles.progressValue}>{Math.round(progress * 100)}%</Text>
-              </View>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
-              </View>
-              <View style={styles.statusSummary}>
-                <View style={[styles.summaryChip, styles.summaryAccepted]}>
-                  <Ionicons name="checkmark-circle" size={13} color={colors.white} />
-                  <Text style={styles.summaryAcceptedText}>
-                    {verifiedRequired} accepted
-                  </Text>
-                </View>
-                <View style={[styles.summaryChip, styles.summaryReview]}>
-                  <Ionicons name="time" size={13} color="#8A6410" />
-                  <Text style={styles.summaryReviewText}>
-                    {reviewRequired} in review
-                  </Text>
-                </View>
-                <View style={[styles.summaryChip, styles.summaryAttention]}>
-                  <Ionicons name="alert-circle" size={13} color={colors.white} />
-                  <Text style={styles.summaryAttentionText}>
-                    {attentionRequired} open
-                  </Text>
-                </View>
-              </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
             </View>
-            {readyToSubmit.length > 0 ? (
-              <Button
-                label={`Submit ${readyToSubmit.length} ready document${readyToSubmit.length === 1 ? '' : 's'}`}
-                onPress={() => void handleSubmitAllReady()}
-                disabled={busyId != null || uploadState.uploading}
-              />
-            ) : null}
+            <Text style={styles.summaryHint}>{t('documents.checklistHint')}</Text>
           </View>
 
           {!isVerified ? (
-            <View style={styles.nextCard}>
-              <LinearGradient
-                pointerEvents="none"
-                colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.nextTop}>
-                <View style={styles.nextIcon}>
-                  <Ionicons
-                    name={accountStatusIcon(journey.accountStatus)}
-                    size={20}
-                    color={colors.yellow}
-                  />
-                </View>
-                <View style={styles.nextCopy}>
-                  <Text style={styles.nextEyebrow}>Account status</Text>
-                  <Text style={styles.nextTitle}>{journey.accountLabel}</Text>
-                  <Text style={styles.nextBody}>{journey.accountSummary}</Text>
-                </View>
-              </View>
-              <Text style={styles.nextHint}>{journey.nextStep}</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={
-                  journey.primaryAction?.label ?? 'Continue Account Setup'
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={journey.primaryAction?.label ?? 'Continue Account Setup'}
+              onPress={() => {
+                const href = journey.primaryAction?.href ?? '/auth/worker/pending';
+                if (href === '/auth/worker/pending') {
+                  router.replace('/auth/worker/pending');
+                  return;
                 }
-                onPress={() => {
-                  const href = journey.primaryAction?.href ?? '/auth/worker/pending';
-                  if (href === '/auth/worker/pending') {
-                    router.replace('/auth/worker/pending');
-                    return;
-                  }
-                  router.push(href);
-                }}
-                style={({ pressed }) => [
-                  styles.nextCta,
-                  pressed && styles.nextCtaPressed,
-                ]}
-              >
-                <Text style={styles.nextCtaText}>
-                  {journey.primaryAction?.label ?? 'Continue Account Setup'}
+                router.push(href);
+              }}
+              style={({ pressed }) => [styles.nextRow, pressed && styles.nextRowPressed]}
+            >
+              <Ionicons
+                name={accountStatusIcon(journey.accountStatus)}
+                size={16}
+                color={colors.tealStrong}
+              />
+              <View style={styles.nextCopy}>
+                <Text style={styles.nextTitle}>{journey.accountLabel}</Text>
+                <Text style={styles.nextHint} numberOfLines={2}>
+                  {journey.nextStep}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.navy} />
-              </Pressable>
-            </View>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            </Pressable>
           ) : null}
 
           {checklist.map((row) => {
@@ -627,58 +589,27 @@ export default function DocumentsScreen() {
             const uploadDisabled = uploadState.uploading || rowBusy;
 
             const tone = statusTone(row.itemStatus);
+            const statusColor = tone.solid ? tone.bg : tone.fg;
 
             return (
               <View key={row.credentialType} style={styles.card}>
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={['rgba(255,255,255,0.96)', 'rgba(248,251,253,0.92)']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View style={styles.cardHeader}>
-                  <LinearGradient
-                    colors={tone.gradient}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.docIcon}
-                  >
-                    <Ionicons name={tone.icon} size={18} color={colors.white} />
-                  </LinearGradient>
-                  <View style={styles.cardCopy}>
-                    <Text style={styles.title}>{row.displayName}</Text>
-                    <View style={styles.pillRow}>
-                      <View style={styles.requirementPill}>
-                        <Text style={styles.requirementText}>
-                          {row.isRequired ? 'Required' : 'Optional'}
-                        </Text>
-                      </View>
-                      <View style={[styles.statusPill, { backgroundColor: tone.bg }]}>
-                        <Ionicons name={tone.icon} size={12} color={tone.fg} />
-                        <Text style={[styles.statusText, { color: tone.fg }]}>
-                          {statusLabel(row.itemStatus, row.isRequired)}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
+                <View style={styles.titleLine}>
+                  <Text style={styles.title} numberOfLines={2}>
+                    {row.displayName}
+                  </Text>
+                  <Text style={[styles.statusText, { color: statusColor }]}>
+                    {statusLabel(row.itemStatus, row.isRequired, row.inputKind)}
+                  </Text>
                 </View>
-
-                {row.inputKind === 'text' && row.textValue && !editable ? (
-                  <View style={styles.fileChip}>
-                    <Ionicons name="key-outline" size={14} color={colors.navy} />
-                    <Text style={styles.fileName} numberOfLines={1}>
-                      {row.textValue}
-                    </Text>
-                  </View>
-                ) : null}
                 {row.inputKind === 'file' && row.fileName ? (
-                  <View style={styles.fileChip}>
-                    <Ionicons name="document-attach-outline" size={14} color={colors.navy} />
-                    <Text style={styles.fileName} numberOfLines={1}>
-                      {row.fileName}
-                    </Text>
-                  </View>
+                  <Text style={styles.fileName} numberOfLines={1}>
+                    {row.fileName}
+                  </Text>
+                ) : null}
+                {row.inputKind === 'text' && !editable && row.textValue ? (
+                  <Text style={styles.fileName} numberOfLines={1}>
+                    {row.textValue}
+                  </Text>
                 ) : null}
                 {row.credential?.rejection_reason ? (
                   <Text style={styles.reject}>{row.credential.rejection_reason}</Text>
@@ -694,127 +625,65 @@ export default function DocumentsScreen() {
                   </Text>
                 ) : null}
 
-                {row.inputKind === 'text' ? (
-                  editable ? (
-                    <View style={styles.rowActions}>
-                      <TextInput
-                        label={row.displayName}
-                        required={row.isRequired}
-                        value={textDrafts[row.credentialType] ?? ''}
-                        onChangeText={(value) => {
-                          setTextDrafts((prev) => ({
-                            ...prev,
-                            [row.credentialType]: value,
-                          }));
-                          setTextErrors((prev) => ({
-                            ...prev,
-                            [row.credentialType]: null,
-                          }));
-                        }}
-                        placeholder={t('documents.textPlaceholder')}
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        keyboardType="numbers-and-punctuation"
-                        textContentType="none"
-                        autoComplete="off"
-                        containerStyle={styles.expiryField}
-                        helpText={
-                          row.hasFile && !row.hasTextValue
-                            ? t('documents.textLegacyHelp')
-                            : t('documents.textHelp')
-                        }
-                        error={textErrors[row.credentialType] ?? undefined}
-                      />
-                      <Pressable
-                        style={[
-                          styles.primaryBtn,
-                          (savingTextType === row.credentialType ||
-                            busyId != null) &&
-                            styles.btnDisabled,
-                        ]}
-                        onPress={() => void handleSaveText(row)}
-                        disabled={
-                          savingTextType != null || busyId != null
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel={t('documents.save')}
-                      >
-                        <Text style={styles.primaryBtnText}>
-                          {savingTextType === row.credentialType
-                            ? t('documents.saving')
-                            : t('documents.save')}
-                        </Text>
-                      </Pressable>
-                      {textSavedAt[row.credentialType] &&
-                      !textErrors[row.credentialType] ? (
-                        <Text style={styles.savedMeta}>{t('documents.saved')}</Text>
-                      ) : null}
-                      {row.credential?.status === 'pending' &&
-                      row.hasTextValue ? (
-                        <Pressable
-                          style={styles.primaryBtn}
-                          onPress={() => void handleSubmit(row)}
-                          disabled={rowBusy || savingTextType != null}
-                        >
-                          <Text style={styles.primaryBtnText}>
-                            {rowBusy
-                              ? t('documents.submitting')
-                              : t('documents.submit')}
-                          </Text>
-                        </Pressable>
-                      ) : null}
-                    </View>
-                  ) : (
-                    <View
+                {row.inputKind === 'text' && editable ? (
+                  <View style={styles.textRow}>
+                    <Field
+                      value={textDrafts[row.credentialType] ?? ''}
+                      onChangeText={(value) => {
+                        setTextDrafts((prev) => ({
+                          ...prev,
+                          [row.credentialType]: value,
+                        }));
+                        setTextErrors((prev) => ({
+                          ...prev,
+                          [row.credentialType]: null,
+                        }));
+                      }}
+                      placeholder={t('documents.textPlaceholder')}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="numbers-and-punctuation"
+                      style={styles.field}
+                      accessibilityLabel={row.displayName}
+                    />
+                    <Pressable
                       style={[
-                        styles.lockRow,
-                        row.itemStatus === 'verified' && styles.lockRowAccepted,
-                        (row.itemStatus === 'under_review' ||
-                          row.itemStatus === 'submitted') &&
-                          styles.lockRowReview,
+                        styles.linkBtn,
+                        (savingTextType != null || busyId != null) && styles.btnDisabled,
                       ]}
+                      onPress={() => void handleSaveText(row)}
+                      disabled={savingTextType != null || busyId != null}
+                      accessibilityRole="button"
+                      accessibilityLabel={t('documents.save')}
                     >
-                      <Ionicons
-                        name={
-                          row.itemStatus === 'verified'
-                            ? 'checkmark-circle'
-                            : 'lock-closed'
-                        }
-                        size={14}
-                        color={
-                          row.itemStatus === 'verified'
-                            ? colors.success
-                            : colors.tealStrong
-                        }
-                      />
-                      <Text
-                        style={[
-                          styles.lockText,
-                          row.itemStatus === 'verified' &&
-                            styles.lockTextAccepted,
-                        ]}
-                      >
-                        {lockMessage(row.itemStatus)}
+                      <Text style={styles.linkBtnText}>
+                        {savingTextType === row.credentialType
+                          ? t('documents.saving')
+                          : t('documents.save')}
                       </Text>
-                    </View>
-                  )
-                ) : isUploading ? (
+                    </Pressable>
+                  </View>
+                ) : null}
+                {row.inputKind === 'text' && editable && row.hasFile && !row.hasTextValue ? (
+                  <Text style={styles.meta}>{t('documents.textLegacyHelp')}</Text>
+                ) : null}
+                {row.inputKind === 'file' && isUploading ? (
                   <View style={styles.rowActions}>
                     <ActivityIndicator color={colors.navy} />
                     <Text style={styles.meta}>Uploading…</Text>
                   </View>
-                ) : editable ? (
+                ) : null}
+                {row.inputKind === 'file' && editable && !isUploading ? (
                   <View style={styles.rowActions}>
                     {requiresExpiry ? (
-                      <TextInput
-                        label="Expires on"
+                      <Field
                         value={practisingLicenceExpiryYmd}
                         onChangeText={setPractisingLicenceExpiryYmd}
-                        placeholder="YYYY-MM-DD"
+                        placeholder="Expiry YYYY-MM-DD"
                         autoCapitalize="none"
                         keyboardType="numbers-and-punctuation"
-                        containerStyle={styles.expiryField}
-                        helpText="Required before upload. Valid through the end of that Cyprus business day (Europe/Nicosia)."
+                        style={styles.field}
+                        accessibilityLabel="Expires on"
                       />
                     ) : null}
                     {requiresExpiry && expiryGate && 'error' in expiryGate ? (
@@ -834,111 +703,68 @@ export default function DocumentsScreen() {
                           ? 'Enter the licence expiry date first'
                           : undefined
                       }
-                      style={[
-                        styles.secondaryBtn,
-                        uploadDisabled && styles.btnDisabled,
-                      ]}
+                      style={[styles.linkBtn, uploadDisabled && styles.btnDisabled]}
                       onPress={() => void handlePick(row, 'image')}
                       disabled={uploadDisabled}
                     >
-                      <Text style={styles.secondaryBtnText}>
-                        {row.fileName
-                          ? t('documents.replacePhoto')
-                          : t('documents.uploadPhoto')}
+                      <Text style={styles.linkBtnText}>
+                        {row.fileName ? t('documents.replacePhoto') : t('documents.uploadPhoto')}
                       </Text>
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={
-                        row.fileName
-                          ? t('documents.replacePdf')
-                          : t('documents.uploadPdf')
+                        row.fileName ? t('documents.replacePdf') : t('documents.uploadPdf')
                       }
                       accessibilityHint={
                         requiresExpiry && !expiryReady
                           ? 'Enter the licence expiry date first'
                           : undefined
                       }
-                      style={[
-                        styles.secondaryBtn,
-                        uploadDisabled && styles.btnDisabled,
-                      ]}
+                      style={[styles.linkBtn, uploadDisabled && styles.btnDisabled]}
                       onPress={() => void handlePick(row, 'document')}
                       disabled={uploadDisabled}
                     >
-                      <Text style={styles.secondaryBtnText}>
-                        {row.fileName
-                          ? t('documents.replacePdf')
-                          : t('documents.uploadPdf')}
+                      <Text style={styles.linkBtnText}>
+                        {row.fileName ? t('documents.replacePdf') : t('documents.uploadPdf')}
                       </Text>
                     </Pressable>
                     {row.credential?.status === 'pending' && row.fileName ? (
-                      <>
-                        <Pressable
-                          style={styles.primaryBtn}
-                          onPress={() => void handleSubmit(row)}
-                          disabled={rowBusy}
-                        >
-                          <Text style={styles.primaryBtnText}>
-                            {rowBusy
-                              ? t('documents.submitting')
-                              : t('documents.submit')}
-                          </Text>
-                        </Pressable>
-                        <Pressable
-                          style={styles.dangerBtn}
-                          onPress={() => void handleDelete(row)}
-                          disabled={rowBusy}
-                        >
-                          <Text style={styles.dangerBtnText}>
-                            {t('documents.delete')}
-                          </Text>
-                        </Pressable>
-                      </>
+                      <Pressable
+                        style={styles.linkBtn}
+                        onPress={() => void handleDelete(row)}
+                        disabled={rowBusy}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('documents.delete')}
+                      >
+                        <Text style={styles.removeText}>{t('documents.delete')}</Text>
+                      </Pressable>
                     ) : null}
                     {row.credential?.status === 'rejected' ? (
                       <Text style={styles.meta}>
-                        Upload a new file to resubmit {credentialTypeLabel(row.credentialType)}.
+                        Add a new file, then submit everything together.
                       </Text>
                     ) : null}
                   </View>
-                ) : (
-                  <View
-                    style={[
-                      styles.lockRow,
-                      row.itemStatus === 'verified' && styles.lockRowAccepted,
-                      (row.itemStatus === 'under_review' ||
-                        row.itemStatus === 'submitted') &&
-                        styles.lockRowReview,
-                    ]}
-                  >
-                    <Ionicons
-                      name={
-                        row.itemStatus === 'verified'
-                          ? 'checkmark-circle'
-                          : 'lock-closed'
-                      }
-                      size={14}
-                      color={
-                        row.itemStatus === 'verified'
-                          ? colors.success
-                          : colors.tealStrong
-                      }
-                    />
-                    <Text
-                      style={[
-                        styles.lockText,
-                        row.itemStatus === 'verified' && styles.lockTextAccepted,
-                      ]}
-                    >
-                      {lockMessage(row.itemStatus)}
-                    </Text>
-                  </View>
-                )}
+                ) : null}
               </View>
             );
           })}
         </ScrollView>
+        {togetherCount > 0 ? (
+          <StickyActionBar clearTabBar>
+            <Button
+              label={
+                submittingAll
+                  ? t('documents.submitting')
+                  : `Submit ${togetherCount} together`
+              }
+              onPress={() => void handleSubmitAllReady()}
+              disabled={submittingAll || busyId != null || uploadState.uploading}
+              loading={submittingAll}
+            />
+          </StickyActionBar>
+        ) : null}
         </KeyboardAvoidingView>
       )}
     </AppScreen>
@@ -946,9 +772,88 @@ export default function DocumentsScreen() {
 }
 
 const styles = StyleSheet.create({
+  scroll: {
+    flex: 1,
+  },
   list: {
-    paddingBottom: spacing.huge,
-    gap: spacing.md,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  summary: {
+    gap: 6,
+    paddingBottom: 2,
+  },
+  summaryTop: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  summaryCount: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.navy,
+  },
+  summaryMeta: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  summaryHint: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
+  },
+  nextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.78)',
+  },
+  nextRowPressed: {
+    opacity: 0.86,
+  },
+  titleLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  textRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  field: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(11, 42, 67, 0.12)',
+    paddingHorizontal: 12,
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    color: colors.navy,
+    backgroundColor: colors.white,
+  },
+  linkBtn: {
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+  linkBtnText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.tealStrong,
+  },
+  removeText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.error,
   },
   intro: {
     gap: spacing.md,
@@ -1088,10 +993,9 @@ const styles = StyleSheet.create({
     color: colors.yellow,
   },
   nextTitle: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 18,
-    letterSpacing: -0.3,
-    color: colors.white,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    color: colors.navy,
   },
   nextBody: {
     fontFamily: typography.fonts.regular,
@@ -1100,10 +1004,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.88)',
   },
   nextHint: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 13,
-    lineHeight: 18,
-    color: colors.yellow,
+    fontFamily: typography.fonts.regular,
+    fontSize: 12,
+    lineHeight: 16,
+    color: colors.textSecondary,
   },
   nextCta: {
     minHeight: 44,
@@ -1124,11 +1028,11 @@ const styles = StyleSheet.create({
     color: colors.navy,
   },
   card: {
-    borderRadius: radii.xl,
-    padding: spacing.md,
-    gap: spacing.sm,
-    overflow: 'hidden',
-    ...shadows.sm,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.82)',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1148,9 +1052,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   title: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    letterSpacing: -0.3,
+    flex: 1,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
     color: colors.navy,
   },
   pillRow: {
@@ -1178,6 +1082,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusText: {
+    flexShrink: 0,
     fontFamily: typography.fonts.semibold,
     fontSize: 12,
   },

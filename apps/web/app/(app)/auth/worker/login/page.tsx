@@ -1,6 +1,11 @@
 import type { Metadata } from 'next';
 
 import { WorkerAppContinuePanel } from '@/components/auth/worker-app-continue';
+import {
+  SecureAuthShell,
+  secureAuthBodyClass,
+  secureAuthTitleClass,
+} from '@/components/auth/secure-auth-shell';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -29,23 +34,22 @@ export default async function WorkerLoginContinuationPage() {
   const variant = emailConfirmed ? 'signup-confirmed' : 'neutral';
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-bh-subtle to-bh-surface px-4 py-12">
-      <div className="w-full max-w-lg rounded-3xl border border-bh-border bg-bh-surface p-6 shadow-[0_8px_30px_rgba(7,29,48,0.06)] sm:p-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-honey-strong">
-          Bridge Hive · Worker
-        </p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-bh-text">
-          {emailConfirmed ? 'Email confirmed' : 'Continue in the worker app'}
-        </h1>
-        <p className="mt-2 text-sm text-bh-text-secondary">
-          {emailConfirmed
-            ? 'Your email address is verified. Account verification is a separate step inside the worker app.'
-            : 'This page helps you continue after email confirmation. Sign in from the Bridge Hive worker app on your phone.'}
-        </p>
-        <div className="mt-8">
-          <WorkerAppContinuePanel variant={variant} />
-        </div>
+    <SecureAuthShell
+      kicker={emailConfirmed ? 'Worker email' : 'Worker app'}
+      caption="Bridge Hive worker"
+      wide
+    >
+      <h1 className={secureAuthTitleClass}>
+        {emailConfirmed ? 'Email confirmed' : 'Continue in the worker app'}
+      </h1>
+      <p className={secureAuthBodyClass}>
+        {emailConfirmed
+          ? 'Your email address is verified. Account verification is a separate step inside the worker app.'
+          : 'This page helps you continue after email confirmation. Sign in from the Bridge Hive worker app on your phone.'}
+      </p>
+      <div className="mt-7">
+        <WorkerAppContinuePanel variant={variant} />
       </div>
-    </div>
+    </SecureAuthShell>
   );
 }

@@ -64,6 +64,9 @@ export const en = {
     copyYear: '© {year} Bridge Hive',
     disclaimer:
       'All rights reserved. Healthcare staffing platform — not a clinical service provider.',
+    developedByPrefix: 'Developed by',
+    developedByName: 'WebRunner Agency',
+    developedByAria: 'Developed by WebRunner Agency (opens in a new tab)',
     legalAria: 'Legal',
     cookieSettings: 'Storage details',
     privacyTerms: 'Privacy & terms',

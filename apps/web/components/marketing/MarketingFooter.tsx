@@ -38,6 +38,8 @@ const SOCIAL_LINKS = [
   },
 ] as const;
 
+const WEB_RUNNER_AGENCY_URL = 'https://www.webrunneragency.com/';
+
 type MarketingFooterProps = {
   locale: MarketingLocale;
   dictionary: MarketingDictionary;
@@ -244,6 +246,24 @@ export function MarketingFooter({ locale, dictionary }: MarketingFooterProps) {
               {f.copyYear.replace('{year}', String(year))}
             </p>
             <p className="m-footer-disclaimer">{f.disclaimer}</p>
+            <p className="m-footer-credit">
+              <span className="m-footer-credit-prefix">{f.developedByPrefix}</span>
+              <a
+                href={WEB_RUNNER_AGENCY_URL}
+                className="m-footer-credit-link"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={f.developedByAria}
+              >
+                <span className="m-footer-credit-name">{f.developedByName}</span>
+                <ExternalLink
+                  className="m-footer-credit-icon"
+                  size={11}
+                  strokeWidth={2.2}
+                  aria-hidden="true"
+                />
+              </a>
+            </p>
           </div>
           <div className="m-footer-note-actions">
             <nav className="m-footer-legal" aria-label={f.legalAria}>

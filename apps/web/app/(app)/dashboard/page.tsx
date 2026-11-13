@@ -11,6 +11,10 @@ export default async function DashboardPage() {
   const bundle = await requireAuthBundle();
   const { memberships, profile } = bundle;
 
+  if (memberships.length === 0) {
+    redirect('/sign-in');
+  }
+
   if (memberships.length === 1) {
     redirect(`/org/${memberships[0].organization.slug}/dashboard`);
   }
@@ -34,15 +38,7 @@ export default async function DashboardPage() {
         </form>
       </div>
 
-      {memberships.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-bh-border bg-bh-surface p-10 text-center">
-          <h2 className="text-lg font-medium text-bh-text">No organizations yet</h2>
-          <p className="mt-2 text-sm text-bh-text-secondary">
-            Ask a Bridge Hive administrator to invite you to an organization.
-          </p>
-        </div>
-      ) : (
-        <ul className="grid gap-4">
+      <ul className="grid gap-4">
           {memberships.map((membership) => (
             <li
               key={membership.id}
@@ -64,7 +60,6 @@ export default async function DashboardPage() {
             </li>
           ))}
         </ul>
-      )}
     </main>
   );
 }

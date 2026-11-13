@@ -163,6 +163,20 @@ describe('premium auth portals', () => {
     expect(safeAdminNext('/admin/workers?tab=1')).toBe('/admin/workers?tab=1');
   });
 
+  it('sends accounts with no organization to the organization sign-in portal', async () => {
+    const dash = await readWeb('app/(app)/dashboard/page.tsx');
+    const signIn = await readWeb('app/(app)/sign-in/page.tsx');
+    const middleware = await readWeb('middleware.ts');
+
+    expect(dash).toMatch(/memberships\.length === 0/);
+    expect(dash).toMatch(/redirect\('\/sign-in'\)/);
+    expect(dash).not.toMatch(/No organizations yet/);
+    expect(signIn).toMatch(/memberships\.length > 0/);
+    expect(signIn).toMatch(/redirect\(next\)/);
+    expect(middleware).toMatch(/pathname === '\/sign-up'/);
+    expect(middleware).not.toMatch(/pathname === '\/sign-in' \|\| pathname === '\/sign-up'/);
+  });
+
   it('org sign-in action and middleware use safeOrgNext', async () => {
     const auth = await readWeb('app/actions/auth.ts');
     const middleware = await readWeb('middleware.ts');

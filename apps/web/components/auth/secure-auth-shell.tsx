@@ -48,19 +48,19 @@ export function SecureAuthShell({
         )}
       >
         <div className="mb-7 flex flex-col items-center text-center">
-          <div className="rounded-[1.15rem] bg-gradient-to-br from-bh-honey via-bh-teal to-[#0b2a43] p-[2px] shadow-[0_16px_40px_rgba(0,0,0,0.4)]">
-            <div className="rounded-[1.05rem] bg-[#071d30] p-1 ring-1 ring-white/10">
+          <div className="rounded-[1.45rem] bg-gradient-to-br from-bh-honey via-bh-teal to-[#0b2a43] p-[3px] shadow-[0_18px_44px_rgba(0,0,0,0.45)]">
+            <div className="rounded-[1.3rem] bg-[#071d30] p-1.5 ring-1 ring-white/10">
               <BridgeHiveMark
-                size={56}
+                size={96}
                 priority
-                className="h-14 w-14 rounded-[0.85rem]"
+                className="h-24 w-24 rounded-[1.05rem]"
               />
             </div>
           </div>
-          <p className="mt-4 text-sm font-semibold tracking-tight text-white">
+          <p className="mt-5 text-lg font-semibold tracking-tight text-white">
             Bridge Hive
           </p>
-          <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
+          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/55">
             {caption}
           </p>
         </div>

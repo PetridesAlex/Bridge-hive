@@ -539,7 +539,7 @@ export const en = {
     refresh: 'Refresh credentials',
     checklistTitle: 'Document checklist',
     checklistHint:
-      'Upload PDF, JPEG, or PNG files up to 10 MB for document requirements. Tax identification and social insurance are entered as text — not photo or PDF uploads.',
+      'Add a photo or PDF for each document. Tax identification and social insurance are text. Then submit them together.',
     textHelp: 'Enter the identification number exactly as issued. Do not upload a photo or PDF for this item.',
     textLegacyHelp:
       'A previous document is on file. Enter the identification number so review can continue.',

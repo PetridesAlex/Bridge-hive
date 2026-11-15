@@ -52,6 +52,22 @@ function pageMeta(
         title: d.contact.meta.title,
         description: d.contact.meta.description,
       };
+    case 'privacyPolicy':
+      return {
+        title: d.footer.privacyPolicy,
+        description:
+          locale === 'el'
+            ? 'Πολιτική απορρήτου της BridgeHive Medical Recruitment Limited.'
+            : 'Privacy Policy for BridgeHive Medical Recruitment Limited.',
+      };
+    case 'cookiePolicy':
+      return {
+        title: d.footer.cookiePolicy,
+        description:
+          locale === 'el'
+            ? 'Πολιτική cookies της BridgeHive Medical Recruitment Limited.'
+            : 'Cookie Policy for BridgeHive Medical Recruitment Limited.',
+      };
     default: {
       const _exhaustive: never = routeKey;
       return _exhaustive;

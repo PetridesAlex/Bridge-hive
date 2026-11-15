@@ -178,32 +178,44 @@ export function OrganizationSidebar({
         />
 
         <div className="relative space-y-2">
-          <div className="group/account relative overflow-hidden rounded-xl bg-white/[0.06] p-2.5 ring-1 ring-white/10 transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+          <div className="group/account relative overflow-hidden rounded-2xl bg-[linear-gradient(145deg,rgba(255,255,255,0.1)_0%,rgba(255,255,255,0.04)_100%)] p-3 shadow-[0_12px_28px_rgba(0,0,0,0.25)] ring-1 ring-white/12 transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
             <span
               aria-hidden
               className="bh-gradient-sheen pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,transparent_18%,rgba(255,255,255,0.16)_50%,transparent_78%)] opacity-0 transition-opacity duration-300 group-hover/account:opacity-100 motion-reduce:opacity-0"
             />
-            <div className="relative flex min-w-0 items-center gap-2.5">
-              <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#e4b334] text-[12px] font-bold tracking-[0.04em] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.28)]">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-[linear-gradient(90deg,transparent,#e4b334,transparent)]"
+            />
+            <div className="relative flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#7dffb3] ring-1 ring-emerald-300/25">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#7dffb3] opacity-70 motion-reduce:animate-none" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#7dffb3]" />
+                </span>
+                Signed in
+              </span>
+              <span
+                className="max-w-[55%] truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-white/45"
+                title={current.role.replace(/_/g, ' ')}
+              >
+                {current.role.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <div className="relative mt-2.5 flex min-w-0 items-center gap-3">
+              <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[linear-gradient(135deg,#f3d27a_0%,#e4b334_55%,#c8951b_100%)] text-[13px] font-extrabold tracking-[0.04em] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_10px_20px_rgba(228,179,52,0.35)] ring-2 ring-[#e4b334]/30 ring-offset-2 ring-offset-[#0a2538]">
                 {initialsFor(userLabel)}
-                <span
-                  className="bh-soft-pulse absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#7dffb3] ring-2 ring-[#071d30] shadow-[0_0_8px_rgba(125,255,179,0.7)]"
-                  aria-hidden
-                />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f3d27a]">
-                  Signed in
-                </p>
                 <p
-                  className="truncate text-[13px] font-semibold leading-tight text-white"
+                  className="truncate text-[14px] font-bold leading-tight tracking-[-0.01em] text-white"
                   title={userLabel}
                 >
                   {userLabel}
                 </p>
                 {userEmail ? (
                   <p
-                    className="truncate text-[11px] text-white/55"
+                    className="mt-0.5 truncate text-[11.5px] font-medium text-white/60"
                     title={userEmail}
                   >
                     {userEmail}

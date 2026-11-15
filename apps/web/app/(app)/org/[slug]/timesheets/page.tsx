@@ -3,8 +3,12 @@ import { redirect } from 'next/navigation';
 import {
   ArrowUpRight,
   CalendarDays,
+  CheckCircle2,
+  ClipboardCheck,
   ClipboardList,
   Clock3,
+  Eye,
+  MapPin,
   UserRound,
 } from 'lucide-react';
 
@@ -135,6 +139,10 @@ export default async function TimesheetsPage({
                   worker && typeof worker === 'object' && 'user_id' in worker
                     ? String((worker as { user_id: string }).user_id).slice(0, 8)
                     : null;
+                const whenRaw = formatDateTime(shift.starts_at);
+                const whenSplit = whenRaw.lastIndexOf(', ');
+                const whenDate = whenSplit > 0 ? whenRaw.slice(0, whenSplit) : whenRaw;
+                const whenTime = whenSplit > 0 ? whenRaw.slice(whenSplit + 2) : '';
                 const initial = (
                   (shift.title || locationName || 'T').trim()[0] ?? 'T'
                 ).toUpperCase();
@@ -144,61 +152,116 @@ export default async function TimesheetsPage({
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <span
-                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-sm font-semibold text-bh-teal-strong ring-1 ring-bh-teal/15"
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
                           aria-hidden
                         >
                           {initial}
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate font-semibold text-bh-text">
+                          <p className="truncate font-semibold tracking-tight text-bh-text">
                             {shift.title || 'Untitled'}
                           </p>
-                          <p className="mt-0.5 truncate text-xs text-bh-text-muted">
-                            {locationName}
+                          <p className="mt-1 inline-flex max-w-[16rem] items-center gap-1 rounded-full bg-bh-teal-soft px-2 py-0.5 text-xs font-semibold text-bh-teal-strong">
+                            <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                            <span className="truncate">{locationName}</span>
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-bh-text-secondary">
-                      {formatDateTime(shift.starts_at)}
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2.5">
+                        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-bh-subtle text-bh-teal-strong ring-1 ring-bh-border">
+                          <CalendarDays className="h-4 w-4" aria-hidden />
+                        </span>
+                        <div className="leading-tight">
+                          <p className="font-semibold text-bh-text">{whenDate}</p>
+                          {whenTime ? (
+                            <p className="bh-tabular mt-0.5 text-xs font-medium text-bh-text-muted">
+                              {whenTime}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-bh-subtle px-2.5 py-1 text-xs font-medium text-bh-text">
-                        <UserRound className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
-                        {workerRole}
-                        {workerId ? (
-                          <span className="text-bh-text-muted">· {workerId}…</span>
-                        ) : null}
+                      <div className="inline-flex items-center gap-2.5 rounded-xl border border-bh-border bg-bh-surface py-1.5 pl-1.5 pr-3 shadow-[0_1px_2px_rgba(7,29,48,0.04)]">
+                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-bh-teal-soft text-bh-teal-strong">
+                          <UserRound className="h-4 w-4" aria-hidden />
+                        </span>
+                        <div className="leading-tight">
+                          <p className="text-sm font-semibold text-bh-text">{workerRole}</p>
+                          {workerId ? (
+                            <p className="mt-0.5 font-mono text-[11px] text-bh-text-muted">
+                              #{workerId}
+                            </p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="bh-tabular inline-flex items-center gap-1.5 rounded-lg bg-bh-subtle px-2.5 py-1.5 text-sm font-bold text-bh-text ring-1 ring-bh-border">
+                        <Clock3 className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                        {formatDurationMinutes(
+                          timesheet.approved_minutes ?? timesheet.submitted_minutes,
+                        )}
                       </span>
                     </td>
-                    <td className="bh-tabular px-4 py-4 font-medium text-bh-text">
-                      {formatDurationMinutes(
-                        timesheet.approved_minutes ?? timesheet.submitted_minutes,
-                      )}
-                    </td>
                     <td className="px-4 py-4">
-                      <Badge
-                        variant={
-                          timesheet.status === 'submitted'
-                            ? 'warning'
-                            : timesheet.status === 'approved'
-                              ? 'success'
+                      {timesheet.status === 'approved' ? (
+                        <span className="relative inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#16a34a_0%,#15803d_100%)] py-1 pl-2 pr-3 text-xs font-bold capitalize tracking-wide text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_6px_16px_rgba(22,163,74,0.4)] ring-1 ring-[#14532d]/20 transition-shadow duration-200 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.3),0_8px_22px_rgba(22,163,74,0.55)]">
+                          <span className="relative grid h-4 w-4 place-items-center">
+                            <span
+                              aria-hidden
+                              className="absolute inset-0 animate-ping rounded-full bg-white/60 motion-reduce:animate-none"
+                            />
+                            <CheckCircle2
+                              className="relative h-4 w-4"
+                              strokeWidth={2.6}
+                              aria-hidden
+                            />
+                          </span>
+                          Approved
+                        </span>
+                      ) : (
+                        <Badge
+                          variant={
+                            timesheet.status === 'submitted'
+                              ? 'warning'
                               : timesheet.status === 'rejected'
                                 ? 'danger'
                                 : 'muted'
-                        }
-                      >
-                        {timesheet.status.replace(/_/g, ' ')}
-                      </Badge>
+                          }
+                        >
+                          {timesheet.status.replace(/_/g, ' ')}
+                        </Badge>
+                      )}
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <Link
-                        href={`/org/${slug}/shifts/${shift.id}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-bh-border bg-bh-surface px-3 py-1.5 text-sm font-medium text-bh-text transition-colors hover:border-bh-teal hover:bg-bh-teal-soft hover:text-bh-teal-strong group-hover:border-bh-teal/40"
-                      >
-                        {timesheet.status === 'submitted' ? 'Review' : 'View'}
-                        <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
-                      </Link>
+                      {timesheet.status === 'submitted' ? (
+                        <Link
+                          href={`/org/${slug}/shifts/${shift.id}?tab=timesheets`}
+                          className="group/btn inline-flex min-h-10 items-center gap-2 rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(7,29,48,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-honey motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                        >
+                          <ClipboardCheck className="h-4 w-4 text-[#e4b334]" aria-hidden />
+                          Review hours
+                          <ArrowUpRight
+                            className="h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5"
+                            aria-hidden
+                          />
+                        </Link>
+                      ) : (
+                        <Link
+                          href={`/org/${slug}/shifts/${shift.id}${timesheet.status === 'approved' || timesheet.status === 'rejected' ? '?tab=timesheets' : ''}`}
+                          className="group/btn inline-flex min-h-10 items-center gap-2 rounded-xl border-2 border-[#16384f]/20 bg-white px-4 text-sm font-semibold text-[#071d30] transition-all duration-200 hover:-translate-y-0.5 hover:border-bh-teal hover:bg-bh-teal-soft hover:text-bh-teal-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                        >
+                          <Eye className="h-4 w-4" aria-hidden />
+                          View
+                          <ArrowUpRight
+                            className="h-3.5 w-3.5 transition-transform duration-200 group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5"
+                            aria-hidden
+                          />
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 );

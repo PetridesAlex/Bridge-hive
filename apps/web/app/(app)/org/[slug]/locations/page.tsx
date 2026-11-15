@@ -348,6 +348,13 @@ export default async function LocationsPage({
         locations={locations.map((location) => ({
           id: location.id,
           name: location.name,
+          addressLine1: location.address_line1,
+          addressLine2: location.address_line2,
+          city: location.city,
+          postalCode: location.postal_code,
+          countryCode: location.country_code,
+          imageUrl: location.imageUrl,
+          upcomingShifts: upcomingByLocation.get(location.id) ?? 0,
         }))}
         wards={locations.flatMap((location) =>
           location.wards.map((ward) => ({

@@ -10,10 +10,12 @@ import {
   Clock3,
   Copy,
   Eraser,
+  Minus,
   Moon,
   Plus,
   Rows3,
   Trash2,
+  Users,
 } from 'lucide-react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
 
@@ -120,9 +122,12 @@ export function CustomRowsWorkspace({
 
   return (
     <div className="space-y-4">
-      <div className="overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] px-4 py-4 sm:px-5">
-          <div className="min-w-0 space-y-2.5">
+      <div className="overflow-hidden rounded-2xl border border-[#16384f]/15 bg-bh-surface shadow-[0_14px_34px_rgba(7,29,48,0.08)]">
+        <div className="grid gap-0 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+          <section
+            aria-labelledby="custom-deadline-label"
+            className="border-b border-bh-border/70 bg-[linear-gradient(180deg,#f7fafc_0%,#ffffff_100%)] p-4 sm:p-5 lg:border-b-0 lg:border-r"
+          >
             <p className="flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
               <span
                 aria-hidden
@@ -130,70 +135,142 @@ export function CustomRowsWorkspace({
               />
               Batch settings
             </p>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="space-y-1.5">
+            <div className="mt-3 flex flex-wrap items-center gap-4">
+              <div>
                 <Label
+                  id="custom-deadline-label"
                   htmlFor="custom-deadline"
-                  className="flex items-center gap-1.5 text-sm font-semibold text-[#071d30]"
+                  className="flex items-center gap-1.5 text-sm font-bold text-[#071d30]"
                 >
-                  <Clock3 className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                  <Clock3 className="h-4 w-4 text-bh-teal-strong" aria-hidden />
                   Claim deadline
                 </Label>
-                <div className="flex items-center gap-2 rounded-xl border border-bh-border bg-white p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+                <div className="mt-2 inline-flex items-center rounded-2xl border-2 border-[#16384f]/15 bg-white p-1 shadow-[0_6px_16px_rgba(7,29,48,0.06)] transition-colors focus-within:border-bh-teal">
+                  <button
+                    type="button"
+                    aria-label="Decrease hours"
+                    onClick={() =>
+                      setDeadlineHours(String(Math.max(0, (Number(deadlineHours) || 0) - 1)))
+                    }
+                    className="grid h-9 w-9 place-items-center rounded-xl text-[#071d30] transition-colors hover:bg-bh-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal"
+                  >
+                    <Minus className="h-4 w-4" aria-hidden />
+                  </button>
                   <Input
                     id="custom-deadline"
                     type="number"
                     min={0}
-                    className="h-9 w-[4.75rem] border-0 bg-transparent px-2.5 text-sm font-semibold text-[#071d30] shadow-none focus-visible:border-transparent focus-visible:ring-0"
+                    className="bh-tabular h-9 w-16 border-0 bg-transparent px-1 text-center text-lg font-bold text-[#071d30] shadow-none [appearance:textfield] focus-visible:border-transparent focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     value={deadlineHours}
                     onChange={(e) => setDeadlineHours(e.target.value)}
                   />
-                  <span className="pr-2.5 text-xs font-medium text-bh-text-secondary">
+                  <button
+                    type="button"
+                    aria-label="Increase hours"
+                    onClick={() =>
+                      setDeadlineHours(String((Number(deadlineHours) || 0) + 1))
+                    }
+                    className="grid h-9 w-9 place-items-center rounded-xl text-[#071d30] transition-colors hover:bg-bh-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal"
+                  >
+                    <Plus className="h-4 w-4" aria-hidden />
+                  </button>
+                  <span className="pl-1.5 pr-3 text-xs font-semibold text-bh-text-secondary">
                     hours before start
                   </span>
                 </div>
               </div>
-              <p className="max-w-xs border-l-2 border-[#e4b334] pl-3 text-xs leading-5 text-bh-text-muted">
-                Applies to every shift in this batch.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-3 rounded-2xl border border-[#16384f]/12 bg-[linear-gradient(155deg,#16384f_0%,#071d30_62%,#0c3a42_100%)] px-3.5 py-2.5 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_10px_22px_rgba(7,29,48,0.22)]">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
-                <Rows3 className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-              </span>
-              <div className="leading-none">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/65">
-                  In this batch
+              <div className="min-w-[12rem] flex-1">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+                  Quick pick
                 </p>
-                <p className="mt-1 text-sm font-semibold">
-                  <span className="bh-tabular text-lg tracking-tight">
-                    {rows.length}
-                  </span>
-                  <span className="text-white/70"> / {BULK_SHIFT_MAX} shifts</span>
-                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[2, 6, 12, 24, 48].map((hours) => {
+                    const active = Number(deadlineHours) === hours;
+                    return (
+                      <button
+                        key={hours}
+                        type="button"
+                        aria-pressed={active}
+                        onClick={() => setDeadlineHours(String(hours))}
+                        className={cn(
+                          'h-8 rounded-full px-3 text-xs font-bold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:transition-none',
+                          active
+                            ? 'bg-[#071d30] text-white shadow-[0_6px_14px_rgba(7,29,48,0.25)]'
+                            : 'bg-white text-[#071d30] ring-1 ring-[#16384f]/15 hover:-translate-y-0.5 hover:ring-bh-teal motion-reduce:hover:translate-y-0',
+                        )}
+                      >
+                        {hours}h
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-bh-border bg-white px-3.5 py-2.5 shadow-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
-                Total positions
-              </p>
-              <p className="mt-1 bh-tabular text-lg font-semibold tracking-tight text-[#071d30]">
-                {sumCustomRowPositions(rows)}
-              </p>
+            <p className="mt-3 border-l-2 border-[#e4b334] pl-3 text-xs leading-5 text-bh-text-muted">
+              Workers can claim each shift until this long before it starts. Applies to
+              every shift in this batch.
+            </p>
+          </section>
+
+          <section
+            aria-label="Batch summary"
+            className="relative overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] p-4 text-white sm:p-5"
+          >
+            <span
+              aria-hidden
+              className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/30 blur-2xl"
+            />
+            <div className="relative grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f3d27a]">
+                  <Rows3 className="h-3.5 w-3.5" aria-hidden />
+                  In this batch
+                </p>
+                <p className="mt-1.5 leading-none">
+                  <span className="bh-tabular text-3xl font-bold tracking-tight">
+                    {rows.length}
+                  </span>
+                  <span className="text-sm font-medium text-white/65"> / {BULK_SHIFT_MAX} shifts</span>
+                </p>
+                <div
+                  className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/15"
+                  role="progressbar"
+                  aria-label="Shifts used"
+                  aria-valuemin={0}
+                  aria-valuemax={BULK_SHIFT_MAX}
+                  aria-valuenow={rows.length}
+                >
+                  <div
+                    className="h-full rounded-full bg-[linear-gradient(90deg,#e4b334,#f3d27a)] transition-[width] duration-300 motion-reduce:transition-none"
+                    style={{ width: `${Math.min(100, (rows.length / BULK_SHIFT_MAX) * 100)}%` }}
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f3d27a]">
+                  <Users className="h-3.5 w-3.5" aria-hidden />
+                  Total positions
+                </p>
+                <p className="bh-tabular mt-1.5 text-3xl font-bold leading-none tracking-tight">
+                  {sumCustomRowPositions(rows)}
+                </p>
+                <p className="mt-2.5 text-xs text-white/65">Workers needed across all shifts</p>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 bg-bh-surface px-4 py-3 sm:px-5">
+        <div
+          role="toolbar"
+          aria-label="Shift row actions"
+          className="flex flex-wrap items-center gap-2.5 border-t border-bh-border/70 bg-[#f7fafc] px-4 py-3 sm:px-5"
+        >
           <Button
             type="button"
             size="sm"
             disabled={rows.length >= BULK_SHIFT_MAX}
             onClick={() => setRows((prev) => addCustomRow(prev, seed))}
-            className="h-10 rounded-xl border border-[#e4b334]/40 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-3 pr-3.5 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(7,29,48,0.24)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_58%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_24px_rgba(7,29,48,0.3)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            className="h-10 rounded-xl border border-[#e4b334]/40 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-3 pr-4 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(7,29,48,0.24)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_58%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_24px_rgba(7,29,48,0.3)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             <span className="grid h-6 w-6 place-items-center rounded-md bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
               <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
@@ -202,28 +279,33 @@ export function CustomRowsWorkspace({
           </Button>
           <Button
             type="button"
+            variant="outline"
             size="sm"
+            disabled={rows.length < 2}
+            title="Copies the first row's times, location, ward, role, break, rate and positions to every row (dates stay as they are)"
             onClick={() => setRows((prev) => copyFirstRowFieldsToAll(prev))}
-            className="h-10 rounded-xl border border-white/20 bg-[linear-gradient(155deg,#1ab4c4_0%,#087f8c_52%,#065860_100%)] px-3 pr-3.5 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_8px_18px_rgba(8,127,140,0.28)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#2ec6d4_0%,#0a96a6_52%,#087f8c_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.34),0_12px_24px_rgba(8,127,140,0.36)] focus-visible:ring-white motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            className="h-10 rounded-xl border-2 border-bh-teal/40 bg-white px-3 pr-4 font-semibold text-bh-teal-strong shadow-sm transition-[transform,background,color,border-color] duration-200 hover:-translate-y-0.5 hover:border-bh-teal hover:bg-bh-teal-soft motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
-            <span className="grid h-6 w-6 place-items-center rounded-md bg-white/15 text-white ring-1 ring-white/30">
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-bh-teal-soft text-bh-teal-strong">
               <Copy className="h-3.5 w-3.5" strokeWidth={2.25} aria-hidden />
             </span>
             Copy first row to all
           </Button>
+          <span aria-hidden className="mx-1 hidden h-6 w-px bg-bh-border sm:block" />
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
             disabled={rows.length === 0}
             onClick={() => setRows(() => clearCustomRows())}
-            className="h-10 rounded-xl border-bh-border bg-white px-3 pr-3.5 font-semibold text-bh-text-secondary shadow-sm transition-[transform,background,color] duration-200 hover:-translate-y-0.5 hover:bg-bh-subtle hover:text-bh-text motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            className="h-10 rounded-xl px-3 pr-4 font-semibold text-bh-text-secondary transition-colors duration-200 hover:bg-red-50 hover:text-red-700"
           >
-            <span className="grid h-6 w-6 place-items-center rounded-md bg-bh-subtle text-bh-text-secondary">
-              <Eraser className="h-3.5 w-3.5" aria-hidden />
-            </span>
+            <Eraser className="mr-1.5 h-4 w-4" aria-hidden />
             Clear rows
           </Button>
+          <p className="ml-auto hidden text-xs text-bh-text-muted md:block">
+            Tip: fill the first row, then copy it to all rows.
+          </p>
         </div>
       </div>
 

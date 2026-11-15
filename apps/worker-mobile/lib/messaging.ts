@@ -1,4 +1,5 @@
 import {
+  isMessagingDeleteUnavailableError,
   isMessagingReactionsUnavailableError,
   isOrgWorkerReactionKey,
   messageListRpcArgs,
@@ -56,6 +57,12 @@ function mapMessageRow(raw: Record<string, unknown>): OrgWorkerMessageRow {
     body: String(raw.body ?? ''),
     clientMessageId: String(raw.clientMessageId ?? raw.client_message_id ?? ''),
     createdAt: String(raw.createdAt ?? raw.created_at ?? new Date().toISOString()),
+    deletedAt:
+      typeof raw.deletedAt === 'string'
+        ? raw.deletedAt
+        : typeof raw.deleted_at === 'string'
+          ? raw.deleted_at
+          : null,
     senderName:
       typeof raw.senderName === 'string'
         ? raw.senderName
@@ -214,4 +221,43 @@ export async function clearMessageReaction(messageId: string) {
 
 export function areMessagingReactionsUnavailable() {
   return reactionsUnavailableLogged;
+}
+
+let deleteUnavailableLogged = false;
+
+function noteDeleteUnavailable(errorMessage: string | null | undefined) {
+  if (!isMessagingDeleteUnavailableError(errorMessage)) return false;
+  if (!deleteUnavailableLogged) {
+    deleteUnavailableLogged = true;
+    console.warn('[messaging] delete unavailable; hiding delete controls', errorMessage);
+  }
+  return true;
+}
+
+export function areMessagingDeletesUnavailable() {
+  return deleteUnavailableLogged;
+}
+
+/** The sender erases their own message for both sides. The server checks ownership. */
+export async function deleteConversationMessage(messageId: string) {
+  const { error } = await supabase.rpc(
+    'delete_org_worker_message' as never,
+    { p_message_id: messageId } as never,
+  );
+  if (error) {
+    return { error: error.message, unavailable: noteDeleteUnavailable(error.message) };
+  }
+  return { error: null as string | null, unavailable: false };
+}
+
+/** Removes the chat and earlier messages for the caller only. */
+export async function clearConversationForMe(conversationId: string) {
+  const { error } = await supabase.rpc(
+    'clear_org_worker_conversation' as never,
+    { p_conversation_id: conversationId } as never,
+  );
+  if (error) {
+    return { error: error.message, unavailable: noteDeleteUnavailable(error.message) };
+  }
+  return { error: null as string | null, unavailable: false };
 }

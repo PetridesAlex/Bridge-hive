@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { EmptyState } from '@/components/empty-state';
 import { OrgMessagesWorkspace } from '@/components/org/org-messages-workspace';
-import { PageHeader } from '@/components/org/page-header';
+import { MessagesHeader } from '@/components/org/messages-header';
 import { requireOrgMembership } from '@/lib/auth';
 import { orgMessagesCopy } from '@/lib/org-messages-i18n';
 
@@ -36,8 +36,12 @@ export default async function OrgMessagesPage({
   }
 
   return (
-    <div className="flex min-h-0 flex-col gap-4">
-      <PageHeader title={copy.title} subtitle={copy.subtitle} />
+    <div className="flex min-h-0 flex-col gap-3">
+      <MessagesHeader
+        eyebrow={copy.inboxLabel}
+        title={copy.title}
+        subtitle={copy.subtitle}
+      />
       <div className="min-h-0 w-full">
         <OrgMessagesWorkspace
           organizationId={ctx.org.id}

@@ -11,7 +11,12 @@ import { AppState } from 'react-native';
 import { InboxView } from '@/components/messages/InboxView';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { useTranslation } from '@/i18n/locale-provider';
-import { listMyMessagingConversations } from '@/lib/messaging';
+import {
+  areMessagingDeletesUnavailable,
+  clearConversationForMe,
+  listMyMessagingConversations,
+} from '@/lib/messaging';
+import { navigateBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -81,7 +86,7 @@ export default function MessagesInboxScreen() {
         loading={isAppReviewDemo ? false : loading}
         refreshing={refreshing}
         error={isAppReviewDemo ? null : error}
-        onBack={() => router.back()}
+        onBack={() => navigateBack('/(tabs)')}
         onRefresh={() => {
           setRefreshing(true);
           void load();
@@ -107,7 +112,27 @@ export default function MessagesInboxScreen() {
           back: t('common.back'),
           noMessagesYet: t('messages.noMessagesYet'),
           newMessages: t('messages.newMessages'),
+          deleteChat: t('messages.deleteChat'),
+          deleteChatTitle: t('messages.deleteChatTitle'),
+          deleteChatBody: t('messages.deleteChatBody'),
+          cancel: t('common.cancel'),
+          confirmDelete: t('messages.confirmDelete'),
+          deleting: t('messages.deleting'),
+          deleteFailed: t('messages.deleteFailed'),
+          deleteUnavailable: t('messages.deleteUnavailable'),
         }}
+        onDeleteChat={
+          isAppReviewDemo || areMessagingDeletesUnavailable()
+            ? undefined
+            : async (id) => {
+                const result = await clearConversationForMe(id);
+                if (result.unavailable) return 'unavailable';
+                if (result.error) return result.error;
+                setRows((prev) => prev.filter((row) => row.id !== id));
+                void load();
+                return null;
+              }
+        }
       />
     </AppScreen>
   );

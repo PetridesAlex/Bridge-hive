@@ -439,6 +439,19 @@ export const en = {
     react: 'React',
     reactionPickerTitle: 'React',
     clearReaction: 'Clear reaction',
+    deleteMessage: 'Delete message',
+    deleteMessageTitle: 'Delete this message?',
+    deleteMessageBody:
+      'The text is erased for you and for the other person, and cannot be restored. A "message deleted" note stays in the chat.',
+    messageDeleted: 'This message was deleted',
+    deleteChat: 'Delete chat',
+    deleteChatTitle: 'Delete this chat?',
+    deleteChatBody:
+      'This conversation and this person are removed from your inbox and your earlier messages are cleared. Only you are affected: the other person keeps their copy. A new message brings the chat back with new messages only.',
+    confirmDelete: 'Delete',
+    deleting: 'Deleting…',
+    deleteFailed: 'Could not delete. Please try again.',
+    deleteUnavailable: 'Deleting is not available yet.',
   },
 
   profile: {

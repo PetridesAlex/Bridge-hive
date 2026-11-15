@@ -113,6 +113,8 @@ export type OrgWorkerMessageRow = {
   clientMessageId: string;
   createdAt: string;
   senderName?: string | null;
+  /** Set when the sender deleted the message. The text is erased server-side. */
+  deletedAt?: string | null;
   /** Client-only send state; never persisted. */
   localStatus?: 'pending' | 'failed' | 'sent';
 };
@@ -187,10 +189,48 @@ export function isOrgWorkerReactionKey(value: string): value is OrgWorkerReactio
 export function canReactToMessage(message: {
   id: string;
   localStatus?: OrgWorkerMessageRow['localStatus'];
+  deletedAt?: string | null;
 }): boolean {
   if (!isMessagingUuid(message.id) || message.id.startsWith('temp-')) return false;
   if (message.localStatus === 'pending' || message.localStatus === 'failed') return false;
+  if (message.deletedAt) return false;
   return true;
+}
+
+/**
+ * UX guard only. The server (delete_org_worker_message) is the authority:
+ * only the sender can delete, and the caller id comes from the session.
+ */
+export function canDeleteMessage(
+  message: {
+    id: string;
+    senderUserId: string;
+    localStatus?: OrgWorkerMessageRow['localStatus'];
+    deletedAt?: string | null;
+  },
+  currentUserId: string | null | undefined,
+): boolean {
+  if (!currentUserId || message.senderUserId !== currentUserId) return false;
+  if (!isMessagingUuid(message.id) || message.id.startsWith('temp-')) return false;
+  if (message.localStatus === 'pending' || message.localStatus === 'failed') return false;
+  if (message.deletedAt) return false;
+  return true;
+}
+
+/** True when a delete RPC is not on this database yet, so the UI hides delete. */
+export function isMessagingDeleteUnavailableError(
+  message: string | null | undefined,
+): boolean {
+  if (!message) return false;
+  const m = message.toLowerCase();
+  return (
+    m.includes('delete_org_worker_message') ||
+    m.includes('clear_org_worker_conversation') ||
+    m.includes('could not find the function') ||
+    m.includes('schema cache') ||
+    m.includes('pgrst202') ||
+    m.includes('42883')
+  );
 }
 
 /** Soft-degrade detector when reactions migration/RPCs are not deployed. */

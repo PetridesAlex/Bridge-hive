@@ -32,6 +32,22 @@ const COPY = {
     emojiSearch: 'Search emoji',
     react: 'React',
     clearReaction: 'Clear reaction',
+    messageActions: 'Message actions',
+    deleteMessage: 'Delete message',
+    deleteMessageTitle: 'Delete this message?',
+    deleteMessageBody:
+      'The text is erased for you and for the worker, and cannot be restored. A "message deleted" note stays in the chat.',
+    messageDeleted: 'This message was deleted',
+    chatActions: 'Chat actions',
+    deleteChat: 'Delete chat',
+    deleteChatTitle: 'Delete this chat?',
+    deleteChatBody:
+      'This conversation and this worker are removed from your inbox and your earlier messages are cleared. Only you are affected: the worker and other staff keep their copy. A new message brings the chat back with new messages only.',
+    cancel: 'Cancel',
+    confirmDelete: 'Delete',
+    deleting: 'Deleting…',
+    deleteFailed: 'Could not delete. Please try again.',
+    deleteUnavailable: 'Deleting is not available yet.',
   },
   el: {
     title: 'Μηνύματα',
@@ -64,6 +80,22 @@ const COPY = {
     emojiSearch: 'Αναζήτηση emoji',
     react: 'Αντίδραση',
     clearReaction: 'Αφαίρεση αντίδρασης',
+    messageActions: 'Ενέργειες μηνύματος',
+    deleteMessage: 'Διαγραφή μηνύματος',
+    deleteMessageTitle: 'Διαγραφή αυτού του μηνύματος;',
+    deleteMessageBody:
+      'Το κείμενο διαγράφεται για εσάς και για τον εργαζόμενο και δεν μπορεί να επαναφερθεί. Στη συνομιλία μένει σημείωση «το μήνυμα διαγράφηκε».',
+    messageDeleted: 'Αυτό το μήνυμα διαγράφηκε',
+    chatActions: 'Ενέργειες συνομιλίας',
+    deleteChat: 'Διαγραφή συνομιλίας',
+    deleteChatTitle: 'Διαγραφή αυτής της συνομιλίας;',
+    deleteChatBody:
+      'Η συνομιλία και ο εργαζόμενος αφαιρούνται από τα εισερχόμενά σας και τα προηγούμενα μηνύματά σας διαγράφονται. Επηρεάζεστε μόνο εσείς: ο εργαζόμενος και τα άλλα στελέχη κρατούν το δικό τους αντίγραφο. Ένα νέο μήνυμα επαναφέρει τη συνομιλία μόνο με τα νέα μηνύματα.',
+    cancel: 'Άκυρο',
+    confirmDelete: 'Διαγραφή',
+    deleting: 'Διαγραφή…',
+    deleteFailed: 'Η διαγραφή απέτυχε. Δοκιμάστε ξανά.',
+    deleteUnavailable: 'Η διαγραφή δεν είναι διαθέσιμη ακόμη.',
   },
 } as const;
 

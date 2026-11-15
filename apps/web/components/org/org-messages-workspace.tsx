@@ -2,6 +2,7 @@
 
 import {
   applyOptimisticReaction,
+  canDeleteMessage,
   canReactToMessage,
   clampMessageDraft,
   filterConversationsByQuery,
@@ -36,10 +37,16 @@ import {
   SendHorizonal,
   ShieldCheck,
   Smile,
+  Trash2,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  areOrgMessagingDeletesUnavailable,
+  clearOrgConversation,
+  deleteOrgMessage,
+} from '@/lib/org-messaging-deletion';
 import {
   areOrgMessagingReactionsUnavailable,
   clearOrgMessageReaction,
@@ -150,6 +157,14 @@ export function OrgMessagesWorkspace({
   const [reactionsEnabled, setReactionsEnabled] = useState(true);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [reactMenuFor, setReactMenuFor] = useState<string | null>(null);
+  const [deletesEnabled, setDeletesEnabled] = useState(
+    () => !areOrgMessagingDeletesUnavailable(),
+  );
+  const [pendingDelete, setPendingDelete] = useState<
+    { kind: 'message'; id: string } | { kind: 'chat'; id: string } | null
+  >(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesRef = useRef<LocalMessage[]>([]);
@@ -309,7 +324,8 @@ export function OrgMessagesWorkspace({
       channelName,
       table: 'organization_worker_messages',
       filter: `conversation_id=eq.${selectedId}`,
-      event: 'INSERT',
+      // INSERT for new messages, UPDATE when a sender deletes one.
+      event: '*',
       onChange: () => {
         void loadThread(selectedId);
         void loadInbox();
@@ -492,6 +508,61 @@ export function OrgMessagesWorkspace({
     void refreshReactions(messages.filter((row) => row.id === messageId));
   };
 
+  const confirmDelete = async () => {
+    if (!pendingDelete || deleteBusy) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+
+    if (pendingDelete.kind === 'message') {
+      const messageId = pendingDelete.id;
+      const result = await deleteOrgMessage(supabase, messageId);
+      if (result.unavailable) setDeletesEnabled(false);
+      if (result.error) {
+        setDeleteError(result.unavailable ? copy.deleteUnavailable : copy.deleteFailed);
+        setDeleteBusy(false);
+        return;
+      }
+      // The server erased the text. Mirror it locally until the refetch lands.
+      const deletedAt = new Date().toISOString();
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, body: '', deletedAt } : m)),
+      );
+      setReactionSummaries((prev) => {
+        const next = { ...prev };
+        delete next[messageId];
+        return next;
+      });
+      setPendingDelete(null);
+      setDeleteBusy(false);
+      void loadInbox();
+      return;
+    }
+
+    const conversationId = pendingDelete.id;
+    const result = await clearOrgConversation(supabase, conversationId);
+    if (result.unavailable) setDeletesEnabled(false);
+    if (result.error) {
+      setDeleteError(result.unavailable ? copy.deleteUnavailable : copy.deleteFailed);
+      setDeleteBusy(false);
+      return;
+    }
+    setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+    if (selectedId === conversationId) {
+      setSelectedId(null);
+      setMessages([]);
+      setReactionSummaries({});
+    }
+    setPendingDelete(null);
+    setDeleteBusy(false);
+    void loadInbox();
+  };
+
+  const closeDeleteDialog = () => {
+    if (deleteBusy) return;
+    setPendingDelete(null);
+    setDeleteError(null);
+  };
+
   const selectedName = selected?.workerName?.trim() || 'Worker';
   const selectedRole = selected
     ? workerRoleLabelForMessaging(selected.workerRole, locale)
@@ -499,7 +570,7 @@ export function OrgMessagesWorkspace({
 
   return (
     <div
-      className="grid h-[min(44rem,calc(100dvh-11.5rem))] min-h-[28rem] w-full overflow-hidden rounded-[22px] border border-[rgba(11,42,67,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(247,251,253,0.98)_100%)] shadow-[0_22px_48px_rgba(7,29,48,0.08)] max-lg:grid-rows-[minmax(12rem,34%)_minmax(0,1fr)] lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)]"
+      className="grid h-[calc(100dvh-13.5rem)] min-h-[26rem] w-full overflow-hidden rounded-[22px] border border-[rgba(11,42,67,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(247,251,253,0.98)_100%)] shadow-[0_22px_48px_rgba(7,29,48,0.08)] max-lg:grid-rows-[minmax(12rem,34%)_minmax(0,1fr)] lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)]"
     >
       <aside className="relative flex min-h-0 flex-col overflow-hidden border-b border-[rgba(11,42,67,0.08)] bg-[linear-gradient(180deg,#f4f8fb_0%,#eef4f8_100%)] lg:border-b-0 lg:border-r">
         <div className="border-b border-[rgba(11,42,67,0.08)] px-4 pb-3.5 pt-4">
@@ -690,6 +761,20 @@ export function OrgMessagesWorkspace({
                   {copy.directMessage}
                 </p>
               </div>
+              {deletesEnabled ? (
+                <button
+                  type="button"
+                  className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-[rgba(180,35,24,0.22)] bg-white px-3 text-xs font-semibold text-[#b42318] shadow-sm transition hover:bg-[rgba(180,35,24,0.06)]"
+                  aria-label={copy.deleteChat}
+                  onClick={() => {
+                    setDeleteError(null);
+                    setPendingDelete({ kind: 'chat', id: selected.id });
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                  <span className="max-sm:sr-only">{copy.deleteChat}</span>
+                </button>
+              ) : null}
             </header>
 
             <div className="min-h-0 flex-1 space-y-1 overflow-x-hidden overflow-y-auto px-4 py-4 sm:px-5">
@@ -774,9 +859,21 @@ export function OrgMessagesWorkspace({
                               {senderLabel}
                             </p>
                           ) : null}
-                          <p className="whitespace-pre-wrap break-words leading-6">
-                            {m.body}
-                          </p>
+                          {m.deletedAt ? (
+                            <p
+                              className={cn(
+                                'flex items-center gap-1.5 italic leading-6',
+                                mine ? 'text-white/70' : 'text-bh-muted',
+                              )}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                              {copy.messageDeleted}
+                            </p>
+                          ) : (
+                            <p className="whitespace-pre-wrap break-words leading-6">
+                              {m.body}
+                            </p>
+                          )}
                           <div
                             className={cn(
                               'mt-1.5 flex items-center justify-end gap-2 text-[10px]',
@@ -798,13 +895,30 @@ export function OrgMessagesWorkspace({
                             ) : null}
                           </div>
                         </div>
-                        {reactionsEnabled && canReactToMessage(m) ? (
+                        {(reactionsEnabled && canReactToMessage(m)) ||
+                        (deletesEnabled && canDeleteMessage(m, currentUserId)) ? (
                           <div
                             className={cn(
-                              'absolute -top-2 opacity-100 transition focus-within:opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100',
+                              'absolute -top-2 flex items-start gap-1 opacity-100 transition focus-within:opacity-100 sm:opacity-0 sm:group-hover/msg:opacity-100',
                               mine ? 'left-0' : 'right-0',
                             )}
                           >
+                            {deletesEnabled && canDeleteMessage(m, currentUserId) ? (
+                              <button
+                                type="button"
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(180,35,24,0.22)] bg-white text-[#b42318] shadow-sm hover:bg-[rgba(180,35,24,0.08)]"
+                                aria-label={copy.deleteMessage}
+                                title={copy.deleteMessage}
+                                onClick={() => {
+                                  setDeleteError(null);
+                                  setPendingDelete({ kind: 'message', id: m.id });
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                              </button>
+                            ) : null}
+                            {reactionsEnabled && canReactToMessage(m) ? (
+                            <div className="relative">
                             <button
                               type="button"
                               className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[rgba(11,42,67,0.10)] bg-white text-[#0b2a43] shadow-sm hover:border-bh-teal/40"
@@ -845,9 +959,11 @@ export function OrgMessagesWorkspace({
                                 })}
                               </div>
                             ) : null}
+                            </div>
+                            ) : null}
                           </div>
                         ) : null}
-                        {reactionSummaries[m.id]?.reactions.length ? (
+                        {reactionSummaries[m.id]?.reactions.length && !m.deletedAt ? (
                           <div
                             className={cn(
                               'mt-1.5 flex flex-wrap gap-1.5',
@@ -969,6 +1085,74 @@ export function OrgMessagesWorkspace({
           </>
         )}
       </section>
+
+      {pendingDelete ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(7,29,48,0.55)] px-4"
+          role="presentation"
+          onClick={closeDeleteDialog}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') closeDeleteDialog();
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="org-messages-delete-title"
+            aria-describedby="org-messages-delete-body"
+            className="w-full max-w-md rounded-2xl border border-[rgba(11,42,67,0.12)] bg-white p-5 shadow-[0_24px_60px_rgba(7,29,48,0.28)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[rgba(180,35,24,0.10)] text-[#b42318]">
+                <Trash2 className="h-5 w-5" aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <h3
+                  id="org-messages-delete-title"
+                  className="text-base font-semibold text-[#071d30]"
+                >
+                  {pendingDelete.kind === 'chat'
+                    ? copy.deleteChatTitle
+                    : copy.deleteMessageTitle}
+                </h3>
+                <p
+                  id="org-messages-delete-body"
+                  className="mt-1.5 text-sm leading-6 text-[rgba(11,42,67,0.72)]"
+                >
+                  {pendingDelete.kind === 'chat'
+                    ? copy.deleteChatBody
+                    : copy.deleteMessageBody}
+                </p>
+                {deleteError ? (
+                  <p className="mt-2 text-sm font-semibold text-[#b42318]" role="alert">
+                    {deleteError}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                className="h-10 rounded-xl border border-[rgba(11,42,67,0.14)] bg-white px-4 text-sm font-semibold text-[#071d30] hover:bg-[#f4f8fb] disabled:opacity-60"
+                onClick={closeDeleteDialog}
+                disabled={deleteBusy}
+                autoFocus
+              >
+                {copy.cancel}
+              </button>
+              <button
+                type="button"
+                className="h-10 rounded-xl bg-[#b42318] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#912018] disabled:opacity-60"
+                onClick={() => void confirmDelete()}
+                disabled={deleteBusy}
+              >
+                {deleteBusy ? copy.deleting : copy.confirmDelete}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

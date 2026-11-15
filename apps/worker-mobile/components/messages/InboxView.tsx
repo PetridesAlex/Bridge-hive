@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -47,6 +48,14 @@ type Copy = {
   back: string;
   noMessagesYet: string;
   newMessages: string;
+  deleteChat: string;
+  deleteChatTitle: string;
+  deleteChatBody: string;
+  cancel: string;
+  confirmDelete: string;
+  deleting: string;
+  deleteFailed: string;
+  deleteUnavailable: string;
 };
 
 type Props = {
@@ -60,6 +69,8 @@ type Props = {
   onRefresh: () => void;
   onRetry: () => void;
   onOpen: (id: string) => void;
+  /** Returns null on success, 'unavailable' when the database lacks the RPC, or an error. */
+  onDeleteChat?: (id: string) => Promise<'unavailable' | string | null>;
 };
 
 function ConversationRow({
@@ -68,12 +79,14 @@ function ConversationRow({
   locale,
   copy,
   onOpen,
+  onRequestDelete,
 }: {
   item: OrgWorkerConversationSummary;
   index: number;
   locale: string;
   copy: Copy;
   onOpen: (id: string) => void;
+  onRequestDelete?: (id: string) => void;
 }) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
@@ -111,6 +124,8 @@ function ConversationRow({
     >
       <Pressable
         onPress={() => onOpen(item.id)}
+        onLongPress={onRequestDelete ? () => onRequestDelete(item.id) : undefined}
+        delayLongPress={380}
         onPressIn={() => {
           if (reduced) return;
           scale.value = withSpring(0.985, { damping: 18, stiffness: 420 });
@@ -143,6 +158,17 @@ function ConversationRow({
             </Text>
             {when ? (
               <Text style={[styles.time, unread && styles.timeUnread]}>{when}</Text>
+            ) : null}
+            {onRequestDelete ? (
+              <Pressable
+                onPress={() => onRequestDelete(item.id)}
+                hitSlop={10}
+                style={styles.rowDelete}
+                accessibilityRole="button"
+                accessibilityLabel={copy.deleteChat}
+              >
+                <Ionicons name="trash-outline" size={16} color={colors.error} />
+              </Pressable>
             ) : null}
           </View>
           <Text style={styles.orgMeta} numberOfLines={1}>
@@ -183,8 +209,31 @@ export function InboxView({
   onRefresh,
   onRetry,
   onOpen,
+  onDeleteChat,
 }: Props) {
   const [query, setQuery] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const closeDelete = () => {
+    if (deleteBusy) return;
+    setDeleteTarget(null);
+    setDeleteError(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || !onDeleteChat || deleteBusy) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    const result = await onDeleteChat(deleteTarget);
+    setDeleteBusy(false);
+    if (result === null) {
+      setDeleteTarget(null);
+      return;
+    }
+    setDeleteError(result === 'unavailable' ? copy.deleteUnavailable : copy.deleteFailed);
+  };
   const reduced = useReducedMotion();
   const searchEnter = useSharedValue(reduced ? 1 : 0);
   const visible = useMemo(
@@ -315,15 +364,139 @@ export function InboxView({
               locale={locale}
               copy={copy}
               onOpen={onOpen}
+              onRequestDelete={
+                onDeleteChat
+                  ? (id) => {
+                      setDeleteError(null);
+                      setDeleteTarget(id);
+                    }
+                  : undefined
+              }
             />
           )}
         />
       )}
+
+      <Modal
+        visible={Boolean(deleteTarget)}
+        animationType="fade"
+        transparent
+        onRequestClose={closeDelete}
+      >
+        <Pressable style={styles.deleteBackdrop} onPress={closeDelete}>
+          <Pressable style={styles.deleteCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.deleteIcon}>
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
+            </View>
+            <Text style={styles.deleteTitle}>{copy.deleteChatTitle}</Text>
+            <Text style={styles.deleteBody}>{copy.deleteChatBody}</Text>
+            {deleteError ? <Text style={styles.deleteErrorText}>{deleteError}</Text> : null}
+            <View style={styles.deleteActions}>
+              <Pressable
+                onPress={closeDelete}
+                disabled={deleteBusy}
+                style={[styles.deleteBtn, styles.deleteBtnQuiet]}
+                accessibilityRole="button"
+              >
+                <Text style={styles.deleteBtnQuietText}>{copy.cancel}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void confirmDelete()}
+                disabled={deleteBusy}
+                style={[styles.deleteBtn, styles.deleteBtnDanger, deleteBusy && { opacity: 0.6 }]}
+                accessibilityRole="button"
+              >
+                <Text style={styles.deleteBtnDangerText}>
+                  {deleteBusy ? copy.deleting : copy.confirmDelete}
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  rowDelete: {
+    marginLeft: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.errorLight,
+  },
+  deleteBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(7,29,48,0.55)',
+  },
+  deleteCard: {
+    width: '100%',
+    maxWidth: 380,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.white,
+    gap: spacing.sm,
+  },
+  deleteIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.errorLight,
+  },
+  deleteTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.navy,
+  },
+  deleteBody: {
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
+  },
+  deleteErrorText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.error,
+  },
+  deleteActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  deleteBtn: {
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnQuiet: {
+    borderWidth: 1,
+    borderColor: 'rgba(11,42,67,0.14)',
+    backgroundColor: colors.white,
+  },
+  deleteBtnQuietText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.navy,
+  },
+  deleteBtnDanger: {
+    backgroundColor: colors.error,
+  },
+  deleteBtnDangerText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
   screen: {
     flex: 1,
     backgroundColor: 'transparent',

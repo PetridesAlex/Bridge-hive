@@ -4,6 +4,7 @@ import {
   applyOlderMessagePage,
   applyOptimisticReaction,
   beginOutgoingMessage,
+  canDeleteMessage,
   canReactToMessage,
   createSendLock,
   createThreadRequestGuard,
@@ -29,8 +30,11 @@ import { ThreadView } from '@/components/messages/ThreadView';
 import { colors } from '@/constants/theme';
 import { useTranslation } from '@/i18n/locale-provider';
 import {
+  areMessagingDeletesUnavailable,
   areMessagingReactionsUnavailable,
+  clearConversationForMe,
   clearMessageReaction,
+  deleteConversationMessage,
   listConversationMessages,
   listMessageReactionSummaries,
   listMyMessagingConversations,
@@ -38,6 +42,7 @@ import {
   sendConversationMessage,
   setMessageReaction,
 } from '@/lib/messaging';
+import { navigateBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -64,6 +69,7 @@ export default function MessageThreadScreen() {
     Record<string, OrgWorkerMessageReactionSummary>
   >({});
   const [reactionsEnabled, setReactionsEnabled] = useState(true);
+  const [deletesEnabled, setDeletesEnabled] = useState(true);
   const activeRef = useRef(true);
   const sendLockRef = useRef(createSendLock());
   const guardRef = useRef(createThreadRequestGuard());
@@ -203,7 +209,7 @@ export default function MessageThreadScreen() {
       channelName: messagingChannelName('worker-thread', { conversationId }),
       table: 'organization_worker_messages',
       filter: `conversation_id=eq.${conversationId}`,
-      event: 'INSERT',
+      event: '*',
       onChange: () => void load(),
       onSubscribed: () => void load(),
     });
@@ -325,6 +331,40 @@ export default function MessageThreadScreen() {
     void refreshReactions(messages.filter((row) => row.id === messageId));
   };
 
+  const onDeleteMessage = async (message: LocalMessagingMessage): Promise<'unavailable' | string | null> => {
+    if (!canDeleteMessage(message, user?.id)) return 'not_allowed';
+    const result = await deleteConversationMessage(message.id);
+    if (result.unavailable) {
+      setDeletesEnabled(false);
+      return 'unavailable';
+    }
+    if (result.error) return result.error;
+    setMessages((prev) =>
+      prev.map((row) =>
+        row.id === message.id ? { ...row, body: '', deletedAt: new Date().toISOString() } : row,
+      ),
+    );
+    setReactionSummaries((prev) => {
+      const next = { ...prev };
+      delete next[message.id];
+      return next;
+    });
+    void load();
+    return null;
+  };
+
+  const onDeleteChat = async (): Promise<'unavailable' | string | null> => {
+    const result = await clearConversationForMe(conversationId);
+    if (result.unavailable) {
+      setDeletesEnabled(false);
+      return 'unavailable';
+    }
+    if (result.error) return result.error;
+    setMessages([]);
+    navigateBack('/messages');
+    return null;
+  };
+
   if (!authLoading && !session) {
     return <Redirect href="/auth/worker/login" />;
   }
@@ -350,13 +390,13 @@ export default function MessageThreadScreen() {
         hasOlder={isAppReviewDemo ? false : hasOlder}
         loadingOlder={loadingOlder}
         onLoadOlder={() => void loadOlder()}
-        onBack={() => {
-          if (router.canGoBack()) router.back();
-          else router.replace('/messages');
-        }}
+        onBack={() => navigateBack('/messages')}
         reactionSummaries={reactionSummaries}
         reactionsEnabled={!isAppReviewDemo && reactionsEnabled}
         onToggleReaction={(messageId, key) => void onToggleReaction(messageId, key)}
+        deletesEnabled={!isAppReviewDemo && deletesEnabled && !areMessagingDeletesUnavailable()}
+        onDeleteMessage={onDeleteMessage}
+        onDeleteChat={onDeleteChat}
         copy={{
           organization: t('messages.organization'),
           conversationSubtitle: t('messages.conversationSubtitle'),
@@ -383,6 +423,18 @@ export default function MessageThreadScreen() {
           react: t('messages.react'),
           reactionPickerTitle: t('messages.reactionPickerTitle'),
           clearReaction: t('messages.clearReaction'),
+          deleteMessage: t('messages.deleteMessage'),
+          deleteMessageTitle: t('messages.deleteMessageTitle'),
+          deleteMessageBody: t('messages.deleteMessageBody'),
+          messageDeleted: t('messages.messageDeleted'),
+          deleteChat: t('messages.deleteChat'),
+          deleteChatTitle: t('messages.deleteChatTitle'),
+          deleteChatBody: t('messages.deleteChatBody'),
+          cancel: t('common.cancel'),
+          confirmDelete: t('messages.confirmDelete'),
+          deleting: t('messages.deleting'),
+          deleteFailed: t('messages.deleteFailed'),
+          deleteUnavailable: t('messages.deleteUnavailable'),
         }}
       />
     </SafeAreaView>

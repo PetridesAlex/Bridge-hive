@@ -1,4 +1,5 @@
 import {
+  canDeleteMessage,
   canReactToMessage,
   clampMessageDraft,
   composerSendsOnEnter,
@@ -36,10 +37,20 @@ import {
   type NativeSyntheticEvent,
   type TextInputSelectionChangeEventData,
 } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { IconButton } from '@/components/ui/IconButton';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
+import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 type Copy = {
   organization: string;
@@ -63,7 +74,25 @@ type Copy = {
   react: string;
   reactionPickerTitle: string;
   clearReaction: string;
+  deleteMessage: string;
+  deleteMessageTitle: string;
+  deleteMessageBody: string;
+  messageDeleted: string;
+  deleteChat: string;
+  deleteChatTitle: string;
+  deleteChatBody: string;
+  cancel: string;
+  confirmDelete: string;
+  deleting: string;
+  deleteFailed: string;
+  deleteUnavailable: string;
 };
+
+type DeleteResult = 'unavailable' | string | null;
+
+type DeleteConfirm =
+  | { kind: 'message'; message: LocalMessagingMessage }
+  | { kind: 'chat' };
 
 type Props = {
   title: string;
@@ -86,6 +115,9 @@ type Props = {
   reactionSummaries: Record<string, OrgWorkerMessageReactionSummary>;
   reactionsEnabled: boolean;
   onToggleReaction: (messageId: string, key: OrgWorkerReactionKey) => void;
+  deletesEnabled: boolean;
+  onDeleteMessage: (message: LocalMessagingMessage) => Promise<DeleteResult>;
+  onDeleteChat: () => Promise<DeleteResult>;
 };
 
 export function ThreadView({
@@ -109,8 +141,14 @@ export function ThreadView({
   reactionSummaries,
   reactionsEnabled,
   onToggleReaction,
+  deletesEnabled,
+  onDeleteMessage,
+  onDeleteChat,
 }: Props) {
   const insets = useSafeAreaInsets();
+  const [deleteConfirm, setDeleteConfirm] = useState<DeleteConfirm | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const listRef = useRef<FlatList<LocalMessagingMessage>>(null);
   const inputRef = useRef<TextInput>(null);
   const nearBottomRef = useRef(true);
@@ -122,8 +160,63 @@ export function ThreadView({
   const [showJump, setShowJump] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [reactTarget, setReactTarget] = useState<LocalMessagingMessage | null>(null);
+  const [composerFocused, setComposerFocused] = useState(false);
+  const reducedMotion = useReducedMotion();
   const canSend = draft.trim().length > 0 && !sending;
+  const hasDraft = draft.trim().length > 0;
   const name = title.trim() || copy.organization;
+  const focusProgress = useSharedValue(0);
+  const readyProgress = useSharedValue(0);
+  const sendPress = useSharedValue(1);
+  const emojiPress = useSharedValue(1);
+
+  useEffect(() => {
+    focusProgress.value = withTiming(composerFocused ? 1 : 0, {
+      duration: reducedMotion ? 0 : 180,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [composerFocused, focusProgress, reducedMotion]);
+
+  useEffect(() => {
+    readyProgress.value = reducedMotion
+      ? withTiming(canSend ? 1 : 0, { duration: 0 })
+      : withSpring(canSend ? 1 : 0, { damping: 18, stiffness: 240, mass: 0.7 });
+  }, [canSend, readyProgress, reducedMotion]);
+
+  const composerShellStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(
+      focusProgress.value,
+      [0, 1],
+      [colors.border, colors.tealStrong],
+    ),
+    backgroundColor: interpolateColor(
+      focusProgress.value,
+      [0, 1],
+      [colors.surfaceSubdued, colors.white],
+    ),
+    shadowOpacity: interpolate(focusProgress.value, [0, 1], [0, 0.08]),
+    shadowRadius: interpolate(focusProgress.value, [0, 1], [0, 10]),
+    elevation: interpolate(focusProgress.value, [0, 1], [0, 3]),
+  }));
+
+  const sendButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: sendPress.value * interpolate(readyProgress.value, [0, 1], [0.94, 1]) }],
+    backgroundColor: interpolateColor(
+      readyProgress.value,
+      [0, 1],
+      ['transparent', colors.navy],
+    ),
+    borderColor: interpolateColor(
+      readyProgress.value,
+      [0, 1],
+      [colors.border, colors.navy],
+    ),
+  }));
+
+  const emojiButtonStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: emojiPress.value }],
+    opacity: interpolate(focusProgress.value, [0, 1], [0.72, 1]),
+  }));
 
   useEffect(() => {
     selectionRef.current = selection;
@@ -147,8 +240,32 @@ export function ThreadView({
   };
 
   const openReactFor = (message: LocalMessagingMessage) => {
-    if (!reactionsEnabled || !canReactToMessage(message)) return;
+    const canReact = reactionsEnabled && canReactToMessage(message);
+    const canDelete = deletesEnabled && canDeleteMessage(message, currentUserId);
+    if (!canReact && !canDelete) return;
     setReactTarget(message);
+  };
+
+  const closeDeleteConfirm = () => {
+    if (deleteBusy) return;
+    setDeleteConfirm(null);
+    setDeleteError(null);
+  };
+
+  const runDelete = async () => {
+    if (!deleteConfirm || deleteBusy) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    const result =
+      deleteConfirm.kind === 'chat'
+        ? await onDeleteChat()
+        : await onDeleteMessage(deleteConfirm.message);
+    setDeleteBusy(false);
+    if (result === null) {
+      setDeleteConfirm(null);
+      return;
+    }
+    setDeleteError(result === 'unavailable' ? copy.deleteUnavailable : copy.deleteFailed);
   };
 
   return (
@@ -176,6 +293,18 @@ export function ThreadView({
             {copy.conversationSubtitle}
           </Text>
         </View>
+        {deletesEnabled ? (
+          <IconButton
+            icon="trash-outline"
+            accessibilityLabel={copy.deleteChat}
+            onPress={() => {
+              setDeleteError(null);
+              setDeleteConfirm({ kind: 'chat' });
+            }}
+            size={18}
+            backgroundColor={colors.errorLight}
+          />
+        ) : null}
       </View>
       <View style={styles.privacy} accessibilityRole="text">
         <Ionicons name="shield-checkmark" size={15} color={colors.tealStrong} />
@@ -260,24 +389,49 @@ export function ThreadView({
               });
               const day = dayChanged ? messagingDayLabel(item.createdAt, locale) : null;
               const summary = reactionSummaries[item.id];
+              const isDeleted = Boolean(item.deletedAt);
               const canReact = reactionsEnabled && canReactToMessage(item);
+              const canDelete = deletesEnabled && canDeleteMessage(item, currentUserId);
               return (
                 <View>
                   {day ? <Text style={styles.day}>{day}</Text> : null}
                   <View style={[styles.bubbleRow, mine ? styles.mine : styles.theirs]}>
+                    {canDelete ? (
+                      <Pressable
+                        onPress={() => {
+                          setDeleteError(null);
+                          setDeleteConfirm({ kind: 'message', message: item });
+                        }}
+                        style={[styles.reactBtn, styles.deleteMsgBtn]}
+                        accessibilityRole="button"
+                        accessibilityLabel={copy.deleteMessage}
+                        hitSlop={8}
+                      >
+                        <Ionicons name="trash-outline" size={16} color={colors.error} />
+                      </Pressable>
+                    ) : null}
                     <Pressable
                       onLongPress={() => openReactFor(item)}
                       delayLongPress={280}
                       accessibilityRole="button"
                       accessibilityLabel={canReact ? copy.react : undefined}
-                      disabled={!canReact}
-                      style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleTheirs]}
+                      disabled={!canReact && !canDelete}
+                      style={[
+                        styles.bubble,
+                        mine ? styles.bubbleMine : styles.bubbleTheirs,
+                        isDeleted && styles.bubbleDeleted,
+                      ]}
                     >
                       {showSender ? (
                         <Text style={styles.sender}>
                           {item.senderName?.trim() || copy.organization}
                         </Text>
                       ) : null}
+                      {isDeleted ? (
+                        <Text style={[styles.body, styles.bodyDeleted, mine && styles.bodyMine]}>
+                          {copy.messageDeleted}
+                        </Text>
+                      ) : (
                       <Text style={[styles.body, mine && styles.bodyMine]}>
                         {splitMessageBody(item.body).map((part, partIndex) =>
                           part.type === 'link' ? (
@@ -293,6 +447,7 @@ export function ThreadView({
                           ),
                         )}
                       </Text>
+                      )}
                       <View style={styles.meta}>
                         <Text style={[styles.metaText, mine && styles.metaMine]}>
                           {messagingClockLabel(item.createdAt, locale)}
@@ -327,7 +482,7 @@ export function ThreadView({
                       </Pressable>
                     ) : null}
                   </View>
-                  {summary && summary.reactions.length > 0 ? (
+                  {!isDeleted && summary && summary.reactions.length > 0 ? (
                     <View
                       style={[
                         styles.chipRow,
@@ -361,80 +516,111 @@ export function ThreadView({
           ) : null}
         </View>
       )}
-      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.lg) }]}>
-        <Pressable
-          onPress={() => setEmojiOpen(true)}
-          style={styles.emojiBtn}
-          accessibilityRole="button"
-          accessibilityLabel={copy.insertEmoji}
+      <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        <Animated.View
+          style={[
+            styles.composerShell,
+            composerShellStyle,
+            { shadowColor: colors.navy, shadowOffset: { width: 0, height: 4 } },
+          ]}
         >
-          <Ionicons name="happy-outline" size={22} color={colors.tealStrong} />
-        </Pressable>
-        <TextInput
-          ref={inputRef}
-          value={draft}
-          onChangeText={(value) => onDraft(clampMessageDraft(value))}
-          onSelectionChange={(
-            event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
-          ) => {
-            const next = event.nativeEvent.selection;
-            setSelection(next);
-            selectionRef.current = next;
-          }}
-          selection={selection}
-          placeholder={copy.composerPlaceholder}
-          placeholderTextColor={colors.textMuted}
-          style={styles.input}
-          multiline
-          scrollEnabled
-          textAlignVertical="center"
-          accessibilityLabel={copy.composerPlaceholder}
-          onKeyPress={(event) => {
-            if (Platform.OS !== 'web') return;
-            const native = event.nativeEvent as {
-              key: string;
-              shiftKey?: boolean;
-              isComposing?: boolean;
-            };
-            if (
-              !composerSendsOnEnter({
-                key: native.key,
-                shiftKey: Boolean(native.shiftKey),
-                composing: Boolean(native.isComposing),
-              })
-            ) {
-              return;
-            }
-            const maybePrevent = event as { preventDefault?: () => void };
-            maybePrevent.preventDefault?.();
-            if (canSend) {
-              ownSendRef.current = true;
-              onSend();
-            }
-          }}
-        />
-        <Pressable
-          onPress={() => {
-            if (!canSend) return;
-            ownSendRef.current = true;
-            onSend();
-          }}
-          disabled={!canSend}
-          style={[styles.send, !canSend && !sending && styles.sendDisabled]}
-          accessibilityRole="button"
-          accessibilityLabel={copy.sendMessage}
-          accessibilityState={{ disabled: !canSend, busy: sending }}
-        >
-          {sending ? (
-            <ActivityIndicator color={colors.white} size="small" />
-          ) : (
-            <Ionicons
-              name="paper-plane"
-              size={18}
-              color={canSend ? colors.white : colors.textMuted}
-            />
-          )}
-        </Pressable>
+          <Animated.View style={emojiButtonStyle}>
+            <Pressable
+              onPress={() => setEmojiOpen(true)}
+              onPressIn={() => {
+                emojiPress.value = withTiming(0.92, { duration: reducedMotion ? 0 : 90 });
+              }}
+              onPressOut={() => {
+                emojiPress.value = withSpring(1, { damping: 16, stiffness: 320 });
+              }}
+              style={styles.emojiBtn}
+              accessibilityRole="button"
+              accessibilityLabel={copy.insertEmoji}
+            >
+              <Ionicons
+                name="happy-outline"
+                size={20}
+                color={composerFocused || hasDraft ? colors.tealStrong : colors.textMuted}
+              />
+            </Pressable>
+          </Animated.View>
+          <TextInput
+            ref={inputRef}
+            value={draft}
+            onChangeText={(value) => onDraft(clampMessageDraft(value))}
+            onFocus={() => setComposerFocused(true)}
+            onBlur={() => setComposerFocused(false)}
+            onSelectionChange={(
+              event: NativeSyntheticEvent<TextInputSelectionChangeEventData>,
+            ) => {
+              const next = event.nativeEvent.selection;
+              setSelection(next);
+              selectionRef.current = next;
+            }}
+            selection={selection}
+            placeholder={copy.composerPlaceholder}
+            placeholderTextColor={colors.textMuted}
+            style={styles.input}
+            multiline
+            scrollEnabled
+            textAlignVertical="center"
+            accessibilityLabel={copy.composerPlaceholder}
+            onKeyPress={(event) => {
+              if (Platform.OS !== 'web') return;
+              const native = event.nativeEvent as {
+                key: string;
+                shiftKey?: boolean;
+                isComposing?: boolean;
+              };
+              if (
+                !composerSendsOnEnter({
+                  key: native.key,
+                  shiftKey: Boolean(native.shiftKey),
+                  composing: Boolean(native.isComposing),
+                })
+              ) {
+                return;
+              }
+              const maybePrevent = event as { preventDefault?: () => void };
+              maybePrevent.preventDefault?.();
+              if (canSend) {
+                ownSendRef.current = true;
+                onSend();
+              }
+            }}
+          />
+          <Animated.View style={[styles.send, sendButtonStyle]}>
+            <Pressable
+              onPress={() => {
+                if (!canSend) return;
+                ownSendRef.current = true;
+                onSend();
+              }}
+              onPressIn={() => {
+                if (!canSend) return;
+                sendPress.value = withTiming(0.9, { duration: reducedMotion ? 0 : 80 });
+              }}
+              onPressOut={() => {
+                sendPress.value = withSpring(1, { damping: 14, stiffness: 320 });
+              }}
+              disabled={!canSend}
+              style={styles.sendHit}
+              accessibilityRole="button"
+              accessibilityLabel={copy.sendMessage}
+              accessibilityState={{ disabled: !canSend, busy: sending }}
+            >
+              {sending ? (
+                <ActivityIndicator color={colors.white} size="small" />
+              ) : (
+                <Ionicons
+                  name="arrow-up"
+                  size={18}
+                  color={canSend ? colors.white : colors.textMuted}
+                />
+              )}
+            </Pressable>
+          </Animated.View>
+        </Animated.View>
       </View>
 
       <Modal
@@ -480,7 +666,10 @@ export function ThreadView({
             style={[styles.reactionBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.sheetTitle}>{copy.reactionPickerTitle}</Text>
+            {reactionsEnabled && reactTarget && canReactToMessage(reactTarget) ? (
+              <Text style={styles.sheetTitle}>{copy.reactionPickerTitle}</Text>
+            ) : null}
+            {reactionsEnabled && reactTarget && canReactToMessage(reactTarget) ? (
             <View style={styles.reactionKeys}>
               {ORG_WORKER_REACTION_KEYS.map((key) => {
                 const mine =
@@ -509,6 +698,65 @@ export function ThreadView({
                   </Pressable>
                 );
               })}
+            </View>
+            ) : null}
+            {deletesEnabled && reactTarget && canDeleteMessage(reactTarget, currentUserId) ? (
+              <Pressable
+                onPress={() => {
+                  const target = reactTarget;
+                  setReactTarget(null);
+                  setDeleteError(null);
+                  setDeleteConfirm({ kind: 'message', message: target });
+                }}
+                style={styles.sheetDelete}
+                accessibilityRole="button"
+                accessibilityLabel={copy.deleteMessage}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.error} />
+                <Text style={styles.sheetDeleteText}>{copy.deleteMessage}</Text>
+              </Pressable>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Modal
+        visible={Boolean(deleteConfirm)}
+        animationType="fade"
+        transparent
+        onRequestClose={closeDeleteConfirm}
+      >
+        <Pressable style={styles.confirmBackdrop} onPress={closeDeleteConfirm}>
+          <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.confirmIcon}>
+              <Ionicons name="trash-outline" size={20} color={colors.error} />
+            </View>
+            <Text style={styles.confirmTitle}>
+              {deleteConfirm?.kind === 'chat' ? copy.deleteChatTitle : copy.deleteMessageTitle}
+            </Text>
+            <Text style={styles.confirmBody}>
+              {deleteConfirm?.kind === 'chat' ? copy.deleteChatBody : copy.deleteMessageBody}
+            </Text>
+            {deleteError ? <Text style={styles.confirmError}>{deleteError}</Text> : null}
+            <View style={styles.confirmActions}>
+              <Pressable
+                onPress={closeDeleteConfirm}
+                disabled={deleteBusy}
+                style={[styles.confirmBtn, styles.confirmBtnQuiet]}
+                accessibilityRole="button"
+              >
+                <Text style={styles.confirmBtnQuietText}>{copy.cancel}</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void runDelete()}
+                disabled={deleteBusy}
+                style={[styles.confirmBtn, styles.confirmBtnDanger, deleteBusy && { opacity: 0.6 }]}
+                accessibilityRole="button"
+              >
+                <Text style={styles.confirmBtnDangerText}>
+                  {deleteBusy ? copy.deleting : copy.confirmDelete}
+                </Text>
+              </Pressable>
             </View>
           </Pressable>
         </Pressable>
@@ -672,6 +920,69 @@ const styles = StyleSheet.create({
   },
   reactBtnMine: {},
   reactBtnTheirs: {},
+  deleteMsgBtn: { backgroundColor: colors.errorLight, borderColor: 'transparent' },
+  bubbleDeleted: { opacity: 0.8 },
+  bodyDeleted: { fontStyle: 'italic', opacity: 0.85 },
+  sheetDelete: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: 48,
+    marginTop: spacing.sm,
+  },
+  sheetDeleteText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 15,
+    color: colors.error,
+  },
+  confirmBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(7,29,48,0.55)',
+  },
+  confirmCard: {
+    width: '100%',
+    maxWidth: 380,
+    padding: spacing.lg,
+    borderRadius: radii.xl,
+    backgroundColor: colors.white,
+    gap: spacing.sm,
+  },
+  confirmIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.errorLight,
+  },
+  confirmTitle: { fontFamily: typography.fonts.semibold, fontSize: 17, color: colors.navy },
+  confirmBody: {
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.textSecondary,
+  },
+  confirmError: { fontFamily: typography.fonts.semibold, fontSize: 13, color: colors.error },
+  confirmActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  confirmBtn: {
+    minHeight: 44,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtnQuiet: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
+  confirmBtnQuietText: { fontFamily: typography.fonts.semibold, fontSize: 14, color: colors.navy },
+  confirmBtnDanger: { backgroundColor: colors.error },
+  confirmBtnDangerText: { fontFamily: typography.fonts.semibold, fontSize: 14, color: colors.white },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -705,46 +1016,60 @@ const styles = StyleSheet.create({
   },
   jumpText: { fontFamily: typography.fonts.semibold, fontSize: 13, color: colors.white },
   composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
     paddingHorizontal: spacing.screen,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.sm,
     backgroundColor: colors.white,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.border,
+    ...shadows.sticky,
+  },
+  composerShell: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 2,
+    minHeight: 48,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 22,
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingVertical: 4,
   },
   emojiBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceSubdued,
   },
   input: {
     flex: 1,
-    minHeight: 48,
-    maxHeight: 128,
-    borderRadius: 24,
-    backgroundColor: colors.surfaceSubdued,
-    paddingHorizontal: spacing.lg,
-    paddingTop: 14,
-    paddingBottom: 14,
+    minHeight: 40,
+    maxHeight: 120,
+    paddingHorizontal: spacing.sm,
+    paddingTop: Platform.OS === 'ios' ? 10 : 8,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     fontFamily: typography.fonts.regular,
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 21,
     color: colors.navy,
+    backgroundColor: 'transparent',
   },
   send: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.navy,
+    width: 36,
+    height: 36,
+    marginBottom: 2,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  sendHit: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendDisabled: { backgroundColor: colors.surfaceSubdued },
   sheetBackdrop: {
     flex: 1,
     justifyContent: 'flex-end',

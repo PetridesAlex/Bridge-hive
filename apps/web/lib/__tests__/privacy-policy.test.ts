@@ -34,7 +34,7 @@ const allText = [
   POLICY_HEADER.endVersion,
 ].join('\n');
 
-describe('privacy policy draft', () => {
+describe('privacy policy', () => {
   it('has the 25 supplied articles in order with the supplied titles', () => {
     expect(POLICY_ARTICLES).toHaveLength(25);
     POLICY_ARTICLES.forEach((article, index) => {
@@ -82,10 +82,10 @@ describe('privacy policy draft', () => {
     expect(withTaxId).toHaveLength(2);
   });
 
-  it('is blocked on hosted production until approved and the Tax ID is filled', () => {
-    expect(PRIVACY_POLICY_PUBLISH_APPROVED).toBe(false);
-    expect(privacyPolicyIsPublishable()).toBe(false);
-    expect(privacyPolicyIsBlockedHere({ VERCEL_ENV: 'production' })).toBe(true);
+  it('is published and available on hosted production while the Tax ID stays a placeholder', () => {
+    expect(PRIVACY_POLICY_PUBLISH_APPROVED).toBe(true);
+    expect(privacyPolicyIsPublishable()).toBe(true);
+    expect(privacyPolicyIsBlockedHere({ VERCEL_ENV: 'production' })).toBe(false);
     expect(privacyPolicyIsBlockedHere({ VERCEL_ENV: 'preview' })).toBe(false);
     expect(privacyPolicyIsBlockedHere({})).toBe(false);
   });
@@ -95,14 +95,14 @@ describe('privacy policy draft', () => {
     expect(switchLocaleHref('/el/privacy-policy', '', 'en')).toBe('/privacy-policy');
   });
 
-  it('is not listed in the sitemap route table, footer or navigation', () => {
+  it('is listed in the sitemap route table and footer', () => {
     const root = path.join(__dirname, '..', '..');
     const routes = readFileSync(path.join(root, 'lib/marketing-i18n/routes.ts'), 'utf8');
-    expect(routes).not.toMatch(/privacyPolicy\s*:/);
+    expect(routes).toMatch(/privacyPolicy\s*:/);
     const footer = readFileSync(
       path.join(root, 'components/marketing/MarketingFooter.tsx'),
       'utf8',
     );
-    expect(footer).not.toContain('privacy-policy');
+    expect(footer).toContain('privacy-policy');
   });
 });

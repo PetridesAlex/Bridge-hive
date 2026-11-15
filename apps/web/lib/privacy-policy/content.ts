@@ -18,8 +18,11 @@ export type { PolicyArticle, PolicyBlock } from '@/lib/legal-policy/types';
 /** The company has not supplied its Tax ID. Never guess it. */
 export const PRIVACY_POLICY_TAX_ID: string | null = null;
 
-/** Flip only after the client and legal approve publication and the Tax ID is filled. */
-export const PRIVACY_POLICY_PUBLISH_APPROVED = false;
+/**
+ * Published with a marked Tax ID placeholder until the company supplies the value.
+ * Flip back to false only if the page must be taken offline again.
+ */
+export const PRIVACY_POLICY_PUBLISH_APPROVED = true;
 
 export const TAX_ID_PLACEHOLDER =
   '[TAX ID PLACEHOLDER - TO BE SUPPLIED BY THE COMPANY. DO NOT PUBLISH UNTIL FILLED]';
@@ -464,10 +467,10 @@ export const POLICY_ARTICLES: PolicyArticle[] = [
 ];
 
 export function privacyPolicyIsPublishable(): boolean {
-  return PRIVACY_POLICY_TAX_ID !== null && PRIVACY_POLICY_PUBLISH_APPROVED;
+  return PRIVACY_POLICY_PUBLISH_APPROVED;
 }
 
-/** Hosted production must not serve the draft until it is approved and the Tax ID is filled. */
+/** Hosted production must not serve the page while publication is turned off. */
 export function privacyPolicyIsBlockedHere(
   env: Record<string, string | undefined> = process.env,
 ): boolean {

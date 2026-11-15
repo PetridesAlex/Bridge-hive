@@ -5,8 +5,8 @@ import { PrivacyPolicyPage } from '@/components/marketing/pages/PrivacyPolicyPag
 import { privacyPolicyIsBlockedHere } from '@/lib/privacy-policy/content';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy (draft)',
-  robots: { index: false, follow: false },
+  title: 'Privacy Policy',
+  robots: { index: true, follow: true },
   alternates: { canonical: 'https://bridgehive.app/privacy-policy' },
 };
 

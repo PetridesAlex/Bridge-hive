@@ -10,8 +10,8 @@
 
 import type { PolicyArticle } from '@/lib/legal-policy/types';
 
-/** Flip only after the client and legal approve publication. */
-export const COOKIE_POLICY_PUBLISH_APPROVED = false;
+/** Flip back to false only if the page must be taken offline again. */
+export const COOKIE_POLICY_PUBLISH_APPROVED = true;
 
 export const COOKIE_POLICY_HEADER = {
   company: 'BRIDGEHIVE MEDICAL RECRUITMENT LIMITED',

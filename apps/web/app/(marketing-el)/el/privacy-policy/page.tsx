@@ -5,8 +5,8 @@ import { PrivacyPolicyPage } from '@/components/marketing/pages/PrivacyPolicyPag
 import { privacyPolicyIsBlockedHere } from '@/lib/privacy-policy/content';
 
 export const metadata: Metadata = {
-  title: 'Πολιτική Απορρήτου (προσχέδιο)',
-  robots: { index: false, follow: false },
+  title: 'Πολιτική Απορρήτου',
+  robots: { index: true, follow: true },
   alternates: { canonical: 'https://bridgehive.app/el/privacy-policy' },
 };
 

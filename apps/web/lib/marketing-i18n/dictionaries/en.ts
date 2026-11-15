@@ -69,7 +69,8 @@ export const en = {
     developedByAria: 'Developed by WebRunner Agency (opens in a new tab)',
     legalAria: 'Legal',
     cookieSettings: 'Storage details',
-    privacyTerms: 'Privacy & terms',
+    cookiePolicy: 'Cookie Policy',
+    privacyPolicy: 'Privacy Policy',
     socialAria: 'Social',
     instagram: 'Instagram',
     linkedin: 'LinkedIn',
@@ -92,7 +93,7 @@ export const en = {
     rememberMeBody:
       'An HttpOnly cookie named bh_org_remember is set when you use organization sign-in. It records whether that sign-in should remain active after you close the browser. It is not an advertising cookie.',
     noteBody:
-      'A Cookie Policy draft is in legal review and is not yet published. This notice describes current technical behaviour. For privacy or terms questions, contact support from the site footer.',
+      'See the Cookie Policy and Privacy Policy linked in the site footer for the full legal wording. This notice summarises current technical behaviour on the public website.',
   },
   recruitmentPromo: {
     ariaLabel: 'Recruitment announcement',

@@ -33,7 +33,7 @@ const allText = [
   COOKIE_POLICY_HEADER.endVersion,
 ].join('\n');
 
-describe('cookie policy draft', () => {
+describe('cookie policy', () => {
   it('has the 10 supplied sections in order with the supplied titles', () => {
     expect(COOKIE_POLICY_ARTICLES).toHaveLength(10);
     const expected = [
@@ -81,10 +81,10 @@ describe('cookie policy draft', () => {
     expect(allText).toContain('BRIDGEHIVE MEDICAL RECRUITMENT LIMITED');
   });
 
-  it('is blocked on hosted production until approved', () => {
-    expect(COOKIE_POLICY_PUBLISH_APPROVED).toBe(false);
-    expect(cookiePolicyIsPublishable()).toBe(false);
-    expect(cookiePolicyIsBlockedHere({ VERCEL_ENV: 'production' })).toBe(true);
+  it('is published and available on hosted production', () => {
+    expect(COOKIE_POLICY_PUBLISH_APPROVED).toBe(true);
+    expect(cookiePolicyIsPublishable()).toBe(true);
+    expect(cookiePolicyIsBlockedHere({ VERCEL_ENV: 'production' })).toBe(false);
     expect(cookiePolicyIsBlockedHere({ VERCEL_ENV: 'preview' })).toBe(false);
     expect(cookiePolicyIsBlockedHere({})).toBe(false);
   });
@@ -98,17 +98,17 @@ describe('cookie policy draft', () => {
     );
   });
 
-  it('is not listed in the sitemap route table, footer or navigation', () => {
+  it('is listed in the sitemap route table and footer', () => {
     const root = path.join(__dirname, '..', '..');
     const routes = readFileSync(
       path.join(root, 'lib/marketing-i18n/routes.ts'),
       'utf8',
     );
-    expect(routes).not.toMatch(/cookiePolicy\s*:/);
+    expect(routes).toMatch(/cookiePolicy\s*:/);
     const footer = readFileSync(
       path.join(root, 'components/marketing/MarketingFooter.tsx'),
       'utf8',
     );
-    expect(footer).not.toContain('cookie-policy');
+    expect(footer).toContain('cookie-policy');
   });
 });

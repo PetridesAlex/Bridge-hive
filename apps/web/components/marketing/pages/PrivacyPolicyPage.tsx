@@ -11,9 +11,9 @@ const GREEK_NOTE =
   'Το κείμενο της Πολιτικής Απορρήτου παρατίθεται στα αγγλικά, όπως υποβλήθηκε από την εταιρεία. Δεν έχει εγκριθεί ελληνική μετάφραση. Σε περίπτωση διαφοράς, ισχύει το αγγλικό κείμενο.';
 
 const DRAFT_BANNER_EN =
-  'Private draft. Not published. The Tax ID is a placeholder until the company supplies it.';
+  'The Tax ID is a placeholder until the company supplies it.';
 const DRAFT_BANNER_EL =
-  'Ιδιωτικό προσχέδιο. Δεν έχει δημοσιευθεί. Ο Φορολογικός Αριθμός (Tax ID) είναι σήμα θέσης μέχρι να τον προμηθεύσει η εταιρεία.';
+  'Ο Φορολογικός Αριθμός (Tax ID) είναι σήμα θέσης μέχρι να τον προμηθεύσει η εταιρεία.';
 
 function TaxIdValue() {
   if (PRIVACY_POLICY_TAX_ID) return <>{PRIVACY_POLICY_TAX_ID}</>;

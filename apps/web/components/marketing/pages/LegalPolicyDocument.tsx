@@ -167,8 +167,8 @@ export type LegalPolicyDocumentProps = {
   title: string;
   subtitle?: string;
   chips?: readonly string[];
-  draftBannerEn: string;
-  draftBannerEl: string;
+  draftBannerEn?: string;
+  draftBannerEl?: string;
   greekNote: string;
   identity?: {
     /** Lines shown above an optional Tax ID row. */
@@ -235,16 +235,20 @@ export function LegalPolicyDocument({
 
       <Section band="porcelain" className="m-policy-band">
         <div className="m-policy">
-          <div className="m-policy-notices">
-            <p className="m-policy-banner" role="note">
-              {isGreek ? draftBannerEl : draftBannerEn}
-            </p>
-            {isGreek ? (
-              <p className="m-policy-note" role="note">
-                {greekNote}
-              </p>
-            ) : null}
-          </div>
+          {draftBannerEn || draftBannerEl || isGreek ? (
+            <div className="m-policy-notices">
+              {(isGreek ? draftBannerEl : draftBannerEn) ? (
+                <p className="m-policy-banner" role="note">
+                  {isGreek ? draftBannerEl : draftBannerEn}
+                </p>
+              ) : null}
+              {isGreek ? (
+                <p className="m-policy-note" role="note">
+                  {greekNote}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="m-policy-layout">
             <aside className="m-policy-aside" aria-label={contentsLabel}>

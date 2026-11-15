@@ -269,8 +269,12 @@ export function MarketingFooter({ locale, dictionary }: MarketingFooterProps) {
             <nav className="m-footer-legal" aria-label={f.legalAria}>
               <CookieSettingsButton label={f.cookieSettings} />
               <span aria-hidden="true" />
-              <Link href={localizePath('/contact#support', locale)}>
-                {f.privacyTerms}
+              <Link href={localizePath('/cookie-policy', locale)}>
+                {f.cookiePolicy}
+              </Link>
+              <span aria-hidden="true" />
+              <Link href={localizePath('/privacy-policy', locale)}>
+                {f.privacyPolicy}
               </Link>
             </nav>
             <nav className="m-footer-social" aria-label={f.socialAria}>

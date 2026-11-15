@@ -5,8 +5,8 @@ import { CookiePolicyPage } from '@/components/marketing/pages/CookiePolicyPage'
 import { cookiePolicyIsBlockedHere } from '@/lib/cookie-policy/content';
 
 export const metadata: Metadata = {
-  title: 'Πολιτική Cookies (προσχέδιο)',
-  robots: { index: false, follow: false },
+  title: 'Πολιτική Cookies',
+  robots: { index: true, follow: true },
   alternates: { canonical: 'https://bridgehive.app/el/cookie-policy' },
 };
 

@@ -80,7 +80,7 @@ describe('marketing storage notice', () => {
     const css = await read('app/marketing.css');
     const combined = notice + en + el;
 
-    expect(en).toMatch(/Got it/);
+    expect(en).toMatch(/Understood/);
     expect(en).toMatch(/What we store/);
     expect(en).toMatch(/bh:m-storage-notice/);
     expect(en).toMatch(/bh_org_remember/);

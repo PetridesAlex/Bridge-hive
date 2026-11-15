@@ -110,6 +110,14 @@ export function switchLocaleHref(
   target: MarketingLocale,
 ): string {
   const bare = stripLocalePrefix(pathname);
+  // Draft legal policies are not in the route table (not indexable, not in the
+  // sitemap) but must keep the language switch on the same page.
+  if (bare === '/privacy-policy') {
+    return localizePath('/privacy-policy', target);
+  }
+  if (bare === '/cookie-policy') {
+    return localizePath('/cookie-policy', target);
+  }
   const routeKey = matchMarketingRoute(bare);
   const safeHash = KNOWN_HASHES.has(hash) ? hash : '';
 

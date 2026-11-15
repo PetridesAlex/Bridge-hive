@@ -80,7 +80,7 @@ export const en = {
     lede:
       'Bridge Hive stores a small amount of information in this browser to run the public website and, only after you sign in, to keep your account session working. This site does not load advertising or analytics tags.',
     whatWeStore: 'What we store',
-    gotIt: 'Got it',
+    gotIt: 'Understood',
     close: 'Close',
     thisNoticeTitle: 'This notice',
     thisNoticeBody:
@@ -92,7 +92,7 @@ export const en = {
     rememberMeBody:
       'An HttpOnly cookie named bh_org_remember is set when you use organization sign-in. It records whether that sign-in should remain active after you close the browser. It is not an advertising cookie.',
     noteBody:
-      'There is no Cookie Policy page yet. This notice describes current technical behaviour and still needs legal review. For privacy or terms questions, contact support from the site footer.',
+      'A Cookie Policy draft is in legal review and is not yet published. This notice describes current technical behaviour. For privacy or terms questions, contact support from the site footer.',
   },
   recruitmentPromo: {
     ariaLabel: 'Recruitment announcement',

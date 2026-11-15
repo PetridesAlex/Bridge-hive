@@ -28,6 +28,7 @@ import {
   CalendarRange,
   Check,
   CheckCircle2,
+  ClipboardCheck,
   FilePenLine,
   Loader2,
   Plus,
@@ -1178,93 +1179,124 @@ function buildFromCustomRows(
 }
 
 function StepRail({ step }: { step: Step }) {
-  const items: Array<{ id: Step; label: string; hint: string }> = [
-    { id: 'build', label: 'Build', hint: 'Compose shifts' },
-    { id: 'review', label: 'Review', hint: 'Check the batch' },
-    { id: 'confirm', label: 'Confirm', hint: 'Create or publish' },
+  const items: Array<{ id: Step; label: string; hint: string; icon: LucideIcon }> = [
+    { id: 'build', label: 'Build', hint: 'Compose shifts', icon: Rows3 },
+    { id: 'review', label: 'Review', hint: 'Check the batch', icon: ClipboardCheck },
+    { id: 'confirm', label: 'Confirm', hint: 'Create or publish', icon: Send },
   ];
   const order = { build: 0, review: 1, confirm: 2, success: 3 };
   const currentIndex = order[step] ?? 0;
+  const progress =
+    step === 'success' ? 100 : Math.round(((currentIndex + 0.5) / items.length) * 100);
 
   return (
     <nav aria-label="Batch creation steps">
-      <ol className="grid grid-cols-1 gap-2 rounded-2xl border border-bh-border bg-bh-surface p-2 shadow-[0_1px_2px_rgba(7,29,48,0.04)] sm:grid-cols-3 sm:gap-0 sm:p-1.5">
-        {items.map((item, idx) => {
-          const done = currentIndex > idx;
-          const current = step === item.id || (step === 'success' && idx === 2);
-          const upcoming = currentIndex < idx;
+      <div className="relative overflow-hidden rounded-2xl border border-[#16384f]/15 bg-[linear-gradient(180deg,#ffffff_0%,#f4f9fb_100%)] shadow-[0_14px_34px_rgba(7,29,48,0.08)]">
+        <div className="relative h-1 w-full bg-[#16384f]/10" aria-hidden>
+          <div
+            className="h-full rounded-r-full bg-[linear-gradient(90deg,#14a9b5,#e4b334)] transition-[width] duration-700 ease-out motion-reduce:transition-none"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <ol className="grid grid-cols-1 gap-1 p-2 sm:grid-cols-3 sm:gap-0 sm:p-2.5">
+          {items.map((item, idx) => {
+            const done = currentIndex > idx;
+            const current = step === item.id || (step === 'success' && idx === 2);
+            const finished = done || (step === 'success' && idx === 2);
+            const upcoming = currentIndex < idx;
+            const Icon = item.icon;
 
-          return (
-            <li
-              key={item.id}
-              aria-current={current ? 'step' : undefined}
-              className={cn(
-                'relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors duration-200 motion-reduce:transition-none',
-                current &&
-                  'bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_8px_18px_rgba(7,29,48,0.22)]',
-                done && !current && 'bg-bh-teal-soft/50 text-bh-text',
-                upcoming && 'text-bh-text-muted',
-              )}
-            >
-              {idx < items.length - 1 ? (
-                <span
-                  aria-hidden
-                  className={cn(
-                    'pointer-events-none absolute right-0 top-1/2 hidden h-px w-3 -translate-y-1/2 translate-x-full sm:block',
-                    done || current ? 'bg-bh-teal' : 'bg-bh-border',
-                  )}
-                />
-              ) : null}
-
-              <span
-                aria-hidden
+            return (
+              <li
+                key={item.id}
+                aria-current={current && step !== 'success' ? 'step' : undefined}
                 className={cn(
-                  'grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold tracking-tight',
+                  'relative flex items-center gap-3.5 rounded-xl px-3.5 py-3 transition-all duration-300 motion-reduce:transition-none',
                   current &&
-                    'bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]',
-                  done &&
-                    !current &&
-                    'bg-bh-teal text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]',
-                  upcoming && 'border border-bh-border bg-bh-subtle text-bh-text-muted',
+                    !finished &&
+                    'bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_12px_26px_rgba(7,29,48,0.28)]',
+                  finished && 'bg-emerald-50/70 text-bh-text',
+                  upcoming && 'text-bh-text-muted',
                 )}
               >
-                {done && !current ? (
-                  <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-                ) : (
-                  idx + 1
-                )}
-              </span>
+                {idx < items.length - 1 ? (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'pointer-events-none absolute right-0 top-1/2 hidden h-0.5 w-4 -translate-y-1/2 translate-x-full rounded-full sm:block',
+                      finished
+                        ? 'bg-emerald-500'
+                        : current
+                          ? 'bg-[linear-gradient(90deg,#14a9b5,#e4b334)]'
+                          : 'bg-[repeating-linear-gradient(90deg,#c4d2de_0_4px,transparent_4px_7px)]',
+                    )}
+                  />
+                ) : null}
 
-              <span className="min-w-0">
-                <span
-                  className={cn(
-                    'block text-[11px] font-semibold uppercase tracking-[0.14em]',
-                    current ? 'text-white/70' : done ? 'text-bh-teal-strong' : 'text-bh-text-muted',
-                  )}
-                >
-                  Step {idx + 1}
+                <span className="relative grid h-11 w-11 shrink-0 place-items-center">
+                  {current && !finished ? (
+                    <span
+                      aria-hidden
+                      className="absolute inset-0 animate-ping rounded-xl bg-[#e4b334]/40 motion-reduce:animate-none"
+                    />
+                  ) : null}
+                  <span
+                    aria-hidden
+                    className={cn(
+                      'relative grid h-11 w-11 place-items-center rounded-xl transition-colors duration-300',
+                      current &&
+                        !finished &&
+                        'bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.4)]',
+                      finished &&
+                        'bg-[linear-gradient(135deg,#16a34a_0%,#15803d_100%)] text-white shadow-[0_8px_16px_rgba(22,163,74,0.35)]',
+                      upcoming &&
+                        'border-2 border-dashed border-[#16384f]/25 bg-white text-bh-text-muted',
+                    )}
+                  >
+                    {finished ? (
+                      <Check className="h-5 w-5" strokeWidth={3} />
+                    ) : (
+                      <Icon className="h-5 w-5" strokeWidth={2.2} />
+                    )}
+                  </span>
                 </span>
-                <span
-                  className={cn(
-                    'mt-0.5 block text-sm font-semibold tracking-tight',
-                    current ? 'text-white' : 'text-bh-text',
-                  )}
-                >
-                  {item.label}
+
+                <span className="min-w-0">
+                  <span
+                    className={cn(
+                      'block text-[10px] font-bold uppercase tracking-[0.16em]',
+                      current && !finished
+                        ? 'text-[#f3d27a]'
+                        : finished
+                          ? 'text-emerald-700'
+                          : 'text-bh-text-muted',
+                    )}
+                  >
+                    Step {idx + 1}
+                    {finished ? ' \u00b7 done' : current ? ' \u00b7 now' : ''}
+                  </span>
+                  <span
+                    className={cn(
+                      'mt-0.5 block text-[15px] font-bold tracking-tight',
+                      current && !finished ? 'text-white' : 'text-bh-text',
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                  <span
+                    className={cn(
+                      'block text-xs',
+                      current && !finished ? 'text-white/70' : 'text-bh-text-muted',
+                    )}
+                  >
+                    {item.hint}
+                  </span>
                 </span>
-                <span
-                  className={cn(
-                    'mt-0.5 block text-xs',
-                    current ? 'text-white/65' : 'text-bh-text-muted',
-                  )}
-                >
-                  {item.hint}
-                </span>
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </nav>
   );
 }

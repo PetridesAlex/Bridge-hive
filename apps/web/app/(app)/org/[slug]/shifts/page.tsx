@@ -17,6 +17,11 @@ import {
 import { formatInTimeZone } from 'date-fns-tz';
 import {
   ArrowUpRight,
+  Clock3,
+  UserRound,
+  Stethoscope,
+  Banknote,
+  Activity,
   Briefcase,
   CalendarDays,
   ChevronDown,
@@ -27,13 +32,13 @@ import {
   LayoutList,
   MapPin,
   Moon,
-  MoreHorizontal,
   Plus,
   RefreshCw,
   Search,
   SlidersHorizontal,
   Sun,
   UserPlus,
+  X,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -42,6 +47,7 @@ import { KpiCard } from '@/components/org/dashboard-widgets';
 import { OrgClientFilterForm } from '@/components/org/org-client-filter-form';
 import {
   OrgTableShell,
+  OrgTableHeadCell,
   orgTableHeadClassName,
   orgTableRowClassName,
 } from '@/components/org/data-table';
@@ -50,7 +56,7 @@ import { ShiftWeekNavigator } from '@/components/org/shift-week-navigator';
 import { ShiftStatusBadge } from '@/components/shift-status-badge';
 import { Button } from '@/components/ui/button';
 import { requireOrgMembership } from '@/lib/auth';
-import { formatRate, roleLabel } from '@/lib/format';
+import { formatDurationMinutes, formatRate, roleLabel } from '@/lib/format';
 import {
   resolveCalendarPeriod,
   shiftCalendarAnchor,
@@ -336,6 +342,29 @@ export default async function ShiftsPage({
           .in('status', [...SHIFT_OCCUPYING_ASSIGNMENT_STATUSES])
       : { data: [] as Array<{ shift_id: string; status: string; worker: unknown }> };
 
+  // Real worker names come from a narrow SECURITY DEFINER function (accepted
+  // assignments of this organization only). Until it exists the list falls back
+  // to "Assigned worker".
+  const { data: assignedNameRows } =
+    capacityShiftIds.length > 0
+      ? await supabase.rpc(
+          'list_org_assigned_workers_for_shifts' as never,
+          { p_shift_ids: capacityShiftIds.slice(0, 200) } as never,
+        )
+      : { data: null };
+  const assignedNamesByShift = new Map<string, string[]>();
+  for (const row of (Array.isArray(assignedNameRows) ? assignedNameRows : []) as Array<{
+    shift_id?: string;
+    full_name?: string | null;
+  }>) {
+    const name = row.full_name?.trim();
+    if (!row.shift_id || !name) continue;
+    assignedNamesByShift.set(row.shift_id, [
+      ...(assignedNamesByShift.get(row.shift_id) ?? []),
+      name,
+    ]);
+  }
+
   const assigneeByShift = new Map<string, string>();
   const filledCountByShift = new Map<string, number>();
   for (const row of assignmentRows ?? []) {
@@ -352,7 +381,7 @@ export default async function ShiftsPage({
           ? (worker as { profile: Array<{ full_name?: string }> }).profile[0]
           : (worker as { profile: { full_name?: string } | null }).profile
         : null;
-    const name = profile?.full_name?.trim();
+    const name = assignedNamesByShift.get(row.shift_id)?.[0] ?? profile?.full_name?.trim();
     if (name) assigneeByShift.set(row.shift_id, name);
     else assigneeByShift.set(row.shift_id, 'Assigned worker');
   }
@@ -481,6 +510,35 @@ export default async function ShiftsPage({
     id: l.id as string,
     name: l.name as string,
   }));
+
+  const activeChips = [
+    q ? { key: 'q', label: `\u201c${q}\u201d`, clear: { q: undefined } } : null,
+    statusFilter
+      ? {
+          key: 'status',
+          label: String(statusFilter).replace(/_/g, ' '),
+          clear: { status: undefined },
+        }
+      : null,
+    roleFilter
+      ? { key: 'role', label: WORKER_ROLE_LABELS[roleFilter], clear: { role: undefined } }
+      : null,
+    locationFilter
+      ? {
+          key: 'location',
+          label: locations.find((l) => l.id === locationFilter)?.name ?? 'Location',
+          clear: { location: undefined },
+        }
+      : null,
+    range
+      ? {
+          key: 'range',
+          label: range === 'past' ? 'Past' : 'Upcoming',
+          clear: { range: undefined },
+        }
+      : null,
+    batchFilter ? { key: 'batch', label: 'Batch', clear: { batch: undefined } } : null,
+  ].filter((chip): chip is NonNullable<typeof chip> => chip !== null);
 
   return (
     <div className="space-y-6">
@@ -721,20 +779,29 @@ export default async function ShiftsPage({
           ) : null}
 
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-            <div className="relative min-w-0 flex-1">
-              <span className="pointer-events-none absolute left-2 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-lg bg-[#071d30] text-[#e4b334]">
-                <Search className="h-3.5 w-3.5" strokeWidth={2.4} aria-hidden />
-              </span>
-              <label htmlFor="q" className="sr-only">
-                Search shifts
-              </label>
-              <input
-                id="q"
-                name="q"
-                defaultValue={q ?? ''}
-                placeholder="Search shifts, locations or wards…"
-                className="h-11 w-full rounded-xl border-2 border-[#16384f]/15 bg-white pl-11 pr-3.5 text-sm font-medium text-[#071d30] shadow-[0_8px_20px_rgba(7,29,48,0.06)] placeholder:text-bh-text-muted transition-[border-color,box-shadow] focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/30"
-              />
+            <div className="bh-search-shell min-w-0 flex-1">
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[10px] bg-[#071d30] text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.25)]">
+                  <Search className="h-4 w-4" strokeWidth={2.4} aria-hidden />
+                </span>
+                <label htmlFor="q" className="sr-only">
+                  Search shifts
+                </label>
+                <input
+                  id="q"
+                  name="q"
+                  defaultValue={q ?? ''}
+                  placeholder="Search shifts, locations or wards…"
+                  autoComplete="off"
+                  className="h-[46px] w-full rounded-[14px] border-0 bg-white pl-14 pr-16 text-[15px] font-medium tracking-[-0.01em] text-[#071d30] placeholder:font-normal placeholder:text-bh-text-muted focus-visible:outline-none"
+                />
+                <kbd
+                  aria-hidden
+                  className="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 items-center gap-1 rounded-md border border-[#16384f]/15 bg-[#f1f6fa] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-bh-text-muted sm:inline-flex"
+                >
+                  Enter
+                </kbd>
+              </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <Button
@@ -866,6 +933,60 @@ export default async function ShiftsPage({
               </label>
             ))}
           </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+              Quick
+            </span>
+            {(
+              [
+                { label: 'All dates', value: undefined },
+                { label: 'Upcoming', value: 'upcoming' },
+                { label: 'Past', value: 'past' },
+              ] as const
+            ).map((chip) => {
+              const active = (range ?? undefined) === chip.value;
+              return (
+                <Link
+                  key={chip.label}
+                  href={filterHref({ range: chip.value, page: undefined })}
+                  aria-current={active ? 'true' : undefined}
+                  className={cn(
+                    'inline-flex h-8 items-center rounded-full px-3.5 text-xs font-semibold transition-all duration-200 motion-reduce:transition-none',
+                    active
+                      ? 'bg-[#071d30] text-white shadow-[0_8px_18px_rgba(7,29,48,0.25)]'
+                      : 'bg-white/80 text-[#071d30] ring-1 ring-[#16384f]/15 hover:-translate-y-0.5 hover:bg-white hover:ring-[#14a9b5]/50 motion-reduce:hover:translate-y-0',
+                  )}
+                >
+                  {chip.label}
+                </Link>
+              );
+            })}
+            {activeChips.length > 0 ? (
+              <>
+                <span
+                  aria-hidden
+                  className="mx-1 hidden h-5 w-px bg-[#16384f]/20 sm:block"
+                />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                  Active
+                </span>
+                {activeChips.map((chip) => (
+                  <Link
+                    key={chip.key}
+                    href={filterHref({ ...chip.clear, page: undefined })}
+                    aria-label={`Remove filter ${chip.label}`}
+                    className="group inline-flex h-8 max-w-[14rem] items-center gap-1.5 rounded-full bg-[#fff3cf] pl-3 pr-2 text-xs font-semibold capitalize text-[#071d30] ring-1 ring-[#e4b334]/60 transition-colors hover:bg-[#ffe9a8]"
+                  >
+                    <span className="truncate">{chip.label}</span>
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-[#071d30]/10 transition-colors group-hover:bg-[#071d30] group-hover:text-white">
+                      <X className="h-3 w-3" strokeWidth={2.6} aria-hidden />
+                    </span>
+                  </Link>
+                ))}
+              </>
+            ) : null}
+          </div>
         </div>
       </OrgClientFilterForm>
 
@@ -914,31 +1035,17 @@ export default async function ShiftsPage({
       ) : (
         <>
           <OrgTableShell className="hidden md:block">
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[52rem] text-left text-sm">
               <thead className={orgTableHeadClassName}>
                 <tr>
-                  <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-                    Shift
-                  </th>
-                  <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-                    Date &amp; time
-                  </th>
-                  <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-                    Location / ward
-                  </th>
-                  <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-                    Role
-                  </th>
-                  <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-                    Rate
-                  </th>
-                  <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-                    Assignment
-                  </th>
-                  <th className="px-4 py-3.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-bh-text-muted">
-                    Status
-                  </th>
-                  <th className="px-4 py-3.5 text-right">
+                  <OrgTableHeadCell className="px-3" icon={Briefcase} label="Shift" />
+                  <OrgTableHeadCell className="px-3" icon={CalendarDays} label="Date & time" />
+                  <OrgTableHeadCell className="px-3" icon={MapPin} label="Location / ward" />
+                  <OrgTableHeadCell className="px-3" icon={Stethoscope} label="Role & rate" />
+                  <OrgTableHeadCell className="px-3" icon={UserRound} label="Assignment" />
+                  <OrgTableHeadCell className="px-3" icon={Activity} label="Status" />
+                  <th className="px-3 py-3.5 text-right">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -991,132 +1098,168 @@ export default async function ShiftsPage({
 
                   return (
                     <tr key={shift.id} className={orgTableRowClassName}>
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-4 align-top">
                         <Link
                           href={`/org/${slug}/shifts/${shift.id}`}
-                          className="group flex items-start gap-3"
+                          className="group flex items-center gap-3"
                         >
                           <span
                             className={cn(
-                              'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+                              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
                               isNight
-                                ? 'bg-bh-sidebar/90 text-bh-honey'
-                                : 'bg-bh-honey-soft text-bh-honey-strong',
+                                ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-[#e4b334] shadow-[0_8px_16px_rgba(7,29,48,0.28)]'
+                                : 'bg-[linear-gradient(155deg,#f6c445_0%,#e09a0b_100%)] text-[#3b2600] shadow-[0_8px_16px_rgba(224,154,11,0.4)]',
                             )}
                           >
-                            <ShiftIcon className="h-4 w-4" aria-hidden />
+                            <ShiftIcon className="h-5 w-5" strokeWidth={2.2} aria-hidden />
                           </span>
                           <span className="min-w-0">
-                            <span className="block truncate font-semibold text-bh-text group-hover:text-bh-accent-blue">
+                            <span className="line-clamp-2 break-words font-semibold leading-snug tracking-tight text-bh-text transition-colors group-hover:text-bh-teal-strong">
                               {shift.title || roleLabel(shift.required_role)}
                             </span>
-                            <span className="mt-0.5 block truncate text-xs text-bh-text-secondary">
-                              {isNight ? 'Night coverage' : 'Day coverage'}
+                            <span
+                              className={cn(
+                                'mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em]',
+                                isNight
+                                  ? 'bg-[#071d30] text-[#f3d27a]'
+                                  : 'bg-[#fff3cf] text-[#7a5600] ring-1 ring-[#e4b334]/50',
+                              )}
+                            >
+                              {isNight ? 'Night shift' : 'Day shift'}
                             </span>
                           </span>
                         </Link>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <p className="font-medium text-bh-text">{dateLine}</p>
-                        <p className="bh-tabular mt-0.5 text-xs text-bh-text-secondary">
+                      <td className="px-3 py-4 align-top">
+                        <p className="whitespace-nowrap font-semibold tracking-tight text-bh-text">{dateLine}</p>
+                        <p className="bh-tabular mt-1.5 inline-flex flex-wrap items-center gap-x-1.5 gap-y-0.5 rounded-lg bg-bh-subtle px-2 py-1 text-xs font-bold text-bh-text ring-1 ring-bh-border">
+                          <Clock3 className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
                           {timeLine}
+                          <span className="font-semibold text-bh-text-muted">
+                            · {formatDurationMinutes(
+                              Math.max(
+                                0,
+                                Math.round(
+                                  (new Date(shift.ends_at).getTime() -
+                                    new Date(shift.starts_at).getTime()) /
+                                    60000,
+                                ),
+                              ),
+                            )}
+                          </span>
                         </p>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex min-w-0 max-w-[14rem] items-start gap-1.5">
-                          <MapPin
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 text-bh-teal-strong"
-                            aria-hidden
-                          />
+                      <td className="px-3 py-4 align-top">
+                        <div className="flex min-w-[9rem] items-start gap-2.5">
+                          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[linear-gradient(135deg,#0e8f99_0%,#14a9b5_100%)] text-white shadow-[0_6px_14px_rgba(14,143,153,0.35)]">
+                            <MapPin className="h-4 w-4" strokeWidth={2.3} aria-hidden />
+                          </span>
                           <span className="min-w-0">
-                            <span className="block truncate text-sm font-semibold text-bh-text">
-                              {locationName ?? '—'}
+                            <span className="line-clamp-2 break-words text-sm font-semibold leading-snug tracking-tight text-bh-text">
+                              {locationName ?? '\u2014'}
                             </span>
                             {wardName ? (
-                              <span className="mt-0.5 block truncate text-xs text-bh-text-secondary">
-                                {wardName}
+                              <span className="mt-1 inline-flex max-w-full items-center rounded-lg bg-bh-teal-soft px-2 py-0.5 text-[11px] font-semibold leading-tight text-bh-teal-strong">
+                                <span className="break-words">{wardName}</span>
                               </span>
                             ) : null}
                           </span>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-4 align-top">
+                        <div className="flex flex-col items-start gap-1.5">
                         <span
                           className={cn(
-                            'inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold',
+                            'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold text-white',
                             shift.required_role === 'registered_nurse' &&
-                              'bg-bh-accent-blue-soft text-bh-accent-blue',
+                              'bg-[linear-gradient(135deg,#7c3aed_0%,#6d28d9_100%)] shadow-[0_6px_14px_rgba(109,40,217,0.35)]',
                             shift.required_role === 'ward_assistant' &&
-                              'bg-bh-success-soft text-bh-success',
+                              'bg-[linear-gradient(135deg,#0e8f99_0%,#0b7a83_100%)] shadow-[0_6px_14px_rgba(14,143,153,0.35)]',
                             shift.required_role === 'physiotherapist' &&
-                              'bg-bh-honey-soft text-bh-honey-strong',
+                              'bg-[linear-gradient(135deg,#ea580c_0%,#c2410c_100%)] shadow-[0_6px_14px_rgba(234,88,12,0.35)]',
                             shift.required_role !== 'registered_nurse' &&
                               shift.required_role !== 'ward_assistant' &&
                               shift.required_role !== 'physiotherapist' &&
-                              'bg-bh-subtle text-bh-text-secondary',
+                              'bg-slate-600',
                           )}
                         >
+                          <Stethoscope className="h-3.5 w-3.5" aria-hidden />
                           {WORKER_ROLE_LABELS[
                             shift.required_role as keyof typeof WORKER_ROLE_LABELS
                           ] ?? roleLabel(shift.required_role)}
                         </span>
+                          <span className="bh-tabular inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-[#fff3cf] px-3 py-1.5 text-sm font-bold text-[#7a5600] ring-1 ring-[#e4b334]/60 shadow-[0_4px_12px_rgba(228,179,52,0.25)]">
+                            <Banknote className="h-4 w-4" aria-hidden />
+                            {formatRate(shift.rate_minor ?? 0, shift.currency ?? 'EUR')}
+                          </span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3.5">
-                        <span className="bh-tabular font-bold text-bh-text">
-                          {formatRate(shift.rate_minor ?? 0, shift.currency ?? 'EUR')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="space-y-1">
+                      <td className="px-3 py-3.5 align-top">
+                        <div className="min-w-[8.5rem] space-y-1.5">
                           {assignee ? (
-                            <span className="inline-flex min-w-0 items-center gap-2">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-teal-soft text-[10px] font-bold text-bh-teal-strong">
+                            <span className="inline-flex min-w-0 max-w-full items-center gap-2">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-[11px] font-bold text-[#e4b334] shadow-[0_4px_10px_rgba(7,29,48,0.25)]">
                                 {initials}
                               </span>
-                              <span className="truncate text-sm font-medium text-bh-text">
+                              <span className="break-words text-sm font-semibold leading-snug text-bh-text">
                                 {requiredForShift > 1
                                   ? `${filledForShift} assigned`
                                   : assignee}
                               </span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-2 text-sm text-bh-text-muted">
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-bh-subtle text-bh-text-muted">
+                            <span className="inline-flex items-center gap-2.5 text-sm font-medium text-bh-text-muted">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-bh-border-strong bg-bh-subtle text-bh-text-muted">
                                 <UserPlus className="h-3.5 w-3.5" aria-hidden />
                               </span>
                               Unassigned
                             </span>
                           )}
-                          {requiredForShift > 1 ? (
-                            <p className="text-xs text-bh-text-muted">
-                              {capacityLabel}
-                            </p>
-                          ) : null}
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-1.5 w-20 overflow-hidden rounded-full bg-bh-subtle"
+                              aria-hidden
+                            >
+                              <span
+                                className={cn(
+                                  'block h-full rounded-full',
+                                  filledForShift >= requiredForShift
+                                    ? 'bg-emerald-600'
+                                    : 'bg-[#f5a30a]',
+                                )}
+                                style={{
+                                  width: `${Math.min(100, (filledForShift / Math.max(1, requiredForShift)) * 100)}%`,
+                                }}
+                              />
+                            </span>
+                            <span className="bh-tabular text-xs font-semibold text-bh-text-secondary">
+                              {filledForShift}/{requiredForShift}
+                            </span>
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-3 py-3.5 align-top">
                         <ShiftStatusBadge status={shift.status} />
                       </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <Button
-                          asChild
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 rounded-lg text-bh-text-muted"
+                      <td className="px-3 py-3.5 text-right align-top">
+                        <Link
+                          href={`/org/${slug}/shifts/${shift.id}`}
+                          aria-label={`Open ${shift.title || 'shift'}`}
+                          className="group/open inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-xl border-2 border-[#16384f]/20 bg-white px-2 text-[13px] 2xl:px-3.5 font-semibold text-[#071d30] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#071d30] hover:bg-[#071d30] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                         >
-                          <Link
-                            href={`/org/${slug}/shifts/${shift.id}`}
-                            aria-label={`View ${shift.title || 'shift'}`}
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Link>
-                        </Button>
+                          <span className="hidden 2xl:inline">Open</span>
+                          <ArrowUpRight
+                            className="h-3.5 w-3.5 transition-transform duration-200 group-hover/open:-translate-y-0.5 group-hover/open:translate-x-0.5"
+                            aria-hidden
+                          />
+                        </Link>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+            </div>
           </OrgTableShell>
 
           <ul className="space-y-3 md:hidden">

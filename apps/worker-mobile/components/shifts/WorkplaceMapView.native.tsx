@@ -69,7 +69,7 @@ export function WorkplaceMapView({
           rotateEnabled={false}
           toolbarEnabled={false}
           showsCompass={interactive}
-          showsPointsOfInterests={false}
+          showsPointsOfInterest={false}
         >
           <Marker
             coordinate={{ latitude, longitude }}

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { DevProvenanceBadge } from '@/components/dev/DevProvenanceBadge';
 import { MarketingDocument } from '@/components/marketing/MarketingDocument';
 import { getDictionary } from '@/lib/marketing-i18n/get-dictionary';
 import { buildMarketingLayoutMetadata } from '@/lib/marketing-i18n/metadata';
@@ -18,6 +19,7 @@ export default function MarketingElLayout({
   return (
     <MarketingDocument locale="el" dictionary={dictionary}>
       {children}
+      <DevProvenanceBadge />
     </MarketingDocument>
   );
 }

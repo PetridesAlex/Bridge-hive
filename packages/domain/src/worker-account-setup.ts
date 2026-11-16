@@ -21,6 +21,7 @@ export const WORKER_ACCOUNT_SETUP_ROUTE_PREFIXES = [
   '/profile/personal-information',
   '/profile/app-information',
   '/support',
+  '/delete-account',
   '/welcome',
 ] as const;
 

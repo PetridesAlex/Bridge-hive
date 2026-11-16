@@ -372,7 +372,7 @@ export default function ShiftDetailScreen() {
   if (loading) {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Shift details" showBack />
+        <ScreenHeader title="Shift details" showBack backFallback="/(tabs)/shifts" />
         <SkeletonCard lines={4} />
       </AppScreen>
     );
@@ -382,7 +382,7 @@ export default function ShiftDetailScreen() {
     if (error) {
       return (
         <AppScreen edges={['top']} contentKind="detail">
-          <ScreenHeader title="Shift details" showBack />
+          <ScreenHeader title="Shift details" showBack backFallback="/(tabs)/shifts" />
           <EmptyState
             title="Shift unavailable"
             description={error}
@@ -394,7 +394,7 @@ export default function ShiftDetailScreen() {
     }
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Shift details" showBack />
+        <ScreenHeader title="Shift details" showBack backFallback="/(tabs)/shifts" />
         <EmptyState
           title={SHIFT_UNAVAILABLE_TITLE}
           description="It may be filled, withdrawn, or no longer open for your role."
@@ -490,7 +490,7 @@ export default function ShiftDetailScreen() {
 
   return (
     <AppScreen scroll={false} edges={['top']} contentKind="detail">
-      <ScreenHeader title="Shift details" showBack titleSize="detail" />
+      <ScreenHeader title="Shift details" showBack backFallback="/(tabs)/shifts" titleSize="detail" />
 
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingBottom: tabScrollInset }]}

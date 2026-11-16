@@ -19,6 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { APP_BOOT_BG } from '@/components/brand/AppBootCover';
+import { DevProvenanceBadge } from '@/components/dev/DevProvenanceBadge';
 import {
   getStripePublishableKey,
   getStripeUrlScheme,
@@ -129,7 +130,9 @@ export default function RootLayout() {
                   <Stack.Screen name="documents" />
                   <Stack.Screen name="notifications" />
                   <Stack.Screen name="payout-setup" />
+                  <Stack.Screen name="delete-account" />
                 </Stack>
+                <DevProvenanceBadge />
               </UnverifiedRouteGuard>
             </AuthProvider>
           </OptionalStripeProvider>

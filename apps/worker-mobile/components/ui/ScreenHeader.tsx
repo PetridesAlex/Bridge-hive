@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   Easing,
   FadeInDown,
@@ -14,6 +13,8 @@ import Animated, {
 import { IconButton } from '@/components/ui/IconButton';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { navigateBack } from '@/lib/navigation';
+import type { Href } from 'expo-router';
 
 type Props = {
   title: string;
@@ -23,12 +24,19 @@ type Props = {
   subtitle?: string;
   showBack?: boolean;
   onBack?: () => void;
+  /** Used when `onBack` is omitted and there is no router history. */
+  backFallback?: Href;
   /** Root: aligned with title row. Detail: aligned with back row. */
   right?: React.ReactNode;
   /** page = root; detail = nested screens */
   titleSize?: 'page' | 'detail';
   /** Unused — kept for call-site compatibility; premium chrome is always light. */
   light?: boolean;
+  /** Entrance motion. Off when the header scrolls with page content. */
+  motion?: boolean;
+  /** Hide the honey accent rule (e.g. when the screen owns its own progress). */
+  showAccent?: boolean;
+  style?: StyleProp<ViewStyle>;
 };
 
 /**
@@ -42,17 +50,20 @@ export function ScreenHeader({
   subtitle,
   showBack = false,
   onBack,
+  backFallback = '/(tabs)',
   right,
   titleSize,
+  motion = true,
+  showAccent = true,
+  style,
 }: Props) {
-  const router = useRouter();
   const reduced = useReducedMotion();
   const size = titleSize ?? (showBack ? 'detail' : 'page');
   const titleStyle = size === 'detail' ? styles.titleDetail : styles.titlePage;
   const enter = useSharedValue(reduced ? 1 : 0);
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !motion) {
       enter.value = 1;
       return;
     }
@@ -60,7 +71,7 @@ export function ScreenHeader({
       duration: 420,
       easing: Easing.out(Easing.cubic),
     });
-  }, [enter, reduced, title]);
+  }, [enter, motion, reduced, title]);
 
   const motionStyle = useAnimatedStyle(() => ({
     opacity: enter.value,
@@ -74,23 +85,15 @@ export function ScreenHeader({
 
   if (showBack) {
     return (
-      <View style={styles.detailWrap}>
-        <View style={styles.detailTop}>
+      <View style={[styles.detailWrap, style]}>
+        <View style={styles.detailTop} pointerEvents="box-none">
           <IconButton
             icon="chevron-back"
             accessibilityLabel="Go back"
-            onPress={
-              onBack ??
-              (() => {
-                if (router.canGoBack()) {
-                  router.back();
-                  return;
-                }
-                router.replace('/(tabs)/profile');
-              })
-            }
+            onPress={onBack ?? (() => navigateBack(backFallback))}
             color={colors.navy}
             backgroundColor={colors.surfaceSubdued}
+            style={styles.backHit}
           />
           {right ? <View style={styles.rightSlot}>{right}</View> : <View style={styles.spacer} />}
         </View>
@@ -102,14 +105,16 @@ export function ScreenHeader({
         <Text style={titleStyle} numberOfLines={3}>
           {title}
         </Text>
-        <Animated.View style={[styles.ruleTrack, ruleStyle]}>
-          <LinearGradient
-            colors={[colors.yellow, colors.honeyStrong]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={styles.ruleFill}
-          />
-        </Animated.View>
+        {showAccent ? (
+          <Animated.View style={[styles.ruleTrack, ruleStyle]}>
+            <LinearGradient
+              colors={[colors.yellow, colors.honeyStrong]}
+              start={{ x: 0, y: 0.5 }}
+              end={{ x: 1, y: 0.5 }}
+              style={styles.ruleFill}
+            />
+          </Animated.View>
+        ) : null}
         {subtitle ? (
           <Text style={styles.subtitle} numberOfLines={3}>
             {subtitle}
@@ -119,11 +124,8 @@ export function ScreenHeader({
     );
   }
 
-  return (
-    <Animated.View
-      style={[styles.rootWrap, motionStyle]}
-      entering={reduced ? undefined : FadeInDown.duration(380).springify().damping(18)}
-    >
+  const headerBody = (
+    <>
       <LinearGradient
         pointerEvents="none"
         colors={['rgba(11, 42, 67, 0.05)', 'rgba(20, 169, 181, 0.07)', 'transparent']}
@@ -145,19 +147,34 @@ export function ScreenHeader({
         </Text>
         {right ? <View style={styles.rightSlot}>{right}</View> : null}
       </View>
-      <Animated.View style={[styles.ruleTrack, ruleStyle]}>
-        <LinearGradient
-          colors={[colors.yellow, colors.honeyStrong]}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={styles.ruleFill}
-        />
-      </Animated.View>
+      {showAccent ? (
+        <Animated.View style={[styles.ruleTrack, ruleStyle]}>
+          <LinearGradient
+            colors={[colors.yellow, colors.honeyStrong]}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={styles.ruleFill}
+          />
+        </Animated.View>
+      ) : null}
       {subtitle ? (
         <Text style={styles.subtitle} numberOfLines={3}>
           {subtitle}
         </Text>
       ) : null}
+    </>
+  );
+
+  if (!motion) {
+    return <View style={[styles.rootWrap, style]}>{headerBody}</View>;
+  }
+
+  return (
+    <Animated.View
+      style={[styles.rootWrap, motionStyle, style]}
+      entering={reduced ? undefined : FadeInDown.duration(380).springify().damping(18)}
+    >
+      {headerBody}
     </Animated.View>
   );
 }
@@ -192,6 +209,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     minHeight: 44,
     marginBottom: spacing.xs,
+    zIndex: 4,
+    position: 'relative',
+  },
+  backHit: {
+    zIndex: 5,
+    elevation: 5,
   },
   eyebrowRow: {
     flexDirection: 'row',

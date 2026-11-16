@@ -65,3 +65,7 @@ npx supabase db reset
 ```
 
 **Note:** Never delete credential records in production without verifying with the platform admin. In production, credentials with missing Storage objects should be handled by the verification workflow (rejected with appropriate reason).
+
+## Local release-candidate launch
+
+See [`docs/DEV_LAUNCH.md`](../../docs/DEV_LAUNCH.md) for the candidate launcher (`bh-dev-launch.sh`), provenance checks, and worktree selection.

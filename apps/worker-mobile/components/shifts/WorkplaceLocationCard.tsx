@@ -101,6 +101,42 @@ function buildCopyText(params: {
     .join('\n');
 }
 
+const SMALL_PLACE_WORDS = new Set(['a', 'and', 'at', 'de', 'for', 'in', 'of', 'on', 'the']);
+
+function isShoutedLabel(value: string): boolean {
+  const letters = value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ]/g, '');
+  if (letters.length < 3) return false;
+  const upper = letters.replace(/[^A-ZÀ-ÖØ-Þ]/g, '');
+  return upper.length / letters.length > 0.85;
+}
+
+/** All-caps workplace names read as labels. Title case makes them read as a place. */
+function titleCasePlace(value: string): string {
+  return value
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .split(' ')
+    .map((word, index) => {
+      if (index > 0 && SMALL_PLACE_WORDS.has(word)) return word;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+function presentPlace(raw: string): { name: string; locality: string | null } {
+  const trimmed = raw.trim().replace(/\s+/g, ' ');
+  const formatted = isShoutedLabel(trimmed) ? titleCasePlace(trimmed) : trimmed;
+  const match = formatted.match(
+    /^(.*?)\s+in\s+([A-Za-zÀ-ÖØ-öø-ÿ][\wÀ-ÖØ-öø-ÿ'.-]*(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ][\wÀ-ÖØ-öø-ÿ'.-]*){0,2})$/,
+  );
+  if (!match) return { name: formatted, locality: null };
+  const name = match[1].trim();
+  const locality = match[2].trim();
+  if (!name || !locality) return { name: formatted, locality: null };
+  return { name, locality };
+}
+
 function mapsSearchUrl(query: string): string {
   const q = encodeURIComponent(query);
   if (Platform.OS === 'ios') return `http://maps.apple.com/?q=${q}`;
@@ -169,6 +205,7 @@ export function WorkplaceLocationCard({
   );
   const hasAddress = addressLines.length > 0;
   const facility = locationName?.trim() || 'Workplace';
+  const place = presentPlace(locationName?.trim() || facility);
   const hasAnyPlace = Boolean(locationName?.trim()) || hasAddress || Boolean(wardName?.trim());
 
   useEffect(() => {
@@ -286,8 +323,16 @@ export function WorkplaceLocationCard({
           <View style={styles.headerCopy}>
             <Text style={styles.eyebrow}>Workplace location</Text>
             <Text style={styles.title} numberOfLines={2}>
-              {facility}
+              {place.name}
             </Text>
+            {place.locality ? (
+              <View style={styles.locality}>
+                <Ionicons name="location-outline" size={13} color={colors.tealStrong} />
+                <Text style={styles.localityText} numberOfLines={1}>
+                  {place.locality}
+                </Text>
+              </View>
+            ) : null}
           </View>
         </View>
 
@@ -406,8 +451,13 @@ export function WorkplaceLocationCard({
               <View style={styles.expandTitleWrap}>
                 <Text style={styles.expandEyebrow}>Workplace</Text>
                 <Text style={styles.expandTitle} numberOfLines={2}>
-                  {facility}
+                  {place.name}
                 </Text>
+                {place.locality ? (
+                  <Text style={styles.expandLocality} numberOfLines={1}>
+                    {place.locality}
+                  </Text>
+                ) : null}
               </View>
               <Pressable
                 onPress={() => setExpanded(false)}
@@ -467,9 +517,9 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   headerIcon: {
     width: 40,
@@ -484,17 +534,32 @@ const styles = StyleSheet.create({
   },
   eyebrow: {
     fontFamily: typography.fonts.semibold,
-    fontSize: typography.size.xs,
+    fontSize: 11,
     color: colors.tealStrong,
-    letterSpacing: 0.4,
+    letterSpacing: 1.6,
     textTransform: 'uppercase',
-    marginBottom: 2,
+    marginBottom: 6,
   },
   title: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: typography.size.lg,
+    fontFamily: typography.fonts.display,
+    fontSize: typography.size.xxl,
     color: colors.navy,
-    lineHeight: typography.lineHeight.lg,
+    lineHeight: typography.lineHeight.xxl,
+    letterSpacing: -0.45,
+  },
+  locality: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  localityText: {
+    flexShrink: 1,
+    fontFamily: typography.fonts.medium,
+    fontSize: 14,
+    lineHeight: 18,
+    letterSpacing: 0.15,
+    color: colors.tealStrong,
   },
   wardChip: {
     alignSelf: 'flex-start',
@@ -634,9 +699,18 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
   },
   expandTitle: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: typography.size.lg,
+    fontFamily: typography.fonts.display,
+    fontSize: typography.size.xxl,
+    lineHeight: typography.lineHeight.xxl,
+    letterSpacing: -0.4,
     color: colors.navy,
+  },
+  expandLocality: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 14,
+    lineHeight: 18,
+    color: colors.tealStrong,
+    marginTop: 2,
   },
   expandClose: {
     width: 40,

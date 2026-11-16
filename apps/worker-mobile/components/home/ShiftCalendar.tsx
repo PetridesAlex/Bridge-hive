@@ -16,6 +16,7 @@ import Animated, {
 
 import { colors, motion, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { isoDateFromTimestamp, parseLocalDate } from '@/utils/format';
 
 type Props = {
@@ -57,10 +58,14 @@ function counts(dates: string[]): Map<string, number> {
   return map;
 }
 
-function rangeTitle(start: Date, offset: number): string {
-  if (offset === 0) return 'This week';
-  if (offset === 1) return 'Next week';
-  if (offset === -1) return 'Last week';
+function rangeTitle(
+  start: Date,
+  offset: number,
+  labels: { thisWeek: string; nextWeek: string; lastWeek: string },
+): string {
+  if (offset === 0) return labels.thisWeek;
+  if (offset === 1) return labels.nextWeek;
+  if (offset === -1) return labels.lastWeek;
   const end = addDays(start, 6);
   const sameMonth = start.getMonth() === end.getMonth();
   if (sameMonth) {
@@ -159,10 +164,18 @@ function DayCell({
 
         <View style={styles.marks}>
           {day.booked > 0 ? (
-            <View style={[styles.mark, styles.markBooked, selected && styles.markOn]} />
+            <View style={[styles.countPill, styles.countPillBooked, selected && styles.countPillOn]}>
+              <Text style={[styles.countPillText, selected && styles.countPillTextOn]}>
+                {day.booked}
+              </Text>
+            </View>
           ) : null}
           {day.open > 0 ? (
-            <View style={[styles.mark, styles.markOpen, selected && styles.markOn]} />
+            <View style={[styles.countPill, styles.countPillOpen, selected && styles.countPillOn]}>
+              <Text style={[styles.countPillText, selected && styles.countPillTextOn]}>
+                {day.open}
+              </Text>
+            </View>
           ) : null}
           {!busy ? <View style={styles.markSpacer} /> : null}
         </View>
@@ -171,8 +184,116 @@ function DayCell({
   );
 }
 
+function AvailabilityInsight({
+  open,
+  booked,
+  openDays,
+  selectedIso,
+  selectedOpen,
+  selectedBooked,
+}: {
+  open: number;
+  booked: number;
+  openDays: number;
+  selectedIso: string | null;
+  selectedOpen: number;
+  selectedBooked: number;
+}) {
+  const { t } = useTranslation();
+  const reduced = useReducedMotion();
+  const pulse = useSharedValue(reduced || open === 0 ? 0 : 0.35);
+  const enter = useSharedValue(reduced ? 1 : 0);
+
+  useEffect(() => {
+    enter.value = reduced
+      ? 1
+      : withTiming(1, { duration: motion.duration.normal, easing: Easing.out(Easing.cubic) });
+  }, [enter, open, booked, selectedIso, reduced]);
+
+  useEffect(() => {
+    if (reduced || open === 0) {
+      pulse.value = 0;
+      return;
+    }
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+  }, [open, pulse, reduced]);
+
+  const shellStyle = useAnimatedStyle(() => ({
+    opacity: enter.value,
+    transform: [{ translateY: interpolate(enter.value, [0, 1], [6, 0]) }],
+  }));
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.18, 0.5]),
+    transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.18]) }],
+  }));
+
+  const focusOpen = selectedIso ? selectedOpen : open;
+  const focusBooked = selectedIso ? selectedBooked : booked;
+  const availableLabel =
+    focusOpen === 1
+      ? t('home.availableCountOne')
+      : t('home.availableCount', { count: focusOpen });
+  const meta = selectedIso
+    ? t('home.dayAvailableMeta', { count: selectedOpen, booked: selectedBooked })
+    : open === 0
+      ? t('home.noneOpenThisWeek')
+      : openDays === 1
+        ? t('home.openDaysMetaOne')
+        : t('home.openDaysMeta', { count: openDays });
+
+  return (
+    <Animated.View style={[styles.insight, shellStyle]}>
+      <View style={styles.insightHero}>
+        <View style={styles.insightLive}>
+          {focusOpen > 0 ? (
+            <Animated.View pointerEvents="none" style={[styles.insightPulse, pulseStyle]} />
+          ) : null}
+          <View style={[styles.insightLiveCore, focusOpen > 0 && styles.insightLiveCoreHot]} />
+        </View>
+        <View style={styles.insightCopy}>
+          <Text style={styles.insightKicker}>{t('home.availableToClaim')}</Text>
+          <Text style={styles.insightValue}>{availableLabel}</Text>
+          <Text style={styles.insightMeta}>{meta}</Text>
+        </View>
+        <View style={styles.insightSide}>
+          <Text style={styles.insightSideLabel}>{t('home.booked')}</Text>
+          <Text style={styles.insightSideValue}>{focusBooked}</Text>
+        </View>
+      </View>
+      <View style={styles.insightMeters}>
+        <View style={styles.insightMeter}>
+          <View style={[styles.statDot, styles.markOpen]} />
+          <Text style={styles.insightMeterValue}>{focusOpen}</Text>
+          <Text style={styles.insightMeterLabel}>{t('home.open')}</Text>
+        </View>
+        <View style={styles.insightMeterRule} />
+        <View style={styles.insightMeter}>
+          <View style={[styles.statDot, styles.markBooked]} />
+          <Text style={styles.insightMeterValue}>{focusBooked}</Text>
+          <Text style={styles.insightMeterLabel}>{t('home.booked')}</Text>
+        </View>
+        {!selectedIso ? (
+          <>
+            <View style={styles.insightMeterRule} />
+            <View style={styles.insightMeter}>
+              <Ionicons name="sunny-outline" size={12} color="rgba(255,255,255,0.72)" />
+              <Text style={styles.insightMeterValue}>{openDays}</Text>
+              <Text style={styles.insightMeterLabel}>{t('home.daysWithOpen')}</Text>
+            </View>
+          </>
+        ) : null}
+      </View>
+    </Animated.View>
+  );
+}
+
 /** Week calendar for booked work and open marketplace shifts. */
 export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: Props) {
+  const { t } = useTranslation();
   const [weekOffset, setWeekOffset] = useState(0);
   const reduced = useReducedMotion();
   const today = todayIso();
@@ -248,6 +369,8 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
 
   const weekBooked = days.reduce((sum, day) => sum + day.booked, 0);
   const weekOpen = days.reduce((sum, day) => sum + day.open, 0);
+  const openDays = days.reduce((sum, day) => sum + (day.open > 0 ? 1 : 0), 0);
+  const selectedDay = selectedIso ? days.find((day) => day.iso === selectedIso) : null;
   const moveWeek = (delta: number) => {
     const nextOffset = weekOffset + delta;
     const start = addDays(mondayOf(today), nextOffset * 7);
@@ -292,8 +415,14 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
         </Pressable>
 
         <View style={styles.heading}>
-          <Text style={styles.kicker}>Schedule</Text>
-          <Text style={styles.title}>{rangeTitle(weekStart, weekOffset)}</Text>
+          <Text style={styles.kicker}>{t('home.schedule')}</Text>
+          <Text style={styles.title}>
+            {rangeTitle(weekStart, weekOffset, {
+              thisWeek: t('home.thisWeek'),
+              nextWeek: t('home.nextWeek'),
+              lastWeek: t('home.lastWeek'),
+            })}
+          </Text>
           <Text style={styles.month}>{monthContext(weekStart)}</Text>
         </View>
 
@@ -308,19 +437,14 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
         </Pressable>
       </View>
 
-      <View style={styles.statRow}>
-        <View style={styles.statChip}>
-          <View style={[styles.statDot, styles.markBooked]} />
-          <Text style={styles.statValue}>{weekBooked}</Text>
-          <Text style={styles.statLabel}>Booked</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statChip}>
-          <View style={[styles.statDot, styles.markOpen]} />
-          <Text style={styles.statValue}>{weekOpen}</Text>
-          <Text style={styles.statLabel}>Open</Text>
-        </View>
-      </View>
+      <AvailabilityInsight
+        open={weekOpen}
+        booked={weekBooked}
+        openDays={openDays}
+        selectedIso={selectedIso}
+        selectedOpen={selectedDay?.open ?? 0}
+        selectedBooked={selectedDay?.booked ?? 0}
+      />
 
       <View style={styles.tools}>
         <Pressable
@@ -331,7 +455,7 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
           style={[styles.tool, selectedIso == null && styles.toolOn]}
         >
           <Text style={[styles.toolText, selectedIso == null && styles.toolTextOn]}>
-            All days
+            {t('home.allDays')}
           </Text>
         </Pressable>
         <Pressable
@@ -348,7 +472,9 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
             size={13}
             color={todaySelected ? colors.navy : colors.white}
           />
-          <Text style={[styles.toolText, todaySelected && styles.toolTextOn]}>Today</Text>
+          <Text style={[styles.toolText, todaySelected && styles.toolTextOn]}>
+            {t('home.today')}
+          </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -357,7 +483,7 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
           style={styles.tool}
         >
           <Ionicons name="calendar-outline" size={13} color={colors.white} />
-          <Text style={styles.toolText}>Month</Text>
+          <Text style={styles.toolText}>{t('home.month')}</Text>
         </Pressable>
       </View>
 
@@ -378,15 +504,15 @@ export function ShiftCalendar({ selectedIso, workDates, openDates, onSelect }: P
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.mark, styles.markBooked]} />
-          <Text style={styles.legendText}>Booked</Text>
+          <Text style={styles.legendText}>{t('home.legendBooked')}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.mark, styles.markOpen]} />
-          <Text style={styles.legendText}>Open to claim</Text>
+          <Text style={styles.legendText}>{t('home.legendOpen')}</Text>
         </View>
         <View style={styles.legendItem}>
           <View style={styles.todayLegend} />
-          <Text style={styles.legendText}>Today</Text>
+          <Text style={styles.legendText}>{t('home.legendToday')}</Text>
         </View>
       </View>
     </Animated.View>
@@ -472,43 +598,143 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.62)',
   },
-  statRow: {
+  insight: {
+    gap: spacing.sm,
+    padding: spacing.md - 2,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  insightHero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm + 2,
+  },
+  insightLive: {
+    width: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  insightPulse: {
+    position: 'absolute',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.yellow,
+  },
+  insightLiveCore: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.35)',
+  },
+  insightLiveCoreHot: {
+    backgroundColor: colors.yellow,
+  },
+  insightCopy: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  insightKicker: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 10.5,
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+    color: 'rgba(255, 236, 190, 0.88)',
+  },
+  insightValue: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 20,
+    lineHeight: 24,
+    letterSpacing: -0.3,
+    color: colors.white,
+  },
+  insightMeta: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 12,
+    lineHeight: 16,
+    color: 'rgba(255,255,255,0.62)',
+  },
+  insightSide: {
+    alignItems: 'flex-end',
+    gap: 2,
+    minWidth: 56,
+  },
+  insightSideLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.58)',
+  },
+  insightSideValue: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 22,
+    lineHeight: 26,
+    letterSpacing: -0.4,
+    color: colors.white,
+  },
+  insightMeters: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.12)',
+  },
+  insightMeter: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
-    borderRadius: radii.full,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.12)',
+    gap: 5,
   },
-  statChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statDivider: {
+  insightMeterRule: {
     width: StyleSheet.hairlineWidth,
     height: 14,
-    backgroundColor: 'rgba(255,255,255,0.22)',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  insightMeterValue: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 13,
+    color: colors.white,
+  },
+  insightMeterLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.62)',
   },
   statDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
   },
-  statValue: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 14,
-    color: colors.white,
+  countPill: {
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  statLabel: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.68)',
+  countPillBooked: {
+    backgroundColor: 'rgba(20, 169, 181, 0.92)',
+  },
+  countPillOpen: {
+    backgroundColor: 'rgba(255, 210, 90, 0.95)',
+  },
+  countPillOn: {
+    backgroundColor: 'rgba(11, 42, which, 0.88)',
+  },
+  countPillText: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 9,
+    lineHeight: 11,
+    color: colors.navy,
+  },
+  countPillTextOn: {
+    color: colors.white,
   },
   tools: {
     flexDirection: 'row',
@@ -547,7 +773,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   day: {
-    minHeight: 84,
+    minHeight: 88,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -605,9 +831,10 @@ const styles = StyleSheet.create({
   marks: {
     flexDirection: 'row',
     gap: 3,
-    height: 6,
+    minHeight: 16,
     marginTop: 4,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   markSpacer: {
     width: 5,

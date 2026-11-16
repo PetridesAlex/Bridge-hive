@@ -57,3 +57,7 @@ scripts/bh-enable-pgtap.sql
 
 # Vercel local link (never commit)
 .vercel
+
+# Local BH launcher runtime (never commit)
+.bh-dev-pids/
+.bh-dev-logs/

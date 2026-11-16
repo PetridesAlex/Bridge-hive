@@ -26,6 +26,7 @@ import { AppMenuDrawer } from '@/components/navigation/AppMenuDrawer';
 import { Avatar } from '@/components/ui/Avatar';
 import { colors, motion, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { useTranslation } from '@/i18n/locale-provider';
 import { formatDate, greetingForNow } from '@/utils/format';
 
 type Props = {
@@ -35,6 +36,10 @@ type Props = {
   /** Signed profile photo URL when available; falls back to initials. */
   imageUri?: string | null;
   unreadCount?: number;
+  /** Unread organization messages — badge on the Messages action. */
+  messageUnreadCount?: number;
+  /** Hide Messages for App Review demo while keeping Notifications + Menu. */
+  showMessages?: boolean;
   /** Visual tone for the bell badge (billing vs generic). */
   alertTone?: 'default' | 'money' | 'danger';
   /** Platform-verified worker — shows a check on the avatar (otherwise a pending clock). */
@@ -164,7 +169,7 @@ function HeaderButton({
             ]}
           >
             <Text style={styles.badgeText}>
-              {count > 9 ? '9+' : count}
+              {count > 99 ? '99+' : count}
             </Text>
           </Animated.View>
         ) : null}
@@ -183,11 +188,14 @@ export function GreetingHeader({
   initials,
   imageUri,
   unreadCount = 0,
+  messageUnreadCount = 0,
+  showMessages = true,
   alertTone = 'default',
   verified = false,
   scrollY,
 }: Props) {
   const router = useRouter();
+  const { t } = useTranslation();
   const greeting = greetingForNow();
   const [menuOpen, setMenuOpen] = useState(false);
   const reduced = useReducedMotion();
@@ -385,7 +393,7 @@ export function GreetingHeader({
         </Animated.View>
 
         <View style={styles.brandBlock}>
-          <BridgeHiveMark size={36} />
+          <BridgeHiveMark size={48} />
           <View style={styles.brandCopy}>
             <Text style={styles.brandName}>Bridge Hive</Text>
             <Animated.Text style={[styles.brandTag, brandTagStyle]}>
@@ -395,22 +403,37 @@ export function GreetingHeader({
         </View>
 
         <View style={styles.actions}>
-          <HeaderButton
-            icon="menu"
-            label="Open navigation menu"
-            onPress={() => setMenuOpen(true)}
-          />
+          {showMessages ? (
+            <HeaderButton
+              icon={messageUnreadCount > 0 ? 'chatbubbles' : 'chatbubbles-outline'}
+              label={
+                messageUnreadCount > 0
+                  ? t('home.messagesUnreadA11y', { count: messageUnreadCount })
+                  : t('home.messagesA11y')
+              }
+              onPress={() => router.push('/messages')}
+              count={messageUnreadCount}
+              ring={messageUnreadCount > 0}
+            />
+          ) : null}
           <HeaderButton
             icon={unreadCount > 0 ? 'notifications' : 'notifications-outline'}
             label={
               unreadCount > 0
-                ? `Notifications, ${unreadCount} alert${unreadCount === 1 ? '' : 's'}`
-                : 'Notifications'
+                ? unreadCount === 1
+                  ? t('home.notificationsAlertOneA11y')
+                  : t('home.notificationsAlertA11y', { count: unreadCount })
+                : t('home.notificationsA11y')
             }
             onPress={() => router.push('/profile/notifications')}
             count={unreadCount}
             tone={alertTone}
             ring={unreadCount > 0}
+          />
+          <HeaderButton
+            icon="menu"
+            label={t('home.menuA11y')}
+            onPress={() => setMenuOpen(true)}
           />
         </View>
       </Animated.View>
@@ -586,7 +609,8 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.xs + 2,
+    flexShrink: 0,
   },
   chromeBtn: {
     width: 44,
@@ -616,15 +640,18 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
     paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.navy,
+    borderWidth: 1.5,
+    borderColor: colors.navy,
+    zIndex: 2,
   },
   badgeDanger: {
     backgroundColor: colors.error,

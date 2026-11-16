@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
-  FadeInDown,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -14,29 +13,30 @@ import Animated, {
 
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { formatMoney } from '@/utils/format';
+import { useTranslation } from '@/i18n/locale-provider';
+import { formatDurationMinutes, formatMoney } from '@/utils/format';
 
 type Props = {
   rateMinor: number;
   currency: string;
   estimatedPayMinor: number;
-  commissionMinor: number;
-  netMinor: number;
-  commissionPercent: number;
+  durationMinutes: number;
 };
 
 /**
- * Premium shift pay overview — rate, gross, commission invoice, and net earnings.
+ * Premium shift pay overview for browsing — hourly rate, duration, and
+ * estimated gross only. Commission detail lives behind Payment details /
+ * accept confirmation, not in this browsing card.
  */
 export function ShiftPriceBreakdown({
   rateMinor,
   currency,
   estimatedPayMinor,
-  commissionMinor,
-  netMinor,
-  commissionPercent,
+  durationMinutes,
 }: Props) {
+  const { t } = useTranslation();
   const reduced = useReducedMotion();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const enter = useSharedValue(reduced ? 1 : 0);
 
   useEffect(() => {
@@ -55,110 +55,114 @@ export function ShiftPriceBreakdown({
     transform: [{ translateY: interpolate(enter.value, [0, 1], [8, 0]) }],
   }));
 
-  const entering = reduced
-    ? undefined
-    : FadeInDown.delay(120).duration(380).springify().damping(17);
+  const detailPoints = [
+    t('shifts.paymentDetailsOrgPays'),
+    t('shifts.paymentDetailsCommission'),
+    t('shifts.paymentDetailsApproved'),
+    t('shifts.paymentDetailsDue'),
+  ];
 
   return (
-    <Animated.View style={[styles.card, shellStyle]}>
-      <LinearGradient
-        pointerEvents="none"
-        colors={['rgba(20, 169, 181, 0.08)', 'rgba(11, 42, 67, 0.02)', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.wash}
-      />
-
-      <View style={styles.header}>
+    <>
+      <Animated.View style={[styles.card, shellStyle]}>
         <LinearGradient
-          colors={[colors.navy, '#0C3E56', colors.tealStrong]}
-          start={{ x: 0.1, y: 0 }}
+          pointerEvents="none"
+          colors={['rgba(20, 169, 181, 0.08)', 'rgba(11, 42, 67, 0.02)', 'transparent']}
+          start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          style={styles.headerIcon}
-        >
-          <Ionicons name="wallet" size={18} color={colors.white} />
-        </LinearGradient>
-        <View style={styles.headerCopy}>
-          <Text style={styles.headerEyebrow}>Earnings estimate</Text>
-          <Text style={styles.headerTitle}>Price overview</Text>
-          <Text style={styles.headerSub}>
-            Based on scheduled hours at {formatMoney(rateMinor, currency)}/hr
-          </Text>
-        </View>
-        <View style={styles.rateBadge}>
-          <Text style={styles.rateBadgeText}>{formatMoney(rateMinor, currency)}/hr</Text>
-        </View>
-      </View>
+          style={styles.wash}
+        />
 
-      {estimatedPayMinor > 0 ? (
-        <View style={styles.rows}>
-          <Animated.View entering={entering} style={styles.row}>
-            <View style={[styles.rowIcon, styles.rowIconGross]}>
-              <Ionicons name="cash-outline" size={16} color={colors.navy} />
-            </View>
-            <View style={styles.rowCopy}>
-              <Text style={styles.rowLabel}>Total pay</Text>
-              <Text style={styles.rowHint}>Paid by the organization</Text>
-            </View>
-            <Text style={styles.rowValue}>{formatMoney(estimatedPayMinor, currency)}</Text>
-          </Animated.View>
-
-          <Animated.View
-            entering={
-              reduced
-                ? undefined
-                : FadeInDown.delay(180).duration(380).springify().damping(17)
-            }
-            style={styles.row}
+        <View style={styles.header}>
+          <LinearGradient
+            colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.headerIcon}
           >
-            <View style={[styles.rowIcon, styles.rowIconCommission]}>
-              <Ionicons name="receipt-outline" size={16} color={colors.navy} />
-            </View>
-            <View style={styles.rowCopy}>
-              <View style={styles.rowLabelRow}>
-                <Text style={styles.rowLabel}>Commission</Text>
-                <View style={styles.percentPill}>
-                  <Text style={styles.percentText}>{commissionPercent}%</Text>
-                </View>
-              </View>
-              <Text style={styles.rowHint}>Bridge Hive invoice</Text>
-            </View>
-            <Text style={styles.rowDebit}>−{formatMoney(commissionMinor, currency)}</Text>
-          </Animated.View>
-
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
+            <Ionicons name="wallet" size={18} color={colors.white} />
+          </LinearGradient>
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerTitle}>{t('shifts.priceOverview')}</Text>
+            <Text style={styles.headerSub}>{t('shifts.priceOverviewSub')}</Text>
           </View>
+          <View style={styles.rateBadge} accessibilityLabel={t('shifts.hourlyRate')}>
+            <Text style={styles.rateBadgeText}>{formatMoney(rateMinor, currency)}/hr</Text>
+          </View>
+        </View>
 
-          <Animated.View
-            entering={
-              reduced
-                ? undefined
-                : FadeInDown.delay(240).duration(400).springify().damping(17)
-            }
-            style={styles.netPanel}
-          >
+        <View style={styles.metaRow}>
+          <View style={styles.metaChip}>
+            <Text style={styles.metaLabel}>{t('shifts.hourlyRate')}</Text>
+            <Text style={styles.metaValue}>{formatMoney(rateMinor, currency)}/hr</Text>
+          </View>
+          <View style={styles.metaChip}>
+            <Text style={styles.metaLabel}>{t('shifts.scheduledDuration')}</Text>
+            <Text style={styles.metaValue}>{formatDurationMinutes(durationMinutes)}</Text>
+          </View>
+        </View>
+
+        {estimatedPayMinor > 0 ? (
+          <View style={styles.grossPanel}>
             <LinearGradient
               pointerEvents="none"
-              colors={['rgba(20, 108, 67, 0.10)', 'rgba(20, 108, 67, 0.03)']}
+              colors={['rgba(11, 42, 67, 0.06)', 'rgba(20, 169, 181, 0.08)']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
-            <View style={styles.netIcon}>
-              <Ionicons name="trending-up" size={16} color={colors.success} />
+            <Text style={styles.grossLabel}>{t('shifts.estimatedGrossPay')}</Text>
+            <Text style={styles.grossValue}>{formatMoney(estimatedPayMinor, currency)}</Text>
+            <Text style={styles.grossHint}>{t('shifts.estimatedGrossPayHint')}</Text>
+          </View>
+        ) : (
+          <Text style={styles.empty}>{t('shifts.estimateUnavailable')}</Text>
+        )}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('shifts.paymentDetails')}
+          onPress={() => setDetailsOpen(true)}
+          style={({ pressed }) => [styles.detailsLink, pressed && styles.detailsLinkPressed]}
+        >
+          <Text style={styles.detailsLinkText}>{t('shifts.paymentDetails')}</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.tealStrong} />
+        </Pressable>
+      </Animated.View>
+
+      <Modal
+        visible={detailsOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDetailsOpen(false)}
+      >
+        <Pressable style={styles.overlay} onPress={() => setDetailsOpen(false)}>
+          <Pressable
+            style={styles.sheet}
+            onPress={(e) => e.stopPropagation()}
+            accessibilityViewIsModal
+          >
+            <Text style={styles.sheetTitle}>{t('shifts.paymentDetails')}</Text>
+            <View style={styles.sheetList}>
+              {detailPoints.map((line) => (
+                <View key={line.slice(0, 28)} style={styles.sheetRow}>
+                  <View style={styles.sheetDot} />
+                  <Text style={styles.sheetText}>{line}</Text>
+                </View>
+              ))}
             </View>
-            <View style={styles.rowCopy}>
-              <Text style={styles.netLabel}>Earnings</Text>
-              <Text style={styles.rowHint}>After commission invoice</Text>
-            </View>
-            <Text style={styles.netValue}>{formatMoney(netMinor, currency)}</Text>
-          </Animated.View>
-        </View>
-      ) : (
-        <Text style={styles.empty}>Estimate unavailable for this schedule.</Text>
-      )}
-    </Animated.View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+              onPress={() => setDetailsOpen(false)}
+              style={({ pressed }) => [styles.sheetClose, pressed && styles.detailsLinkPressed]}
+            >
+              <Text style={styles.sheetCloseText}>{t('common.close')}</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -167,7 +171,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: 22,
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.md,
     overflow: 'hidden',
     ...shadows.sm,
   },
@@ -190,13 +194,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 2,
-  },
-  headerEyebrow: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 10,
-    letterSpacing: 0.7,
-    textTransform: 'uppercase',
-    color: colors.tealStrong,
   },
   headerTitle: {
     fontFamily: typography.fonts.displaySemibold,
@@ -221,121 +218,135 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.white,
   },
-  rows: {
-    gap: spacing.sm + 2,
-  },
-  row: {
+  metaRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    minHeight: 52,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: radii.md,
-    backgroundColor: 'rgba(11, 42, 67, 0.03)',
+    gap: spacing.sm,
   },
-  rowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  rowIconGross: {
-    backgroundColor: 'rgba(20, 169, 181, 0.14)',
-  },
-  rowIconCommission: {
-    backgroundColor: 'rgba(11, 42, 67, 0.08)',
-  },
-  rowCopy: {
+  metaChip: {
     flex: 1,
     minWidth: 0,
-    gap: 1,
+    gap: 4,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm + 2,
+    borderRadius: radii.md,
+    backgroundColor: 'rgba(11, 42, 67, 0.035)',
   },
-  rowLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  rowLabel: {
-    fontFamily: typography.fonts.semibold,
-    fontSize: 14,
-    letterSpacing: -0.1,
-    color: colors.navy,
-  },
-  rowHint: {
-    fontFamily: typography.fonts.regular,
-    fontSize: 12,
+  metaLabel: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    letterSpacing: 0.2,
+    textTransform: 'uppercase',
     color: colors.textSecondary,
   },
-  percentPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 999,
-    backgroundColor: 'rgba(11, 42, 67, 0.08)',
-  },
-  percentText: {
-    fontFamily: typography.fonts.bold,
-    fontSize: 10,
-    letterSpacing: 0.2,
+  metaValue: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    letterSpacing: -0.15,
     color: colors.navy,
   },
-  rowValue: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    letterSpacing: -0.2,
-    color: colors.navy,
-  },
-  rowDebit: {
-    fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    letterSpacing: -0.2,
-    color: colors.navy,
-  },
-  divider: {
-    paddingVertical: 2,
-    paddingHorizontal: 4,
-  },
-  dividerLine: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(11, 42, 67, 0.12)',
-  },
-  netPanel: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm + 2,
-    minHeight: 60,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+  grossPanel: {
     borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    gap: 4,
     overflow: 'hidden',
   },
-  netIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(20, 108, 67, 0.12)',
-    flexShrink: 0,
-  },
-  netLabel: {
-    fontFamily: typography.fonts.bold,
-    fontSize: 14,
+  grossLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
     letterSpacing: -0.1,
     color: colors.navy,
   },
-  netValue: {
+  grossValue: {
     fontFamily: typography.fonts.displayExtra,
-    fontSize: 22,
-    lineHeight: 26,
-    letterSpacing: -0.4,
-    color: colors.success,
+    fontSize: 28,
+    lineHeight: 32,
+    letterSpacing: -0.5,
+    color: colors.navy,
+  },
+  grossHint: {
+    marginTop: 2,
+    fontFamily: typography.fonts.regular,
+    fontSize: 12,
+    lineHeight: 17,
+    color: colors.textSecondary,
   },
   empty: {
     fontFamily: typography.fonts.regular,
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  detailsLink: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+  },
+  detailsLinkPressed: {
+    opacity: 0.7,
+  },
+  detailsLinkText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.tealStrong,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  sheet: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: colors.card,
+    borderRadius: radii.xl,
+    padding: spacing.xl,
+    gap: spacing.md,
+    ...shadows.sm,
+  },
+  sheetTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 20,
+    letterSpacing: -0.3,
+    color: colors.navy,
+  },
+  sheetList: {
+    gap: spacing.sm + 2,
+  },
+  sheetRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  sheetDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginTop: 7,
+    backgroundColor: colors.navy,
+    opacity: 0.35,
+  },
+  sheetText: {
+    flex: 1,
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.textSecondary,
+  },
+  sheetClose: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radii.full,
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
+  },
+  sheetCloseText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    color: colors.navy,
   },
 });

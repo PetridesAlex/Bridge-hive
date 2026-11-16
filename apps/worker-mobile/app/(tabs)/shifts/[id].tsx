@@ -1,6 +1,4 @@
 import {
-  commissionFromGross,
-  DEFAULT_COMMISSION_RATE_BPS,
   estimatedWorkerShiftPayMinor,
   SHIFT_UNAVAILABLE_TITLE,
   shiftNotificationUrl,
@@ -460,10 +458,6 @@ export default function ShiftDetailScreen() {
     endsAtIso: shift.ends_at,
     breakMinutes: shift.break_minutes,
   });
-  const commissionMinor =
-    estimatedPayMinor > 0 ? commissionFromGross(estimatedPayMinor) : 0;
-  const netAfterCommissionMinor = Math.max(0, estimatedPayMinor - commissionMinor);
-  const commissionPercent = DEFAULT_COMMISSION_RATE_BPS / 100;
   const notesLong = (shift.notes?.length ?? 0) > 160;
   const notesVisible =
     !shift.notes
@@ -629,14 +623,12 @@ export default function ShiftDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Price overview</Text>
+          <Text style={styles.sectionLabel}>{t('shifts.priceOverview')}</Text>
           <ShiftPriceBreakdown
             rateMinor={shift.rate_minor}
             currency={shift.currency}
             estimatedPayMinor={estimatedPayMinor}
-            commissionMinor={commissionMinor}
-            netMinor={netAfterCommissionMinor}
-            commissionPercent={commissionPercent}
+            durationMinutes={durationMin}
           />
           <View style={styles.payNote}>
             <LinearGradient

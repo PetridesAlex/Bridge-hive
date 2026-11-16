@@ -1,5 +1,5 @@
 -- 20261113190000_org_worker_message_deletion.sql
--- UNAPPLIED. Not on staging, not on production.
+-- Applied on Bridge-Hive and Bridge-Hive-Test.
 -- Adds two user actions to organization <-> worker chat:
 --   1. Delete a message the caller sent (for both sides; the text is erased and
 --      the row stays as a "message deleted" marker so the thread order and

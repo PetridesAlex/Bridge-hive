@@ -422,7 +422,8 @@ export const en = {
     demoBlockedBody: 'Demo accounts cannot access real conversations.',
     loadEarlier: 'Load earlier messages',
     you: 'You',
-    subtitle: 'Chat with organizations after approved work',
+    subtitle:
+      'Chat with organizations after approved work. You can also delete messages you sent, or clear a chat for yourself.',
     conversationSubtitle: 'Organization conversation.',
     searchPlaceholder: 'Search organizations',
     noMessagesYet: 'No messages yet',

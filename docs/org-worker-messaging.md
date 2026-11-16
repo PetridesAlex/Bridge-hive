@@ -9,7 +9,8 @@
 - **No** `org_billing` messaging
 - **No** platform-admin / broad support message reading
 - **No** staff email digests
-- Retention / deletion: **owner policy decision — not approved as indefinite retention**
+- Soft-delete of own messages (both sides) and per-user “delete chat for me” are supported via RPCs
+- Legal retention window for undeleted chat content remains an **owner policy decision** — not approved as indefinite retention
 
 ## Eligibility (server-enforced)
 
@@ -61,7 +62,7 @@ Configurable via `platform_settings` (clients may mirror for UX only):
 
 | Topic | Current engineering default | Decision needed |
 | --- | --- | --- |
-| Retention / deletion | Rows persist until a policy is chosen | Retention window, erase path — **do not treat as legal approval** |
+| Retention of undeleted chat | Soft-delete erases message text for both sides; chat clear is per-user only | Overall retention window for remaining rows — **do not treat as legal approval** |
 | Support read access | None | Whether support may view threads |
 | `org_billing` messaging | Denied | Widen or keep |
 | Staff email digests | Off | Keep off for v1 |

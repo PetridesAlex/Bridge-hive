@@ -3,7 +3,8 @@ export type OrgMessagesLocale = 'en' | 'el';
 const COPY = {
   en: {
     title: 'Messages',
-    subtitle: 'Message workers after approved completed shifts.',
+    subtitle:
+      'Message workers after approved completed shifts. You can also delete messages you sent, or clear a chat for yourself.',
     searchPlaceholder: 'Search workers or messages',
     inboxLabel: 'Inbox',
     directMessage: 'Direct message',
@@ -51,7 +52,8 @@ const COPY = {
   },
   el: {
     title: 'Μηνύματα',
-    subtitle: 'Μηνύματα σε εργαζόμενους μετά από εγκεκριμένες ολοκληρωμένες βάρδιες.',
+    subtitle:
+      'Μηνύματα σε εργαζόμενους μετά από εγκεκριμένες ολοκληρωμένες βάρδιες. Μπορείτε επίσης να διαγράψετε μηνύματα που στείλατε, ή να καθαρίσετε μια συνομιλία για εσάς.',
     searchPlaceholder: 'Αναζήτηση εργαζομένων ή μηνυμάτων',
     inboxLabel: 'Εισερχόμενα',
     directMessage: 'Άμεσο μήνυμα',

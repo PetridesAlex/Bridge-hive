@@ -16,7 +16,9 @@ cd /Users/petridesaalex/Desktop/Bridge-Hive-release-candidate
 ./scripts/bh-dev-launch.sh stop
 ```
 
-Defaults: Next `:3000`, Metro `:8081`. Status prints **live** dirty fingerprint and only prints ready links when servers respond.
+Defaults: Next `:3000`, Metro `:8081`.
+Servers are double-forked via `scripts/bh-dev-daemonize.py` so they keep running after the launcher exits (including on macOS).
+ Status prints **live** dirty fingerprint and only prints ready links when servers respond.
 
 ## 3. Verify before testing
 

@@ -305,15 +305,7 @@ start_web() {
   fi
   info "Starting Next on :$WEB_PORT"
   mkdir -p "$LOG_DIR" "$PID_DIR"
-  (
-    cd "$CANONICAL_ROOT/apps/web"
-    if command -v setsid >/dev/null 2>&1; then
-      setsid npx next dev -p "$WEB_PORT" >"$LOG_DIR/web.log" 2>&1 &
-    else
-      nohup npx next dev -p "$WEB_PORT" >"$LOG_DIR/web.log" 2>&1 &
-    fi
-    echo $! >"$WEB_PID_FILE.wrap"
-  )
+  python3 "$CANONICAL_ROOT/scripts/bh-dev-daemonize.py"     "$CANONICAL_ROOT/apps/web" "$LOG_DIR/web.log"     npx next dev -p "$WEB_PORT"
   wait_http "http://127.0.0.1:$WEB_PORT" "web"
   record_listener_pid "$WEB_PORT" "$WEB_PID_FILE"
 }
@@ -325,15 +317,7 @@ start_metro() {
   fi
   info "Starting Metro on :$METRO_PORT"
   mkdir -p "$LOG_DIR" "$PID_DIR"
-  (
-    cd "$CANONICAL_ROOT/apps/worker-mobile"
-    if command -v setsid >/dev/null 2>&1; then
-      setsid npx expo start --lan --port "$METRO_PORT" >"$LOG_DIR/metro.log" 2>&1 &
-    else
-      nohup npx expo start --lan --port "$METRO_PORT" >"$LOG_DIR/metro.log" 2>&1 &
-    fi
-    echo $! >"$METRO_PID_FILE.wrap"
-  )
+  python3 "$CANONICAL_ROOT/scripts/bh-dev-daemonize.py"     "$CANONICAL_ROOT/apps/worker-mobile" "$LOG_DIR/metro.log"     npx expo start --lan --port "$METRO_PORT"
   wait_http "http://127.0.0.1:$METRO_PORT/status" "metro"
   record_listener_pid "$METRO_PORT" "$METRO_PID_FILE"
 }

@@ -49,6 +49,13 @@ const COPY = {
     deleting: 'Deleting…',
     deleteFailed: 'Could not delete. Please try again.',
     deleteUnavailable: 'Deleting is not available yet.',
+    alertTitle: 'New message',
+    alertBody: '{name} sent you a message.',
+    alertAction: 'View message',
+    alertWorkerFallback: 'A worker',
+    messagesUnreadAria: 'Messages, {count} unread',
+    unreadUnavailable: 'Unread count unavailable',
+    unreadRetry: 'Retry unread count',
   },
   el: {
     title: 'Μηνύματα',
@@ -98,6 +105,13 @@ const COPY = {
     deleting: 'Διαγραφή…',
     deleteFailed: 'Η διαγραφή απέτυχε. Δοκιμάστε ξανά.',
     deleteUnavailable: 'Η διαγραφή δεν είναι διαθέσιμη ακόμη.',
+    alertTitle: 'Νέο μήνυμα',
+    alertBody: 'Ο/Η {name} σας έστειλε μήνυμα.',
+    alertAction: 'Προβολή μηνύματος',
+    alertWorkerFallback: 'Ένας εργαζόμενος',
+    messagesUnreadAria: 'Μηνύματα, {count} μη αναγνωσμένα',
+    unreadUnavailable: 'Μη διαθέσιμος αριθμός μη αναγνωσμένων',
+    unreadRetry: 'Επανάληψη μέτρησης μη αναγνωσμένων',
   },
 } as const;
 

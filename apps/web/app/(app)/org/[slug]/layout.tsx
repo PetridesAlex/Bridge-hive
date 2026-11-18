@@ -68,6 +68,7 @@ export default async function OrgLayout({
       current={current}
       memberships={memberships}
       capabilities={ctx.capabilities}
+      userId={ctx.user.id}
       userLabel={userLabel}
       userEmail={ctx.user.email}
     >

@@ -14,6 +14,7 @@ import {
 import { usePathname } from 'next/navigation';
 
 import { OrgNavLink } from '@/components/org/org-nav-link';
+import { useOrgMessagingAlerts } from '@/components/org/org-messaging-alerts-provider';
 
 import { signOutAction } from '@/app/actions/auth';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
@@ -23,6 +24,7 @@ import {
 } from '@/components/org/organization-switcher';
 import { SidebarLiveClock } from '@/components/org/sidebar-live-clock';
 import { Button } from '@/components/ui/button';
+import { orgMessagesCopy } from '@/lib/org-messages-i18n';
 import { clearOrganizationLogoUrlCache } from '@/lib/organization-logo';
 import { cn } from '@/lib/utils';
 import {
@@ -76,6 +78,8 @@ export function OrganizationSidebar({
   const groups = (
     ['overview', 'operations', 'finance', 'recruitment', 'organization'] as const
   ).filter((g) => items.some((i) => i.group === g));
+  const messagingAlerts = useOrgMessagingAlerts();
+  const messagesCopy = orgMessagesCopy('en');
 
   return (
     <aside
@@ -124,15 +128,37 @@ export function OrganizationSidebar({
                   const Icon = ICONS[item.id];
                   const active =
                     pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const messagesBadge =
+                    item.id === 'messages' && messagingAlerts?.enabled
+                      ? messagingAlerts.badgeLabel
+                      : null;
+                  const messagesUnavailable =
+                    item.id === 'messages' &&
+                    messagingAlerts?.enabled &&
+                    messagingAlerts.unreadStatus === 'error' &&
+                    !messagingAlerts.badgeLabel;
+                  const ariaLabel =
+                    item.id === 'messages' && messagesBadge
+                      ? messagesCopy.messagesUnreadAria.replace(
+                          '{count}',
+                          messagesBadge,
+                        )
+                      : item.id === 'messages' && messagesUnavailable
+                        ? messagesCopy.unreadUnavailable
+                        : undefined;
                   return (
                     <li key={item.id}>
                       <OrgNavLink
                         href={item.href}
                         eager={item.id === 'dashboard'}
                         aria-current={active ? 'page' : undefined}
+                        aria-label={ariaLabel}
                         onClick={onNavigate}
                         className={cn(
-                          'group flex h-10 items-center gap-2.5 overflow-hidden rounded-md px-2 text-[13px] font-medium tracking-tight',
+                          'group flex h-10 items-center gap-2.5 rounded-md px-2 text-[13px] font-medium tracking-tight',
+                          messagesBadge || messagesUnavailable
+                            ? 'overflow-visible'
+                            : 'overflow-hidden',
                           'transition-colors duration-150',
                           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/70 focus-visible:ring-offset-0',
                           'motion-reduce:transition-none',
@@ -143,16 +169,44 @@ export function OrganizationSidebar({
                       >
                         <span
                           className={cn(
-                            'flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150',
+                            'relative flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-150',
                             active
                               ? 'bg-bh-teal/25 text-white'
                               : 'text-bh-sidebar-muted group-hover:text-bh-teal',
                           )}
                         >
                           <Icon className="h-[16px] w-[16px]" aria-hidden />
+                          {messagesBadge ? (
+                            <span
+                              aria-hidden
+                              className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-[#5ec8ff] shadow-[0_0_0_2px_#071d30] ring-1 ring-white/60"
+                            />
+                          ) : null}
                         </span>
 
                         <span className="min-w-0 flex-1 truncate">{item.label}</span>
+
+                        {messagesBadge ? (
+                          <span
+                            aria-hidden
+                            className="relative inline-flex h-[22px] min-w-[22px] shrink-0 items-center justify-center"
+                          >
+                            <span className="bh-msg-ping absolute inset-0 rounded-full bg-[#5ec8ff]/50 motion-reduce:hidden" />
+                            <span className="relative inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full bg-[linear-gradient(180deg,#8adbff_0%,#4fc3ff_45%,#2aa8ef_100%)] px-[7px] text-[11px] font-extrabold leading-none tracking-tight text-white shadow-[0_6px_14px_rgba(42,168,239,0.55),inset_0_1px_0_rgba(255,255,255,0.45)] ring-2 ring-white/30">
+                              {messagesBadge}
+                            </span>
+                          </span>
+                        ) : null}
+
+                        {messagesUnavailable ? (
+                          <span
+                            title={messagesCopy.unreadUnavailable}
+                            className="inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-full bg-white/10 px-1 text-[10px] font-bold text-white/70 ring-1 ring-white/20"
+                            aria-hidden
+                          >
+                            ·
+                          </span>
+                        ) : null}
                       </OrgNavLink>
                     </li>
                   );

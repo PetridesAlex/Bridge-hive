@@ -23,7 +23,9 @@ import {
   shouldShowMessagingSender,
   subscribeMessagingRealtime,
   subscribeReactionBroadcast,
+  sumConversationUnread,
   unicodeCharLength,
+  unreadBadgeLabel,
   workerRoleLabelForMessaging,
   type OrgWorkerConversationSummary,
   type OrgWorkerMessageReactionSummary,
@@ -42,11 +44,13 @@ import {
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useOrgMessagingAlerts } from '@/components/org/org-messaging-alerts-provider';
 import {
   areOrgMessagingDeletesUnavailable,
   clearOrgConversation,
   deleteOrgMessage,
 } from '@/lib/org-messaging-deletion';
+import { shouldMarkConversationRead } from '@/lib/org-messaging-alerts';
 import {
   areOrgMessagingReactionsUnavailable,
   clearOrgMessageReaction,
@@ -139,16 +143,21 @@ export function OrgMessagesWorkspace({
 }: Props) {
   const copy = orgMessagesCopy(locale);
   const supabase = useMemo(() => createClient(), []);
-  const [conversations, setConversations] = useState<OrgWorkerConversationSummary[]>(
-    [],
+  const alerts = useOrgMessagingAlerts();
+  const useSharedAlerts = Boolean(
+    alerts?.enabled && alerts.organizationId === organizationId,
   );
+
+  const [localConversations, setLocalConversations] = useState<
+    OrgWorkerConversationSummary[]
+  >([]);
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(initialConversationId);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [draft, setDraft] = useState('');
-  const [inboxLoading, setInboxLoading] = useState(true);
+  const [localInboxLoading, setLocalInboxLoading] = useState(true);
   const [threadLoading, setThreadLoading] = useState(false);
-  const [inboxError, setInboxError] = useState<string | null>(null);
+  const [localInboxError, setLocalInboxError] = useState<string | null>(null);
   const [threadError, setThreadError] = useState<string | null>(null);
   const [online, setOnline] = useState(true);
   const [reactionSummaries, setReactionSummaries] = useState<
@@ -168,11 +177,59 @@ export function OrgMessagesWorkspace({
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const messagesRef = useRef<LocalMessage[]>([]);
+  const selectedIdRef = useRef<string | null>(selectedId);
+  const threadGenRef = useRef(0);
+  const loadThreadRef = useRef<(conversationId: string, opts?: { quiet?: boolean }) => Promise<void>>(
+    async () => undefined,
+  );
+  const loadInboxRef = useRef<() => Promise<void>>(async () => undefined);
+  const refreshReactionsRef = useRef<(rows: OrgWorkerMessageRow[]) => Promise<void>>(
+    async () => undefined,
+  );
+  const alertsRef = useRef(alerts);
+  const conversationsRef = useRef<OrgWorkerConversationSummary[]>([]);
   const reactionGenRef = useRef<Record<string, number>>({});
   const reactionSnapshotRef = useRef<
     Record<string, OrgWorkerMessageReactionSummary | undefined>
   >({});
   messagesRef.current = messages;
+  selectedIdRef.current = selectedId;
+  alertsRef.current = alerts;
+
+  const conversations = useSharedAlerts
+    ? alerts!.conversations
+    : localConversations;
+  conversationsRef.current = conversations;
+
+  const setConversations = useCallback(
+    (
+      updater:
+        | OrgWorkerConversationSummary[]
+        | ((
+            prev: OrgWorkerConversationSummary[],
+          ) => OrgWorkerConversationSummary[]),
+    ) => {
+      const shared = alertsRef.current;
+      if (useSharedAlerts && shared) {
+        shared.patchConversations((prev) =>
+          typeof updater === 'function' ? updater(prev) : updater,
+        );
+        return;
+      }
+      setLocalConversations(updater);
+    },
+    [useSharedAlerts],
+  );
+
+  const inboxLoading = useSharedAlerts
+    ? alerts!.unreadStatus === 'loading' ||
+      (alerts!.unreadStatus === 'idle' && conversations.length === 0)
+    : localInboxLoading;
+  const inboxError = useSharedAlerts
+    ? alerts!.unreadStatus === 'error'
+      ? copy.retry
+      : null
+    : localInboxError;
 
   const filtered = useMemo(
     () => filterConversationsByQuery(conversations, query),
@@ -180,9 +237,11 @@ export function OrgMessagesWorkspace({
   );
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
   const unreadTotal = useMemo(
-    () => conversations.reduce((sum, row) => sum + Math.max(0, row.unreadCount), 0),
-    [conversations],
+    () =>
+      useSharedAlerts ? alerts!.unreadTotal : sumConversationUnread(conversations),
+    [alerts, conversations, useSharedAlerts],
   );
+  const unreadLabel = unreadBadgeLabel(unreadTotal);
   const draftLength = unicodeCharLength(draft);
   const canSend = draft.trim().length > 0 && online;
   const showDraftMeter = draftLength >= ORG_WORKER_MESSAGE_MAX_LENGTH - 200;
@@ -196,9 +255,27 @@ export function OrgMessagesWorkspace({
     el.style.height = `${next}px`;
   }, [draft]);
 
+  useEffect(() => {
+    if (initialConversationId) setSelectedId(initialConversationId);
+  }, [initialConversationId]);
+
+  const setFocusedConversationId = alerts?.setFocusedConversationId;
+  useEffect(() => {
+    if (!useSharedAlerts || !setFocusedConversationId) return;
+    setFocusedConversationId(selectedId);
+    return () => {
+      setFocusedConversationId(null);
+    };
+  }, [selectedId, setFocusedConversationId, useSharedAlerts]);
+
   const loadInbox = useCallback(async () => {
-    setInboxLoading(true);
-    setInboxError(null);
+    const shared = alertsRef.current;
+    if (useSharedAlerts && shared) {
+      await shared.refreshInbox();
+      return;
+    }
+    setLocalInboxLoading(true);
+    setLocalInboxError(null);
     const { data, error } = await supabase.rpc(
       'list_org_worker_conversations' as never,
       {
@@ -207,13 +284,14 @@ export function OrgMessagesWorkspace({
       } as never,
     );
     if (error) {
-      setInboxError(error.message);
-      setConversations([]);
+      setLocalInboxError(error.message);
+      setLocalConversations([]);
     } else {
-      setConversations(parseConversations(data));
+      setLocalConversations(parseConversations(data));
     }
-    setInboxLoading(false);
-  }, [organizationId, supabase]);
+    setLocalInboxLoading(false);
+  }, [organizationId, supabase, useSharedAlerts]);
+  loadInboxRef.current = loadInbox;
 
   const refreshReactions = useCallback(
     async (rows: OrgWorkerMessageRow[]) => {
@@ -238,10 +316,17 @@ export function OrgMessagesWorkspace({
     },
     [reactionsEnabled, supabase],
   );
+  refreshReactionsRef.current = refreshReactions;
 
   const loadThread = useCallback(
-    async (conversationId: string) => {
-      setThreadLoading(true);
+    async (conversationId: string, opts?: { quiet?: boolean }) => {
+      const generation = ++threadGenRef.current;
+      const quiet =
+        opts?.quiet === true ||
+        (selectedIdRef.current === conversationId && messagesRef.current.length > 0);
+      if (!quiet) {
+        setThreadLoading(true);
+      }
       setThreadError(null);
       const { data, error } = await supabase.rpc(
         'list_org_worker_messages' as never,
@@ -252,9 +337,10 @@ export function OrgMessagesWorkspace({
           p_limit: 80,
         } as never,
       );
+      if (generation !== threadGenRef.current) return;
       if (error) {
         setThreadError(error.message);
-        setMessages([]);
+        if (!quiet) setMessages([]);
       } else {
         const rows = parseMessages(data);
         setMessages((prev) => {
@@ -265,9 +351,24 @@ export function OrgMessagesWorkspace({
           );
           return mergeMessagePage(pendingLocal, rows) as LocalMessage[];
         });
-        void refreshReactions(rows);
+        void refreshReactionsRef.current(rows);
         const latest = rows[rows.length - 1];
-        if (latest) {
+        const tabVisible =
+          typeof document === 'undefined'
+            ? true
+            : document.visibilityState === 'visible';
+        const unreadAlready =
+          conversationsRef.current.find((c) => c.id === conversationId)
+            ?.unreadCount ?? 0;
+        if (
+          latest &&
+          unreadAlready > 0 &&
+          shouldMarkConversationRead({
+            conversationId,
+            selectedConversationId: selectedIdRef.current,
+            tabVisible,
+          })
+        ) {
           await supabase.rpc(
             'mark_org_worker_conversation_read' as never,
             {
@@ -275,31 +376,44 @@ export function OrgMessagesWorkspace({
               p_message_id: latest.id,
             } as never,
           );
-          setConversations((prev) =>
-            prev.map((c) =>
-              c.id === conversationId ? { ...c, unreadCount: 0 } : c,
-            ),
-          );
+          if (generation !== threadGenRef.current) return;
+          const shared = alertsRef.current;
+          if (useSharedAlerts && shared) {
+            shared.applyLocalRead(conversationId);
+          } else {
+            setLocalConversations((prev) => {
+              const current = prev.find((c) => c.id === conversationId);
+              if (!current || current.unreadCount === 0) return prev;
+              return prev.map((c) =>
+                c.id === conversationId ? { ...c, unreadCount: 0 } : c,
+              );
+            });
+          }
         }
       }
-      setThreadLoading(false);
+      if (generation === threadGenRef.current) {
+        setThreadLoading(false);
+      }
     },
-    [refreshReactions, supabase],
+    [supabase, useSharedAlerts],
   );
+  loadThreadRef.current = loadThread;
 
   useEffect(() => {
+    if (useSharedAlerts) return;
     void loadInbox();
-  }, [loadInbox]);
+  }, [loadInbox, useSharedAlerts]);
 
   useEffect(() => {
     if (!selectedId) {
       setMessages([]);
       setReactionSummaries({});
       setReactMenuFor(null);
+      setThreadLoading(false);
       return;
     }
-    void loadThread(selectedId);
-  }, [selectedId, loadThread]);
+    void loadThreadRef.current(selectedId, { quiet: false });
+  }, [selectedId]);
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
@@ -314,7 +428,18 @@ export function OrgMessagesWorkspace({
   }, []);
 
   useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!selectedIdRef.current) return;
+      void loadThreadRef.current(selectedIdRef.current, { quiet: true });
+    };
+    window.addEventListener('visibilitychange', onVisibility);
+    return () => window.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
+  useEffect(() => {
     if (!selectedId) return;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     const channelName = messagingChannelName('org-thread', {
       organizationId,
       conversationId: selectedId,
@@ -327,31 +452,34 @@ export function OrgMessagesWorkspace({
       // INSERT for new messages, UPDATE when a sender deletes one.
       event: '*',
       onChange: () => {
-        void loadThread(selectedId);
-        void loadInbox();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          void loadThreadRef.current(selectedId, { quiet: true });
+        }, 180);
       },
       onSubscribed: () => {
-        void loadThread(selectedId);
+        void loadThreadRef.current(selectedId, { quiet: true });
       },
     });
     const reactionsSub = subscribeReactionBroadcast({
       client: supabase,
       conversationId: selectedId,
       onChange: () => {
-        void refreshReactions(messagesRef.current);
+        void refreshReactionsRef.current(messagesRef.current);
       },
       onSubscribed: () => {
-        void refreshReactions(messagesRef.current);
+        void refreshReactionsRef.current(messagesRef.current);
       },
     });
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       messagesSub.unsubscribe();
       reactionsSub.unsubscribe();
     };
-  }, [organizationId, selectedId, supabase, loadThread, loadInbox, refreshReactions]);
+  }, [organizationId, selectedId, supabase]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
   }, [messages.length, selectedId]);
 
   const sendMessage = async (clientMessageId: string, body: string) => {
@@ -573,25 +701,38 @@ export function OrgMessagesWorkspace({
       className="grid h-[calc(100dvh-13.5rem)] min-h-[26rem] w-full overflow-hidden rounded-[22px] border border-[rgba(11,42,67,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(247,251,253,0.98)_100%)] shadow-[0_22px_48px_rgba(7,29,48,0.08)] max-lg:grid-rows-[minmax(12rem,34%)_minmax(0,1fr)] lg:grid-cols-[minmax(16rem,20rem)_minmax(0,1fr)]"
     >
       <aside className="relative flex min-h-0 flex-col overflow-hidden border-b border-[rgba(11,42,67,0.08)] bg-[linear-gradient(180deg,#f4f8fb_0%,#eef4f8_100%)] lg:border-b-0 lg:border-r">
-        <div className="border-b border-[rgba(11,42,67,0.08)] px-4 pb-3.5 pt-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-bh-teal-strong">
-                {copy.inboxLabel}
-              </p>
-              <p className="mt-0.5 truncate text-sm font-semibold text-[#071d30]">
-                {filtered.length} {copy.conversations}
-                {unreadTotal > 0 ? (
-                  <span className="ml-2 inline-flex items-center rounded-full bg-[#0b2a43] px-2 py-0.5 text-[10px] font-bold text-[#f3d27a]">
-                    {unreadTotal > 99 ? '99+' : unreadTotal} {copy.unread}
-                  </span>
-                ) : null}
-              </p>
+        <div className="relative overflow-hidden border-b border-white/10 bg-[#071d30] px-4 pb-3.5 pt-4">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-white/10 blur-2xl"
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)]"
+          />
+          <div className="relative mb-3 flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#071d30] shadow-[0_8px_16px_rgba(0,0,0,0.2)]">
+                <MessageSquare className="h-4 w-4" strokeWidth={2.4} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/55">
+                  {copy.inboxLabel}
+                </p>
+                <p className="mt-0.5 truncate text-[15px] font-bold tracking-tight text-white">
+                  {filtered.length} {copy.conversations}
+                  {unreadLabel ? (
+                    <span className="ml-2 inline-flex items-center rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#071d30]">
+                      {unreadLabel} {copy.unread}
+                    </span>
+                  ) : null}
+                </p>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => void loadInbox()}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[rgba(11,42,67,0.08)] bg-white/80 text-[#0b2a43] shadow-sm transition hover:-translate-y-0.5 hover:border-bh-teal/30 hover:text-bh-teal-strong"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-white/15"
               aria-label={copy.retry}
             >
               <RefreshCw className="h-3.5 w-3.5" aria-hidden />
@@ -600,7 +741,7 @@ export function OrgMessagesWorkspace({
 
           <label className="relative block">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bh-teal-strong/80"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#071d30]/55"
               aria-hidden
             />
             <input
@@ -608,7 +749,7 @@ export function OrgMessagesWorkspace({
               onChange={(e) => setQuery(e.target.value)}
               placeholder={copy.searchPlaceholder}
               aria-label={copy.searchPlaceholder}
-              className="h-11 w-full rounded-xl border border-[rgba(11,42,67,0.10)] bg-white/90 pl-10 pr-3 text-sm text-[#071d30] shadow-[0_6px_16px_rgba(7,29,48,0.04)] outline-none transition placeholder:text-bh-muted focus:border-bh-teal/40 focus:ring-2 focus:ring-bh-teal/20"
+              className="h-11 w-full rounded-xl border border-white/15 bg-white pl-10 pr-3 text-sm font-medium text-[#071d30] shadow-[0_8px_18px_rgba(0,0,0,0.12)] outline-none transition placeholder:text-[#071d30]/45 focus:ring-2 focus:ring-[#5ec8ff]/50"
             />
           </label>
 
@@ -696,7 +837,7 @@ export function OrgMessagesWorkspace({
                             </p>
                             {unread ? (
                               <span className="inline-flex min-w-[1.4rem] items-center justify-center rounded-full bg-[#0b2a43] px-1.5 py-0.5 text-[10px] font-bold text-[#f3d27a]">
-                                {c.unreadCount > 99 ? '99+' : c.unreadCount}
+                                {unreadBadgeLabel(c.unreadCount)}
                               </span>
                             ) : null}
                           </div>
@@ -783,7 +924,7 @@ export function OrgMessagesWorkspace({
                 <p>{copy.privacy}</p>
               </div>
 
-              {threadLoading ? (
+              {threadLoading && messages.length === 0 ? (
                 <p className="px-1 text-sm text-bh-muted">{copy.loading}</p>
               ) : null}
               {threadError ? (

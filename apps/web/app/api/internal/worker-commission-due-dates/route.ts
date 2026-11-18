@@ -3,6 +3,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+import { workerCommissionDueDatesCronRefusalReason } from '@/lib/push/env';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -10,6 +12,10 @@ export const dynamic = 'force-dynamic';
  * Prepared scheduler entry for process_worker_commission_due_dates.
  * Not registered in vercel.json until Prompt 2 production activation.
  * Requires WORKER_PUSH_DISPATCH_SECRET or CRON_SECRET (same as worker-push).
+ *
+ * Preview isolation: Vercel Preview never calls the billing processor,
+ * even if WORKER_COMMISSION_DUE_DATES_CRON=1 or secrets leak into Preview.
+ * Authenticated staging verification uses Bridge-Hive-Test RPC directly.
  */
 function authorized(request: Request): boolean {
   const secrets = [
@@ -47,11 +53,11 @@ async function handle(request: Request) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  // Feature gate: refuse until Prompt 2 enables the producer.
-  if (process.env.WORKER_COMMISSION_DUE_DATES_CRON !== '1') {
+  const refusal = workerCommissionDueDatesCronRefusalReason();
+  if (refusal) {
     return NextResponse.json({
       enabled: false,
-      reason: 'WORKER_COMMISSION_DUE_DATES_CRON not enabled',
+      reason: refusal,
     });
   }
 

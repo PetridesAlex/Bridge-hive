@@ -19,7 +19,11 @@ import {
   receiptFromExpo,
   type ClaimedPushDelivery,
 } from '../expo-api';
-import { isWorkerPushDispatchEnabled } from '../env';
+import {
+  isWorkerCommissionDueDatesCronEnabled,
+  isWorkerPushDispatchEnabled,
+  workerCommissionDueDatesCronRefusalReason,
+} from '../env';
 
 const shiftId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
@@ -203,10 +207,13 @@ describe('invoice_due_soon push payload', () => {
 
 describe('preview isolation', () => {
   const original = process.env.VERCEL_ENV;
+  const originalCron = process.env.WORKER_COMMISSION_DUE_DATES_CRON;
   afterEach(() => {
     if (original === undefined) delete process.env.VERCEL_ENV;
     else process.env.VERCEL_ENV = original;
     delete process.env.WORKER_PUSH_DISABLE;
+    if (originalCron === undefined) delete process.env.WORKER_COMMISSION_DUE_DATES_CRON;
+    else process.env.WORKER_COMMISSION_DUE_DATES_CRON = originalCron;
   });
 
   it('disables Expo dispatch on Vercel Preview', () => {
@@ -219,6 +226,25 @@ describe('preview isolation', () => {
     expect(isWorkerPushDispatchEnabled()).toBe(true);
     process.env.WORKER_PUSH_DISABLE = '1';
     expect(isWorkerPushDispatchEnabled()).toBe(false);
+  });
+
+  it('never enables commission due-dates cron on Vercel Preview', () => {
+    process.env.VERCEL_ENV = 'preview';
+    process.env.WORKER_COMMISSION_DUE_DATES_CRON = '1';
+    expect(isWorkerCommissionDueDatesCronEnabled()).toBe(false);
+    expect(workerCommissionDueDatesCronRefusalReason()).toBe('preview_isolation');
+  });
+
+  it('requires explicit flag outside Preview for commission due-dates cron', () => {
+    process.env.VERCEL_ENV = 'production';
+    delete process.env.WORKER_COMMISSION_DUE_DATES_CRON;
+    expect(isWorkerCommissionDueDatesCronEnabled()).toBe(false);
+    expect(workerCommissionDueDatesCronRefusalReason()).toBe(
+      'WORKER_COMMISSION_DUE_DATES_CRON not enabled',
+    );
+    process.env.WORKER_COMMISSION_DUE_DATES_CRON = '1';
+    expect(isWorkerCommissionDueDatesCronEnabled()).toBe(true);
+    expect(workerCommissionDueDatesCronRefusalReason()).toBeNull();
   });
 });
 

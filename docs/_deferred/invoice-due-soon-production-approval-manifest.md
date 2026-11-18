@@ -9,7 +9,7 @@
 | --- | --- |
 | PR | https://github.com/PetridesAlex/Bridge-hive/pull/59 |
 | Prior tip (pre Preview isolation) | `4fb5633f2fff2ae21a468e3ff1597ceba0cb7d87` |
-| Isolation + claim-fix tip | *(filled after push of this manifest)* |
+| Isolation + claim-fix tip | `c405d60aa07dcb2dbba60e1ba1ccbaaddfd08238` (pre-tip-doc; see final push) |
 | Migration file | `supabase/migrations/20261118180000_worker_invoice_due_soon_reminder.sql` |
 | Migration SHA-256 (**updated**) | `3da76ece8e2d5026e1001b2eef68ba5bffc704bdb7e60065c56b7253d1ed902d` |
 | Prior authorized SHA (superseded) | `e46c4b1bd5ed830925c7664d8e0e51beddb9fd1c87026224ca0be68598ea96fd` |

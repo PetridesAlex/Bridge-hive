@@ -531,25 +531,29 @@ begin
     );
 
   -- Drop invoice reminders when paid/void/processing/past due/demo/deleted.
+  -- Use EXISTS (not UPDATE…FROM left-join to target alias) for PG compatibility.
   update public.worker_notification_deliveries d
   set
     status = 'invalid',
     receipt_error = 'invoice_unavailable',
     updated_at = now()
   from public.worker_notification_events e
-  left join public.worker_commission_invoices i on i.id = e.invoice_id
-  left join public.profiles p on p.id = d.worker_id
   where d.event_id = e.id
     and d.status = 'pending'
     and e.event_type = 'invoice_due_soon'
     and (
-      i.id is null
-      or i.worker_id <> d.worker_id
-      or i.status <> 'open'
-      or i.due_at <= now()
-      or public.is_app_review_demo_worker(d.worker_id)
-      or p.id is null
-      or p.account_status <> 'active'
+      e.invoice_id is null
+      or not exists (
+        select 1
+        from public.worker_commission_invoices i
+        join public.profiles p on p.id = d.worker_id
+        where i.id = e.invoice_id
+          and i.worker_id = d.worker_id
+          and i.status = 'open'
+          and i.due_at > now()
+          and p.account_status = 'active'
+          and not public.is_app_review_demo_worker(d.worker_id)
+      )
     );
 
   with candidate as (

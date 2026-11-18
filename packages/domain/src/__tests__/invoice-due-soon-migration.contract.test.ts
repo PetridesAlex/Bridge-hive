@@ -14,7 +14,7 @@ describe('invoice_due_soon reminder migration contract', () => {
     const sha = createHash('sha256').update(migration).digest('hex');
     // Frozen for the Prompt 1 readiness manifest — update only with intentional SQL edits.
     expect(sha).toBe(
-      'e46c4b1bd5ed830925c7664d8e0e51beddb9fd1c87026224ca0be68598ea96fd',
+      '3da76ece8e2d5026e1001b2eef68ba5bffc704bdb7e60065c56b7253d1ed902d',
     );
   });
 

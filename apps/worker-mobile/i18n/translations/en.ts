@@ -161,6 +161,7 @@ export const en = {
     newToBridgeHive: 'New to BridgeHive?',
     createProfessionalAccount: 'Create professional account',
     alreadyRegistered: 'Already have an account?',
+    privacyPolicyLink: 'Privacy Policy',
     googleContinue: 'Continue with Google',
     googleShort: 'Google',
     showPassword: 'Show password',
@@ -510,6 +511,8 @@ export const en = {
     notificationPreferences: 'Notification preferences',
     appInformation: 'App information',
     support: 'Support',
+    privacyPolicy: 'Privacy Policy',
+    privacyPolicySubtitle: 'How we handle your personal data.',
     deleteAccount: 'Delete account',
     deleteAccountTitle: 'Delete your account?',
     deleteAccountBody:
@@ -696,6 +699,25 @@ export const en = {
     topicPayoutsBody: 'Bank review, earnings, or commission invoices.',
     topicPayoutsMail: 'Payouts & invoices help',
     mailSubject: 'Bridge Hive worker support',
+    privacyPolicyLink: 'Read our Privacy Policy',
+  },
+  privacyPolicy: {
+    title: 'Privacy Policy',
+    legalDocument: 'Legal document',
+    onThisPage: 'On this page',
+    tocSubtitle: 'Jump to any article',
+    dataController: 'Data controller',
+    metaVersion: 'Version',
+    metaUpdated: 'Updated',
+    metaTaxId: 'Tax Identification Number (TIN)',
+    viewOnline: 'View latest online',
+    offlineNote:
+      'This copy is bundled with the app for offline reading. The online page may be updated separately.',
+    greekNote:
+      'Το κείμενο της Πολιτικής Απορρήτου παρατίθεται στα αγγλικά, όπως υποβλήθηκε από την εταιρεία. Δεν έχει εγκριθεί ελληνική μετάφραση. Σε περίπτωση διαφοράς, ισχύει το αγγλικό κείμενο.',
+    statusFinal: 'Final',
+    linkFailed: 'Could not open that link. Please try again.',
+    backToTop: 'Back to top',
   },
   roles: {
     registered_nurse: 'Registered Nurse',

@@ -375,6 +375,14 @@ export default function AccountHubScreen() {
         <ProfileMenuRow
           grouped
           showDivider
+          icon="shield-outline"
+          label={t('profile.privacyPolicy')}
+          subtitle={t('profile.privacyPolicySubtitle')}
+          onPress={() => router.push('/privacy-policy')}
+        />
+        <ProfileMenuRow
+          grouped
+          showDivider
           destructive
           icon="trash-outline"
           label={t('profile.deleteAccount')}

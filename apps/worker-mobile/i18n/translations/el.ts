@@ -163,6 +163,7 @@ export const el: TranslationCatalog = {
     newToBridgeHive: 'Νέοι στο BridgeHive;',
     createProfessionalAccount: 'Δημιουργία επαγγελματικού λογαριασμού',
     alreadyRegistered: 'Έχετε ήδη λογαριασμό;',
+    privacyPolicyLink: 'Πολιτική Απορρήτου',
     googleContinue: 'Συνέχεια με Google',
     googleShort: 'Google',
     showPassword: 'Εμφάνιση κωδικού',
@@ -512,6 +513,8 @@ export const el: TranslationCatalog = {
     notificationPreferences: 'Προτιμήσεις ειδοποιήσεων',
     appInformation: 'Πληροφορίες εφαρμογής',
     support: 'Υποστήριξη',
+    privacyPolicy: 'Πολιτική Απορρήτου',
+    privacyPolicySubtitle: 'Πώς διαχειριζόμαστε τα προσωπικά σας δεδομένα.',
     deleteAccount: 'Διαγραφή λογαριασμού',
     deleteAccountTitle: 'Διαγραφή του λογαριασμού σας;',
     deleteAccountBody:
@@ -700,6 +703,25 @@ export const el: TranslationCatalog = {
     topicPayoutsBody: 'Έλεγχος τράπεζας, αποδοχές ή τιμολόγια προμήθειας.',
     topicPayoutsMail: 'Βοήθεια πληρωμών & τιμολογίων',
     mailSubject: 'Υποστήριξη εργαζομένου Bridge Hive',
+    privacyPolicyLink: 'Διαβάστε την Πολιτική Απορρήτου',
+  },
+  privacyPolicy: {
+    title: 'Πολιτική Απορρήτου',
+    legalDocument: 'Νομικό έγγραφο',
+    onThisPage: 'Σε αυτή τη σελίδα',
+    tocSubtitle: 'Μετάβαση σε οποιοδήποτε άρθρο',
+    dataController: 'Υπεύθυνος επεξεργασίας',
+    metaVersion: 'Έκδοση',
+    metaUpdated: 'Ενημέρωση',
+    metaTaxId: 'Αριθμός Φορολογικής Ταυτότητας (ΑΦΤ)',
+    viewOnline: 'Δείτε την πιο πρόσφατη έκδοση online',
+    offlineNote:
+      'Αυτό το αντίγραφο είναι ενσωματωμένο στην εφαρμογή για ανάγνωση εκτός σύνδεσης. Η online σελίδα μπορεί να ενημερωθεί χωριστά.',
+    greekNote:
+      'Το κείμενο της Πολιτικής Απορρήτου παρατίθεται στα αγγλικά, όπως υποβλήθηκε από την εταιρεία. Δεν έχει εγκριθεί ελληνική μετάφραση. Σε περίπτωση διαφοράς, ισχύει το αγγλικό κείμενο.',
+    statusFinal: 'Οριστική',
+    linkFailed: 'Δεν ήταν δυνατό το άνοιγμα του συνδέσμου. Δοκιμάστε ξανά.',
+    backToTop: 'Επιστροφή στην αρχή',
   },
   roles: {
     registered_nurse: 'Νοσηλευτής/τρια',

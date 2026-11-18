@@ -159,6 +159,17 @@ export default function WorkerRegisterScreen() {
           {stepCopy.title}
         </Text>
         <Text style={styles.stepBody}>{stepCopy.body}</Text>
+        {step === 1 ? (
+          <Pressable
+            onPress={() => router.push('/privacy-policy')}
+            accessibilityRole="link"
+            accessibilityLabel={t('auth.privacyPolicyLink')}
+            hitSlop={8}
+            style={styles.privacyLinkHit}
+          >
+            <Text style={styles.privacyLink}>{t('auth.privacyPolicyLink')}</Text>
+          </Pressable>
+        ) : null}
       </View>
 
       {step === 1 ? (
@@ -327,6 +338,18 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#D7EEF2',
     letterSpacing: -0.2,
+  },
+  privacyLinkHit: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  privacyLink: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    color: colors.tealStrong,
+    textDecorationLine: 'underline',
   },
   stepBody: {
     fontFamily: typography.fonts.regular,

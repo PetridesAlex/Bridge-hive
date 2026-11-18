@@ -157,6 +157,14 @@ export default function WorkerLoginScreen() {
       >
         <Text style={styles.forgot}>{t('auth.forgotPassword')}</Text>
       </Pressable>
+      <Pressable
+        onPress={() => router.push('/privacy-policy')}
+        accessibilityRole="link"
+        accessibilityLabel={t('auth.privacyPolicyLink')}
+        style={styles.forgotBtn}
+      >
+        <Text style={styles.forgot}>{t('auth.privacyPolicyLink')}</Text>
+      </Pressable>
       <GoogleSignInButton glass />
     </AuthShell>
   );

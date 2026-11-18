@@ -12,7 +12,7 @@
 | Branch | `feat/invoice-due-soon-3day-reminder` |
 | Base main | `9db2168fcbb6afced88b1431794d2768187a5000` (PRs #57/#58) |
 | PR | *(filled after `gh pr create`)* |
-| Head SHA | `b062eea3d4d2a327a1d2eb72c5113843a0a936c8` |
+| Head SHA | `30d0bb2e5536a682f22e4c0c01f8952be2e5f743` |
 
 ### Included
 

@@ -74,7 +74,7 @@ export function ShiftDetailTabs({
               className={cn(
                 'inline-flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:transition-none',
                 selected
-                  ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)]'
+                  ? 'bg-[#071d30] text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)]'
                   : 'text-bh-text-secondary hover:bg-bh-subtle hover:text-bh-text',
               )}
             >

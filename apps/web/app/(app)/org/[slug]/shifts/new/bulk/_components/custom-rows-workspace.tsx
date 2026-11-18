@@ -214,15 +214,15 @@ export function CustomRowsWorkspace({
 
           <section
             aria-label="Batch summary"
-            className="relative overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] p-4 text-white sm:p-5"
+            className="relative overflow-hidden bg-[#071d30] p-4 text-white sm:p-5"
           >
             <span
               aria-hidden
-              className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/30 blur-2xl"
+              className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
             />
             <div className="relative grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f3d27a]">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5ec8ff]">
                   <Rows3 className="h-3.5 w-3.5" aria-hidden />
                   In this batch
                 </p>
@@ -247,7 +247,7 @@ export function CustomRowsWorkspace({
                 </div>
               </div>
               <div>
-                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f3d27a]">
+                <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5ec8ff]">
                   <Users className="h-3.5 w-3.5" aria-hidden />
                   Total positions
                 </p>
@@ -270,7 +270,7 @@ export function CustomRowsWorkspace({
             size="sm"
             disabled={rows.length >= BULK_SHIFT_MAX}
             onClick={() => setRows((prev) => addCustomRow(prev, seed))}
-            className="h-10 rounded-xl border border-[#e4b334]/40 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-3 pr-4 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(7,29,48,0.24)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_58%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_24px_rgba(7,29,48,0.3)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+            className="h-10 rounded-xl border border-[#e4b334]/40 bg-[#071d30] px-3 pr-4 font-semibold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_8px_18px_rgba(7,29,48,0.24)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[#0a283c] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_12px_24px_rgba(7,29,48,0.3)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
           >
             <span className="grid h-6 w-6 place-items-center rounded-md bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
               <Plus className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
@@ -311,21 +311,21 @@ export function CustomRowsWorkspace({
 
       <div className="hidden lg:block">
         <OrgTableShell className="overflow-hidden border-[#16384f]/20 shadow-[0_18px_40px_rgba(7,29,48,0.12)] ring-1 ring-[rgba(22,56,79,0.08)]">
-          <div className="relative flex items-center justify-between gap-3 overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-3.5 text-white">
+          <div className="relative flex items-center justify-between gap-3 overflow-hidden bg-[#071d30] px-4 py-3.5 text-white">
             <span
               aria-hidden
-              className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/30 blur-2xl"
+              className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-[#5ec8ff]/25 blur-2xl"
             />
             <span
               aria-hidden
-              className="bh-orb-drift pointer-events-none absolute -bottom-10 right-8 h-20 w-20 rounded-full bg-[#e4b334]/20 blur-2xl"
+              className="bh-orb-drift pointer-events-none absolute -bottom-10 right-8 h-20 w-20 rounded-full bg-[#5ec8ff]/15 blur-2xl"
             />
             <span
               aria-hidden
-              className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
             />
             <div className="relative min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
                 Shift rows
               </p>
               <p className="mt-1 text-xs text-white/70">
@@ -456,7 +456,7 @@ function CustomRowTableRow({
       )}
     >
       <td className="px-1.5 py-3 align-top first:pl-3">
-        <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] px-1.5 text-[11px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
+        <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md bg-[#071d30] px-1.5 text-[11px] font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]">
           {index + 1}
         </span>
       </td>
@@ -466,7 +466,7 @@ function CustomRowTableRow({
             'mb-1.5 inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-[10px] font-bold uppercase tracking-[0.14em]',
             dayLabel === 'Sat' || dayLabel === 'Sun'
               ? 'bg-[#e4b334] text-[#071d30]'
-              : 'bg-[#071d30] text-[#f3d27a]',
+              : 'bg-[#071d30] text-[#5ec8ff]',
           )}
         >
           <span

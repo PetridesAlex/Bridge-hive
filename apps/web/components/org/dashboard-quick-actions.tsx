@@ -49,19 +49,19 @@ export function DashboardQuickActions({
       className="relative overflow-hidden rounded-[var(--bh-org-radius)] border border-white/50 bg-[linear-gradient(180deg,#d7eef2_0%,#eef6fa_55%,#f4f9fb_100%)] shadow-[0_12px_28px_rgba(7,29,48,0.08)]"
       aria-labelledby="quick-actions-heading"
     >
-      <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-3.5">
+      <div className="relative overflow-hidden border-b border-white/10 bg-[#071d30] px-4 py-3.5">
         <span
           aria-hidden
-          className="bh-orb-drift pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/35 blur-2xl"
+          className="bh-orb-drift pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-[#5ec8ff]/25 blur-2xl"
         />
         <span
           aria-hidden
-          className="bh-orb-drift pointer-events-none absolute -bottom-10 -right-6 h-20 w-20 rounded-full bg-[#e4b334]/20 blur-2xl"
+          className="bh-orb-drift pointer-events-none absolute -bottom-10 -right-6 h-20 w-20 rounded-full bg-[#5ec8ff]/15 blur-2xl"
           style={{ animationDelay: '-6s' }}
         />
         <span
           aria-hidden
-          className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
         />
         <button
           type="button"
@@ -70,20 +70,20 @@ export function DashboardQuickActions({
           aria-controls="quick-actions-list"
           className="relative flex w-full items-start gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e4b334]"
         >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_16px_rgba(94,200,255,0.35)]">
             <Sparkles className="h-4 w-4" strokeWidth={2.4} aria-hidden />
           </span>
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-2">
               <span
                 id="quick-actions-heading"
-                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]"
+                className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]"
               >
                 Quick actions
               </span>
               <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/70">
                 <span
-                  className="bh-soft-pulse h-1.5 w-1.5 rounded-full bg-[#e4b334]"
+                  className="bh-soft-pulse h-1.5 w-1.5 rounded-full bg-[#5ec8ff]"
                   aria-hidden
                 />
                 Live
@@ -133,7 +133,7 @@ export function DashboardQuickActions({
                 </span>
               </span>
               <ArrowUpRight
-                className="h-4 w-4 shrink-0 text-[#f3d27a] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                className="h-4 w-4 shrink-0 text-[#5ec8ff] transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
                 aria-hidden
               />
             </Link>

@@ -65,16 +65,16 @@ export function WardLibraryPanel({
 
   if (!locations.length) {
     return (
-      <section className="relative overflow-hidden rounded-2xl border border-[#16384f]/20 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-6 py-10 text-center text-white shadow-[0_18px_40px_rgba(7,29,48,0.16)]">
+      <section className="relative overflow-hidden rounded-2xl border border-[#16384f]/20 bg-[#071d30] px-6 py-10 text-center text-white shadow-[0_18px_40px_rgba(7,29,48,0.16)]">
         <span
           aria-hidden
-          className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/30 blur-2xl"
+          className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
         />
         <span
           aria-hidden
           className="bh-orb-drift pointer-events-none absolute -bottom-12 right-10 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
         />
-        <span className="relative mx-auto grid h-11 w-11 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+        <span className="relative mx-auto grid h-11 w-11 place-items-center rounded-xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_16px_rgba(94,200,255,0.35)]">
           <Layers className="h-4 w-4" strokeWidth={2.4} aria-hidden />
         </span>
         <h2 className="relative mt-3 text-lg font-semibold tracking-tight">
@@ -90,10 +90,10 @@ export function WardLibraryPanel({
 
   return (
     <section className="bh-org-enter relative overflow-hidden rounded-2xl border border-[#16384f]/25 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]">
-      <header className="relative flex flex-wrap items-start justify-between gap-4 overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-4 text-white sm:px-6">
+      <header className="relative flex flex-wrap items-start justify-between gap-4 overflow-hidden bg-[#071d30] px-5 py-4 text-white sm:px-6">
         <span
           aria-hidden
-          className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/35 blur-2xl"
+          className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
         />
         <span
           aria-hidden
@@ -101,14 +101,14 @@ export function WardLibraryPanel({
         />
         <span
           aria-hidden
-          className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
         />
         <div className="relative flex min-w-0 max-w-lg items-start gap-3.5">
-          <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+          <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_16px_rgba(94,200,255,0.35)]">
             <Layers className="h-5 w-5" strokeWidth={2.4} aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
               Standard units
             </p>
             <h2 className="mt-1 text-[20px] font-bold leading-none tracking-[-0.03em] text-white">
@@ -156,7 +156,7 @@ export function WardLibraryPanel({
                 className={cn(
                   'group relative min-w-[11.5rem] overflow-hidden rounded-2xl px-4 py-3 text-left transition-[background-color,box-shadow,transform] duration-200 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
                   active
-                    ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-white shadow-[0_12px_24px_rgba(7,29,48,0.22)]'
+                    ? 'bg-[#071d30] text-white shadow-[0_12px_24px_rgba(7,29,48,0.22)]'
                     : 'bg-white/80 text-bh-text ring-1 ring-[#16384f]/10 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_10px_22px_rgba(7,29,48,0.08)]',
                 )}
               >
@@ -179,7 +179,7 @@ export function WardLibraryPanel({
                       className={cn(
                         'mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]',
                         active
-                          ? 'bg-white/12 text-[#f3d27a]'
+                          ? 'bg-white/12 text-[#5ec8ff]'
                           : 'bg-bh-subtle text-bh-text-muted',
                       )}
                     >
@@ -209,7 +209,7 @@ export function WardLibraryPanel({
               />
               <span
                 aria-hidden
-                className="bh-orb-drift pointer-events-none absolute -bottom-10 right-6 h-20 w-20 rounded-full bg-[#e4b334]/20 blur-2xl"
+                className="bh-orb-drift pointer-events-none absolute -bottom-10 right-6 h-20 w-20 rounded-full bg-[#5ec8ff]/15 blur-2xl"
               />
               <span className="relative mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_20px_rgba(228,179,52,0.35)]">
                 <Layers className="h-5 w-5" strokeWidth={2.4} aria-hidden />

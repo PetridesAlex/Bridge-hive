@@ -29,9 +29,12 @@ import {
   Check,
   CheckCircle2,
   ClipboardCheck,
+  Clock3,
   FilePenLine,
+  Layers,
   Loader2,
   Plus,
+  Rocket,
   Rows3,
   Send,
   Trash2,
@@ -399,67 +402,132 @@ export function BulkShiftBuilder({
   }
 
   if (step === 'success' && result) {
+    const published = result.requestedStatus === 'published';
     return (
-      <div className="rounded-2xl border border-bh-border bg-bh-surface p-6 shadow-sm sm:p-8">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-bh-success-soft text-bh-success">
-          <Check className="h-6 w-6" aria-hidden />
-        </div>
-        <h2 className="mt-4 text-xl font-semibold text-bh-text">
-          {result.requestedStatus === 'published'
-            ? 'Shifts published'
-            : 'Draft shifts created'}
-        </h2>
-        <p className="mt-2 text-sm text-bh-text-secondary">
-          {result.shiftCount} shifts are ready. Open this batch on the schedule, or
-          create another set of multiple shifts.
-        </p>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Button
-            asChild
-            variant="honey"
-            size="lg"
-            className="group min-h-12 justify-between gap-3 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)]"
-          >
-            <Link href={`/org/${slug}/shifts?batch=${result.batchId}`}>
-              <span className="inline-flex items-center gap-2.5">
+      <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#071d30] shadow-[0_22px_48px_rgba(7,29,48,0.32)]">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/5 blur-3xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)]"
+        />
+        <div className="relative px-5 py-8 sm:px-8 sm:py-10">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-7">
+            <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white text-[#071d30] shadow-[0_12px_28px_rgba(0,0,0,0.22)]">
+              <Check className="h-7 w-7" strokeWidth={2.6} aria-hidden />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/50">
+                Successfully submitted
+              </p>
+              <h2 className="mt-2 text-[clamp(1.7rem,3.5vw,2.25rem)] font-black leading-[1.05] tracking-[-0.04em] text-white">
+                {published ? 'Shifts published' : 'Draft shifts created'}
+              </h2>
+              <p className="mt-3 max-w-2xl text-[15px] leading-6 text-white/70">
+                {result.shiftCount} shift{result.shiftCount === 1 ? '' : 's'}{' '}
+                {published
+                  ? 'are live and available for matching.'
+                  : 'are saved as drafts and ready on your schedule.'}{' '}
+                Open the batch now, or start another set.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="bh-tabular inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-white/15">
+                  {result.shiftCount} shifts
+                </span>
+                <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white ring-1 ring-white/15">
+                  {published ? 'Published' : 'Draft'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row sm:flex-wrap">
+            <Button
+              asChild
+              size="lg"
+              className="group h-12 min-h-12 rounded-xl border border-white/20 bg-white px-5 text-[15px] font-bold tracking-tight text-[#071d30] shadow-[0_12px_28px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f4f8fb] focus-visible:ring-white motion-reduce:hover:translate-y-0"
+            >
+              <Link href={`/org/${slug}/shifts?batch=${result.batchId}`}>
                 <CalendarDays className="h-4 w-4" aria-hidden />
                 View batch on shifts
-              </span>
-              <ArrowRight
-                className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                aria-hidden
-              />
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="group min-h-12 justify-between gap-3 rounded-xl border-bh-border/90 bg-white px-5 text-bh-text shadow-[0_1px_2px_rgba(7,29,48,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] hover:shadow-[0_8px_20px_rgba(7,29,48,0.08)]"
-          >
-            <Link href={`/org/${slug}/shifts/new/bulk`}>
-              <span className="inline-flex items-center gap-2.5">
-                <ArrowLeft
-                  className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
-                  aria-hidden
-                />
-                Back to multiple shifts
-              </span>
-              <Rows3 className="h-4 w-4 text-bh-text-muted" aria-hidden />
-            </Link>
-          </Button>
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30] text-white">
+                  <ArrowRight
+                    className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
+                    aria-hidden
+                  />
+                </span>
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              className="group h-12 min-h-12 rounded-xl border border-white/20 bg-white/10 px-5 text-[15px] font-semibold text-white shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/15 focus-visible:ring-white motion-reduce:hover:translate-y-0"
+            >
+              <Link href={`/org/${slug}/shifts/new/bulk`}>
+                <Rows3 className="h-4 w-4" aria-hidden />
+                Create another batch
+              </Link>
+            </Button>
+          </div>
         </div>
-      </div>
+      </section>
     );
   }
 
   return (
     <div className="space-y-5">
+      <header className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#071d30] px-5 py-6 shadow-[0_18px_40px_rgba(7,29,48,0.28)] sm:px-7 sm:py-7">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/5 blur-3xl"
+        />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75 ring-1 ring-white/15">
+              <CalendarRange className="h-3.5 w-3.5" aria-hidden />
+              Shifts
+            </p>
+            <h1 className="mt-3 text-[clamp(1.9rem,4.2vw,2.6rem)] font-black leading-[1.05] tracking-[-0.04em] text-white">
+              Create multiple shifts
+            </h1>
+            <p className="mt-3 max-w-2xl text-[15px] leading-6 text-white/70">
+              Build the batch row by row, edit every shift on its own, then check
+              the times before you save drafts or publish.
+            </p>
+          </div>
+          <ul className="flex flex-wrap items-center gap-2 lg:max-w-sm lg:justify-end">
+            <li className="inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-semibold text-[#071d30]">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-[#071d30] text-white">
+                <Clock3 className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
+              </span>
+              {organizationTimezone}
+            </li>
+            <li className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-white ring-1 ring-white/15">
+              <Layers className="h-3.5 w-3.5" aria-hidden />
+              Up to {BULK_SHIFT_MAX} shifts
+            </li>
+            <li className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-white ring-1 ring-white/15">
+              <Rocket className="h-3.5 w-3.5" aria-hidden />
+              Draft or publish
+            </li>
+          </ul>
+        </div>
+      </header>
+
       <StepRail step={step} />
 
-      <p className="text-xs font-medium text-bh-text-muted">
-        Times use location timezone
-        {selectedLocation ? ` · ${selectedLocation.name} (${locationTz})` : ` · ${organizationTimezone}`}
+      <p className="inline-flex max-w-full flex-wrap items-center gap-2 rounded-full border border-[#071d30]/12 bg-white/70 px-3.5 py-1.5 text-xs font-semibold text-[#071d30]/70 shadow-[0_4px_12px_rgba(7,29,48,0.06)] backdrop-blur-sm">
+        <span className="rounded-full bg-[#071d30] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+          Timezone
+        </span>
+        <span className="min-w-0 truncate">
+          Times use location timezone
+          {selectedLocation
+            ? ` · ${selectedLocation.name} (${locationTz})`
+            : ` · ${organizationTimezone}`}
+        </span>
       </p>
 
       {step === 'build' ? (
@@ -668,29 +736,46 @@ export function BulkShiftBuilder({
 
       {step === 'review' || step === 'confirm' ? (
         <div className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SummaryTile
-              label="Shifts"
-              value={String(summary.shiftCount)}
-            />
-            <SummaryTile
-              label="Total positions"
-              value={String(totalPositions)}
-            />
-            <SummaryTile
-              label="Est. gross"
-              value={formatMoneyMinor(
-                summary.estimatedGrossMinor,
-                summary.currency,
-              )}
-            />
-            <SummaryTile
-              label="Roles"
-              value={summary.roleCounts
-                .filter((r) => r.count > 0)
-                .map((r) => `${r.count} ${r.label}`)
-                .join(' · ') || '—'}
-            />
+          <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/70 shadow-[0_14px_32px_rgba(7,29,48,0.1)] ring-1 ring-[#071d30]/08 backdrop-blur-md">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#071d30]/08 bg-[#071d30] px-4 py-3.5 sm:px-5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/50">
+                  Batch summary
+                </p>
+                <p className="mt-0.5 text-base font-semibold tracking-tight text-white">
+                  {summary.shiftCount} shift{summary.shiftCount === 1 ? '' : 's'} ready
+                  to create
+                </p>
+              </div>
+              <p className="text-xs font-medium text-white/60">
+                Review details before releasing
+              </p>
+            </div>
+
+            <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5 lg:grid-cols-4">
+              <SummaryTile
+                label="Shifts"
+                value={String(summary.shiftCount)}
+              />
+              <SummaryTile
+                label="Total positions"
+                value={String(totalPositions)}
+              />
+              <SummaryTile
+                label="Est. gross"
+                value={formatMoneyMinor(
+                  summary.estimatedGrossMinor,
+                  summary.currency,
+                )}
+              />
+              <SummaryTile
+                label="Roles"
+                value={summary.roleCounts
+                  .filter((r) => r.count > 0)
+                  .map((r) => `${r.count} ${r.label}`)
+                  .join(' · ') || '—'}
+              />
+            </div>
           </div>
 
           {exactDupes.length > 0 ? (
@@ -718,53 +803,82 @@ export function BulkShiftBuilder({
             </p>
           ) : null}
 
-          <div className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface">
+          <div className="overflow-hidden rounded-2xl border border-white/70 bg-white shadow-[0_14px_32px_rgba(7,29,48,0.1)] ring-1 ring-[#071d30]/08">
+            <div className="flex items-center justify-between gap-3 border-b border-[#071d30]/08 px-4 py-3 sm:px-5">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#071d30]/50">
+                  Shift list
+                </p>
+                <p className="mt-0.5 text-sm font-semibold text-[#071d30]">
+                  {preview.length} row{preview.length === 1 ? '' : 's'} in this batch
+                </p>
+              </div>
+            </div>
             <div className="max-h-[28rem] overflow-auto">
-              <table className="w-full min-w-[48rem] text-left text-sm">
-                <thead className="sticky top-0 bg-bh-subtle/90 text-[11px] font-semibold uppercase tracking-wide text-bh-text-muted backdrop-blur">
+              <table className="w-full min-w-[52rem] text-left text-sm">
+                <thead className="sticky top-0 z-[1] bg-[#071d30] text-[10px] font-bold uppercase tracking-[0.12em] text-white/65">
                   <tr>
-                    <th className="px-3 py-2.5">#</th>
-                    <th className="px-3 py-2.5">Date</th>
-                    <th className="px-3 py-2.5">Time</th>
-                    <th className="px-3 py-2.5">Role</th>
-                    <th className="px-3 py-2.5">Location</th>
-                    <th className="px-3 py-2.5">Ward / unit</th>
-                    <th className="px-3 py-2.5">Positions</th>
-                    <th className="px-3 py-2.5">Rate</th>
+                    <th className="px-4 py-3 font-bold">#</th>
+                    <th className="px-3 py-3 font-bold">Date</th>
+                    <th className="px-3 py-3 font-bold">Time</th>
+                    <th className="px-3 py-3 font-bold">Role</th>
+                    <th className="px-3 py-3 font-bold">Location</th>
+                    <th className="px-3 py-3 font-bold">Ward / unit</th>
+                    <th className="px-3 py-3 font-bold">Positions</th>
+                    <th className="px-4 py-3 font-bold">Rate</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.map((row) => (
+                  {preview.map((row, index) => (
                     <tr
                       key={row.rowIndex}
-                      className="border-t border-bh-border/70"
+                      className={cn(
+                        'border-t border-[#071d30]/06 transition-colors hover:bg-[#0a283c]/[0.03]',
+                        index % 2 === 1 && 'bg-[#071d30]/[0.015]',
+                      )}
                     >
-                      <td className="px-3 py-2 text-bh-text-muted">
-                        {row.rowIndex + 1}
+                      <td className="px-4 py-3">
+                        <span className="bh-tabular inline-flex h-6 min-w-6 items-center justify-center rounded-md bg-[#071d30]/[0.06] px-1.5 text-[11px] font-bold text-[#071d30]/70">
+                          {row.rowIndex + 1}
+                        </span>
                       </td>
-                      <td className="px-3 py-2 font-medium text-bh-text">
-                        {row.dateYmd}
+                      <td className="px-3 py-3">
+                        <span className="bh-tabular font-semibold tracking-tight text-[#071d30]">
+                          {row.dateYmd}
+                        </span>
                       </td>
-                      <td className="px-3 py-2 text-bh-text-secondary">
-                        {row.startsAtIso.slice(11, 16)}–
-                        {row.endsAtIso.slice(11, 16)} UTC
+                      <td className="px-3 py-3">
+                        <span className="bh-tabular inline-flex items-center rounded-full bg-[#071d30]/[0.06] px-2.5 py-1 text-[12px] font-semibold text-[#071d30]">
+                          {row.startsAtIso.slice(11, 16)}–
+                          {row.endsAtIso.slice(11, 16)}
+                          <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-[#071d30]/45">
+                            UTC
+                          </span>
+                        </span>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-3 font-medium text-[#071d30]">
                         {WORKER_ROLE_LABELS[row.requiredRole]}
                       </td>
-                      <td className="px-3 py-2 text-bh-text-secondary">
+                      <td className="max-w-[12rem] truncate px-3 py-3 text-[#071d30]/70">
                         {locationNameById.get(row.locationId) ?? '—'}
                       </td>
-                      <td className="px-3 py-2 text-bh-text-secondary">
+                      <td className="px-3 py-3 text-[#071d30]/70">
                         {row.wardId
                           ? (wardNameById.get(row.wardId) ?? '—')
                           : '—'}
                       </td>
-                      <td className="px-3 py-2 text-bh-text-secondary">
-                        {row.requiredPositions ?? 1}
+                      <td className="px-3 py-3">
+                        <span className="bh-tabular inline-flex h-7 min-w-7 items-center justify-center rounded-lg bg-[#071d30] px-2 text-xs font-bold text-white">
+                          {row.requiredPositions ?? 1}
+                        </span>
                       </td>
-                      <td className="px-3 py-2">
-                        {formatMoneyMinor(row.rateMinor, row.currency)}/hr
+                      <td className="px-4 py-3">
+                        <span className="bh-tabular font-bold tracking-tight text-[#071d30]">
+                          {formatMoneyMinor(row.rateMinor, row.currency)}
+                          <span className="ml-0.5 text-xs font-semibold text-[#071d30]/45">
+                            /hr
+                          </span>
+                        </span>
                       </td>
                     </tr>
                   ))}
@@ -803,7 +917,7 @@ export function BulkShiftBuilder({
                   className={cn(
                     'group relative flex items-start gap-3 rounded-2xl border px-4 py-4 text-left transition-all duration-200 motion-reduce:transition-none',
                     requestedStatus === 'draft'
-                      ? 'border-transparent bg-[linear-gradient(155deg,#16384f_0%,#071d30_62%,#0c3a42_100%)] text-white shadow-[0_12px_28px_rgba(7,29,48,0.22)]'
+                      ? 'border-transparent bg-[#071d30] text-white shadow-[0_12px_28px_rgba(7,29,48,0.22)]'
                       : 'border-bh-border/80 bg-white text-bh-text hover:-translate-y-0.5 hover:border-[#16384f]/20 hover:bg-[#f7fafc] hover:shadow-[0_8px_20px_rgba(7,29,48,0.06)] motion-reduce:hover:translate-y-0',
                   )}
                 >
@@ -901,8 +1015,12 @@ export function BulkShiftBuilder({
             </div>
           ) : null}
 
-          <div className="sticky bottom-4 z-10 overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface/95 shadow-[0_16px_40px_rgba(7,29,48,0.12)] backdrop-blur-md">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+          <div className="sticky bottom-4 z-10 relative overflow-hidden rounded-2xl border border-white/10 bg-[#071d30] shadow-[0_20px_48px_rgba(7,29,48,0.35)]">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent)]"
+            />
+            <div className="relative flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
               <div className="flex min-w-0 flex-wrap items-center gap-3">
                 <Button
                   type="button"
@@ -910,7 +1028,7 @@ export function BulkShiftBuilder({
                   size="lg"
                   disabled={pending}
                   onClick={() => setStep(step === 'confirm' ? 'review' : 'build')}
-                  className="group min-h-11 rounded-xl border-bh-border/90 bg-white px-4 shadow-[0_1px_2px_rgba(7,29,48,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/25 hover:bg-[#f7fafc] motion-reduce:hover:translate-y-0"
+                  className="group min-h-12 rounded-xl border-white/20 bg-white/10 px-4 font-semibold text-white shadow-none transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/15 hover:text-white motion-reduce:hover:translate-y-0"
                 >
                   <ArrowLeft
                     className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
@@ -919,10 +1037,10 @@ export function BulkShiftBuilder({
                   Back
                 </Button>
                 <div className="hidden min-w-0 sm:block">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-text-muted">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/50">
                     {step === 'confirm' ? 'Ready to create' : 'Review batch'}
                   </p>
-                  <p className="truncate text-sm font-medium text-[#071d30]">
+                  <p className="truncate text-sm font-semibold text-white">
                     {preview.length} shift{preview.length === 1 ? '' : 's'}
                     {step === 'confirm'
                       ? requestedStatus === 'published'
@@ -936,7 +1054,6 @@ export function BulkShiftBuilder({
               {step === 'review' ? (
                 <Button
                   type="button"
-                  variant="honey"
                   size="lg"
                   onClick={() => {
                     if (exactDupes.length && !allowExactDuplicates) {
@@ -947,25 +1064,27 @@ export function BulkShiftBuilder({
                     }
                     setStep('confirm');
                   }}
-                  className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)] motion-reduce:hover:translate-y-0"
+                  className="group relative h-12 min-h-12 overflow-hidden rounded-xl border border-white/20 bg-white px-5 text-[15px] font-bold tracking-tight text-[#071d30] shadow-[0_12px_28px_rgba(0,0,0,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f4f8fb] hover:shadow-[0_16px_32px_rgba(0,0,0,0.32)] focus-visible:ring-white motion-reduce:hover:translate-y-0"
                 >
+                  <ClipboardCheck className="h-4 w-4" aria-hidden />
                   Continue to confirm
-                  <ArrowRight
-                    className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                    aria-hidden
-                  />
+                  <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30] text-white">
+                    <ArrowRight
+                      className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
+                      aria-hidden
+                    />
+                  </span>
                 </Button>
               ) : (
                 <Button
                   type="button"
-                  variant="honey"
                   size="lg"
                   disabled={
                     pending ||
                     (exactDupes.length > 0 && !allowExactDuplicates)
                   }
                   onClick={submitBatch}
-                  className="group min-h-11 rounded-xl px-5 shadow-[0_8px_20px_rgba(228,179,52,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(228,179,52,0.36)] motion-reduce:hover:translate-y-0"
+                  className="group relative h-12 min-h-12 overflow-hidden rounded-xl border border-white/20 bg-white px-5 text-[15px] font-bold tracking-tight text-[#071d30] shadow-[0_12px_28px_rgba(0,0,0,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f4f8fb] hover:shadow-[0_16px_32px_rgba(0,0,0,0.32)] focus-visible:ring-white motion-reduce:hover:translate-y-0"
                 >
                   {pending ? (
                     <>
@@ -976,19 +1095,23 @@ export function BulkShiftBuilder({
                     <>
                       <Send className="h-4 w-4" aria-hidden />
                       Publish {preview.length} shifts
-                      <ArrowRight
-                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                        aria-hidden
-                      />
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30] text-white">
+                        <ArrowRight
+                          className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
+                          aria-hidden
+                        />
+                      </span>
                     </>
                   ) : (
                     <>
                       <FilePenLine className="h-4 w-4" aria-hidden />
                       Create {preview.length} drafts
-                      <ArrowRight
-                        className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
-                        aria-hidden
-                      />
+                      <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#071d30] text-white">
+                        <ArrowRight
+                          className="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5"
+                          aria-hidden
+                        />
+                      </span>
                     </>
                   )}
                 </Button>
@@ -1214,7 +1337,7 @@ function StepRail({ step }: { step: Step }) {
                   'relative flex items-center gap-3.5 rounded-xl px-3.5 py-3 transition-all duration-300 motion-reduce:transition-none',
                   current &&
                     !finished &&
-                    'bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_12px_26px_rgba(7,29,48,0.28)]',
+                    'bg-[#071d30] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_12px_26px_rgba(7,29,48,0.28)]',
                   finished && 'bg-emerald-50/70 text-bh-text',
                   upcoming && 'text-bh-text-muted',
                 )}
@@ -1266,7 +1389,7 @@ function StepRail({ step }: { step: Step }) {
                     className={cn(
                       'block text-[10px] font-bold uppercase tracking-[0.16em]',
                       current && !finished
-                        ? 'text-[#f3d27a]'
+                        ? 'text-[#5ec8ff]'
                         : finished
                           ? 'text-emerald-700'
                           : 'text-bh-text-muted',
@@ -1396,11 +1519,13 @@ function ModeCards({
 
 function SummaryTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-bh-border bg-bh-surface px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-bh-text-muted">
+    <div className="rounded-xl border border-[#071d30]/10 bg-[#f7fafc] px-4 py-3.5">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#071d30]/45">
         {label}
       </p>
-      <p className="mt-1 text-sm font-semibold text-bh-text">{value}</p>
+      <p className="bh-tabular mt-1.5 text-xl font-extrabold tracking-[-0.03em] text-[#071d30]">
+        {value}
+      </p>
     </div>
   );
 }

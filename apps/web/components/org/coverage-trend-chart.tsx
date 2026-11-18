@@ -86,7 +86,7 @@ export function CoverageTrendChart({
           aria-hidden
           className="bh-orb-drift pointer-events-none absolute -bottom-10 -right-6 h-24 w-24 rounded-full bg-[#e4b334]/18 blur-2xl"
         />
-        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#f3d27a] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
+        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#5ec8ff] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
           <TrendingUp className="h-4 w-4" aria-hidden />
         </span>
         <p className="relative mt-3 text-sm font-semibold text-[#071d30]">
@@ -171,7 +171,7 @@ export function CoverageTrendChart({
             ) : null}
           </div>
           <span className="inline-flex items-center gap-1 rounded-full bg-[#071d30] px-2 py-0.5 text-[10px] font-bold text-white">
-            <TrendingUp className="h-3 w-3 text-[#f3d27a]" aria-hidden />
+            <TrendingUp className="h-3 w-3 text-[#5ec8ff]" aria-hidden />
             <span className="bh-tabular">{fillRate}%</span> filled
           </span>
         </div>

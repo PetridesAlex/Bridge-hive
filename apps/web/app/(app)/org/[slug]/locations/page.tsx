@@ -285,7 +285,7 @@ export default async function LocationsPage({
             <Button
               asChild
               size="lg"
-              className="group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] px-3.5 font-semibold text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1a425c_0%,#0a283c_72%)] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+              className="group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl border border-white/10 bg-[#071d30] px-3.5 font-semibold text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0a283c] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
             >
               <Link href={filterHref(slug, filterState, { new: '1' })}>
                 <span className="inline-flex items-center gap-2.5">
@@ -480,7 +480,7 @@ export default async function LocationsPage({
               <Button
                 asChild
                 size="lg"
-                className="group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] px-3.5 font-semibold text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1a425c_0%,#0a283c_72%)] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)] motion-reduce:hover:translate-y-0"
+                className="group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl border border-white/10 bg-[#071d30] px-3.5 font-semibold text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#0a283c] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)] motion-reduce:hover:translate-y-0"
               >
                 <Link href={`/org/${slug}/locations?new=1`}>
                   <span className="inline-flex items-center gap-2.5">
@@ -623,10 +623,10 @@ export default async function LocationsPage({
                 className="bh-org-enter group/site relative overflow-hidden rounded-2xl border border-[#16384f]/25 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)] transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_44px_rgba(7,29,48,0.18)] motion-reduce:transform-none motion-reduce:hover:translate-y-0"
                 style={{ animationDelay: `${index * 90}ms` }}
               >
-                <div className="relative overflow-hidden bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-4 text-white sm:px-5 sm:py-5">
+                <div className="relative overflow-hidden bg-[#071d30] px-4 py-4 text-white sm:px-5 sm:py-5">
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/35 blur-2xl"
+                    className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
                   />
                   <span
                     aria-hidden
@@ -634,7 +634,7 @@ export default async function LocationsPage({
                   />
                   <span
                     aria-hidden
-                    className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
                   />
 
                   <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -655,10 +655,10 @@ export default async function LocationsPage({
                         </span>
                       )}
                       <div className="min-w-0">
-                        <p className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+                        <p className="flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
                           <span className="inline-flex items-center gap-1.5">
                             <span
-                              className="bh-soft-pulse h-1.5 w-1.5 rounded-full bg-[#e4b334] shadow-[0_0_8px_rgba(228,179,52,0.85)]"
+                              className="bh-soft-pulse h-1.5 w-1.5 rounded-full bg-[#5ec8ff] shadow-[0_0_8px_rgba(228,179,52,0.85)]"
                               aria-hidden
                             />
                             Added location
@@ -768,7 +768,7 @@ export default async function LocationsPage({
                       />
                       <span
                         aria-hidden
-                        className="bh-orb-drift pointer-events-none absolute -bottom-10 right-8 h-20 w-20 rounded-full bg-[#e4b334]/20 blur-2xl"
+                        className="bh-orb-drift pointer-events-none absolute -bottom-10 right-8 h-20 w-20 rounded-full bg-[#5ec8ff]/15 blur-2xl"
                       />
                       <span className="relative mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_20px_rgba(228,179,52,0.35)]">
                         <Layers className="h-5 w-5" strokeWidth={2.4} aria-hidden />

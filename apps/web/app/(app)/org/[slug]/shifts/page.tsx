@@ -544,17 +544,17 @@ export default async function ShiftsPage({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="mb-2.5 flex items-center gap-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-bh-teal-strong">
+          <p className="mb-3 flex items-center gap-2.5 text-[11px] font-bold uppercase tracking-[0.22em] text-[#071d30]/55">
             <span
               aria-hidden
-              className="h-px w-7 rounded-full bg-[linear-gradient(90deg,#e4b334,#16a6b6)]"
+              className="h-[3px] w-8 rounded-full bg-[#071d30]"
             />
             Schedule
           </p>
-          <h1 className="text-[2rem] font-extrabold leading-none tracking-[-0.04em] text-[#071d30]">
+          <h1 className="text-[2.35rem] font-black leading-[0.92] tracking-[-0.045em] text-[#071d30] sm:text-[2.6rem]">
             Shifts
           </h1>
-          <p className="mt-3 max-w-md border-l-2 border-[#e4b334] pl-3 text-[15px] leading-6 tracking-[-0.011em] text-bh-text-secondary">
+          <p className="mt-3.5 max-w-md border-l-[3px] border-[#071d30] pl-3.5 text-[15px] font-medium leading-6 tracking-[-0.01em] text-[#071d30]/70">
             Create, publish and manage staffing across your locations.
           </p>
         </div>
@@ -563,46 +563,30 @@ export default async function ShiftsPage({
             <div className="flex flex-wrap items-center justify-end gap-3">
               <Button
                 asChild
-                className="group relative h-14 min-h-14 overflow-hidden rounded-2xl border border-[#e4b334]/55 bg-[linear-gradient(165deg,#f6e2a4_0%,#e4b334_46%,#c9920f_100%)] px-4 pr-5 text-[15px] font-bold tracking-tight text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.62),0_16px_34px_rgba(201,146,15,0.36)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(165deg,#fbeec0_0%,#edbf48_46%,#d4a318_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_20px_40px_rgba(201,146,15,0.46)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                className="group h-14 min-h-14 rounded-2xl border border-[#071d30] bg-[#071d30] px-4 pr-5 text-[15px] font-bold tracking-tight text-white shadow-[0_10px_22px_rgba(7,29,48,0.22)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[#0d2a42] hover:shadow-[0_14px_28px_rgba(7,29,48,0.3)] focus-visible:ring-[#071d30] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 <Link href={`/org/${slug}/shifts/new`}>
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute -left-6 -top-8 h-20 w-20 rounded-full bg-white/35 blur-2xl"
-                  />
-                  <span
-                    aria-hidden
-                    className="bh-gradient-sheen pointer-events-none absolute inset-0 opacity-70 bg-[linear-gradient(115deg,transparent_12%,rgba(255,255,255,0.55)_48%,transparent_78%)]"
-                  />
-                  <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-[#071d30] text-[#e4b334] shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_8px_16px_rgba(7,29,48,0.28)]">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white">
                     <Plus className="h-[18px] w-[18px]" strokeWidth={2.6} aria-hidden />
                   </span>
-                  <span className="relative">Create shift</span>
+                  <span>Create shift</span>
                   <ArrowUpRight
-                    className="relative h-4 w-4 text-[#071d30]/70 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    className="h-4 w-4 text-white/75 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                     aria-hidden
                   />
                 </Link>
               </Button>
               <Button
                 asChild
-                className="group relative h-14 min-h-14 overflow-hidden rounded-2xl border border-white/18 bg-[linear-gradient(155deg,#16384f_0%,#071d30_56%,#0c3a42_100%)] px-4 pr-5 text-[15px] font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.16),0_16px_34px_rgba(7,29,48,0.38)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1d4d68_0%,#0c2844_56%,#146067_100%)] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_20px_40px_rgba(7,29,48,0.46)] focus-visible:ring-[#e4b334] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                className="group h-14 min-h-14 rounded-2xl border border-[#071d30]/20 bg-white px-4 pr-5 text-[15px] font-bold tracking-tight text-[#071d30] shadow-[0_8px_18px_rgba(7,29,48,0.08)] transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-[#f4f8fb] hover:shadow-[0_12px_24px_rgba(7,29,48,0.12)] focus-visible:ring-[#071d30] motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 <Link href={`/org/${slug}/shifts/new/bulk`}>
-                  <span
-                    aria-hidden
-                    className="bh-orb-drift pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
-                  />
-                  <span
-                    aria-hidden
-                    className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] bg-[linear-gradient(90deg,#071d30_0%,#e4b334_52%,#16a6b6_100%)]"
-                  />
-                  <span className="relative grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#071d30] text-white">
                     <Layers className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
                   </span>
-                  <span className="relative">Create multiple shifts</span>
+                  <span>Create multiple shifts</span>
                   <ArrowUpRight
-                    className="relative h-4 w-4 text-[#f3d27a] transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                    className="h-4 w-4 text-[#071d30]/55 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                     aria-hidden
                   />
                 </Link>
@@ -705,28 +689,28 @@ export default async function ShiftsPage({
         pathname={`/org/${slug}/shifts`}
         className="relative overflow-hidden rounded-2xl border border-[#16384f]/25 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]"
       >
-        <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-3.5 sm:px-5">
+        <div className="relative flex flex-wrap items-center justify-between gap-3 overflow-hidden border-b border-white/10 bg-[#071d30] px-4 py-3.5 sm:px-5">
           <span
             aria-hidden
-            className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/35 blur-2xl"
+            className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
           />
           <span
             aria-hidden
-            className="bh-orb-drift pointer-events-none absolute -bottom-12 right-16 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
+            className="pointer-events-none absolute -bottom-12 right-16 h-24 w-24 rounded-full bg-[#5ec8ff]/15 blur-2xl"
           />
           <span
             aria-hidden
-            className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
           />
           <div className="relative flex min-w-0 items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.35)]">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_16px_rgba(94,200,255,0.35)]">
               <SlidersHorizontal className="h-4 w-4" strokeWidth={2.4} aria-hidden />
             </span>
             <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
                 Filters
                 {hasFilters ? (
-                  <span className="bh-tabular inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#e4b334] px-1.5 text-[10px] font-bold tracking-normal text-[#071d30]">
+                  <span className="bh-tabular inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#5ec8ff] px-1.5 text-[10px] font-bold tracking-normal text-[#071d30]">
                     {activeFilterCount}
                   </span>
                 ) : null}
@@ -747,7 +731,7 @@ export default async function ShiftsPage({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200',
                 listView
-                  ? 'bg-[#e4b334] text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.35)]'
+                  ? 'bg-[#5ec8ff] text-[#071d30] shadow-[0_6px_14px_rgba(94,200,255,0.35)]'
                   : 'text-white/75 hover:bg-white/10 hover:text-white',
               )}
             >
@@ -760,7 +744,7 @@ export default async function ShiftsPage({
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all duration-200',
                 !listView
-                  ? 'bg-[#e4b334] text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.35)]'
+                  ? 'bg-[#5ec8ff] text-[#071d30] shadow-[0_6px_14px_rgba(94,200,255,0.35)]'
                   : 'text-white/75 hover:bg-white/10 hover:text-white',
               )}
             >
@@ -781,7 +765,7 @@ export default async function ShiftsPage({
           <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <div className="bh-search-shell min-w-0 flex-1">
               <div className="relative">
-                <span className="pointer-events-none absolute left-2.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[10px] bg-[#071d30] text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.25)]">
+                <span className="pointer-events-none absolute left-2.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[10px] bg-[#071d30] text-[#5ec8ff] shadow-[0_6px_14px_rgba(7,29,48,0.25)]">
                   <Search className="h-4 w-4" strokeWidth={2.4} aria-hidden />
                 </span>
                 <label htmlFor="q" className="sr-only">
@@ -808,7 +792,7 @@ export default async function ShiftsPage({
                 type="submit"
                 variant="honey"
                 size="lg"
-                className="group min-h-11 rounded-xl border border-[#e4b334]/40 bg-[#e4b334] px-5 font-semibold text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_22px_rgba(228,179,52,0.38)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f0c14a] hover:shadow-[0_14px_28px_rgba(228,179,52,0.48)] motion-reduce:hover:translate-y-0"
+                className="group min-h-11 rounded-xl border border-[#5ec8ff]/50 bg-[#5ec8ff] px-5 font-semibold text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_22px_rgba(94,200,255,0.38)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#7ad4ff] hover:shadow-[0_14px_28px_rgba(94,200,255,0.48)] motion-reduce:hover:translate-y-0"
               >
                 Apply
                 <ArrowUpRight
@@ -827,7 +811,7 @@ export default async function ShiftsPage({
                     batch: undefined,
                     page: undefined,
                   })}
-                  className="inline-flex h-11 items-center gap-1.5 rounded-xl border-2 border-[#16384f]/20 bg-white px-3.5 text-sm font-semibold text-[#071d30] shadow-[0_8px_20px_rgba(7,29,48,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/40 hover:bg-[#071d30] hover:text-white motion-reduce:hover:translate-y-0"
+                  className="inline-flex h-11 items-center gap-1.5 rounded-xl border-2 border-[#16384f]/20 bg-white px-3.5 text-sm font-semibold text-[#071d30] shadow-[0_8px_20px_rgba(7,29,48,0.06)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#16384f]/40 hover:bg-[#0a283c] hover:text-white motion-reduce:hover:translate-y-0"
                 >
                   <RefreshCw className="h-3.5 w-3.5" aria-hidden />
                   Clear
@@ -979,7 +963,7 @@ export default async function ShiftsPage({
                     className="group inline-flex h-8 max-w-[14rem] items-center gap-1.5 rounded-full bg-[#fff3cf] pl-3 pr-2 text-xs font-semibold capitalize text-[#071d30] ring-1 ring-[#e4b334]/60 transition-colors hover:bg-[#ffe9a8]"
                   >
                     <span className="truncate">{chip.label}</span>
-                    <span className="grid h-4 w-4 place-items-center rounded-full bg-[#071d30]/10 transition-colors group-hover:bg-[#071d30] group-hover:text-white">
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-[#071d30]/10 transition-colors group-hover:bg-[#0a283c] group-hover:text-white">
                       <X className="h-3 w-3" strokeWidth={2.6} aria-hidden />
                     </span>
                   </Link>
@@ -1107,7 +1091,7 @@ export default async function ShiftsPage({
                             className={cn(
                               'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]',
                               isNight
-                                ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-[#e4b334] shadow-[0_8px_16px_rgba(7,29,48,0.28)]'
+                                ? 'bg-[#071d30] text-[#e4b334] shadow-[0_8px_16px_rgba(7,29,48,0.28)]'
                                 : 'bg-[linear-gradient(155deg,#f6c445_0%,#e09a0b_100%)] text-[#3b2600] shadow-[0_8px_16px_rgba(224,154,11,0.4)]',
                             )}
                           >
@@ -1121,7 +1105,7 @@ export default async function ShiftsPage({
                               className={cn(
                                 'mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.08em]',
                                 isNight
-                                  ? 'bg-[#071d30] text-[#f3d27a]'
+                                  ? 'bg-[#071d30] text-[#5ec8ff]'
                                   : 'bg-[#fff3cf] text-[#7a5600] ring-1 ring-[#e4b334]/50',
                               )}
                             >
@@ -1198,7 +1182,7 @@ export default async function ShiftsPage({
                         <div className="min-w-[8.5rem] space-y-1.5">
                           {assignee ? (
                             <span className="inline-flex min-w-0 max-w-full items-center gap-2">
-                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-[11px] font-bold text-[#e4b334] shadow-[0_4px_10px_rgba(7,29,48,0.25)]">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#071d30] text-[11px] font-bold text-[#e4b334] shadow-[0_4px_10px_rgba(7,29,48,0.25)]">
                                 {initials}
                               </span>
                               <span className="break-words text-sm font-semibold leading-snug text-bh-text">
@@ -1245,7 +1229,7 @@ export default async function ShiftsPage({
                         <Link
                           href={`/org/${slug}/shifts/${shift.id}`}
                           aria-label={`Open ${shift.title || 'shift'}`}
-                          className="group/open inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-xl border-2 border-[#16384f]/20 bg-white px-2 text-[13px] 2xl:px-3.5 font-semibold text-[#071d30] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#071d30] hover:bg-[#071d30] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                          className="group/open inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-xl border-2 border-[#16384f]/20 bg-white px-2 text-[13px] 2xl:px-3.5 font-semibold text-[#071d30] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#071d30] hover:bg-[#0a283c] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                         >
                           <span className="hidden 2xl:inline">Open</span>
                           <ArrowUpRight
@@ -1317,25 +1301,25 @@ export default async function ShiftsPage({
             })}
           </ul>
 
-          <div className="relative overflow-hidden rounded-2xl border border-[#16384f]/20 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-4 py-3.5 shadow-[0_16px_36px_rgba(7,29,48,0.22)] sm:px-5">
+          <div className="relative overflow-hidden rounded-2xl border border-[#16384f]/20 bg-[#071d30] px-4 py-3.5 shadow-[0_16px_36px_rgba(7,29,48,0.22)] sm:px-5">
             <span
               aria-hidden
-              className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/30 blur-2xl"
+              className="pointer-events-none absolute -left-8 -top-10 h-24 w-24 rounded-full bg-[#5ec8ff]/25 blur-2xl"
             />
             <span
               aria-hidden
-              className="bh-orb-drift pointer-events-none absolute -bottom-12 right-10 h-28 w-28 rounded-full bg-[#e4b334]/22 blur-2xl"
+              className="bh-orb-drift pointer-events-none absolute -bottom-12 right-10 h-28 w-28 rounded-full bg-[#5ec8ff]/15 blur-2xl"
             />
             <span
               aria-hidden
-              className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
             />
             <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm text-white/75">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_8px_16px_rgba(228,179,52,0.32)]">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_16px_rgba(94,200,255,0.35)]">
                 <LayoutList className="h-4 w-4" strokeWidth={2.4} aria-hidden />
               </span>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
                 On this page
               </span>
               <span className="bh-tabular inline-flex items-center rounded-lg bg-white/10 px-2.5 py-1 text-[15px] font-bold tracking-tight text-white ring-1 ring-white/15">
@@ -1344,10 +1328,10 @@ export default async function ShiftsPage({
               <span>of</span>
               <span className="bh-tabular font-bold text-white">{total}</span>
               <span>shifts</span>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#e4b334]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#f3d27a] ring-1 ring-[#e4b334]/35">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5ec8ff]/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#5ec8ff] ring-1 ring-[#5ec8ff]/35">
                 <span
                   aria-hidden
-                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e4b334] motion-reduce:animate-none"
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5ec8ff] motion-reduce:animate-none"
                 />
                 {coveragePct}% in view
               </span>

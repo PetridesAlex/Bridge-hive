@@ -4,12 +4,15 @@ import {
   Activity,
   CalendarPlus,
   CalendarRange,
-  Globe2,
   ClipboardCheck,
+  Globe2,
+  Layers,
+  LayoutGrid,
   TrendingDown,
   TrendingUp,
   UserCheck,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 
@@ -26,12 +29,16 @@ const RANGES: OrgActivityRangeDays[] = [7, 30, 90];
 
 type MetricFocus = 'all' | 'created' | 'acceptances' | 'workers' | 'approved';
 
-const FOCUS_OPTIONS: Array<{ id: MetricFocus; label: string }> = [
-  { id: 'all', label: 'All metrics' },
-  { id: 'created', label: 'Created' },
-  { id: 'acceptances', label: 'Acceptances' },
-  { id: 'workers', label: 'Workers' },
-  { id: 'approved', label: 'Approved' },
+const FOCUS_OPTIONS: Array<{
+  id: MetricFocus;
+  label: string;
+  icon: LucideIcon;
+}> = [
+  { id: 'all', label: 'All metrics', icon: LayoutGrid },
+  { id: 'created', label: 'Created', icon: CalendarPlus },
+  { id: 'acceptances', label: 'Acceptances', icon: Layers },
+  { id: 'workers', label: 'Workers', icon: Users },
+  { id: 'approved', label: 'Approved', icon: ClipboardCheck },
 ];
 
 export function OrganizationActivityPanel({
@@ -86,32 +93,32 @@ export function OrganizationActivityPanel({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-[#16384f]/18 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]">
-      <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-5 sm:px-6 sm:py-6">
+      <div className="relative overflow-hidden border-b border-white/10 bg-[#071d30] px-5 py-5 sm:px-6 sm:py-6">
         <span
           aria-hidden
-          className="pointer-events-none absolute -left-10 -top-12 h-36 w-36 rounded-full bg-bh-teal/30 blur-2xl"
+          className="pointer-events-none absolute -left-10 -top-12 h-36 w-36 rounded-full bg-[#5ec8ff]/25 blur-2xl"
         />
         <span
           aria-hidden
-          className="bh-orb-drift pointer-events-none absolute -bottom-16 right-8 h-40 w-40 rounded-full bg-[#e4b334]/22 blur-2xl"
+          className="bh-orb-drift pointer-events-none absolute -bottom-16 right-8 h-40 w-40 rounded-full bg-[#5ec8ff]/15 blur-2xl"
         />
         <span
           aria-hidden
-          className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
         />
 
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex min-w-0 max-w-2xl items-start gap-3">
-          <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_18px_rgba(228,179,52,0.35)]">
+          <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_18px_rgba(94,200,255,0.35)]">
             <Activity className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
               Historical pulse
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#e4b334]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#f3d27a] ring-1 ring-[#e4b334]/35">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#5ec8ff]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#5ec8ff] ring-1 ring-[#5ec8ff]/35">
                 <span
                   aria-hidden
-                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e4b334] motion-reduce:animate-none"
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5ec8ff] motion-reduce:animate-none"
                 />
                 Live
               </span>
@@ -125,11 +132,11 @@ export function OrganizationActivityPanel({
             </p>
             <div className="mt-3.5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/15">
-                <CalendarRange className="h-3.5 w-3.5 text-[#f3d27a]" aria-hidden />
+                <CalendarRange className="h-3.5 w-3.5 text-[#5ec8ff]" aria-hidden />
                 {series.periodLabel}
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/15">
-                <Globe2 className="h-3.5 w-3.5 text-[#f3d27a]" aria-hidden />
+                <Globe2 className="h-3.5 w-3.5 text-[#5ec8ff]" aria-hidden />
                 {series.timeZone}
               </span>
               <span className="bh-tabular inline-flex items-center rounded-full bg-[#e4b334] px-2.5 py-1 text-[11px] font-bold text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.32)]">
@@ -246,33 +253,48 @@ export function OrganizationActivityPanel({
           />
         </div>
 
-        <p className="text-xs font-medium text-[#071d30]/65">
-          Tap a card to focus the chart. Prior window: {series.priorPeriodLabel}.
-        </p>
-
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Chart metrics">
-          {FOCUS_OPTIONS.map((opt) => {
-            const selected = focus === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setFocus(opt.id)}
-                className={cn(
-                  'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors duration-200 motion-reduce:transition-none',
-                  selected
-                    ? 'bg-[#e4b334] text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.32)]'
-                    : 'bg-white/80 text-[#071d30]/70 ring-1 ring-[#16384f]/10 hover:bg-white hover:text-[#071d30]',
-                )}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
+        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[12px] font-medium text-[#071d30]/60">
+            Focus one metric on the chart · Prior window:{' '}
+            <span className="font-semibold text-[#071d30]">{series.priorPeriodLabel}</span>
+          </p>
+          <div
+            className="inline-flex w-fit flex-wrap gap-1 rounded-2xl border border-[#071d30]/10 bg-white/70 p-1 shadow-[0_8px_20px_rgba(7,29,48,0.06)]"
+            role="group"
+            aria-label="Chart metrics"
+          >
+            {FOCUS_OPTIONS.map((opt) => {
+              const selected = focus === opt.id;
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setFocus(opt.id)}
+                  className={cn(
+                    'inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[12px] font-semibold transition-[background-color,color,box-shadow] duration-200 motion-reduce:transition-none',
+                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5ec8ff] focus-visible:ring-offset-1',
+                    selected
+                      ? 'bg-[#071d30] text-white shadow-[0_8px_16px_rgba(7,29,48,0.22)]'
+                      : 'bg-transparent text-[#071d30]/65 hover:bg-[#5ec8ff]/15 hover:text-[#071d30]',
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'h-3.5 w-3.5',
+                      selected ? 'text-[#5ec8ff]' : 'text-[#071d30]/45',
+                    )}
+                    aria-hidden
+                  />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="rounded-2xl border border-white/60 bg-white/55 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_12px_28px_rgba(7,29,48,0.06)] sm:p-4">
+        <div className="rounded-2xl border border-white/70 bg-white/40 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_14px_30px_rgba(7,29,48,0.08)] ring-1 ring-[#5ec8ff]/12 sm:p-4">
           <OrganizationActivityChart
             series={series}
             focus={focus}
@@ -452,7 +474,7 @@ function TotalChip({
     },
     blue: {
       bar: 'bg-[#16384f]',
-      icon: 'bg-[linear-gradient(140deg,#071d30_0%,#1d4d68_100%)] text-[#f3d27a] shadow-[0_8px_16px_rgba(7,29,48,0.28)]',
+      icon: 'bg-[linear-gradient(140deg,#071d30_0%,#1d4d68_100%)] text-[#5ec8ff] shadow-[0_8px_16px_rgba(7,29,48,0.28)]',
       stroke: '#16384f',
       fill: 'rgba(7,29,48,0.1)',
       progress: 'bg-[#16384f]',

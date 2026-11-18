@@ -20,3 +20,10 @@
 ## Mobile
 - Source saved/merged with this release
 - Installed TestFlight unchanged; native build pending
+
+## Released identity (filled after merge)
+- PR: https://github.com/PetridesAlex/Bridge-hive/pull/57
+- Merged main SHA: `be72ba351039d2b2e6d3df13fef96d22966f98a3`
+- Vercel production: `dpl_HKGou4ZUqtnWnaLgayJLt2gye6PN` READY → aliases include `bridgehive.app`
+- Mobile: source on main; TestFlight unchanged; native build pending
+- Next: Stripe sandbox/live prerequisite checklist (do not start here)

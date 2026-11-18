@@ -15,7 +15,8 @@ type Props = {
 /** Safe-area sticky bottom actions — transparent shell; CTA floats on its own. */
 export function StickyActionBar({ children, style, clearTabBar = false }: Props) {
   const insets = useSafeAreaInsets();
-  const tabInset = useTabBarScrollInset(spacing.sm);
+  // Clear the absolute tab strip plus the raised honeycomb FAB cradle.
+  const tabInset = useTabBarScrollInset(spacing.xxl + spacing.md);
   const paddingBottom = clearTabBar
     ? tabInset
     : Math.max(insets.bottom, spacing.md);

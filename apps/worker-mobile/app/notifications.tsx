@@ -10,7 +10,12 @@ import {
   View,
 } from 'react-native';
 import { router } from 'expo-router';
-import { shiftRouteFromPushData } from '@bridge-hive/domain';
+import {
+  appRouteFromPushData,
+  formatInvoiceDeadlineUtc,
+  isInvoiceDueSoonWarningWindow,
+  shiftRouteFromPushData,
+} from '@bridge-hive/domain';
 
 import { useTabBarScrollInset } from '@/components/navigation/AnimatedTabBar';
 import { BillingRestrictionAlert } from '@/components/notifications/BillingRestrictionAlert';
@@ -92,17 +97,49 @@ export default function NotificationsScreen() {
         tone: 'danger',
       });
     }
-    if (pastDue.length === 0) {
-      const dueSoon = allInvoices.find((invoice) => invoice.status === 'open');
-      if (dueSoon) {
-        alerts.push({
-          id: `invoice-due-soon-${dueSoon.id}`,
-          title: t('notifications.dueSoonTitle'),
-          body: t('notifications.dueSoonBody'),
-          href: `/invoices/${dueSoon.id}`,
-          tone: 'money',
-        });
-      }
+
+    const processing = allInvoices.filter(
+      (invoice) => invoice.status === 'payment_processing',
+    );
+    for (const invoice of processing) {
+      alerts.push({
+        id: `invoice-processing-${invoice.id}`,
+        title: t('notifications.paymentProcessingTitle'),
+        body: t('notifications.paymentProcessingBody'),
+        href: `/invoices/${invoice.id}`,
+        tone: 'money',
+      });
+    }
+
+    const dueSoonOpen = allInvoices
+      .filter(
+        (invoice) =>
+          invoice.status === 'open' && isInvoiceDueSoonWarningWindow(invoice.due_at),
+      )
+      .sort(
+        (a, b) => new Date(a.due_at).getTime() - new Date(b.due_at).getTime(),
+      );
+
+    if (dueSoonOpen.length === 1) {
+      const invoice = dueSoonOpen[0]!;
+      const deadline = formatInvoiceDeadlineUtc(invoice.due_at);
+      alerts.push({
+        id: `invoice-due-soon-${invoice.id}`,
+        title: t('notifications.dueSoonTitle'),
+        body: t('notifications.dueSoonBody', { deadline }),
+        href: `/invoices/${invoice.id}`,
+        tone: 'money',
+      });
+    } else if (dueSoonOpen.length > 1) {
+      const earliest = dueSoonOpen[0]!;
+      const deadline = formatInvoiceDeadlineUtc(earliest.due_at);
+      alerts.push({
+        id: `invoice-due-soon-summary`,
+        title: t('notifications.dueSoonTitle'),
+        body: t('notifications.dueSoonBodyMany', { deadline }),
+        href: '/invoices',
+        tone: 'money',
+      });
     }
     return alerts;
   }, [allInvoices, t]);
@@ -130,7 +167,7 @@ export default function NotificationsScreen() {
   }, [refresh]);
 
   const onOpen = async (item: Notification) => {
-    const route = shiftRouteFromPushData(item.data);
+    const route = appRouteFromPushData(item.data);
     if (!item.read_at) {
       await markNotificationRead(item.id);
       void refresh();
@@ -248,7 +285,11 @@ export default function NotificationsScreen() {
                     <Text style={styles.text} numberOfLines={3}>
                       {alert.body}
                     </Text>
-                    <Text style={styles.billingCta}>{t('notifications.viewInvoice')}</Text>
+                    <Text style={styles.billingCta}>
+                      {alert.href === '/invoices'
+                        ? t('notifications.viewInvoices')
+                        : t('notifications.viewInvoice')}
+                    </Text>
                   </View>
                   <Ionicons
                     name="chevron-forward"
@@ -259,7 +300,11 @@ export default function NotificationsScreen() {
               );
             }
             const item = row.item;
-            const shiftId = shiftRouteFromPushData(item.data)?.replace('/shifts/', '');
+            const shiftPath = shiftRouteFromPushData(item.data);
+            const shiftId =
+              shiftPath && shiftPath.startsWith('/shifts/') && !shiftPath.includes('?')
+                ? shiftPath.replace('/shifts/', '')
+                : null;
             const unavailable = shiftId ? availability.get(shiftId) === false : false;
             return (
               <ShiftNotificationCard

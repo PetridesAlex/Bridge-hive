@@ -1,11 +1,11 @@
 # Deferred release packages (not active)
 
-These artifacts are **source-preserved** but **not approved for hosted apply/deploy**.
+These artifacts are **source-preserved** in the release candidate but are **not** part of the active migration set or deployed Edge Functions.
 
-| Package | Candidate location | Status |
+| Package | Path | Status |
 | --- | --- | --- |
-| Worker self-service account deletion SQL | `docs/_deferred/migrations/20261113170000_worker_self_service_account_deletion.sql` | UNAPPLIED — do not move into `supabase/migrations/` without approval |
-| `delete-worker-account` Edge Function | `supabase/functions/delete-worker-account/` (source in tree for client/tests) | NOT DEPLOYED — deploy needs separate approval |
-| Maps coordinates SQL | remains on dirty primary as untracked `042_location_coordinates.sql` | Deferred — not copied into active migrations |
+| Worker self-service account deletion SQL | `migrations/20261113170000_worker_self_service_account_deletion.sql` | UNAPPLIED — needs separate approval |
+| `delete-worker-account` Edge Function | `functions/delete-worker-account/` | NOT DEPLOYED — needs separate approval |
+| Maps coordinates SQL | (not copied; remains on dirty primary as `042_location_coordinates.sql`) | Deferred |
 
-Do not apply SQL or deploy functions without an explicit approval scoped to that package.
+Do not move these into `supabase/migrations/` or deploy without an explicit approval scoped to that package.

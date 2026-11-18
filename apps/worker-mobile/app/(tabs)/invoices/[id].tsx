@@ -12,6 +12,8 @@ import {
   workerInvoiceStatusLabel,
   type WorkerInvoiceStatus,
 } from '@bridge-hive/domain';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as Linking from 'expo-linking';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -34,11 +36,11 @@ import { Banner } from '@/components/ui/Banner';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { KeyValueRow } from '@/components/ui/KeyValueRow';
 import { ListGroup, ListGroupSeparator } from '@/components/ui/Card';
+import { MoneyAmount } from '@/components/ui/MoneyAmount';
 import { MoneySummary } from '@/components/ui/MoneySummary';
 import { PremiumActionButton } from '@/components/ui/PremiumActionButton';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { StickyActionBar } from '@/components/ui/StickyActionBar';
-import { Surface } from '@/components/ui/Surface';
 import { type StatusTone } from '@/components/ui/StatusBadge';
 import { APP_CONFIG } from '@/constants/config';
 import {
@@ -48,7 +50,7 @@ import {
   isStripeTestPublishableKey,
   STRIPE_MERCHANT_COUNTRY_CODE,
 } from '@/constants/stripe';
-import { colors, spacing, typography } from '@/constants/theme';
+import { colors, shadows, spacing, typography } from '@/constants/theme';
 import { useInvoice } from '@/hooks/useInvoice';
 import { isAppReviewDemoInvoiceId } from '@/lib/app-review-demo';
 import {
@@ -72,6 +74,63 @@ function toneForStatus(status: WorkerInvoiceStatus): StatusTone {
   if (status === 'payment_processing') return 'warning';
   if (status === 'void' || status === 'uncollectible') return 'neutral';
   return 'info';
+}
+
+function SectionCardHeader({
+  icon,
+  eyebrow,
+  hint,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  eyebrow: string;
+  hint?: string;
+}) {
+  return (
+    <View style={styles.cardHeader}>
+      <LinearGradient
+        colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.cardHeaderIcon}
+      >
+        <Ionicons name={icon} size={14} color={colors.white} />
+      </LinearGradient>
+      <View style={styles.cardHeaderCopy}>
+        <Text style={styles.cardEyebrow}>{eyebrow}</Text>
+        {hint ? (
+          <Text style={styles.cardHint} numberOfLines={2}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function FactRow({
+  icon,
+  label,
+  value,
+  last = false,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: string;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.factRow, !last && styles.factRowBorder]}>
+      <View style={styles.factIcon}>
+        <Ionicons name={icon} size={15} color={colors.tealStrong} />
+      </View>
+      <View style={styles.factCopy}>
+        <Text style={styles.factLabel}>{label}</Text>
+        <Text style={styles.factValue} numberOfLines={2}>
+          {value}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 function iconForStatus(status: WorkerInvoiceStatus) {
@@ -398,10 +457,48 @@ export default function InvoiceDetailScreen() {
       (pendingHint && status !== 'paid' && pollTimedOut)) &&
     status !== 'paid';
   const payLabel = `Pay ${formatMoney(invoice.commission_amount_minor, invoice.currency)}`;
-  const commissionContext = `${(invoice.commission_rate_bps / 100).toFixed(0)}% of ${formatMoney(
-    invoice.gross_amount_minor,
-    invoice.currency,
-  )} approved gross pay`;
+  const grossLabel = formatMoney(invoice.gross_amount_minor, invoice.currency);
+  const commissionContext = `Percentage of ${grossLabel} approved gross pay`;
+  const shiftTitle = shift?.title?.trim() ?? '';
+  const showShiftTitle = shiftTitle.length > 0 && shiftTitle.toLowerCase() !== 'shift';
+  const shiftHeadline = showShiftTitle
+    ? shiftTitle
+    : shift?.starts_at
+      ? formatDate(shift.starts_at)
+      : 'Approved shift';
+  const shiftFacts: {
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    value: string;
+  }[] = [];
+  if (orgName !== 'Organization') {
+    shiftFacts.push({ icon: 'business-outline', label: 'Organization', value: orgName });
+  }
+  if (showShiftTitle && shift?.starts_at) {
+    shiftFacts.push({
+      icon: 'calendar-outline',
+      label: 'Date',
+      value: formatDate(shift.starts_at),
+    });
+  } else if (!showShiftTitle && shift?.starts_at) {
+    shiftFacts.push({
+      icon: 'calendar-outline',
+      label: 'Shift date',
+      value: formatDate(shift.starts_at),
+    });
+  }
+  shiftFacts.push({
+    icon: 'time-outline',
+    label: 'Approved hours',
+    value: hoursFromMinutes(invoice.approved_minutes ?? 0),
+  });
+  if (!isSandboxInvoice) {
+    shiftFacts.push({
+      icon: 'cash-outline',
+      label: 'Hourly rate',
+      value: `${formatMoney(invoice.rate_minor ?? 0, invoice.currency)} / hour`,
+    });
+  }
 
   return (
     <AppScreen scroll={false} edges={['top']} contentKind="detail">
@@ -416,8 +513,11 @@ export default function InvoiceDetailScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.content,
-          { paddingBottom: payable ? tabScrollInset + 88 : tabScrollInset },
-          payable ? styles.contentWithSticky : null,
+          {
+            paddingBottom: payable
+              ? tabScrollInset + 88 + spacing.xxl
+              : tabScrollInset,
+          },
         ]}
         showsVerticalScrollIndicator={false}
       >
@@ -461,78 +561,69 @@ export default function InvoiceDetailScreen() {
           statusLabel={workerInvoiceStatusLabel(status)}
           statusTone={toneForStatus(status)}
           statusIcon={iconForStatus(status)}
+          pulse={status === 'open' || status === 'payment_processing'}
           context={commissionContext}
           stateLine={invoiceStateLine(status, invoice.due_at, invoice.paid_at)}
         />
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Shift</Text>
-          <ListGroup>
-            <View style={styles.groupPad}>
-              <KeyValueRow label="Shift" value={shift?.title?.trim() || 'Shift'} />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow label="Organization" value={orgName} />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Shift date"
-                value={shift?.starts_at ? formatDate(shift.starts_at) : '—'}
+        <View style={styles.card}>
+          <SectionCardHeader
+            icon="briefcase"
+            eyebrow="This shift"
+            hint={shiftHeadline}
+          />
+          <View style={styles.facts}>
+            {shiftFacts.map((fact, index) => (
+              <FactRow
+                key={fact.label}
+                icon={fact.icon}
+                label={fact.label}
+                value={fact.value}
+                last={index === shiftFacts.length - 1}
               />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Approved hours"
-                value={hoursFromMinutes(invoice.approved_minutes ?? 0)}
-              />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Hourly rate"
-                value={
-                  isSandboxInvoice
-                    ? '—'
-                    : `${formatMoney(invoice.rate_minor ?? 0, invoice.currency)} / hour`
-                }
-              />
-            </View>
-          </ListGroup>
+            ))}
+          </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Calculation</Text>
-          <ListGroup>
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Approved gross pay"
-                value={formatMoney(invoice.gross_amount_minor, invoice.currency)}
-              />
-            </View>
-            <ListGroupSeparator />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Commission rate"
-                value={`${(invoice.commission_rate_bps / 100).toFixed(2)}%`}
-              />
-            </View>
-            <View style={styles.finalDivider} />
-            <View style={styles.groupPad}>
-              <KeyValueRow
-                label="Bridge Hive commission"
-                value={formatMoney(invoice.commission_amount_minor, invoice.currency)}
-                emphasize
-              />
-            </View>
-          </ListGroup>
+        <View style={styles.card}>
+          <SectionCardHeader icon="calculator-outline" eyebrow="Calculation" />
+          <View style={styles.calcPad}>
+            <KeyValueRow label="Approved gross pay" value={grossLabel} />
+            <KeyValueRow label="Commission rate" value="%" />
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>You pay Bridge Hive</Text>
+            <MoneyAmount
+              amountMinor={invoice.commission_amount_minor}
+              currency={invoice.currency}
+              emphasize
+              style={styles.totalValue}
+            />
+          </View>
         </View>
 
-        <Surface variant="tinted">
-          <Text style={styles.explainer}>{WORKER_COMMISSION_EXPLAINER}</Text>
-        </Surface>
+        <View style={styles.note}>
+          <LinearGradient
+            pointerEvents="none"
+            colors={[
+              'rgba(11, 42, 67, 0.05)',
+              'rgba(20, 169, 181, 0.10)',
+              'rgba(224, 170, 24, 0.08)',
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <LinearGradient
+            colors={[colors.navy, '#0C3E56', colors.tealStrong]}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.noteIcon}
+          >
+            <Ionicons name="shield-checkmark" size={15} color={colors.white} />
+          </LinearGradient>
+          <Text style={styles.noteText}>{WORKER_COMMISSION_EXPLAINER}</Text>
+        </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Invoice timeline</Text>
@@ -641,31 +732,160 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxxl,
     gap: spacing.lg,
   },
-  contentWithSticky: {
-    paddingBottom: spacing.huge,
-  },
   section: {
     gap: spacing.sm,
   },
   sectionLabel: {
-    fontFamily: typography.fonts.semibold,
+    fontFamily: typography.fonts.displaySemibold,
     fontSize: typography.size.sm,
-    color: colors.textSecondary,
+    color: colors.navy,
+    letterSpacing: -0.1,
     paddingHorizontal: 2,
+  },
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 22,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.08)',
+    ...shadows.sm,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+  },
+  cardHeaderIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardHeaderCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  cardEyebrow: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 11,
+    letterSpacing: 0.9,
+    textTransform: 'uppercase',
+    color: colors.tealStrong,
+  },
+  cardHint: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    lineHeight: 19,
+    color: colors.navy,
+    letterSpacing: -0.15,
+  },
+  facts: {
+    paddingBottom: spacing.xs,
+  },
+  factRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+  },
+  factRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(11, 42, 67, 0.07)',
+  },
+  factIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+    backgroundColor: 'rgba(20, 169, 181, 0.10)',
+  },
+  factCopy: {
+    flex: 1,
+    gap: 2,
+    minWidth: 0,
+  },
+  factLabel: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 10,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: colors.textMuted,
+  },
+  factValue: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 15,
+    lineHeight: 20,
+    color: colors.navy,
+    letterSpacing: -0.15,
+  },
+  calcPad: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xs,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: 'rgba(11, 42, 67, 0.04)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(11, 42, 67, 0.08)',
+  },
+  totalLabel: {
+    flex: 1,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    color: colors.navy,
+    letterSpacing: -0.1,
+  },
+  totalValue: {
+    fontFamily: typography.fonts.displayExtra,
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.navy,
+    letterSpacing: -0.4,
+  },
+  note: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: colors.card,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.08)',
+    ...shadows.sm,
+  },
+  noteIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  noteText: {
+    flex: 1,
+    fontFamily: typography.fonts.regular,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.navy,
   },
   groupPad: {
     paddingHorizontal: spacing.lg,
-  },
-  finalDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderStrong,
-    marginTop: spacing.xs,
-  },
-  explainer: {
-    fontFamily: typography.fonts.regular,
-    fontSize: typography.size.sm,
-    lineHeight: typography.lineHeight.sm,
-    color: colors.textSecondary,
   },
   helpRow: {
     paddingVertical: spacing.md,

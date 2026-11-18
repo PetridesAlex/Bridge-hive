@@ -2,7 +2,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
+  INVOICE_DUE_SOON_PUSH_TYPE,
   SHIFT_UNAVAILABLE_TITLE,
+  appRouteFromPushData,
+  buildInvoiceDueSoonNotification,
   buildShiftPublishedBatchNotification,
   buildShiftPublishedNotification,
   calendarAssignmentMarker,
@@ -13,7 +16,7 @@ import {
   shouldShowNotificationExplainer,
 } from '@bridge-hive/domain';
 
-import { NEW_SHIFTS_CHANNEL } from '../channel';
+import { BILLING_REMINDERS_CHANNEL, NEW_SHIFTS_CHANNEL } from '../channel';
 
 const root = path.join(__dirname, '../../..');
 
@@ -99,6 +102,36 @@ describe('new-shifts Android channel', () => {
     expect(client).toContain('AndroidImportance.HIGH');
     expect(client).toContain('sound: null');
     expect(client).not.toContain('exp.host');
+  });
+});
+
+describe('billing-reminders Android channel', () => {
+  it('registers a separate channel from shifts and messages', () => {
+    expect(BILLING_REMINDERS_CHANNEL).toMatchObject({
+      id: 'billing-reminders',
+      name: 'Billing reminders',
+      importance: 'high',
+    });
+    const client = source('lib/push/client.ts');
+    expect(client).toContain('BILLING_REMINDERS_CHANNEL');
+    expect(client).toContain('ensureBillingRemindersChannel');
+    expect(source('lib/push/channel.ts')).toContain("id: 'billing-reminders'");
+  });
+
+  it('opens the invoice route from a validated push payload', () => {
+    const invoiceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    expect(
+      appRouteFromPushData({
+        type: INVOICE_DUE_SOON_PUSH_TYPE,
+        invoiceId,
+        url: `bridgehive://invoices/${invoiceId}`,
+      }),
+    ).toBe(`/invoices/${invoiceId}`);
+    expect(buildInvoiceDueSoonNotification({ invoiceId, locale: 'el' })?.title).toBe(
+      'Υπενθύμιση Bridge Hive',
+    );
+    const controller = source('components/push/PushNotificationController.tsx');
+    expect(controller).toContain('appRouteFromPushData');
   });
 });
 

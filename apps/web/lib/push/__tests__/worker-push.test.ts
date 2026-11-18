@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
+  buildInvoiceDueSoonNotification,
   buildOrgWorkerMessageNotification,
   buildShiftPublishedNotification,
   openPositionsLabel,
@@ -9,6 +10,7 @@ import {
 } from '@bridge-hive/domain';
 
 import {
+  BILLING_REMINDERS_CHANNEL_ID,
   buildExpoPushMessage,
   ORG_MESSAGES_CHANNEL_ID,
   outcomeFromExpoTicket,
@@ -163,6 +165,39 @@ describe('org_worker_message push payload', () => {
     expect(buildOrgWorkerMessageNotification({ conversationId })?.data.type).toBe(
       ORG_WORKER_MESSAGE_PUSH_TYPE,
     );
+  });
+});
+
+describe('invoice_due_soon push payload', () => {
+  const invoiceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+  it('uses billing-reminders channel and omits financial details', () => {
+    const message = buildExpoPushMessage({
+      deliveryId: claimed.deliveryId,
+      expoPushToken: claimed.expoPushToken,
+      eventType: 'invoice_due_soon',
+      invoiceId,
+      preferredLocale: 'en',
+      openPositions: 0,
+      payload: { invoiceId },
+      shiftId: null,
+      status: 'n/a',
+      startsAt: null,
+      endsAt: null,
+      timeZone: null,
+      place: null,
+      requiredRole: null,
+      rateMinor: null,
+      currency: null,
+    });
+    expect(message?.channelId).toBe(BILLING_REMINDERS_CHANNEL_ID);
+    expect(message?.title).toBe('Bridge Hive reminder');
+    expect(message?.body).toContain('Open Bridge Hive');
+    expect(message?.data).toEqual(
+      buildInvoiceDueSoonNotification({ invoiceId })?.data,
+    );
+    const serialized = JSON.stringify(message);
+    expect(serialized).not.toMatch(/€|EUR|WH-|IBAN|tax/i);
   });
 });
 

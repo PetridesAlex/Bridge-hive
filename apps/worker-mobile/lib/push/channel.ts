@@ -21,4 +21,18 @@ export const ORG_MESSAGES_CHANNEL = {
   color: '#0B2A43',
 } as const;
 
+/**
+ * Android channel for billing/invoice reminders.
+ * Separate from shift and message channels so muting those does not silence billing.
+ */
+export const BILLING_REMINDERS_CHANNEL = {
+  id: 'billing-reminders',
+  name: 'Billing reminders',
+  importance: 'high',
+  sound: 'default',
+  vibration: true,
+  lightColor: '#C47A12',
+  color: '#0B2A43',
+} as const;
+
 export const PUSH_EXPLAINER_DISMISSED_KEY = 'bridgehive.push.explainerDismissed';

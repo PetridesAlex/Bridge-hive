@@ -442,10 +442,17 @@ export const en = {
     actionNeeded: 'Action needed',
     pastDueInvoiceTitle: 'Commission invoice past due',
     pastDueInvoiceBody: 'Pay this Bridge Hive invoice to keep claiming new shifts.',
-    dueSoonTitle: 'Commission invoice due soon',
-    dueSoonBody: 'Bridge Hive invoices are separate from organization earnings.',
+    dueSoonTitle: 'Invoice payment reminder',
+    dueSoonBody:
+      'Please settle your pending Bridge Hive invoice by %{deadline} to avoid a pause on accepting new shifts.',
+    dueSoonBodyMany:
+      'Please settle your pending Bridge Hive invoices by %{deadline} to avoid a pause on accepting new shifts.',
     viewInvoice: 'View invoice',
+    viewInvoices: 'View invoices',
     money: 'Money',
+    paymentProcessingTitle: 'Payment confirmation pending',
+    paymentProcessingBody:
+      'We are confirming your recent payment. You do not need to pay again unless confirmation fails.',
   },
   messages: {
     title: 'Messages',
@@ -711,8 +718,7 @@ export const en = {
     metaUpdated: 'Updated',
     metaTaxId: 'Tax Identification Number (TIN)',
     viewOnline: 'View latest online',
-    offlineNote:
-      'This copy is bundled with the app for offline reading. The online page may be updated separately.',
+    offlineNote: 'Bundled for offline reading. The live page may update separately.',
     greekNote:
       'Το κείμενο της Πολιτικής Απορρήτου παρατίθεται στα αγγλικά, όπως υποβλήθηκε από την εταιρεία. Δεν έχει εγκριθεί ελληνική μετάφραση. Σε περίπτωση διαφοράς, ισχύει το αγγλικό κείμενο.',
     statusFinal: 'Final',

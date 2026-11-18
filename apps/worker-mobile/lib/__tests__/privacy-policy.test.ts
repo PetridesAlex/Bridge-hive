@@ -60,6 +60,8 @@ describe('mobile privacy policy screen behavior', () => {
     expect(document).toContain('privacyPolicyOnlineUrl');
     expect(document).toContain("taxIdLine('en')");
     expect(document).toContain('statusFinal');
+    expect(document).toContain('jumpTo');
+    expect(document).toContain('privacy-article-');
     expect(document).not.toContain('draftChip');
     expect(document).not.toContain('markConversation');
     expect(document).not.toContain('mark-read');

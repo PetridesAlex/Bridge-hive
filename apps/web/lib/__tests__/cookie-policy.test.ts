@@ -6,7 +6,10 @@ import {
   COOKIE_POLICY_ARTICLES,
   COOKIE_POLICY_HEADER,
   COOKIE_POLICY_PUBLISH_APPROVED,
+  COOKIE_POLICY_TAX_ID,
+  assertFinalCookiePolicyContent,
   cookiePolicyIsBlockedHere,
+  cookiePolicyIsFinal,
   cookiePolicyIsPublishable,
 } from '@/lib/cookie-policy/content';
 import type { PolicyBlock } from '@/lib/legal-policy/types';
@@ -22,7 +25,8 @@ const allText = [
   COOKIE_POLICY_HEADER.company,
   COOKIE_POLICY_HEADER.title,
   COOKIE_POLICY_HEADER.subtitle,
-  ...COOKIE_POLICY_HEADER.identityLines,
+  ...COOKIE_POLICY_HEADER.linesBeforeTaxId,
+  ...COOKIE_POLICY_HEADER.linesAfterTaxId,
   COOKIE_POLICY_HEADER.version,
   COOKIE_POLICY_HEADER.lastUpdated,
   ...COOKIE_POLICY_ARTICLES.flatMap((a) => [
@@ -53,35 +57,46 @@ describe('cookie policy', () => {
     });
   });
 
-  it('keeps key client statements verbatim', () => {
+  it('keeps key final statements and named inventory', () => {
     expect(allText).toContain(
-      'Based on the technical review of the public BridgeHive website conducted on 12 November 2026, Google Analytics, Google Tag Manager and Meta Pixel were not detected.',
+      'Based on the technical review of the public BridgeHive website conducted on 12 November 2026, and reconfirmed on the release-candidate website on 18 November 2026, Google Analytics, Google Tag Manager and Meta Pixel were not detected.',
     );
     expect(allText).toContain(
-      'Selecting \u201cUnderstood\u201d acknowledges the notice and may store a preference preventing the notice from being displayed repeatedly.',
+      'Selecting \u201cUnderstood\u201d acknowledges the notice and stores a first-party localStorage preference (bh:m-storage-notice, versioned information acknowledgement) so the notice is not displayed repeatedly in that browser.',
     );
     expect(allText).toContain(
       'BridgeHive uses technical infrastructure providers, including Vercel and Supabase.',
     );
+    expect(allText).toContain('bh:m-storage-notice');
+    expect(allText).toContain('bh_org_remember');
+    expect(allText).toContain('sb-<project-ref>-auth-token');
+    expect(allText).not.toMatch(/subject to final technical verification/i);
+    expect(allText).not.toMatch(/Draft for Legal Review/i);
     expect(allText).toContain(
-      'The exact names, purposes and lifetimes of authentication cookies and browser storage technologies are subject to final technical verification.',
+      'It does not claim that the website storage notice covers every native mobile application SDK',
     );
   });
 
-  it('keeps the supplied identity and date wording', () => {
+  it('keeps final Version 1.0 identity, TIN and revision date', () => {
     expect(COOKIE_POLICY_HEADER.lastUpdated).toBe(
-      'Last Updated: 13 November 2026',
+      'Last Updated: 18 November 2026',
     );
-    expect(COOKIE_POLICY_HEADER.version).toBe('Draft for Legal Review');
+    expect(COOKIE_POLICY_HEADER.version).toBe('Version: 1.0');
     expect(COOKIE_POLICY_HEADER.endVersion).toBe(
-      'Draft for Legal Review \u2014 13 November 2026',
+      'Version 1.0 \u2014 18 November 2026',
     );
+    expect(COOKIE_POLICY_TAX_ID).toBe('60418646N');
     expect(allText).toContain('Website: https://bridgehive.app');
     expect(allText).toContain('Contact: info@bridgehive.app');
     expect(allText).toContain('BRIDGEHIVE MEDICAL RECRUITMENT LIMITED');
+    expect(allText).toContain('Company Registration Number: HE 498387');
+    expect(COOKIE_POLICY_HEADER.version).not.toMatch(/draft/i);
+    expect(COOKIE_POLICY_HEADER.endVersion).not.toMatch(/draft/i);
   });
 
-  it('is published and available on hosted production', () => {
+  it('is final and publishable without production block', () => {
+    expect(cookiePolicyIsFinal()).toBe(true);
+    expect(() => assertFinalCookiePolicyContent()).not.toThrow();
     expect(COOKIE_POLICY_PUBLISH_APPROVED).toBe(true);
     expect(cookiePolicyIsPublishable()).toBe(true);
     expect(cookiePolicyIsBlockedHere({ VERCEL_ENV: 'production' })).toBe(false);
@@ -110,5 +125,22 @@ describe('cookie policy', () => {
       'utf8',
     );
     expect(footer).toContain('cookie-policy');
+    expect(footer).toContain('CookieSettingsButton');
+  });
+
+  it('renders TIN identity from the cookie policy page without Draft banners', () => {
+    const page = readFileSync(
+      path.join(
+        __dirname,
+        '..',
+        '..',
+        'components/marketing/pages/CookiePolicyPage.tsx',
+      ),
+      'utf8',
+    );
+    expect(page).toContain('COOKIE_POLICY_TAX_ID');
+    expect(page).toContain('taxIdLabel');
+    expect(page).not.toContain('draftBannerEn');
+    expect(page).not.toContain('Draft for Legal Review');
   });
 });

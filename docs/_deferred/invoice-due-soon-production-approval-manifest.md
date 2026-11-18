@@ -9,7 +9,7 @@
 | --- | --- |
 | PR | https://github.com/PetridesAlex/Bridge-hive/pull/59 |
 | Prior Prompt 1 tip | `4fb5633f2fff2ae21a468e3ff1597ceba0cb7d87` |
-| New head after Preview isolation | *(filled on push)* |
+| New head after Preview isolation | `17783b32dc10383ff3c0563f52502b46548b6411` |
 | Migration file | `supabase/migrations/20261118180000_worker_invoice_due_soon_reminder.sql` |
 | Migration SHA-256 | `e46c4b1bd5ed830925c7664d8e0e51beddb9fd1c87026224ca0be68598ea96fd` (unchanged) |
 

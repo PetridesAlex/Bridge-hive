@@ -23,13 +23,17 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 info() { echo "$*"; }
 
 require_canonical() {
-  local script_root
+  local here script_root
   script_root="$(cd "$(dirname "$0")/.." && pwd -P)"
-  [[ -d "$CANONICAL_ROOT" ]] || die "Refuse: BH_DEV_ROOT not a directory: $CANONICAL_ROOT"
-  [[ -f "$CANONICAL_ROOT/package.json" ]] || die "Refuse: missing package.json in $CANONICAL_ROOT"
-  [[ -d "$CANONICAL_ROOT/apps/web" && -d "$CANONICAL_ROOT/apps/worker-mobile" ]] || die "Refuse: incomplete tree $CANONICAL_ROOT"
-  if [[ -z "${BH_DEV_ROOT:-}" && "$script_root" != "$CANONICAL_ROOT" ]]; then
-    die "Refuse: launcher must run from $CANONICAL_ROOT (got $script_root). Set BH_DEV_ROOT to override."
+  # Launcher file may live in RC while BH_DEV_ROOT points at another tree.
+  here="$CANONICAL_ROOT"
+  [[ -d "$here" ]] || die "Refuse: BH_DEV_ROOT not a directory: $here"
+  [[ -f "$here/package.json" ]] || die "Refuse: missing package.json in $here"
+  [[ -d "$here/apps/web" && -d "$here/apps/worker-mobile" ]] || die "Refuse: incomplete tree $here"
+  # If invoked from a checkout's scripts/, require that checkout == selected root
+  # unless BH_DEV_ROOT was set explicitly to a different tree.
+  if [[ -z "${BH_DEV_ROOT:-}" && "$script_root" != "$here" ]]; then
+    die "Refuse: launcher must run from $here (got $script_root). Set BH_DEV_ROOT to override."
   fi
 }
 
@@ -58,7 +62,7 @@ lockfile_sha() {
 supabase_host_from_env() {
   local f="$CANONICAL_ROOT/apps/worker-mobile/.env"
   [[ -f "$f" ]] || { echo "missing"; return; }
-  python3 - <<'PY2' "$f"
+  python3 - <<'PY' "$f"
 import re, sys
 text = open(sys.argv[1], encoding="utf-8").read()
 m = re.search(r"^EXPO_PUBLIC_SUPABASE_URL=(.+)$", text, re.M)
@@ -67,7 +71,7 @@ if not m:
 url = m.group(1).strip().strip('"').strip("'")
 host = url.split("//")[-1].split("/")[0]
 print(host or "missing")
-PY2
+PY
 }
 
 stripe_mode_effective() {
@@ -155,7 +159,7 @@ EOF
 
 print_status() {
   require_canonical
-  local base dirty mode host wp mp web_ready metro_ready lan
+  local base dirty mode host wp mp web_ready metro_ready
   base="$(git -C "$CANONICAL_ROOT" rev-parse HEAD)"
   dirty="$(compute_fingerprint)"
   mode="$(stripe_mode_effective)"
@@ -188,6 +192,7 @@ print_status() {
     if http_ready "http://127.0.0.1:$METRO_PORT/status"; then
       metro_ready=1
       info "metro_ready=yes http://localhost:$METRO_PORT"
+      local lan
       lan="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo '')"
       [[ -n "$lan" ]] && info "expo_lan=exp://${lan}:$METRO_PORT"
     else
@@ -225,6 +230,7 @@ kill_pid_tree() {
     kill "$pid" 2>/dev/null || true
     sleep 1
     if ps -p "$pid" >/dev/null 2>&1; then
+      # Kill children listening under same tree if parent stuck
       pkill -P "$pid" 2>/dev/null || true
       kill -9 "$pid" 2>/dev/null || true
     fi
@@ -233,7 +239,7 @@ kill_pid_tree() {
 
 stop_owned() {
   require_canonical
-  local pid port_pid_val cwd port
+  local pid port_pid_val cwd
   for f in "$WEB_PID_FILE" "$METRO_PID_FILE"; do
     if [[ -f "$f" ]]; then
       pid="$(cat "$f" || true)"
@@ -242,6 +248,7 @@ stop_owned() {
       rm -f "$f"
     fi
   done
+  # Also stop listeners whose cwd is under this canonical root (covers orphaned npx children)
   for port in "$WEB_PORT" "$METRO_PORT"; do
     port_pid_val="$(port_pid "$port" || true)"
     if [[ -n "${port_pid_val:-}" ]]; then
@@ -305,7 +312,16 @@ start_web() {
   fi
   info "Starting Next on :$WEB_PORT"
   mkdir -p "$LOG_DIR" "$PID_DIR"
-  python3 "$CANONICAL_ROOT/scripts/bh-dev-daemonize.py"     "$CANONICAL_ROOT/apps/web" "$LOG_DIR/web.log"     npx next dev -p "$WEB_PORT"
+  (
+    cd "$CANONICAL_ROOT/apps/web"
+    # setsid detaches from launcher TTY/process group so Next survives shell exit
+    if command -v setsid >/dev/null 2>&1; then
+      setsid npx next dev -p "$WEB_PORT" >"$LOG_DIR/web.log" 2>&1 &
+    else
+      nohup npx next dev -p "$WEB_PORT" >"$LOG_DIR/web.log" 2>&1 &
+    fi
+    echo $! >"$WEB_PID_FILE.wrap"
+  )
   wait_http "http://127.0.0.1:$WEB_PORT" "web"
   record_listener_pid "$WEB_PORT" "$WEB_PID_FILE"
 }
@@ -317,19 +333,29 @@ start_metro() {
   fi
   info "Starting Metro on :$METRO_PORT"
   mkdir -p "$LOG_DIR" "$PID_DIR"
-  python3 "$CANONICAL_ROOT/scripts/bh-dev-daemonize.py"     "$CANONICAL_ROOT/apps/worker-mobile" "$LOG_DIR/metro.log"     npx expo start --lan --port "$METRO_PORT"
+  (
+    cd "$CANONICAL_ROOT/apps/worker-mobile"
+    if command -v setsid >/dev/null 2>&1; then
+      setsid npx expo start --lan --port "$METRO_PORT" >"$LOG_DIR/metro.log" 2>&1 &
+    else
+      nohup npx expo start --lan --port "$METRO_PORT" >"$LOG_DIR/metro.log" 2>&1 &
+    fi
+    echo $! >"$METRO_PID_FILE.wrap"
+  )
   wait_http "http://127.0.0.1:$METRO_PORT/status" "metro"
   record_listener_pid "$METRO_PORT" "$METRO_PID_FILE"
 }
 
 print_links_if_ready() {
-  local lan
+  local lan web_ok=0 metro_ok=0
   if http_ready "http://127.0.0.1:$WEB_PORT"; then
+    web_ok=1
     info "WEB  http://localhost:$WEB_PORT"
   else
     info "WEB  stopped"
   fi
   if http_ready "http://127.0.0.1:$METRO_PORT/status"; then
+    metro_ok=1
     lan="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo 'LAN_IP')"
     info "METRO http://localhost:$METRO_PORT"
     info "EXPO exp://${lan}:$METRO_PORT"
@@ -389,19 +415,20 @@ cmd_remote_check() {
   local_sha="$(git -C "$CANONICAL_ROOT" rev-parse HEAD)"
   info "local_branch=$branch"
   info "local_sha=$local_sha"
-  if git -C "$CANONICAL_ROOT" fetch origin "$branch" --quiet 2>/dev/null; then
-    remote_sha="$(git -C "$CANONICAL_ROOT" rev-parse "origin/$branch" 2>/dev/null || true)"
-  fi
-  if [[ -z "${remote_sha:-}" ]]; then
-    remote_sha="$(git -C "$CANONICAL_ROOT" ls-remote --heads origin "$branch" 2>/dev/null | awk '{print $1}')" || true
-  fi
-  if [[ -z "${remote_sha:-}" ]]; then
-    # Distinguish offline vs missing branch when possible
-    if ! git -C "$CANONICAL_ROOT" ls-remote origin HEAD >/dev/null 2>&1; then
+  if ! git -C "$CANONICAL_ROOT" fetch origin "$branch" --quiet 2>/dev/null; then
+    # branch may not exist yet on remote
+    if ! remote_sha="$(git -C "$CANONICAL_ROOT" ls-remote --heads origin "$branch" 2>/dev/null | awk '{print $1}')"; then
       info "remote_freshness=unverified"
       info "detail=could not reach origin"
       return 0
     fi
+  else
+    remote_sha="$(git -C "$CANONICAL_ROOT" rev-parse "origin/$branch" 2>/dev/null || true)"
+  fi
+  if [[ -z "${remote_sha:-}" ]]; then
+    remote_sha="$(git -C "$CANONICAL_ROOT" ls-remote --heads origin "$branch" 2>/dev/null | awk '{print $1}')"
+  fi
+  if [[ -z "${remote_sha:-}" ]]; then
     info "remote_freshness=no_remote_branch"
     info "remote_sha="
     return 0

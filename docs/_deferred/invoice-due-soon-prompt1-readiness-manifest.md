@@ -12,7 +12,7 @@
 | Branch | `feat/invoice-due-soon-3day-reminder` |
 | Base main | `9db2168fcbb6afced88b1431794d2768187a5000` (PRs #57/#58) |
 | PR | *(filled after `gh pr create`)* |
-| Head SHA | *(filled after push)* |
+| Head SHA | `b062eea3d4d2a327a1d2eb72c5113843a0a936c8` |
 
 ### Included
 
@@ -68,8 +68,8 @@
 Use only this manifest + PR head SHA. Before writes on `hfnymqjrbppculcofaag`, show:
 
 1. Frozen migration checksum `e46c4b1bd5ed830925c7664d8e0e51beddb9fd1c87026224ca0be68598ea96fd`
-2. Read-only eligible open-invoice count in the 3-day window
-3. Explicit approval that catch-up notifications **will** send to those invoices once
+2. Read-only eligible open-invoice count in the 3-day window (prod snapshot at Prompt 1 freeze: **0**)
+3. Explicit approval that catch-up notifications **will** send to those invoices once (if count > 0 at activation)
 4. Then apply only this migration; enable `WORKER_COMMISSION_DUE_DATES_CRON=1` + vercel cron for `/api/internal/worker-commission-due-dates` only after backend/client gate
 5. Merge PR only after backend prerequisites; verify Vercel READY SHA = merged main
 6. Older apps: invoice push type unknown → keep feature gated until compatible native build; in-app banner still works from invoice list data

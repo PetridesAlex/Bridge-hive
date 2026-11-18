@@ -543,7 +543,7 @@ export function ShiftScheduleFields({
           'bh-tabular h-14 rounded-xl border-2 border-[#16384f]/15 bg-white text-center text-2xl font-bold text-[#071d30] shadow-[0_6px_16px_rgba(7,29,48,0.06)] focus-visible:border-bh-teal focus-visible:ring-bh-teal/25';
         return (
           <div className="overflow-hidden rounded-2xl border border-[#16384f]/12 bg-white shadow-[0_10px_28px_rgba(7,29,48,0.07)]">
-            <div className="flex flex-wrap items-center justify-between gap-2 bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] px-4 py-3 text-white">
+            <div className="flex flex-wrap items-center justify-between gap-2 bg-[#071d30] px-4 py-3 text-white">
               <p className="inline-flex items-center gap-2 text-sm font-bold">
                 <CalendarClock className="h-4 w-4 text-[#e4b334]" aria-hidden />
                 Shift hours
@@ -557,7 +557,7 @@ export function ShiftScheduleFields({
               >
                 {hours != null ? formatDuration(hours) : 'Set start and end'}
                 {overnight ? (
-                  <span className="rounded-full bg-[#071d30]/85 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-[#f3d27a]">
+                  <span className="rounded-full bg-[#071d30]/85 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-[#5ec8ff]">
                     Overnight
                   </span>
                 ) : null}
@@ -754,7 +754,7 @@ export function ShiftScheduleFields({
                 className={cn(
                   'group flex items-center gap-2.5 rounded-2xl border-2 px-3 py-2.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal focus-visible:ring-offset-1 motion-reduce:transition-none',
                   selected
-                    ? '-translate-y-0.5 border-transparent bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-white shadow-[0_12px_24px_rgba(7,29,48,0.28)]'
+                    ? '-translate-y-0.5 border-transparent bg-[#071d30] text-white shadow-[0_12px_24px_rgba(7,29,48,0.28)]'
                     : 'border-[#16384f]/12 bg-white hover:-translate-y-0.5 hover:border-bh-teal/50 hover:shadow-[0_10px_22px_rgba(7,29,48,0.08)] motion-reduce:hover:translate-y-0',
                 )}
               >

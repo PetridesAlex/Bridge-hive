@@ -22,31 +22,31 @@ export function DashboardGreeting({
   greeting: string;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-6 text-white shadow-[0_18px_40px_rgba(7,29,48,0.28)] sm:px-6 sm:py-7 lg:px-8">
+    <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-[#071d30] px-5 py-6 text-white shadow-[0_18px_40px_rgba(7,29,48,0.28)] sm:px-6 sm:py-7 lg:px-8">
       <span
         aria-hidden
-        className="bh-orb-drift pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-bh-teal/30 blur-3xl"
+        className="bh-orb-drift pointer-events-none absolute -left-10 -top-12 h-40 w-40 rounded-full bg-[#5ec8ff]/25 blur-3xl"
       />
       <span
         aria-hidden
-        className="bh-orb-drift pointer-events-none absolute -bottom-16 right-8 h-36 w-36 rounded-full bg-[#e4b334]/20 blur-3xl"
+        className="bh-orb-drift pointer-events-none absolute -bottom-16 right-8 h-36 w-36 rounded-full bg-[#5ec8ff]/15 blur-3xl"
         style={{ animationDelay: '-7s' }}
       />
       <span
         aria-hidden
-        className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
       />
 
       <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-4">
           <div
             aria-hidden
-            className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#e4b334] text-[15px] font-bold tracking-[0.08em] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_22px_rgba(228,179,52,0.35)] sm:flex"
+            className="hidden h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#5ec8ff] text-[15px] font-bold tracking-[0.08em] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_22px_rgba(94,200,255,0.35)] sm:flex"
           >
             {initialsFor(orgName)}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f3d27a]">
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-[#5ec8ff]">
               Organization workspace
               <span className="mx-2 text-white/40" aria-hidden>
                 ·

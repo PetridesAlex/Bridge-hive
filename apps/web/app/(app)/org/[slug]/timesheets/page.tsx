@@ -152,7 +152,7 @@ export default async function TimesheetsPage({
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
                         <span
-                          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#071d30] text-base font-bold text-[#5ec8ff] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
                           aria-hidden
                         >
                           {initial}
@@ -240,7 +240,7 @@ export default async function TimesheetsPage({
                       {timesheet.status === 'submitted' ? (
                         <Link
                           href={`/org/${slug}/shifts/${shift.id}?tab=timesheets`}
-                          className="group/btn inline-flex min-h-10 items-center gap-2 rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(7,29,48,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-honey motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                          className="group/btn inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#071d30] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(7,29,48,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-honey motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                         >
                           <ClipboardCheck className="h-4 w-4 text-[#e4b334]" aria-hidden />
                           Review hours

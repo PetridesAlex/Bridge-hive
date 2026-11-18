@@ -170,6 +170,8 @@ export type LegalPolicyDocumentProps = {
   draftBannerEn?: string;
   draftBannerEl?: string;
   greekNote: string;
+  /** Label for the Tax ID / TIN / ΑΦΤ row (without trailing colon). */
+  taxIdLabel?: string;
   identity?: {
     /** Lines shown above an optional Tax ID row. */
     beforeTaxId?: readonly string[];
@@ -194,6 +196,7 @@ export function LegalPolicyDocument({
   draftBannerEn,
   draftBannerEl,
   greekNote,
+  taxIdLabel = 'Tax ID',
   identity,
   articles,
   end,
@@ -201,11 +204,12 @@ export function LegalPolicyDocument({
 }: LegalPolicyDocumentProps) {
   const isGreek = locale === 'el';
   const contentsLabel = CONTENTS_LABEL[locale];
+  const taxDt = `${taxIdLabel}:`;
 
   const taxIdSlot =
     identity?.taxIdValue !== undefined ? (
       <div className="m-policy-fact m-policy-fact--tax" key="tax-id">
-        <dt>Tax ID:</dt>
+        <dt>{taxDt}</dt>
         <dd>{identity.taxIdValue}</dd>
       </div>
     ) : undefined;
@@ -280,7 +284,7 @@ export function LegalPolicyDocument({
                       {identity?.taxIdValue !== undefined ? (
                         <dl className="m-policy-facts m-policy-facts--tax">
                           <div className="m-policy-fact m-policy-fact--tax">
-                            <dt>Tax ID:</dt>
+                            <dt>{taxDt}</dt>
                             <dd>{identity.taxIdValue}</dd>
                           </div>
                         </dl>

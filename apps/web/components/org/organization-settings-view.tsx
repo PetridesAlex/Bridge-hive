@@ -216,14 +216,18 @@ export function OrganizationSettingsView({
   return (
     <div className="space-y-6">
       <section className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_1px_2px_rgba(7,29,48,0.04)]">
-        <div className="relative overflow-hidden bg-gradient-to-br from-bh-teal-soft/70 via-bh-surface to-bh-honey-soft/45 px-5 py-6 sm:px-6 sm:py-7">
+        <div className="relative overflow-hidden bg-[#071d30] px-5 py-6 sm:px-6 sm:py-7">
           <div
-            className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-bh-teal/20 blur-3xl"
+            className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full bg-[#5ec8ff]/20 blur-3xl"
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute -bottom-12 left-20 h-28 w-28 rounded-full bg-bh-honey/25 blur-3xl"
+            className="pointer-events-none absolute -bottom-12 left-20 h-28 w-28 rounded-full bg-[#5ec8ff]/10 blur-3xl"
             aria-hidden
+          />
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
           />
           <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-4">
@@ -231,18 +235,18 @@ export function OrganizationSettingsView({
                 displayName={displayName}
                 logoUrl={logoUrl}
                 size="lg"
-                className="h-[80px] w-[80px] rounded-2xl text-2xl shadow-[0_8px_24px_rgba(7,29,48,0.12)] ring-2 ring-white/90"
+                className="h-[80px] w-[80px] rounded-2xl text-2xl shadow-[0_8px_24px_rgba(0,0,0,0.25)] ring-2 ring-white/20"
               />
               <div className="min-w-0 space-y-2.5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-bh-teal-strong">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5ec8ff]">
                   Organization settings
                 </p>
-                <h2 className="truncate text-xl font-bold tracking-tight text-bh-text sm:text-2xl">
+                <h2 className="truncate text-xl font-bold tracking-tight text-white sm:text-2xl">
                   {displayName}
                 </h2>
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-sidebar/15 bg-bh-sidebar px-3 py-1.5 text-xs font-bold tracking-wide text-bh-sidebar-text shadow-[0_4px_12px_rgba(7,29,48,0.18)]">
-                    <Building2 className="h-3.5 w-3.5 text-bh-honey" aria-hidden />
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold tracking-wide text-[#071d30]">
+                    <Building2 className="h-3.5 w-3.5" aria-hidden />
                     {typeLabel}
                   </span>
                   <span
@@ -254,7 +258,7 @@ export function OrganizationSettingsView({
                     <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
                     {ORG_STATUS_LABELS[status]}
                   </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-bh-teal/30 bg-bh-teal-soft px-3 py-1.5 text-xs font-bold tracking-wide text-bh-teal-strong shadow-sm">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold tracking-wide text-white ring-1 ring-white/15">
                     <Shield className="h-3.5 w-3.5" aria-hidden />
                     {roleLabel(role)}
                   </span>
@@ -265,7 +269,7 @@ export function OrganizationSettingsView({
               <Button
                 type="button"
                 variant="outline"
-                className="relative border-bh-border bg-bh-surface/95 shadow-sm"
+                className="relative border-white/20 bg-white text-[#071d30] shadow-sm hover:bg-[#f4f8fb]"
                 onClick={() => selectSection(canEditProfile ? 'profile' : 'branding')}
               >
                 Edit profile

@@ -489,7 +489,7 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
                     className={cn(
                       'flex flex-1 flex-col items-center justify-center rounded-xl px-3 py-2 transition-all duration-200 sm:flex-none sm:items-start sm:px-3.5',
                       active
-                        ? 'bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)]'
+                        ? 'bg-[#071d30] text-white shadow-[0_8px_18px_rgba(7,29,48,0.22)]'
                         : 'text-bh-text-secondary hover:bg-bh-subtle hover:text-bh-text',
                     )}
                   >
@@ -519,14 +519,14 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-3 border-b border-white/40 bg-white/15 px-4 py-3.5 sm:px-5">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <div className="inline-flex items-center gap-1 rounded-xl border border-bh-border/80 bg-bh-subtle/40 p-1">
+      <div className="flex flex-col gap-3.5 border-b border-white/45 bg-[linear-gradient(180deg,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0.12)_100%)] px-4 py-4 sm:px-5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5">
+          <div className="inline-flex items-center gap-1 rounded-2xl border border-white/70 bg-white/45 p-1 shadow-[0_10px_24px_rgba(7,29,48,0.08)] ring-1 ring-[#5ec8ff]/20 backdrop-blur-md">
             <Button
               asChild
               size="sm"
               variant="outline"
-              className="h-8 w-8 rounded-lg border-transparent bg-white px-0 shadow-sm hover:border-bh-border"
+              className="h-9 w-9 rounded-xl border-transparent bg-white/80 px-0 text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] hover:border-transparent hover:bg-white hover:text-[#1a8fd4]"
               aria-label="Previous period"
             >
               <Link
@@ -536,14 +536,14 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
                   ...filterParams,
                 })}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" strokeWidth={2.4} />
               </Link>
             </Button>
             <Button
               asChild
               size="sm"
               variant="outline"
-              className="h-8 rounded-lg border-transparent bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] px-3.5 font-semibold text-white shadow-sm hover:border-transparent hover:bg-[#0c2844] hover:text-white"
+              className="h-9 rounded-xl border border-[#8adbff]/70 border-transparent bg-[linear-gradient(165deg,#8adbff_0%,#4fc3ff_48%,#2aa8ef_100%)] px-4 font-bold tracking-tight text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_18px_rgba(42,168,239,0.35)] hover:border-transparent hover:bg-[linear-gradient(165deg,#a6e4ff_0%,#5ec8ff_48%,#3bb4f5_100%)] hover:text-white"
             >
               <Link
                 href={href({
@@ -559,7 +559,7 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
               asChild
               size="sm"
               variant="outline"
-              className="h-8 w-8 rounded-lg border-transparent bg-white px-0 shadow-sm hover:border-bh-border"
+              className="h-9 w-9 rounded-xl border-transparent bg-white/80 px-0 text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] hover:border-transparent hover:bg-white hover:text-[#1a8fd4]"
               aria-label="Next period"
             >
               <Link
@@ -569,20 +569,23 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
                   ...filterParams,
                 })}
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" strokeWidth={2.4} />
               </Link>
             </Button>
           </div>
           <p
-            className="min-w-0 rounded-xl border border-bh-border/70 bg-white px-3 py-1.5 text-[15px] font-semibold tracking-tight text-bh-text shadow-sm"
+            className="min-w-0 rounded-2xl border border-white/70 bg-white/65 px-3.5 py-2 text-[15px] font-bold tracking-[-0.02em] text-[#071d30] shadow-[0_10px_22px_rgba(7,29,48,0.07)] ring-1 ring-[#5ec8ff]/15 backdrop-blur-md"
             aria-live="polite"
           >
             {periodLabel}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2" aria-busy={filterPending || undefined}>
-          <span className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-bh-subtle px-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">
+        <div
+          className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/60 bg-white/40 p-1.5 shadow-[0_10px_24px_rgba(7,29,48,0.06)] ring-1 ring-[#5ec8ff]/12 backdrop-blur-md"
+          aria-busy={filterPending || undefined}
+        >
+          <span className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-[linear-gradient(165deg,#8adbff_0%,#4fc3ff_50%,#2aa8ef_100%)] px-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4),0_6px_14px_rgba(42,168,239,0.28)]">
             <Filter className="h-3.5 w-3.5" aria-hidden />
             Filter
           </span>
@@ -591,7 +594,7 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
           </label>
           <select
             id="cal-location"
-            className="h-9 max-w-[min(100%,220px)] truncate rounded-xl border border-bh-border bg-white px-3 text-xs font-semibold text-bh-text shadow-sm focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/25"
+            className="h-9 max-w-[min(100%,220px)] truncate rounded-xl border border-white/80 bg-white/85 px-3 text-xs font-semibold text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow] focus-visible:border-[#5ec8ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5ec8ff]/30"
             value={locationFilter ?? ''}
             disabled={filterPending}
             onChange={(e) => {
@@ -618,7 +621,7 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
           </label>
           <select
             id="cal-role"
-            className="h-9 max-w-[min(100%,200px)] truncate rounded-xl border border-bh-border bg-white px-3 text-xs font-semibold text-bh-text shadow-sm focus-visible:border-bh-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal/25"
+            className="h-9 max-w-[min(100%,200px)] truncate rounded-xl border border-white/80 bg-white/85 px-3 text-xs font-semibold text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-[border-color,box-shadow] focus-visible:border-[#5ec8ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5ec8ff]/30"
             value={roleFilter ?? ''}
             disabled={filterPending}
             onChange={(e) => {
@@ -643,7 +646,7 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
           {hasFilters ? (
             <Link
               href={href({ view, date: dateYmd })}
-              className="inline-flex h-9 items-center rounded-xl border border-bh-border bg-white px-3 text-xs font-semibold text-bh-accent-blue shadow-sm hover:bg-bh-subtle"
+              className="inline-flex h-9 items-center rounded-xl border border-[#5ec8ff]/35 bg-white/80 px-3 text-xs font-bold text-[#1a8fd4] shadow-sm transition-colors hover:bg-[#5ec8ff]/15 hover:text-[#0f7ec4]"
             >
               Clear filters
             </Link>
@@ -752,33 +755,28 @@ export function ShiftScheduleCalendar(props: ShiftScheduleCalendarProps) {
   );
 }
 
-const PREVIEW_STATUS: Record<string, { label: string; pill: string; bar: string }> = {
+const PREVIEW_STATUS: Record<string, { label: string; pill: string }> = {
   published: {
     label: 'Open · awaiting worker',
-    pill: 'bg-bh-teal-soft text-bh-teal-strong',
-    bar: 'bg-bh-teal',
+    pill: 'bg-[#5ec8ff]/18 text-[#5ec8ff] ring-[#5ec8ff]/35',
   },
   filled: {
     label: 'Filled · worker assigned',
-    pill: 'bg-bh-success-soft text-bh-success',
-    bar: 'bg-bh-success',
+    pill: 'bg-white/12 text-white ring-white/20',
   },
   in_progress: {
     label: 'In progress',
-    pill: 'bg-bh-info-soft text-bh-info',
-    bar: 'bg-bh-info',
+    pill: 'bg-[#5ec8ff]/18 text-[#5ec8ff] ring-[#5ec8ff]/35',
   },
   awaiting_approval: {
     label: 'Awaiting timesheet approval',
-    pill: 'bg-bh-warning-soft text-bh-warning',
-    bar: 'bg-bh-warning',
+    pill: 'bg-white/12 text-white ring-white/20',
   },
 };
 
 const PREVIEW_STATUS_FALLBACK = {
   label: '',
-  pill: 'bg-bh-subtle text-bh-text-secondary',
-  bar: 'bg-bh-text-muted',
+  pill: 'bg-white/10 text-white/80 ring-white/15',
 };
 
 function ShiftPreview({
@@ -811,27 +809,27 @@ function ShiftPreview({
 
   return (
     <>
-      <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 pb-4 pt-5">
+      <div className="relative overflow-hidden border-b border-white/10 bg-[#071d30] px-5 pb-4 pt-5">
         <span
           aria-hidden
-          className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/30 blur-2xl"
+          className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
         />
         <span
           aria-hidden
-          className="bh-orb-drift pointer-events-none absolute -bottom-12 right-0 h-32 w-32 rounded-full bg-[#e4b334]/22 blur-2xl"
+          className="pointer-events-none absolute -bottom-12 right-0 h-32 w-32 rounded-full bg-[#5ec8ff]/15 blur-2xl"
         />
         <span
           aria-hidden
-          className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
         />
 
-        <DialogClose className="absolute right-3.5 top-3.5 z-10 grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white/80 ring-1 ring-white/15 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e4b334]">
+        <DialogClose className="absolute right-3.5 top-3.5 z-10 grid h-9 w-9 place-items-center rounded-xl bg-white/10 text-white/80 ring-1 ring-white/15 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5ec8ff]">
           <X className="h-4 w-4" aria-hidden />
           <span className="sr-only">Close</span>
         </DialogClose>
 
         <div className="relative flex items-start gap-3.5 pr-10">
-          <div className="flex h-[62px] w-[54px] shrink-0 flex-col items-center justify-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_18px_rgba(228,179,52,0.38)]">
+          <div className="flex h-[62px] w-[54px] shrink-0 flex-col items-center justify-center rounded-2xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_18px_rgba(94,200,255,0.35)]">
             <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#071d30]/65">
               {formatInTimeZone(new Date(startMs), timeZone, 'MMM')}
             </span>
@@ -843,12 +841,12 @@ function ShiftPreview({
             </span>
           </div>
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+            <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
               Shift preview
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#e4b334]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#f3d27a] ring-1 ring-[#e4b334]/35">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#5ec8ff]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#5ec8ff] ring-1 ring-[#5ec8ff]/35">
                 <span
                   aria-hidden
-                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e4b334] motion-reduce:animate-none"
+                  className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5ec8ff] motion-reduce:animate-none"
                 />
                 Live
               </span>
@@ -856,18 +854,23 @@ function ShiftPreview({
             <DialogTitle className="mt-1 truncate text-[20px] font-bold leading-tight tracking-tight text-white">
               {event.title}
             </DialogTitle>
-            <DialogDescription className="mt-0.5 text-[13px] text-white/75">
+            <DialogDescription className="mt-0.5 text-[13px] text-white/70">
               Quick look before opening the full shift record.
             </DialogDescription>
           </div>
         </div>
 
         <div className="relative mt-4 flex flex-wrap items-center gap-2">
-          <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-white/10', status.pill)}>
+          <span
+            className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1',
+              status.pill,
+            )}
+          >
             {status.label}
           </span>
           <span className="bh-tabular inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white ring-1 ring-white/15">
-            <Clock3 className="h-3 w-3 text-[#f3d27a]" aria-hidden />
+            <Clock3 className="h-3 w-3 text-[#5ec8ff]" aria-hidden />
             {durationLabel}
           </span>
           {event.coverageLabel &&
@@ -876,83 +879,116 @@ function ShiftPreview({
               {event.coverageLabel}
             </span>
           ) : null}
-          <span className="inline-flex items-center rounded-full bg-[#e4b334] px-2.5 py-1 text-[11px] font-bold text-[#071d30] shadow-[0_6px_14px_rgba(228,179,52,0.32)]">
+          <span className="inline-flex items-center rounded-full bg-[#5ec8ff] px-2.5 py-1 text-[11px] font-bold text-[#071d30]">
             <ShiftStartsIn startsAt={event.startsAt} endsAt={event.endsAt} />
           </span>
         </div>
       </div>
 
       <div className="px-5 py-4">
-        <div className="overflow-hidden rounded-2xl bg-white">
-          <div className="flex items-start gap-3 px-4 py-3.5">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-bh-teal-soft text-bh-teal-strong">
-              <Clock3 className="h-4 w-4" aria-hidden />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">When</p>
-              <p className="bh-tabular mt-0.5 text-[15px] font-semibold tracking-tight text-[#071d30]">
-                {formatTimeInTimezone(event.startsAt, timeZone)}
-                <span className="mx-1 font-medium text-bh-text-muted">→</span>
-                {formatTimeInTimezone(event.endsAt, timeZone)}
-              </p>
-              <p className="mt-0.5 text-[12.5px] text-bh-text-secondary">
-                {formatInTimeZone(new Date(startMs), timeZone, 'EEEE, d MMMM yyyy')}
-              </p>
-              <div className="mt-3">
-                <div className="relative h-1.5 overflow-hidden rounded-full bg-bh-subtle">
-                  <div
-                    className={cn('absolute inset-y-0 rounded-full', status.bar)}
-                    style={{ left: `${barLeft}%`, width: `${Math.max(barWidth, 2)}%` }}
-                  />
+        <div className="overflow-hidden rounded-2xl border border-[#071d30]/10 bg-white shadow-[0_12px_28px_rgba(7,29,48,0.08)]">
+          <div className="relative px-4 py-4">
+            <div className="relative flex items-start gap-3.5">
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#5ec8ff] text-[#071d30] shadow-[0_8px_16px_rgba(94,200,255,0.28)]">
+                <Clock3 className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#071d30]/55">
+                    When
+                  </p>
+                  <span className="bh-tabular inline-flex items-center rounded-full bg-[#071d30]/06 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#071d30]/70">
+                    {durationLabel}
+                  </span>
+                </div>
+                <div className="mt-1.5 flex flex-wrap items-baseline gap-2">
+                  <p className="bh-tabular text-[22px] font-extrabold leading-none tracking-[-0.03em] text-[#071d30]">
+                    {formatTimeInTimezone(event.startsAt, timeZone)}
+                  </p>
+                  <span
+                    aria-hidden
+                    className="inline-flex h-6 items-center rounded-full bg-[#071d30] px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white"
+                  >
+                    to
+                  </span>
+                  <p className="bh-tabular text-[22px] font-extrabold leading-none tracking-[-0.03em] text-[#071d30]">
+                    {formatTimeInTimezone(event.endsAt, timeZone)}
+                  </p>
+                </div>
+                <p className="mt-1.5 text-[13px] font-medium text-[#071d30]/60">
+                  {formatInTimeZone(new Date(startMs), timeZone, 'EEEE, d MMMM yyyy')}
+                </p>
+                <div className="mt-3.5">
+                  <div className="mb-1 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.12em] text-[#071d30]/40">
+                    <span>00:00</span>
+                    <span>Day span</span>
+                    <span>24:00</span>
+                  </div>
+                  <div className="relative h-2 overflow-hidden rounded-full bg-[#071d30]/08">
+                    <div
+                      className="absolute inset-y-0 rounded-full bg-[#5ec8ff]"
+                      style={{ left: `${barLeft}%`, width: `${Math.max(barWidth, 2)}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="mx-4 h-px bg-bh-border/60" />
+          <div className="mx-4 h-px bg-[#071d30]/10" />
 
-          <div className="flex items-start gap-3 px-4 py-3.5">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#071d30]/[0.06] text-[#071d30]">
-              <MapPin className="h-4 w-4" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">Location</p>
-              <p className="mt-0.5 truncate text-[14px] font-semibold text-[#071d30]">
-                {place[0] ?? 'No location set'}
-              </p>
-              {place[1] ? (
-                <p className="mt-0.5 truncate text-[12.5px] text-bh-text-secondary">{place[1]}</p>
-              ) : null}
+          <div className="relative px-4 py-4">
+            <div className="relative flex items-start gap-3.5">
+              <span className="relative grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#071d30] text-[#5ec8ff]">
+                <MapPin className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
+                <span
+                  aria-hidden
+                  className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-[#5ec8ff] shadow-[0_0_0_2px_#071d30]"
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#071d30]/55">
+                  Location
+                </p>
+                <p className="mt-1 truncate text-[16px] font-bold leading-snug tracking-tight text-[#071d30]">
+                  {place[0] ?? 'No location set'}
+                </p>
+                {place[1] ? (
+                  <p className="mt-1 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-[#071d30]/06 px-2.5 py-1 text-[12px] font-semibold text-[#071d30]/75">
+                    <span
+                      aria-hidden
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#5ec8ff]"
+                    />
+                    <span className="truncate">{place[1]}</span>
+                  </p>
+                ) : (
+                  <p className="mt-1 text-[12.5px] font-medium text-[#071d30]/50">
+                    Site assigned for this opening
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="mx-4 h-px bg-bh-border/60" />
+          <div className="mx-4 h-px bg-[#071d30]/10" />
 
           <div className="grid grid-cols-2 gap-2.5 px-3 pb-3">
-            <div className="relative overflow-hidden rounded-xl bg-[linear-gradient(165deg,#f4f8fb_0%,#e8f0f6_100%)] px-3.5 py-3.5 ring-1 ring-[#071d30]/10">
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -right-5 -top-7 h-16 w-16 rounded-full bg-bh-teal/20 blur-xl"
-              />
-              <span className="relative mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-[#071d30] text-white shadow-[0_8px_14px_rgba(7,29,48,0.28)]">
+            <div className="relative overflow-hidden rounded-xl bg-[#071d30]/[0.04] px-3.5 py-3.5 ring-1 ring-[#071d30]/10">
+              <span className="relative mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-[#071d30] text-[#5ec8ff]">
                 <Briefcase className="h-3.5 w-3.5" aria-hidden />
               </span>
-              <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
+              <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-[#071d30]/55">
                 Role
               </p>
               <p className="relative mt-1 text-[14px] font-bold leading-snug tracking-tight text-[#071d30]">
                 {event.roleLabel}
               </p>
             </div>
-            <div className="relative overflow-hidden rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_100%)] px-3.5 py-3.5 ring-1 ring-white/10">
-              <span
-                aria-hidden
-                className="bh-orb-drift pointer-events-none absolute -bottom-8 -right-4 h-20 w-20 rounded-full bg-[#e4b334]/28 blur-xl"
-              />
-              <span className="relative mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-[#e4b334] text-[#071d30] shadow-[0_8px_14px_rgba(228,179,52,0.4)]">
+            <div className="relative overflow-hidden rounded-xl bg-[#071d30] px-3.5 py-3.5">
+              <span className="relative mb-2.5 grid h-8 w-8 place-items-center rounded-lg bg-[#5ec8ff] text-[#071d30]">
                 <Banknote className="h-3.5 w-3.5" aria-hidden />
               </span>
-              <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+              <p className="relative text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
                 Rate
               </p>
               <p className="bh-tabular relative mt-1 text-[16px] font-bold leading-snug tracking-tight text-white">
@@ -965,20 +1001,34 @@ function ShiftPreview({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-bh-border/50 bg-white px-5 py-4">
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="lg" className="rounded-xl px-5">
+      <div className="flex flex-col gap-2 border-t border-[#071d30]/10 bg-white px-5 py-3.5">
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-xl border-[#071d30]/15 bg-white text-[13px] font-semibold text-[#071d30] hover:bg-[#071d30]/[0.04] hover:text-[#071d30]"
+          >
             <DialogClose>Close</DialogClose>
           </Button>
-          <Button asChild size="lg" className="flex-1 rounded-xl">
+          <Button
+            asChild
+            size="sm"
+            className="h-9 rounded-xl bg-[#5ec8ff] text-[13px] font-bold text-[#071d30] hover:bg-[#4fc3ff] hover:text-[#071d30]"
+          >
             <Link href={event.href}>
               View shift
-              <ArrowRight className="h-4 w-4" aria-hidden />
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
           </Button>
         </div>
         {canReviewTimesheets && event.status === 'awaiting_approval' ? (
-          <Button asChild variant="outline" size="lg" className="w-full rounded-xl">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-9 w-full rounded-xl border-[#071d30]/15 bg-white text-[13px] font-semibold text-[#071d30] hover:bg-[#071d30]/[0.04]"
+          >
             <Link href={`/org/${slug}/timesheets`}>Review timesheet</Link>
           </Button>
         ) : null}

@@ -18,7 +18,7 @@ const TONE_BAR: Record<CalendarEvent['tone'], string> = {
   rn: 'bg-[#5b9bff]',
   ward: 'bg-[#7dffb3]',
   physio: 'bg-[#e4b334]',
-  draft: 'bg-white/45',
+  draft: 'bg-[#071d30]/25',
   open: 'bg-[#2ad4e0]',
   filled: 'bg-[#7dffb3]',
   amber: 'bg-[#e4b334]',
@@ -29,7 +29,7 @@ const TONE_BAR: Record<CalendarEvent['tone'], string> = {
 const STATUS_BADGE: Record<string, string> = {
   published: 'bg-[#e4b334] text-[#071d30]',
   filled: 'bg-[#7dffb3] text-[#071d30]',
-  draft: 'bg-white/15 text-white',
+  draft: 'bg-[#071d30]/10 text-[#071d30]',
   in_progress: 'bg-[#5b9bff] text-[#071d30]',
   cancelled: 'bg-[#ff8a7a] text-[#071d30]',
 };
@@ -133,7 +133,7 @@ export function UpcomingShiftsRail({
               >
                 <Link
                   href={event.href}
-                  className="group relative flex gap-3 overflow-hidden rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] p-3 text-white shadow-[0_12px_24px_rgba(7,29,48,0.22)] ring-1 ring-white/10 transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_28px_rgba(7,29,48,0.3)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:hover:translate-y-0"
+                  className="group relative flex gap-3 overflow-hidden rounded-xl border border-white/60 bg-white/45 p-3 text-[#071d30] shadow-[0_10px_22px_rgba(7,29,48,0.08)] ring-1 ring-[#5ec8ff]/20 backdrop-blur-md transition-[transform,box-shadow,background] duration-200 hover:-translate-y-0.5 hover:bg-white/60 hover:shadow-[0_14px_28px_rgba(7,29,48,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal motion-reduce:hover:translate-y-0"
                 >
                   <span
                     className={cn(
@@ -144,7 +144,7 @@ export function UpcomingShiftsRail({
                   />
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-1.5">
-                      <span className="bh-tabular text-[15px] font-bold tracking-tight text-[#f3d27a]">
+                      <span className="bh-tabular text-[15px] font-bold tracking-tight text-[#1a8fd4]">
                         {formatTimeInTimezone(event.startsAt, timeZone)}–
                         {formatTimeInTimezone(event.endsAt, timeZone)}
                       </span>
@@ -152,14 +152,15 @@ export function UpcomingShiftsRail({
                         status={event.status}
                         className={cn(
                           'px-2 py-0.5 text-[10px] uppercase tracking-[0.08em]',
-                          STATUS_BADGE[event.status] ?? 'bg-white/15 text-white',
+                          STATUS_BADGE[event.status] ??
+                            'bg-[#071d30]/10 text-[#071d30]',
                         )}
                       />
                     </span>
-                    <span className="mt-1 block truncate text-[15px] font-bold leading-snug text-white">
+                    <span className="mt-1 block truncate text-[15px] font-bold leading-snug text-[#071d30]">
                       {event.title}
                     </span>
-                    <span className="mt-0.5 block truncate text-xs font-medium text-white/75">
+                    <span className="mt-0.5 block truncate text-xs font-medium text-[#071d30]/65">
                       {[event.locationName, event.roleLabel].filter(Boolean).join(' · ')}
                     </span>
                     <span
@@ -167,14 +168,14 @@ export function UpcomingShiftsRail({
                         'mt-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]',
                         urgent
                           ? 'bg-[#e4b334] text-[#071d30]'
-                          : 'bg-white/12 text-white/85',
+                          : 'bg-[#071d30]/08 text-[#071d30]/75',
                       )}
                     >
                       {dateLabel}
                     </span>
                   </span>
                   <ArrowRight
-                    className="mt-1 h-4 w-4 shrink-0 text-white/55 transition-transform group-hover:translate-x-0.5 group-hover:text-[#e4b334]"
+                    className="mt-1 h-4 w-4 shrink-0 text-[#071d30]/40 transition-transform group-hover:translate-x-0.5 group-hover:text-[#1a8fd4]"
                     aria-hidden
                   />
                 </Link>

@@ -187,7 +187,7 @@ export function WardLibraryDialog({
                   'group relative min-h-11 justify-between gap-3 overflow-hidden rounded-xl px-3.5 font-semibold transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0',
                   triggerTone === 'gold'
                     ? 'border-0 bg-[#e4b334] text-[#071d30] shadow-[0_10px_22px_rgba(228,179,52,0.38)] hover:bg-[#f0c14d] hover:shadow-[0_14px_28px_rgba(228,179,52,0.48)]'
-                    : 'border border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] hover:bg-[linear-gradient(155deg,#1a425c_0%,#0a283c_72%)] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)]',
+                    : 'border border-white/10 bg-[#071d30] text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] hover:bg-[#0a283c] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)]',
                 ),
           )}
         >

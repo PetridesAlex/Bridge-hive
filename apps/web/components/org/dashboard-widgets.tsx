@@ -186,7 +186,7 @@ export function KpiCard({
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-teal focus-visible:ring-offset-2',
         'motion-reduce:transition-none motion-reduce:hover:translate-y-0',
         featured
-          ? 'border-white/15 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] text-white shadow-[0_18px_40px_rgba(7,29,48,0.32)] hover:shadow-[0_22px_48px_rgba(7,29,48,0.4)]'
+          ? 'border-white/15 bg-[#071d30] text-white shadow-[0_18px_40px_rgba(7,29,48,0.32)] hover:shadow-[0_22px_48px_rgba(7,29,48,0.4)]'
           : cn(theme.card, 'hover:shadow-[0_18px_36px_rgba(7,29,48,0.14)]'),
         highlight && !featured && 'ring-2 ring-inset ring-bh-warning/60',
       )}
@@ -195,7 +195,7 @@ export function KpiCard({
         <>
           <span
             aria-hidden
-            className="bh-orb-drift pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/30 blur-2xl"
+            className="bh-orb-drift pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
           />
           <span
             aria-hidden
@@ -204,7 +204,7 @@ export function KpiCard({
           />
           <span
             aria-hidden
-            className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
           />
         </>
       ) : (
@@ -237,7 +237,7 @@ export function KpiCard({
           <ArrowRight
             className={cn(
               'h-4 w-4 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none',
-              featured ? 'text-[#f3d27a]' : 'text-[#071d30]',
+              featured ? 'text-[#5ec8ff]' : 'text-[#071d30]',
             )}
             aria-hidden
           />
@@ -248,7 +248,7 @@ export function KpiCard({
         <p
           className={cn(
             'text-[11px] font-bold uppercase tracking-[0.16em]',
-            featured ? 'text-[#f3d27a]' : theme.label,
+            featured ? 'text-[#5ec8ff]' : theme.label,
           )}
         >
           {label}

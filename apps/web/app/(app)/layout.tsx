@@ -38,7 +38,18 @@ export default function RootLayout({
       >
         {children}
         <DevProvenanceBadge />
-        <Toaster richColors position="top-right" />
+        <Toaster
+          richColors
+          position="top-right"
+          expand
+          visibleToasts={4}
+          gap={12}
+          toastOptions={{
+            classNames: {
+              toast: 'bh-sonner-toast',
+            },
+          }}
+        />
       </body>
     </html>
   );

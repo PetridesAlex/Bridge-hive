@@ -16,6 +16,7 @@ import { APP_CONFIG } from '@/constants/config';
 import { colors, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTranslation } from '@/i18n/locale-provider';
+import { router } from 'expo-router';
 
 type TopicTone = 'account' | 'shifts' | 'payouts';
 
@@ -257,6 +258,16 @@ export default function SupportScreen() {
           </View>
         </Pressable>
       </Animated.View>
+
+      <Pressable
+        onPress={() => router.push('/privacy-policy')}
+        accessibilityRole="link"
+        accessibilityLabel={t('support.privacyPolicyLink')}
+        style={styles.privacyLink}
+      >
+        <Ionicons name="shield-outline" size={16} color={colors.navy} />
+        <Text style={styles.privacyLinkText}>{t('support.privacyPolicyLink')}</Text>
+      </Pressable>
     </AppScreen>
   );
 }
@@ -416,5 +427,21 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.94,
+  },
+  privacyLink: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 44,
+    paddingVertical: 8,
+  },
+  privacyLinkText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 14,
+    color: colors.navy,
+    textDecorationLine: 'underline',
   },
 });

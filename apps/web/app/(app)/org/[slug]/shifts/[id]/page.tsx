@@ -23,6 +23,8 @@ import {
   Info,
   XCircle,
   MapPin,
+  ShieldCheck,
+  StickyNote,
   Stethoscope,
   Timer,
   UserRound,
@@ -71,16 +73,24 @@ function DetailPanel({
   action?: React.ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_1px_2px_rgba(7,29,48,0.04)]">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-bh-border/70 bg-gradient-to-b from-bh-subtle/70 to-bh-surface px-5 py-4 sm:px-6">
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-bh-teal-soft text-bh-teal-strong">
-            <Icon className="h-5 w-5" aria-hidden />
+    <section className="overflow-hidden rounded-2xl border border-white/70 bg-white/75 shadow-[0_14px_32px_rgba(7,29,48,0.1)] ring-1 ring-[#5ec8ff]/15 backdrop-blur-md">
+      <div className="relative flex flex-wrap items-start justify-between gap-3 overflow-hidden border-b border-white/10 bg-[#071d30] px-5 py-4 sm:px-6">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/20 blur-2xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
+        />
+        <div className="relative flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_8px_16px_rgba(94,200,255,0.3)]">
+            <Icon className="h-5 w-5" strokeWidth={2.3} aria-hidden />
           </span>
           <div>
-            <h2 className="text-base font-semibold text-bh-text">{title}</h2>
+            <h2 className="text-base font-semibold text-white">{title}</h2>
             {description ? (
-              <p className="mt-0.5 text-sm text-bh-text-secondary">{description}</p>
+              <p className="mt-0.5 text-sm text-white/70">{description}</p>
             ) : null}
           </div>
         </div>
@@ -99,10 +109,10 @@ function splitWhen(value: string): { date: string; time: string } {
 }
 
 const STAT_TONES = {
-  honey: 'bg-[#fff3cf] text-[#9a6b00] ring-[#e4b334]/40',
-  green: 'bg-emerald-100 text-emerald-700 ring-emerald-300/60',
-  teal: 'bg-bh-teal-soft text-bh-teal-strong ring-bh-teal/25',
-  slate: 'bg-bh-subtle text-bh-text-secondary ring-bh-border',
+  honey: 'bg-[#5ec8ff] text-[#071d30] ring-[#5ec8ff]/40',
+  green: 'bg-[#071d30] text-[#5ec8ff] ring-white/10',
+  teal: 'bg-[#5ec8ff]/15 text-[#071d30] ring-[#5ec8ff]/30',
+  slate: 'bg-[#071d30]/[0.06] text-[#071d30] ring-[#071d30]/10',
 } as const;
 
 function StatTile({
@@ -121,24 +131,30 @@ function StatTile({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-bh-border bg-bh-surface p-4 shadow-[0_1px_2px_rgba(7,29,48,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:border-bh-border-strong hover:shadow-[0_12px_24px_rgba(7,29,48,0.08)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
-      <div className="flex items-center gap-2.5">
+    <div className="group relative overflow-hidden rounded-2xl border border-white/70 bg-white/70 p-4 shadow-[0_10px_24px_rgba(7,29,48,0.07)] ring-1 ring-[#5ec8ff]/15 backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_16px_32px_rgba(7,29,48,0.12)] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-6 -top-8 h-20 w-20 rounded-full bg-[#5ec8ff]/15 blur-2xl"
+      />
+      <div className="relative flex items-center gap-2.5">
         <span
           className={cn(
-            'grid h-9 w-9 shrink-0 place-items-center rounded-xl ring-1',
+            'grid h-10 w-10 shrink-0 place-items-center rounded-xl shadow-[0_8px_16px_rgba(7,29,48,0.12)] ring-1',
             STAT_TONES[tone],
           )}
         >
-          <Icon className="h-4 w-4" strokeWidth={2.3} aria-hidden />
+          <Icon className="h-4 w-4" strokeWidth={2.4} aria-hidden />
         </span>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">
+        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#071d30]/55">
           {label}
         </p>
       </div>
-      <p className="bh-tabular mt-3 text-2xl font-bold tracking-[-0.02em] text-bh-text">
+      <p className="bh-tabular relative mt-3 text-[26px] font-extrabold tracking-[-0.03em] text-[#071d30]">
         {value}
       </p>
-      {hint ? <p className="mt-0.5 text-xs text-bh-text-muted">{hint}</p> : null}
+      {hint ? (
+        <p className="relative mt-1 text-[12px] font-medium text-[#071d30]/55">{hint}</p>
+      ) : null}
       {children}
     </div>
   );
@@ -371,64 +387,74 @@ export default async function ShiftDetailPage({
 
   return (
     <div className="space-y-6">
-      <div className="overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_1px_2px_rgba(7,29,48,0.04)]">
-        <div className="bg-gradient-to-br from-bh-teal-soft/45 via-bh-surface to-bh-honey-soft/25 px-5 py-5 sm:px-6 sm:py-6">
+      <div className="rounded-2xl border border-[#071d30]/10 bg-white/85 px-5 py-5 shadow-[0_14px_32px_rgba(7,29,48,0.1)] backdrop-blur-md sm:px-6 sm:py-6">
+        <div className="relative">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[#071d30]/[0.04] blur-3xl"
+          />
           <BackLink href={`/org/${slug}/shifts`} label="Shifts" className="mb-4" />
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
+          <div className="relative flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1">
               <div className="bh-fade-up flex flex-wrap items-center gap-2.5">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(14,143,153,0.28)] bg-[rgba(20,169,181,0.10)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-bh-teal-strong">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#071d30] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white">
                   <CalendarClock className="h-3.5 w-3.5" aria-hidden />
                   Shift
                 </span>
                 <ShiftStatusBadge status={shift.status} />
               </div>
-              <h1 className="bh-msg-title bh-fade-up-delay-1 mt-3 text-[clamp(1.9rem,4.2vw,2.7rem)] font-semibold leading-[1.08] tracking-[-0.035em]">
+              <h1 className="bh-msg-title bh-fade-up-delay-1 mt-3 break-words text-[clamp(1.95rem,4.2vw,2.75rem)] font-black leading-[1.05] tracking-[-0.04em] text-[#071d30]">
                 {shift.title || roleLabel(shift.required_role)}
               </h1>
               <span
                 aria-hidden
-                className="bh-msg-rule bh-fade-up-delay-2 mt-3 block h-[3px] w-16 rounded-full bg-[linear-gradient(90deg,#14a9b5,#e4b334)]"
+                className="bh-msg-rule bh-fade-up-delay-2 mt-3 block h-[3px] w-16 rounded-full bg-[#071d30]"
               />
-              <p className="bh-fade-up-delay-2 mt-4 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full bg-[linear-gradient(135deg,#0e8f99_0%,#14a9b5_100%)] py-1 pl-1 pr-3.5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(14,143,153,0.4)]">
-                  <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[#0e8f99]">
+              <div className="bh-fade-up-delay-2 mt-4 flex flex-wrap items-center gap-2">
+                <span className="inline-flex max-w-full items-center gap-2 rounded-full bg-[#071d30]/[0.06] py-1 pl-1 pr-3.5 text-[13px] font-semibold text-[#071d30] ring-1 ring-[#071d30]/10">
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[#071d30] text-white">
                     <MapPin className="h-3.5 w-3.5" strokeWidth={2.5} aria-hidden />
                   </span>
-                  {locationName}
-                  {wardName ? (
-                    <span className="font-medium text-white/80">· {wardName}</span>
-                  ) : null}
+                  <span className="min-w-0 truncate">
+                    {locationName}
+                    {wardName ? (
+                      <span className="font-medium text-[#071d30]/65"> · {wardName}</span>
+                    ) : null}
+                  </span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[linear-gradient(135deg,#7c3aed_0%,#6d28d9_100%)] px-3 py-1.5 text-[13px] font-semibold text-white shadow-[0_8px_18px_rgba(109,40,217,0.35)]">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#071d30]/[0.06] px-3 py-1.5 text-[13px] font-semibold text-[#071d30] ring-1 ring-[#071d30]/10">
                   <Stethoscope className="h-3.5 w-3.5" aria-hidden />
                   {roleLabel(shift.required_role)}
                 </span>
-                <span className="bh-tabular inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1.5 text-[13px] font-semibold text-bh-text-secondary ring-1 ring-bh-border">
-                  <CalendarClock className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+                <span className="bh-tabular inline-flex items-center gap-1.5 rounded-full bg-[#071d30]/[0.06] px-3 py-1.5 text-[13px] font-semibold text-[#071d30] ring-1 ring-[#071d30]/10">
+                  <CalendarClock className="h-3.5 w-3.5 text-[#071d30]/70" aria-hidden />
                   {formatDateTime(shift.starts_at, ctx.org.timezone)}
                 </span>
-              </p>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center gap-2">
               <PermissionGuard
                 allowed={
                   ctx.capabilities.canPublishShifts && shift.status === 'draft'
                 }
               >
-                <PublishShiftButton slug={slug} shiftId={shift.id} />
+                <PublishShiftButton
+                  slug={slug}
+                  shiftId={shift.id}
+                  className="h-12 min-h-12 rounded-xl bg-[#071d30] px-4 text-[15px] font-bold tracking-tight text-white shadow-[0_10px_22px_rgba(7,29,48,0.2)] hover:bg-[#0a283c]"
+                />
               </PermissionGuard>
               <PermissionGuard allowed={ctx.capabilities.canManageShifts && ctx.capabilities.canOperate}>
                 <Link
                   href={`/org/${slug}/shifts/new/bulk?template=${shift.id}`}
-                  className="group/dup inline-flex min-h-12 items-center gap-3 rounded-xl border border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_72%)] py-2 pl-2.5 pr-4 text-[15px] font-semibold text-white shadow-[0_12px_28px_rgba(7,29,48,0.28)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[linear-gradient(155deg,#1a425c_0%,#0a283c_72%)] hover:shadow-[0_16px_32px_rgba(7,29,48,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-honey active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                  className="group/dup inline-flex min-h-12 items-center gap-3 rounded-xl border border-[#071d30]/15 bg-white py-2 pl-2.5 pr-4 text-[15px] font-semibold text-[#071d30] shadow-[0_8px_18px_rgba(7,29,48,0.08)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#f7fafc] hover:shadow-[0_12px_24px_rgba(7,29,48,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#071d30] active:translate-y-0 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                 >
-                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-[#071d30] text-white">
                     <CopyPlus className="h-4 w-4" strokeWidth={2.4} aria-hidden />
                   </span>
                   Duplicate to multiple dates
                   <ArrowRight
-                    className="h-4 w-4 text-white/80 transition-transform duration-200 group-hover/dup:translate-x-0.5"
+                    className="h-4 w-4 text-[#071d30]/55 transition-transform duration-200 group-hover/dup:translate-x-0.5"
                     aria-hidden
                   />
                 </Link>
@@ -475,7 +501,7 @@ export default async function ShiftDetailPage({
               tone="teal"
             >
               <div
-                className="mt-3 h-2 overflow-hidden rounded-full bg-bh-subtle"
+                className="relative mt-3 h-2 overflow-hidden rounded-full bg-[#071d30]/08"
                 role="progressbar"
                 aria-label="Positions filled"
                 aria-valuemin={0}
@@ -483,12 +509,7 @@ export default async function ShiftDetailPage({
                 aria-valuenow={Math.min(filledCount, requiredPositions)}
               >
                 <div
-                  className={cn(
-                    'h-full rounded-full transition-[width] duration-500 motion-reduce:transition-none',
-                    openPositions === 0
-                      ? 'bg-[linear-gradient(90deg,#16a34a,#15803d)]'
-                      : 'bg-[linear-gradient(90deg,#14a9b5,#0f8a96)]',
-                  )}
+                  className="h-full rounded-full bg-[#5ec8ff] transition-[width] duration-500 motion-reduce:transition-none"
                   style={{
                     width: `${Math.min(100, (filledCount / Math.max(1, requiredPositions)) * 100)}%`,
                   }}
@@ -504,13 +525,13 @@ export default async function ShiftDetailPage({
             />
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-bh-border bg-bh-subtle/30">
-            <div className="flex items-center justify-between gap-3 border-b border-bh-border/70 px-4 py-2.5 sm:px-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">
+          <div className="overflow-hidden rounded-2xl border border-white/70 bg-white/60 shadow-[0_12px_28px_rgba(7,29,48,0.08)] ring-1 ring-[#5ec8ff]/15 backdrop-blur-md">
+            <div className="flex items-center justify-between gap-3 border-b border-[#071d30]/08 bg-[#071d30] px-4 py-3 sm:px-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#5ec8ff]">
                 Schedule
               </p>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-bh-surface px-2.5 py-1 text-xs font-semibold text-bh-text ring-1 ring-bh-border">
-                <Stethoscope className="h-3.5 w-3.5 text-bh-teal-strong" aria-hidden />
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#5ec8ff] px-2.5 py-1 text-xs font-bold text-[#071d30]">
+                <Stethoscope className="h-3.5 w-3.5" aria-hidden />
                 {roleLabel(shift.required_role)}
               </span>
             </div>
@@ -525,25 +546,25 @@ export default async function ShiftDetailPage({
                   key={point.label}
                   className={cn(index === 1 && 'sm:order-3 sm:text-right')}
                 >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-teal-strong">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#071d30]/50">
                     {point.label}
                   </p>
-                  <p className="bh-tabular mt-1 text-3xl font-bold tracking-[-0.03em] text-bh-text">
+                  <p className="bh-tabular mt-1 text-3xl font-extrabold tracking-[-0.03em] text-[#071d30]">
                     {point.when.time || '—'}
                   </p>
-                  <p className="mt-0.5 text-sm font-medium text-bh-text-secondary">
+                  <p className="mt-0.5 text-sm font-medium text-[#071d30]/60">
                     {point.when.date}
                   </p>
                 </div>
               ))}
               <div className="flex flex-col items-center gap-1.5 sm:order-2">
-                <span className="inline-flex items-center gap-2 text-bh-text-muted">
-                  <span aria-hidden className="hidden h-px w-8 bg-bh-border-strong sm:block" />
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                  <span aria-hidden className="hidden h-px w-8 bg-bh-border-strong sm:block" />
+                <span className="inline-flex items-center gap-2 text-[#071d30]/35">
+                  <span aria-hidden className="hidden h-px w-8 bg-[#5ec8ff]/50 sm:block" />
+                  <ArrowRight className="h-4 w-4 text-[#5ec8ff]" aria-hidden />
+                  <span aria-hidden className="hidden h-px w-8 bg-[#5ec8ff]/50 sm:block" />
                 </span>
-                <span className="bh-tabular inline-flex items-center gap-1.5 rounded-full bg-[#071d30] px-3 py-1 text-xs font-semibold text-white shadow-[0_6px_14px_rgba(7,29,48,0.22)]">
-                  <Timer className="h-3.5 w-3.5 text-[#e4b334]" aria-hidden />
+                <span className="bh-tabular inline-flex items-center gap-1.5 rounded-full bg-[#071d30] px-3 py-1.5 text-xs font-bold text-white shadow-[0_8px_16px_rgba(7,29,48,0.2)]">
+                  <Timer className="h-3.5 w-3.5 text-[#5ec8ff]" aria-hidden />
                   {formatDurationMinutes(
                     Math.max(
                       0,
@@ -562,19 +583,25 @@ export default async function ShiftDetailPage({
               className={cn(
                 'flex flex-wrap items-center gap-2 border-t px-4 py-3 text-sm sm:px-5',
                 acceptanceClosed
-                  ? 'border-red-200 bg-red-50 text-red-800'
-                  : 'border-bh-border/70 bg-bh-surface/60 text-bh-text-secondary',
+                  ? 'border-[#071d30]/15 bg-[#071d30] text-white'
+                  : 'border-[#071d30]/08 bg-[#5ec8ff]/10 text-[#071d30]',
               )}
             >
-              <Hourglass className="h-4 w-4 shrink-0" aria-hidden />
-              <span className="font-semibold text-bh-text">Acceptance deadline</span>
-              <span>
+              <Hourglass
+                className={cn(
+                  'h-4 w-4 shrink-0',
+                  acceptanceClosed ? 'text-[#5ec8ff]' : 'text-[#071d30]/60',
+                )}
+                aria-hidden
+              />
+              <span className="font-semibold">Acceptance deadline</span>
+              <span className={acceptanceClosed ? 'text-white/80' : 'text-[#071d30]/70'}>
                 {shift.acceptance_deadline
                   ? formatDateTime(shift.acceptance_deadline, ctx.org.timezone)
                   : 'None set'}
               </span>
               {acceptanceClosed ? (
-                <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
+                <span className="rounded-full bg-[#5ec8ff] px-2 py-0.5 text-xs font-bold text-[#071d30]">
                   Cutoff has passed
                 </span>
               ) : null}
@@ -584,15 +611,30 @@ export default async function ShiftDetailPage({
           {requirements.length > 0 || shift.notes ? (
             <div className="grid gap-3 lg:grid-cols-2">
               {requirements.length > 0 ? (
-                <div className="rounded-2xl border border-bh-border bg-bh-surface p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-bh-text-muted">
-                    Extra requirements
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
+                <div className="overflow-hidden rounded-2xl border border-[#071d30]/10 bg-white shadow-[0_10px_24px_rgba(7,29,48,0.08)]">
+                  <div className="flex items-center justify-between gap-3 border-b border-[#071d30]/08 bg-[#071d30] px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#071d30]">
+                        <ShieldCheck className="h-4 w-4" strokeWidth={2.4} aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">
+                          Credentials
+                        </p>
+                        <p className="text-sm font-semibold text-white">
+                          Extra requirements
+                        </p>
+                      </div>
+                    </div>
+                    <span className="bh-tabular shrink-0 rounded-full bg-white px-2.5 py-0.5 text-[11px] font-bold text-[#071d30]">
+                      {requirements.length}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 p-4">
                     {requirements.map((r) => (
                       <span
                         key={r.id}
-                        className="inline-flex items-center rounded-full border border-bh-teal/20 bg-bh-teal-soft/70 px-3 py-1 text-xs font-semibold text-bh-teal-strong"
+                        className="inline-flex items-center rounded-full bg-[#071d30]/[0.07] px-3 py-1.5 text-xs font-semibold text-[#071d30]"
                       >
                         {credentialTypeLabel(r.requirement_type)}
                       </span>
@@ -603,14 +645,24 @@ export default async function ShiftDetailPage({
               {shift.notes ? (
                 <div
                   className={cn(
-                    'rounded-2xl border border-[#e4b334]/40 bg-[#fff8e8] p-4',
+                    'overflow-hidden rounded-2xl bg-[#071d30] shadow-[0_12px_28px_rgba(7,29,48,0.18)]',
                     requirements.length === 0 && 'lg:col-span-2',
                   )}
                 >
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[#9a6b00]">
-                    Notes for workers
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-bh-text">
+                  <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3">
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-[#071d30]">
+                      <StickyNote className="h-4 w-4" strokeWidth={2.4} aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/55">
+                        Guidance
+                      </p>
+                      <p className="text-sm font-semibold text-white">
+                        Notes for workers
+                      </p>
+                    </div>
+                  </div>
+                  <p className="whitespace-pre-wrap px-4 py-4 text-sm leading-6 text-white/85">
                     {shift.notes}
                   </p>
                 </div>
@@ -634,10 +686,16 @@ export default async function ShiftDetailPage({
         allowed={ctx.capabilities.canManageShifts && shift.status === 'draft'}
       >
         <div className="space-y-3">
-          <div>
-            <h2 className="text-lg font-semibold text-bh-text">Edit draft</h2>
-            <p className="text-sm text-bh-text-secondary">
-              Update details, then save. Publish when the opening is ready.
+          <div className="overflow-hidden rounded-2xl border border-[#071d30]/10 bg-white px-4 py-4 shadow-[0_8px_18px_rgba(7,29,48,0.06)] sm:px-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#071d30]/50">
+              Draft only
+            </p>
+            <h2 className="mt-1 text-lg font-bold tracking-tight text-[#071d30]">
+              Edit before you publish
+            </h2>
+            <p className="mt-1.5 max-w-2xl text-sm leading-6 text-[#071d30]/70">
+              You can change role, schedule, pay, location, and requirements while
+              this shift is still a draft. Workers will not see it until you publish.
             </p>
           </div>
           <ShiftForm
@@ -686,7 +744,7 @@ export default async function ShiftDetailPage({
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-bh-subtle/50 px-4 py-3">
-              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#071d30] text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]">
                 <UserRound className="h-4 w-4" aria-hidden />
               </span>
               <div className="min-w-0 flex-1">
@@ -762,7 +820,7 @@ export default async function ShiftDetailPage({
                             <div className="flex items-center gap-3">
                               <span
                                 aria-hidden
-                                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
+                                className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#071d30] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
                               >
                                 {label.trim()[0]?.toUpperCase() ?? 'W'}
                               </span>
@@ -909,7 +967,7 @@ export default async function ShiftDetailPage({
                     <div className="flex min-w-0 items-center gap-3">
                       <span
                         aria-hidden
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#071d30] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
                       >
                         {workerLabel.trim()[0]?.toUpperCase() ?? 'W'}
                       </span>
@@ -1096,17 +1154,17 @@ export default async function ShiftDetailPage({
         >
           <div className="space-y-5">
             {singleCurrency ? (
-              <div className="relative overflow-hidden rounded-2xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] p-5 text-white shadow-[0_14px_30px_rgba(7,29,48,0.2)]">
+              <div className="relative overflow-hidden rounded-2xl bg-[#071d30] p-5 text-white shadow-[0_14px_30px_rgba(7,29,48,0.2)]">
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-bh-teal/30 blur-2xl"
+                  className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/25 blur-2xl"
                 />
                 <span
                   aria-hidden
                   className="bh-orb-drift pointer-events-none absolute -bottom-12 right-10 h-24 w-24 rounded-full bg-[#e4b334]/25 blur-2xl"
                 />
                 <div className="relative flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#f3d27a]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#5ec8ff]">
                     Shift total
                   </p>
                   <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-semibold ring-1 ring-white/20">
@@ -1118,7 +1176,7 @@ export default async function ShiftDetailPage({
                 <div className="relative mt-4 grid gap-5 sm:grid-cols-3">
                   {(
                     [
-                      { label: 'Approved gross', key: 'gross_amount_minor', accent: 'text-[#f3d27a]' },
+                      { label: 'Approved gross', key: 'gross_amount_minor', accent: 'text-[#5ec8ff]' },
                       { label: 'Paid directly to workers', key: 'worker_transfer_amount_minor', accent: 'text-white' },
                       { label: 'Organization total due', key: 'organization_total_due_minor', accent: 'text-white' },
                     ] as const
@@ -1157,7 +1215,7 @@ export default async function ShiftDetailPage({
                     <div className="flex min-w-0 items-center gap-3">
                       <span
                         aria-hidden
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
+                        className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#071d30] text-base font-bold text-[#e4b334] shadow-[0_6px_14px_rgba(7,29,48,0.2)]"
                       >
                         {workerLabel.trim()[0]?.toUpperCase() ?? 'W'}
                       </span>
@@ -1228,7 +1286,7 @@ export default async function ShiftDetailPage({
                     </p>
                     <Link
                       href={`/org/${slug}/payments/${payout.id}`}
-                      className="group/pay inline-flex min-h-10 items-center gap-2 rounded-xl bg-[linear-gradient(155deg,#16384f_0%,#071d30_80%)] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(7,29,48,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-honey motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                      className="group/pay inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#071d30] px-4 text-sm font-semibold text-white shadow-[0_8px_18px_rgba(7,29,48,0.25)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(7,29,48,0.32)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bh-honey motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                     >
                       Open payment details
                       <ArrowUpRight
@@ -1241,26 +1299,54 @@ export default async function ShiftDetailPage({
               );
             })}
 
-            <aside className="flex gap-3 rounded-2xl border border-[#e4b334]/40 bg-[#fff8e8] p-4">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-[#e4b334]/25 text-[#9a6b00]">
-                <Info className="h-[18px] w-[18px]" aria-hidden />
-              </span>
-              <div className="min-w-0 text-sm leading-6 text-bh-text-secondary">
-                <p className="font-semibold text-bh-text">How payment works</p>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs leading-5">
-                  <li>
-                    Your organization pays each worker their approved gross amount directly.
-                  </li>
-                  <li>
-                    Bridge Hive commission is a separate worker invoice per completed
-                    position and is not an organization expense.
-                  </li>
-                  <li>
-                    Open payment details to see the worker&rsquo;s bank account for the
-                    direct transfer.
-                  </li>
-                </ul>
+            <aside className="overflow-hidden rounded-2xl border border-white/10 bg-[#071d30] shadow-[0_14px_28px_rgba(7,29,48,0.2)]">
+              <div className="flex items-center gap-3 border-b border-white/10 px-4 py-3.5 sm:px-5">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-white">
+                  <Info className="h-5 w-5" strokeWidth={2.3} aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/50">
+                    Important
+                  </p>
+                  <p className="text-base font-semibold tracking-tight text-white">
+                    How payment works
+                  </p>
+                </div>
               </div>
+              <ol className="divide-y divide-white/10 px-4 py-1 sm:px-5">
+                <li className="flex gap-3 py-3.5">
+                  <span className="bh-tabular mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10 text-[11px] font-bold text-white">
+                    1
+                  </span>
+                  <p className="text-sm leading-6 text-white/80">
+                    Your organization pays each worker their{' '}
+                    <span className="font-semibold text-white">approved gross amount</span>{' '}
+                    directly.
+                  </p>
+                </li>
+                <li className="flex gap-3 py-3.5">
+                  <span className="bh-tabular mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10 text-[11px] font-bold text-white">
+                    2
+                  </span>
+                  <p className="text-sm leading-6 text-white/80">
+                    Bridge Hive commission is a{' '}
+                    <span className="font-semibold text-white">
+                      separate worker invoice
+                    </span>{' '}
+                    per completed position — not an organization expense.
+                  </p>
+                </li>
+                <li className="flex gap-3 py-3.5">
+                  <span className="bh-tabular mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-white/10 text-[11px] font-bold text-white">
+                    3
+                  </span>
+                  <p className="text-sm leading-6 text-white/80">
+                    Open payment details to see the worker&rsquo;s{' '}
+                    <span className="font-semibold text-white">bank account</span> for the
+                    direct transfer.
+                  </p>
+                </li>
+              </ol>
             </aside>
           </div>
         </DetailPanel>

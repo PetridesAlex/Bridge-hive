@@ -575,32 +575,32 @@ export default async function OrgDashboardPage({
           </div>
 
           <section className="overflow-hidden rounded-2xl border border-[#16384f]/18 bg-white shadow-[0_18px_40px_rgba(7,29,48,0.12)]">
-            <div className="relative overflow-hidden border-b border-white/10 bg-[linear-gradient(155deg,#16384f_0%,#071d30_58%,#0c3a42_100%)] px-5 py-5 sm:px-6">
+            <div className="relative overflow-hidden border-b border-white/10 bg-[#071d30] px-5 py-5 sm:px-6">
               <span
                 aria-hidden
-                className="pointer-events-none absolute -left-10 -top-12 h-36 w-36 rounded-full bg-bh-teal/30 blur-2xl"
+                className="pointer-events-none absolute -left-10 -top-12 h-36 w-36 rounded-full bg-[#5ec8ff]/25 blur-2xl"
               />
               <span
                 aria-hidden
-                className="bh-orb-drift pointer-events-none absolute -bottom-16 right-6 h-40 w-40 rounded-full bg-[#e4b334]/22 blur-2xl"
+                className="bh-orb-drift pointer-events-none absolute -bottom-16 right-6 h-40 w-40 rounded-full bg-[#5ec8ff]/15 blur-2xl"
               />
               <span
                 aria-hidden
-                className="bh-org-topbar-line pointer-events-none absolute inset-x-0 bottom-0 h-[3px]"
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-[2px] bg-[linear-gradient(90deg,transparent,#5ec8ff,transparent)]"
               />
 
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex min-w-0 items-start gap-3.5">
-                  <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#e4b334] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_10px_18px_rgba(228,179,52,0.35)]">
+                  <span className="mt-0.5 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#5ec8ff] text-[#071d30] shadow-[inset_0_1px_0_rgba(255,255,255,0.45),0_10px_18px_rgba(94,200,255,0.35)]">
                     <TrendingUp className="h-[18px] w-[18px]" strokeWidth={2.4} aria-hidden />
                   </span>
                   <div className="min-w-0">
-                    <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f3d27a]">
+                    <p className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5ec8ff]">
                       Upcoming coverage
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#e4b334]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#f3d27a] ring-1 ring-[#e4b334]/35">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#5ec8ff]/15 px-1.5 py-0.5 text-[9px] font-bold tracking-[0.14em] text-[#5ec8ff] ring-1 ring-[#5ec8ff]/35">
                         <span
                           aria-hidden
-                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#e4b334] motion-reduce:animate-none"
+                          className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#5ec8ff] motion-reduce:animate-none"
                         />
                         Outlook
                       </span>

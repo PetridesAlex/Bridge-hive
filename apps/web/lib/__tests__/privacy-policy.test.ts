@@ -8,8 +8,11 @@ import {
   PRIVACY_POLICY_PUBLISH_APPROVED,
   PRIVACY_POLICY_TAX_ID,
   TAX_ID_PLACEHOLDER,
+  assertFinalPrivacyPolicyContent,
   privacyPolicyIsBlockedHere,
+  privacyPolicyIsFinal,
   privacyPolicyIsPublishable,
+  taxIdLabel,
   taxIdLine,
   type PolicyBlock,
 } from '@/lib/privacy-policy/content';
@@ -32,6 +35,7 @@ const allText = [
   ...POLICY_ARTICLES.flatMap((a) => [a.title, ...a.blocks.flatMap(textOf)]),
   POLICY_HEADER.end,
   POLICY_HEADER.endVersion,
+  taxIdLine('en'),
 ].join('\n');
 
 describe('privacy policy', () => {
@@ -51,13 +55,16 @@ describe('privacy policy', () => {
     expect(allText).not.toContain('\u2E3B');
   });
 
-  it('keeps the supplied identity and version wording', () => {
-    expect(POLICY_HEADER.version).toBe('Version: 1.0 \u2014 Draft for Legal Review');
-    expect(POLICY_HEADER.lastUpdated).toBe('Last Updated: 13 November 2026');
+  it('keeps final Version 1.0 identity and revision date', () => {
+    expect(POLICY_HEADER.version).toBe('Version: 1.0');
+    expect(POLICY_HEADER.lastUpdated).toBe('Last Updated: 18 November 2026');
+    expect(POLICY_HEADER.endVersion).toBe('Version 1.0 \u2014 18 November 2026');
     expect(allText).toContain('Company Registration Number: HE 498387');
     expect(allText).toContain(
       '237 Archbishop Makarios III Avenue, DIANA HOUSE, 5th Floor, Office 518, 3105 Limassol, Cyprus',
     );
+    expect(POLICY_HEADER.version).not.toMatch(/draft/i);
+    expect(POLICY_HEADER.endVersion).not.toMatch(/draft/i);
   });
 
   it('keeps the supplied backup, deletion and restore statements verbatim', () => {
@@ -72,22 +79,43 @@ describe('privacy policy', () => {
     );
   });
 
-  it('shows a marked Tax ID placeholder and never invents a value', () => {
-    expect(PRIVACY_POLICY_TAX_ID).toBeNull();
-    expect(taxIdLine()).toBe(`Tax ID: ${TAX_ID_PLACEHOLDER}`);
-    expect(TAX_ID_PLACEHOLDER).toContain('PLACEHOLDER');
+  it('ships the company TIN and never renders the tax placeholder', () => {
+    expect(PRIVACY_POLICY_TAX_ID).toBe('60418646N');
+    expect(taxIdLine('en')).toBe(
+      'Tax Identification Number (TIN): 60418646N',
+    );
+    expect(taxIdLine('el')).toBe(
+      'Αριθμός Φορολογικής Ταυτότητας (ΑΦΤ): 60418646N',
+    );
+    expect(taxIdLabel('en')).toContain('TIN');
+    expect(taxIdLabel('el')).toContain('ΑΦΤ');
+    expect(allText).not.toContain(TAX_ID_PLACEHOLDER);
+    expect(allText).not.toContain('PLACEHOLDER');
     const withTaxId = POLICY_ARTICLES.flatMap((a) => a.blocks).filter(
       (b) => typeof b !== 'string' && b.kind === 'lines' && b.withTaxId,
     );
     expect(withTaxId).toHaveLength(2);
   });
 
-  it('is published and available on hosted production while the Tax ID stays a placeholder', () => {
+  it('is final and publishable without production block', () => {
+    expect(privacyPolicyIsFinal()).toBe(true);
+    expect(() => assertFinalPrivacyPolicyContent()).not.toThrow();
     expect(PRIVACY_POLICY_PUBLISH_APPROVED).toBe(true);
     expect(privacyPolicyIsPublishable()).toBe(true);
     expect(privacyPolicyIsBlockedHere({ VERCEL_ENV: 'production' })).toBe(false);
     expect(privacyPolicyIsBlockedHere({ VERCEL_ENV: 'preview' })).toBe(false);
     expect(privacyPolicyIsBlockedHere({})).toBe(false);
+  });
+
+  it('does not pass draft Tax ID banners from the privacy page', () => {
+    const page = readFileSync(
+      path.join(__dirname, '..', '..', 'components/marketing/pages/PrivacyPolicyPage.tsx'),
+      'utf8',
+    );
+    expect(page).not.toContain('draftBannerEn');
+    expect(page).not.toContain('DRAFT_BANNER');
+    expect(page).not.toContain('TAX_ID_PLACEHOLDER');
+    expect(page).toContain('taxIdLabel');
   });
 
   it('keeps the language switch on the policy page', () => {
@@ -104,5 +132,16 @@ describe('privacy policy', () => {
       'utf8',
     );
     expect(footer).toContain('privacy-policy');
+  });
+
+  it('keeps Article 14 aligned with the final Cookie Policy inventory', () => {
+    const article14 = POLICY_ARTICLES.find((a) => a.id === 'article-14');
+    expect(article14).toBeDefined();
+    const text = article14!.blocks.flatMap(textOf).join('\n');
+    expect(text).toContain('Cookie Policy');
+    expect(text).toContain('Understood');
+    expect(text).toContain('do not claim to cover every native mobile');
+    expect(text).not.toMatch(/subject to completion of the technical inventory/i);
+    expect(text).toContain('Google Analytics, Google Tag Manager and Meta Pixel were not detected');
   });
 });

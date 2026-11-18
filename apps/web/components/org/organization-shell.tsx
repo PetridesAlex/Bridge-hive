@@ -1,6 +1,7 @@
 import { OrganizationSidebar } from '@/components/org/organization-sidebar';
 import { OrganizationTopbar } from '@/components/org/organization-topbar';
 import type { SwitcherOrg } from '@/components/org/organization-switcher';
+import { OrgMessagingAlertsProvider } from '@/components/org/org-messaging-alerts-provider';
 import type { OrgNavCapabilities } from '@bridge-hive/domain';
 import { orgDisplayFont } from '@/lib/org-display-font';
 
@@ -24,6 +25,7 @@ export function OrganizationShell({
   current,
   memberships,
   capabilities,
+  userId,
   userLabel,
   userEmail,
   children,
@@ -34,51 +36,60 @@ export function OrganizationShell({
   current: SwitcherOrg;
   memberships: SwitcherOrg[];
   capabilities: OrgNavCapabilities;
+  userId: string;
   userLabel: string;
   userEmail?: string | null;
   children: React.ReactNode;
 }) {
   return (
-    <div className={`${orgDisplayFont.variable} bh-org relative flex min-h-dvh bg-[#c9dcea]`}>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-bh-surface focus:px-3 focus:py-2 focus:shadow"
-      >
-        Skip to content
-      </a>
+    <OrgMessagingAlertsProvider
+      organizationId={current.id}
+      slug={slug}
+      userId={userId}
+      capabilities={capabilities}
+      locale="en"
+    >
+      <div className={`${orgDisplayFont.variable} bh-org relative flex min-h-dvh bg-[#c9dcea]`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-bh-surface focus:px-3 focus:py-2 focus:shadow"
+        >
+          Skip to content
+        </a>
 
-      <div className="relative z-10 hidden w-[280px] shrink-0 self-stretch border-r border-[#14324a]/90 min-[1180px]:block">
-        <div className="sticky top-0 flex h-dvh flex-col bg-[#071d30] shadow-[12px_0_40px_rgba(7,29,48,0.18)]">
-          <OrganizationSidebar
+        <div className="relative z-10 hidden w-[280px] shrink-0 self-stretch border-r border-[#14324a]/90 min-[1180px]:block">
+          <div className="sticky top-0 flex h-dvh flex-col bg-[#071d30] shadow-[12px_0_40px_rgba(7,29,48,0.18)]">
+            <OrganizationSidebar
+              slug={slug}
+              current={current}
+              memberships={memberships}
+              capabilities={capabilities}
+              userLabel={userLabel}
+              userEmail={userEmail}
+            />
+          </div>
+        </div>
+
+        <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
+          <OrganizationWorkspaceBackground />
+          <OrganizationTopbar
             slug={slug}
+            orgName={orgName}
+            orgLogoUrl={orgLogoUrl}
             current={current}
             memberships={memberships}
             capabilities={capabilities}
             userLabel={userLabel}
             userEmail={userEmail}
           />
+          <main
+            id="main-content"
+            className="relative z-10 mx-auto w-full max-w-[1440px] flex-1 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8"
+          >
+            {children}
+          </main>
         </div>
       </div>
-
-      <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col">
-        <OrganizationWorkspaceBackground />
-        <OrganizationTopbar
-          slug={slug}
-          orgName={orgName}
-          orgLogoUrl={orgLogoUrl}
-          current={current}
-          memberships={memberships}
-          capabilities={capabilities}
-          userLabel={userLabel}
-          userEmail={userEmail}
-        />
-        <main
-          id="main-content"
-          className="relative z-10 mx-auto w-full max-w-[1440px] flex-1 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pt-8"
-        >
-          {children}
-        </main>
-      </div>
-    </div>
+    </OrgMessagingAlertsProvider>
   );
 }

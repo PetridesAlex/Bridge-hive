@@ -131,6 +131,7 @@ export default function RootLayout() {
                   <Stack.Screen name="notifications" />
                   <Stack.Screen name="payout-setup" />
                   <Stack.Screen name="delete-account" />
+                  <Stack.Screen name="privacy-policy" />
                 </Stack>
                 <DevProvenanceBadge />
               </UnverifiedRouteGuard>

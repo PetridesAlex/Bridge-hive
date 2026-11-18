@@ -24,7 +24,7 @@ const ROW_TONES = {
   },
   navy: {
     border: 'border-[#16485f]/20',
-    chip: 'bg-[linear-gradient(140deg,#050f1a_0%,#16485f_100%)] text-[#f3d27a] shadow-[0_6px_12px_rgba(7,29,48,0.28)]',
+    chip: 'bg-[linear-gradient(140deg,#050f1a_0%,#16485f_100%)] text-[#5ec8ff] shadow-[0_6px_12px_rgba(7,29,48,0.28)]',
     bar: 'bg-[linear-gradient(90deg,#c27c00_0%,#e0aa18_55%,#f6cd4f_100%)] shadow-[0_0_10px_rgba(224,170,24,0.45)]',
     text: 'text-[#16384f]',
   },
@@ -75,7 +75,7 @@ export function RoleCoverageBars({
           aria-hidden
           className="bh-orb-drift pointer-events-none absolute -bottom-10 -right-6 h-24 w-24 rounded-full bg-[#071d30]/10 blur-2xl"
         />
-        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#f3d27a] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
+        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#5ec8ff] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
           <Users className="h-4 w-4" aria-hidden />
         </span>
         <p className="relative mt-3 text-sm font-semibold text-[#071d30]">
@@ -175,29 +175,33 @@ const ACTIVITY_SERIES = [
   {
     id: 'created' as const,
     label: 'Shifts created',
-    color: '#087F8C',
-    fill: '#16A6B6',
+    short: 'Created',
+    color: '#1a8fd4',
+    fill: '#5ec8ff',
     value: (b: OrgActivitySeries['buckets'][number]) => b.shiftsCreated,
   },
   {
     id: 'acceptances' as const,
     label: 'Acceptances',
-    color: '#2563EB',
-    fill: '#3B82F6',
+    short: 'Accepted',
+    color: '#0e8a96',
+    fill: '#16a6b6',
     value: (b: OrgActivitySeries['buckets'][number]) => b.acceptances,
   },
   {
     id: 'workers' as const,
     label: 'Participating workers',
-    color: '#C49212',
-    fill: '#E0AA18',
+    short: 'Workers',
+    color: '#0b2a43',
+    fill: '#16384f',
     value: (b: OrgActivitySeries['buckets'][number]) => b.participatingWorkers,
   },
   {
     id: 'approved' as const,
     label: 'Timesheets approved',
-    color: '#0B2A43',
-    fill: '#1B3F5C',
+    short: 'Approved',
+    color: '#2aa8ef',
+    fill: '#8adbff',
     value: (b: OrgActivitySeries['buckets'][number]) => b.timesheetsApproved,
   },
 ];
@@ -215,14 +219,14 @@ export function OrganizationActivityChart({
 }) {
   if (!hasActivity) {
     return (
-      <div className="rounded-2xl border border-dashed border-bh-teal/25 bg-bh-teal-soft/30 px-4 py-10 text-center">
-        <p className="text-sm font-semibold text-bh-text">No activity in this period</p>
-        <p className="mt-1 text-sm text-bh-text-secondary">
+      <div className="rounded-2xl border border-dashed border-[#5ec8ff]/35 bg-white/50 px-4 py-10 text-center">
+        <p className="text-sm font-semibold text-[#071d30]">No activity in this period</p>
+        <p className="mt-1 text-sm text-[#071d30]/65">
           Create and publish shifts to start building a historical activity record.
         </p>
         <Link
           href={emptyHref}
-          className="mt-3 inline-flex text-sm font-semibold text-bh-teal-strong hover:underline"
+          className="mt-3 inline-flex text-sm font-semibold text-[#1a8fd4] hover:underline"
         >
           Create shift →
         </Link>
@@ -235,16 +239,23 @@ export function OrganizationActivityChart({
       ? ACTIVITY_SERIES
       : ACTIVITY_SERIES.filter((s) => s.id === focus);
 
+  const totals = Object.fromEntries(
+    ACTIVITY_SERIES.map((s) => [
+      s.id,
+      series.buckets.reduce((sum, b) => sum + s.value(b), 0),
+    ]),
+  ) as Record<(typeof ACTIVITY_SERIES)[number]['id'], number>;
+
   const max = Math.max(
     1,
     ...series.buckets.flatMap((b) => active.map((s) => s.value(b))),
   );
 
   const width = 720;
-  const height = 220;
-  const padX = 36;
-  const padTop = 16;
-  const padBottom = 28;
+  const height = 248;
+  const padX = 42;
+  const padTop = 18;
+  const padBottom = 34;
   const innerW = width - padX * 2;
   const innerH = height - padTop - padBottom;
   const step =
@@ -253,133 +264,214 @@ export function OrganizationActivityChart({
       : innerW / Math.max(1, series.buckets.length - 1);
 
   const labelEvery = Math.max(1, Math.ceil(series.buckets.length / 8));
+  const focused = active.length === 1;
+  const peak = focused
+    ? series.buckets.reduce(
+        (best, b, i) => {
+          const value = active[0]!.value(b);
+          if (value < best.value) return best;
+          return { value, index: i, label: b.label };
+        },
+        { value: -1, index: 0, label: '' },
+      )
+    : null;
 
   return (
-    <div className="space-y-3">
-      <ul className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-bh-text-secondary">
+    <div className="space-y-3.5">
+      <ul className="flex flex-wrap gap-2">
         {active.map((s) => (
-          <li key={s.id} className="inline-flex items-center gap-1.5">
+          <li
+            key={s.id}
+            className="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/80 px-2.5 py-1.5 text-[12px] font-semibold text-[#071d30] shadow-[0_6px_14px_rgba(7,29,48,0.06)] ring-1 ring-[#5ec8ff]/15"
+          >
             <span
-              className="h-2.5 w-2.5 rounded-full"
+              className="h-2.5 w-2.5 rounded-full shadow-[0_0_0_3px_rgba(94,200,255,0.18)]"
               style={{ backgroundColor: s.color }}
               aria-hidden
             />
-            {s.label}
+            <span>{s.short}</span>
+            <span className="bh-tabular rounded-full bg-[#071d30] px-1.5 py-0.5 text-[10px] font-bold text-white">
+              {totals[s.id]}
+            </span>
           </li>
         ))}
       </ul>
 
-      <div className="overflow-x-auto rounded-xl bg-bh-subtle/35 px-2 pt-3">
-        <svg
-          viewBox={`0 0 ${width} ${height}`}
-          className="h-56 w-full min-w-[320px]"
-          role="img"
-          aria-label={`Organization activity counts by ${series.granularity} for ${series.periodLabel}`}
-        >
-          {[0.25, 0.5, 0.75, 1].map((t) => {
-            const y = padTop + innerH * (1 - t);
-            return (
-              <g key={t}>
-                <line
-                  x1={padX}
-                  x2={width - padX}
-                  y1={y}
-                  y2={y}
-                  stroke="#E1E7EA"
-                  strokeWidth="1"
+      <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-[linear-gradient(165deg,#071d30_0%,#0c2a40_48%,#123a52_100%)] px-2.5 pb-2 pt-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_16px_32px_rgba(7,29,48,0.18)]">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-8 -top-10 h-28 w-28 rounded-full bg-[#5ec8ff]/20 blur-2xl"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -bottom-12 -right-6 h-32 w-32 rounded-full bg-[#16a6b6]/18 blur-2xl"
+        />
+        <div className="relative overflow-x-auto">
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="h-60 w-full min-w-[320px]"
+            role="img"
+            aria-label={`Organization activity counts by ${series.granularity} for ${series.periodLabel}`}
+          >
+            <defs>
+              {active.map((s) => (
+                <linearGradient
+                  key={`grad-${s.id}`}
+                  id={`org-activity-${s.id}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop offset="0%" stopColor={s.fill} stopOpacity="0.55" />
+                  <stop offset="100%" stopColor={s.fill} stopOpacity="0.02" />
+                </linearGradient>
+              ))}
+            </defs>
+
+            {[0, 0.25, 0.5, 0.75, 1].map((t) => {
+              const y = padTop + innerH * (1 - t);
+              return (
+                <g key={t}>
+                  <line
+                    x1={padX}
+                    x2={width - padX}
+                    y1={y}
+                    y2={y}
+                    stroke="rgba(255,255,255,0.1)"
+                    strokeWidth="1"
+                    strokeDasharray={t === 0 ? undefined : '3 5'}
+                  />
+                  <text
+                    x={padX - 10}
+                    y={y + 3}
+                    textAnchor="end"
+                    fill="rgba(255,255,255,0.55)"
+                    fontSize="10"
+                    fontWeight="600"
+                  >
+                    {Math.round(max * t)}
+                  </text>
+                </g>
+              );
+            })}
+
+            {active.map((s) => {
+              const points = series.buckets.map((b, i) => {
+                const x =
+                  series.buckets.length <= 1
+                    ? padX + innerW / 2
+                    : padX + i * step;
+                const y = padTop + innerH - (s.value(b) / max) * innerH;
+                return { x, y, value: s.value(b) };
+              });
+              const line = points.map((p) => `${p.x},${p.y}`).join(' ');
+              const area = [
+                `${points[0]!.x},${padTop + innerH}`,
+                ...points.map((p) => `${p.x},${p.y}`),
+                `${points[points.length - 1]!.x},${padTop + innerH}`,
+              ].join(' ');
+              return (
+                <g key={s.id}>
+                  {(focused || active.length === 1) && (
+                    <polygon fill={`url(#org-activity-${s.id})`} points={area} />
+                  )}
+                  <polyline
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={focused ? 3.25 : 2.75}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    points={line}
+                  />
+                  <polyline
+                    fill="none"
+                    stroke="rgba(255,255,255,0.35)"
+                    strokeWidth={focused ? 1.25 : 1}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                    points={line}
+                    opacity="0.55"
+                  />
+                  {points.map((p, i) =>
+                    p.value > 0 || focused ? (
+                      <circle
+                        key={`${s.id}-${series.buckets[i]!.key}`}
+                        cx={p.x}
+                        cy={p.y}
+                        r={focused ? 4.25 : 3}
+                        fill="#fff"
+                        stroke={s.color}
+                        strokeWidth="2"
+                      >
+                        <title>
+                          {series.buckets[i]!.label}: {s.label} {p.value}
+                        </title>
+                      </circle>
+                    ) : null,
+                  )}
+                </g>
+              );
+            })}
+
+            {peak && peak.value > 0 ? (
+              <g>
+                <circle
+                  cx={
+                    series.buckets.length <= 1
+                      ? padX + innerW / 2
+                      : padX + peak.index * step
+                  }
+                  cy={padTop + innerH - (peak.value / max) * innerH}
+                  r="7"
+                  fill="rgba(94,200,255,0.2)"
+                  stroke="#5ec8ff"
+                  strokeWidth="1.5"
                 />
                 <text
-                  x={padX - 8}
-                  y={y + 3}
-                  textAnchor="end"
-                  fill="#64748B"
-                  fontSize="10"
+                  x={
+                    series.buckets.length <= 1
+                      ? padX + innerW / 2
+                      : padX + peak.index * step
+                  }
+                  y={padTop + innerH - (peak.value / max) * innerH - 12}
+                  textAnchor="middle"
+                  fill="#8adbff"
+                  fontSize="11"
+                  fontWeight="700"
                 >
-                  {Math.round(max * t)}
+                  Peak {peak.value}
                 </text>
               </g>
-            );
-          })}
+            ) : null}
 
-          {active.map((s) => {
-            const points = series.buckets.map((b, i) => {
+            {series.buckets.map((b, i) => {
+              if (i % labelEvery !== 0 && i !== series.buckets.length - 1) {
+                return null;
+              }
               const x =
-                series.buckets.length <= 1
-                  ? padX + innerW / 2
-                  : padX + i * step;
-              const y = padTop + innerH - (s.value(b) / max) * innerH;
-              return { x, y, value: s.value(b) };
-            });
-            const line = points.map((p) => `${p.x},${p.y}`).join(' ');
-            const area = [
-              `${points[0]!.x},${padTop + innerH}`,
-              ...points.map((p) => `${p.x},${p.y}`),
-              `${points[points.length - 1]!.x},${padTop + innerH}`,
-            ].join(' ');
-            const gradId = `org-activity-${s.id}`;
-            return (
-              <g key={s.id}>
-                <defs>
-                  <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={s.fill} stopOpacity="0.28" />
-                    <stop offset="100%" stopColor={s.fill} stopOpacity="0.02" />
-                  </linearGradient>
-                </defs>
-                {focus !== 'all' || active.length === 1 ? (
-                  <polygon fill={`url(#${gradId})`} points={area} />
-                ) : null}
-                <polyline
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth="2.5"
-                  strokeLinejoin="round"
-                  strokeLinecap="round"
-                  points={line}
-                />
-                {points.map((p, i) => (
-                  <circle
-                    key={`${s.id}-${series.buckets[i]!.key}`}
-                    cx={p.x}
-                    cy={p.y}
-                    r={focus === 'all' ? 2.5 : 3.5}
-                    fill="#fff"
-                    stroke={s.color}
-                    strokeWidth="1.75"
-                  >
-                    <title>
-                      {series.buckets[i]!.label}: {s.label} {p.value}
-                    </title>
-                  </circle>
-                ))}
-              </g>
-            );
-          })}
-
-          {series.buckets.map((b, i) => {
-            if (i % labelEvery !== 0 && i !== series.buckets.length - 1) {
-              return null;
-            }
-            const x =
-              series.buckets.length <= 1 ? padX + innerW / 2 : padX + i * step;
-            return (
-              <text
-                key={b.key}
-                x={x}
-                y={height - 8}
-                textAnchor="middle"
-                fontSize="10"
-                fill="#64748B"
-              >
-                {b.label}
-              </text>
-            );
-          })}
-        </svg>
+                series.buckets.length <= 1 ? padX + innerW / 2 : padX + i * step;
+              return (
+                <text
+                  key={b.key}
+                  x={x}
+                  y={height - 10}
+                  textAnchor="middle"
+                  fontSize="10"
+                  fontWeight="600"
+                  fill="rgba(255,255,255,0.55)"
+                >
+                  {b.label}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
       </div>
 
-      <p className="text-xs text-bh-text-muted">
-        Axis unit: counts · {series.granularity === 'week' ? 'Weekly' : 'Daily'}{' '}
-        buckets in {series.timeZone}
+      <p className="text-[11px] font-medium text-[#071d30]/55">
+        Counts by {series.granularity === 'week' ? 'week' : 'day'} ·{' '}
+        {series.periodLabel} · {series.timeZone}
       </p>
     </div>
   );
@@ -405,7 +497,7 @@ export function LocationWorkloadList({
           aria-hidden
           className="bh-orb-drift pointer-events-none absolute -bottom-10 -right-6 h-24 w-24 rounded-full bg-[#e4b334]/16 blur-2xl"
         />
-        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#f3d27a] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
+        <span className="relative mx-auto grid h-10 w-10 place-items-center rounded-xl bg-[#071d30] text-[#5ec8ff] shadow-[0_10px_18px_rgba(7,29,48,0.28)]">
           <Building2 className="h-4 w-4" aria-hidden />
         </span>
         <p className="relative mt-3 text-sm font-semibold text-[#071d30]">

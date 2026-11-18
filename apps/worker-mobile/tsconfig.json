@@ -5,6 +5,7 @@
     "paths": {
       "@/*": ["./*"],
       "@bridge-hive/domain": ["../../packages/domain/src"],
+      "@bridge-hive/legal-content": ["../../packages/legal-content/src"],
       "@bridge-hive/supabase-types": ["../../packages/supabase-types/src"],
       "@bridge-hive/design-tokens": ["../../packages/design-tokens/src"]
     }

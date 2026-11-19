@@ -37,6 +37,11 @@ import { useInvoices } from '@/hooks/useInvoices';
 import { usePayouts } from '@/hooks/usePayouts';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTranslation } from '@/i18n/locale-provider';
+import { isSandboxPaymentsBuild } from '@/constants/stripe';
+import {
+  invoiceListHref,
+  invoiceTotalsUsable,
+} from '@/lib/invoice-load';
 import { useAuth } from '@/providers/AuthProvider';
 
 type MoneySegment = 'earnings' | 'invoices';
@@ -312,6 +317,7 @@ export default function MoneyScreen() {
   const pathname = usePathname();
   const fromAccount = pathname.includes('/profile/');
   const invoiceBase = fromAccount ? '/profile/invoices' : '/invoices';
+  const fullInvoiceListHref = invoiceListHref(pathname);
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const { payouts, account, loading: payoutLoading, error: payoutError, refresh: refreshPayouts } =
     usePayouts(user?.id);
@@ -319,12 +325,18 @@ export default function MoneyScreen() {
     invoices,
     allInvoices,
     loading: invoiceLoading,
-    error: invoiceError,
+    loadStatus: invoiceLoadStatus,
+    errorCode: invoiceErrorCode,
     refresh: refreshInvoices,
   } = useInvoices(user?.id);
   const [segment, setSegment] = useState<MoneySegment>('earnings');
+  const sandboxBuild = isSandboxPaymentsBuild();
+  const invoiceTotalsReady = invoiceTotalsUsable(invoiceLoadStatus);
 
   const invoiceTotals = useMemo(() => {
+    if (!invoiceTotalsReady) {
+      return { open: 0, pastDue: 0 };
+    }
     const open = allInvoices
       .filter((i) => i.status === 'open' || i.status === 'payment_processing')
       .reduce((sum, i) => sum + i.commission_amount_minor, 0);
@@ -332,7 +344,7 @@ export default function MoneyScreen() {
       .filter((i) => i.status === 'past_due')
       .reduce((sum, i) => sum + i.commission_amount_minor, 0);
     return { open, pastDue };
-  }, [allInvoices]);
+  }, [allInvoices, invoiceTotalsReady]);
 
   const earningsTotal = useMemo(
     () => payouts.reduce((sum, p) => sum + (p.gross_amount_minor ?? 0), 0),
@@ -340,8 +352,13 @@ export default function MoneyScreen() {
   );
 
   const invoiceDue = invoiceTotals.open + invoiceTotals.pastDue;
-  const invoiceHint =
-    invoiceTotals.pastDue > 0
+  const invoiceHint = !invoiceTotalsReady
+    ? invoiceErrorCode === 'denied'
+      ? t('payments.sandboxDeniedTitle')
+      : invoiceLoadStatus === 'failed'
+        ? t('payments.loadInvoicesError')
+        : t('payments.platformCommission')
+    : invoiceTotals.pastDue > 0
       ? t('payments.pastDuePayNow')
       : invoiceDue > 0
         ? t('payments.openCommissionDue')
@@ -353,19 +370,12 @@ export default function MoneyScreen() {
   };
 
   const loading = payoutLoading || invoiceLoading;
+  const listData = segment === 'earnings' ? payouts : invoices;
 
-  return (
-    <AppScreen scroll={false} edges={['top']}>
-      <ScreenHeader
-        eyebrow={fromAccount ? undefined : t('payments.eyebrow')}
-        title={t('payments.moneyTitle')}
-        subtitle={t('payments.subtitle')}
-        showBack={fromAccount}
-        backFallback="/(tabs)/profile"
-        titleSize={fromAccount ? 'detail' : 'page'}
-      />
+  const listHeader = (
+    <View>
       {isAppReviewDemo ? (
-        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+        <View style={{ paddingBottom: spacing.sm }}>
           <AppReviewDemoBanner />
         </View>
       ) : null}
@@ -378,6 +388,12 @@ export default function MoneyScreen() {
         earningsLabel={t('payments.title')}
         invoicesLabel={t('invoices.title')}
       />
+
+      {sandboxBuild ? (
+        <Text style={styles.sandboxBadge} accessibilityRole="text">
+          {t('payments.sandboxTestLabel')}
+        </Text>
+      ) : null}
 
       <View style={styles.summaries}>
         <MoneySummaryTile
@@ -393,10 +409,17 @@ export default function MoneyScreen() {
         <MoneySummaryTile
           label={t('invoices.title')}
           amountMinor={invoiceDue}
+          amountLabel={invoiceTotalsReady ? undefined : t('payments.totalsUnavailable')}
           hint={invoiceHint}
-          icon={invoiceTotals.pastDue > 0 ? 'alert-circle-outline' : 'receipt-outline'}
+          icon={
+            invoiceTotalsReady && invoiceTotals.pastDue > 0
+              ? 'alert-circle-outline'
+              : 'receipt-outline'
+          }
           selected={segment === 'invoices'}
-          emphasis={invoiceTotals.pastDue > 0 ? 'alert' : 'default'}
+          emphasis={
+            invoiceTotalsReady && invoiceTotals.pastDue > 0 ? 'alert' : 'default'
+          }
           delayMs={90}
           onPress={() => setSegment('invoices')}
           accessibilityLabel={`${t('invoices.title')}. ${invoiceHint}`}
@@ -404,69 +427,90 @@ export default function MoneyScreen() {
       </View>
 
       {segment === 'earnings' ? (
-        <>
-          <PayoutAccountCard
-            account={account}
-            title={t('payments.payoutAccount')}
-            manageLabel={t('payments.managePayout')}
-            setupLabel={t('payments.setupPayout')}
-            addIbanLabel={t('payments.addIban')}
-          />
+        <PayoutAccountCard
+          account={account}
+          title={t('payments.payoutAccount')}
+          manageLabel={t('payments.managePayout')}
+          setupLabel={t('payments.setupPayout')}
+          addIbanLabel={t('payments.addIban')}
+        />
+      ) : invoices.length > 0 ? (
+        <InvoiceLedgerLink
+          label={t('payments.openFullList')}
+          onPress={() => router.push(fullInvoiceListHref)}
+        />
+      ) : null}
+    </View>
+  );
 
-          {payoutLoading && payouts.length === 0 ? (
-            <SkeletonCard />
-          ) : payoutError && payouts.length === 0 ? (
-            <ErrorState title={t('payments.loadEarningsError')} onRetry={refreshPayouts} />
-          ) : (
-            <FlatList
-              data={payouts}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
-              refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
-              ListEmptyComponent={
-                <EmptyState
-                  title={t('payments.emptyEarnings')}
-                  description={t('payments.emptyEarningsBody')}
-                />
-              }
-              renderItem={({ item }) => <PayoutCard payout={item} />}
-            />
-          )}
-        </>
-      ) : invoiceLoading && invoices.length === 0 ? (
-        <SkeletonCard />
-      ) : invoiceError && invoices.length === 0 ? (
+  const listEmpty = () => {
+    if (segment === 'earnings') {
+      if (payoutLoading && payouts.length === 0) return <SkeletonCard />;
+      if (payoutError && payouts.length === 0) {
+        return <ErrorState title={t('payments.loadEarningsError')} onRetry={refreshPayouts} />;
+      }
+      return (
+        <EmptyState
+          title={t('payments.emptyEarnings')}
+          description={t('payments.emptyEarningsBody')}
+        />
+      );
+    }
+    if (invoiceLoading && invoices.length === 0) return <SkeletonCard />;
+    if (invoiceErrorCode === 'denied') {
+      return (
+        <ErrorState
+          title={t('payments.sandboxDeniedTitle')}
+          description={t('payments.sandboxDeniedBody')}
+          onRetry={refreshInvoices}
+        />
+      );
+    }
+    if (invoiceErrorCode === 'failed' && invoices.length === 0) {
+      return (
         <ErrorState title={t('payments.loadInvoicesError')} onRetry={refreshInvoices} />
-      ) : (
-        <FlatList
-          data={invoices}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <InvoiceEmptyPanel
-              title={t('invoices.empty')}
-              description={t('payments.emptyInvoicesBody')}
-              actionLabel={t('payments.openFullList')}
-              onAction={() => router.push('/(tabs)/invoices')}
-            />
-          }
-          ListHeaderComponent={
-            invoices.length > 0 ? (
-              <InvoiceLedgerLink
-                label={t('payments.openFullList')}
-                onPress={() => router.push('/(tabs)/invoices')}
-              />
-            ) : null
-          }
-          renderItem={({ item }) => (
+      );
+    }
+    return (
+      <InvoiceEmptyPanel
+        title={t('invoices.empty')}
+        description={t('payments.emptyInvoicesBody')}
+        actionLabel={t('payments.openFullList')}
+        onAction={() => router.push(fullInvoiceListHref)}
+      />
+    );
+  };
+
+  return (
+    <AppScreen scroll={false} edges={['top']}>
+      <ScreenHeader
+        eyebrow={fromAccount ? undefined : t('payments.eyebrow')}
+        title={t('payments.moneyTitle')}
+        subtitle={t('payments.subtitle')}
+        showBack={fromAccount}
+        backFallback="/(tabs)/profile"
+        titleSize={fromAccount ? 'detail' : 'page'}
+      />
+
+      <FlatList
+        style={styles.moneyList}
+        data={listData as { id: string }[]}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={[styles.list, { paddingBottom: tabScrollInset }]}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} />}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        renderItem={({ item }) =>
+          segment === 'earnings' ? (
+            <PayoutCard payout={item as (typeof payouts)[number]} />
+          ) : (
             <InvoiceCard
-              invoice={item}
+              invoice={item as (typeof invoices)[number]}
               onPress={() => router.push(`${invoiceBase}/${item.id}`)}
             />
-          )}
-        />
-      )}
+          )
+        }
+      />
     </AppScreen>
   );
 }
@@ -755,6 +799,23 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.medium,
     fontSize: 12,
     color: 'rgba(255,255,255,0.88)',
+  },
+  moneyList: {
+    flex: 1,
+  },
+  sandboxBadge: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: radii.sm,
+    overflow: 'hidden',
+    fontFamily: typography.fonts.semibold,
+    fontSize: 11,
+    letterSpacing: 0.4,
+    color: colors.navy,
+    backgroundColor: colors.yellow,
   },
   summaries: {
     flexDirection: 'row',

@@ -404,6 +404,11 @@ export const el: TranslationCatalog = {
       'Τα εγκεκριμένα φύλλα ωρών δημιουργούν στιγμιότυπα πληρωμής εδώ. Πληρωμή μόνο μετά τη συμφωνία.',
     loadEarningsError: 'Αδυναμία φόρτωσης αποδοχών',
     loadInvoicesError: 'Αδυναμία φόρτωσης τιμολογίων',
+    sandboxDeniedTitle: 'Μη διαθέσιμα sandbox τιμολόγια',
+    sandboxDeniedBody:
+      'Αυτό το TestFlight build χρησιμοποιεί τη λωρίδα Stripe sandbox. Ο λογαριασμός σας δεν είναι sandbox tester, γι’ αυτό δεν εμφανίζονται TEST τιμολόγια. Αυτό δεν μηδενίζει ούτε αλλάζει κανένα πραγματικό υπόλοιπο.',
+    totalsUnavailable: '—',
+    sandboxTestLabel: 'TEST · sandbox',
     emptyInvoicesBody:
       'Όταν ένας οργανισμός εγκρίνει το φύλλο ωρών σας, εμφανίζεται εδώ τιμολόγιο προμήθειας Bridge Hive.',
     openFullList: 'Άνοιγμα πλήρους λίστας τιμολογίων',
@@ -426,6 +431,10 @@ export const el: TranslationCatalog = {
     emptyBody:
       'Όταν ένας οργανισμός εγκρίνει το φύλλο ωρών σας, εμφανίζεται εδώ τιμολόγιο προμήθειας Bridge Hive. Λήξη σε 10 ημερολογιακές ημέρες.',
     loadError: 'Αδυναμία φόρτωσης τιμολογίων',
+    sandboxDeniedTitle: 'Μη διαθέσιμα sandbox τιμολόγια',
+    sandboxDeniedBody:
+      'Αυτό το TestFlight build χρησιμοποιεί τη λωρίδα Stripe sandbox. Ο λογαριασμός σας δεν είναι sandbox tester, γι’ αυτό δεν εμφανίζονται TEST τιμολόγια. Αυτό δεν μηδενίζει ούτε αλλάζει κανένα πραγματικό υπόλοιπο.',
+    totalsUnavailable: '—',
     filterAll: 'Όλα',
     filterOpen: 'Ανοιχτά',
     filterPastDue: 'Εκπρόθεσμα',
@@ -463,6 +472,8 @@ export const el: TranslationCatalog = {
     emptyInboxBody:
       'Τα μηνύματα ξεκλειδώνουν αφού ένας οργανισμός εγκρίνει το φύλλο ωρών σας.',
     loadError: 'Αδυναμία φόρτωσης μηνυμάτων',
+    sendUnavailable: 'Αδυναμία προετοιμασίας του μηνύματος. Δοκιμάστε ξανά.',
+    sendFailed: 'Αδυναμία αποστολής. Δοκιμάστε ξανά.',
     loading: 'Φόρτωση μηνυμάτων…',
     composerPlaceholder: 'Γράψτε ένα μήνυμα…',
     send: 'Αποστολή',

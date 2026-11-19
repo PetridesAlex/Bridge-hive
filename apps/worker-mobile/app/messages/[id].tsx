@@ -21,7 +21,7 @@ import {
   type OrgWorkerMessageRow,
   type OrgWorkerReactionKey,
 } from '@bridge-hive/domain';
-import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,6 +43,7 @@ import {
   setMessageReaction,
 } from '@/lib/messaging';
 import { navigateBack } from '@/lib/navigation';
+import { createSecureClientMessageId } from '@/lib/secure-uuid';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -126,27 +127,36 @@ export default function MessageThreadScreen() {
     guardRef.current.setScope({ conversationId, organizationId: null });
     guardRef.current.setActive(activeRef.current);
     const requestId = guardRef.current.start();
-    const [thread, inbox] = await Promise.all([
-      listConversationMessages(conversationId),
-      listMyMessagingConversations(),
-    ]);
-    if (!guardRef.current.isCurrent(requestId, { conversationId })) return;
-    if (thread.error) setError(thread.error);
-    else setError(null);
-    applyPage(thread.data);
-    const conv = inbox.data.find((c) => c.id === conversationId);
-    if (conv?.organizationName) setTitle(conv.organizationName);
-    const latest = thread.data[thread.data.length - 1];
-    if (
-      latest &&
-      !thread.error &&
-      guardRef.current.shouldMarkRead(requestId, { conversationId })
-    ) {
-      await markConversationRead(conversationId, latest.id);
+    try {
+      const [thread, inbox] = await Promise.all([
+        listConversationMessages(conversationId),
+        listMyMessagingConversations(),
+      ]);
+      if (!guardRef.current.isCurrent(requestId, { conversationId })) return;
+      if (thread.error) setError(t('messages.loadError'));
+      else setError(null);
+      applyPage(thread.data);
+      const conv = inbox.data.find((c) => c.id === conversationId);
+      if (conv?.organizationName) setTitle(conv.organizationName);
+      const latest = thread.data[thread.data.length - 1];
+      if (
+        latest &&
+        !thread.error &&
+        guardRef.current.shouldMarkRead(requestId, { conversationId })
+      ) {
+        await markConversationRead(conversationId, latest.id);
+      }
+      loadedOnceRef.current = true;
+    } catch {
+      if (guardRef.current.isCurrent(requestId, { conversationId })) {
+        setError(t('messages.loadError'));
+      }
+    } finally {
+      if (guardRef.current.isCurrent(requestId, { conversationId })) {
+        setLoading(false);
+      }
     }
-    loadedOnceRef.current = true;
-    setLoading(false);
-  }, [applyPage, conversationId, isAppReviewDemo, session]);
+  }, [applyPage, conversationId, isAppReviewDemo, session, t]);
 
   const loadOlder = useCallback(async () => {
     if (!conversationId || loadingOlder) return;
@@ -230,22 +240,30 @@ export default function MessageThreadScreen() {
   }, [conversationId, isAppReviewDemo, load, refreshReactions, session]);
 
   const send = async (clientMessageId: string, body: string) => {
-    if (!sendLockRef.current.acquire()) return;
     setSending(true);
-    const result = await sendConversationMessage(conversationId, body, clientMessageId);
-    sendLockRef.current.release();
-    setSending(false);
-    if (result.error || !result.data) {
+    try {
+      const result = await sendConversationMessage(conversationId, body, clientMessageId);
+      if (result.error || !result.data) {
+        setMessages((prev) => applyFailedSend(prev, clientMessageId));
+        return;
+      }
+      setMessages((prev) => applyAcceptedSend(prev, result.data!, conversationId));
+      setDraft('');
+      setError(null);
+    } catch {
       setMessages((prev) => applyFailedSend(prev, clientMessageId));
-      return;
+      setError(t('messages.sendFailed'));
+    } finally {
+      sendLockRef.current.release();
+      setSending(false);
     }
-    setMessages((prev) => applyAcceptedSend(prev, result.data!, conversationId));
   };
 
   const onSend = async () => {
-    if (sendLockRef.current.held) return;
+    if (!sendLockRef.current.acquire()) return;
     const normalized = normalizeMessageBody(draft);
     if (!normalized.ok || !user?.id) {
+      sendLockRef.current.release();
       if (!normalized.ok && normalized.error === 'too_long') setError(t('messages.tooLong'));
       return;
     }
@@ -254,21 +272,22 @@ export default function MessageThreadScreen() {
       senderUserId: user.id,
       senderKind: 'worker',
       body: normalized.body,
-      clientMessageId: newClientMessageId(),
+      clientMessageId: newClientMessageId(createSecureClientMessageId),
       senderName: t('messages.you'),
     });
     if ('error' in outgoing) {
-      setError(t('messages.loadError'));
+      sendLockRef.current.release();
+      setError(t('messages.sendUnavailable'));
       return;
     }
     setMessages((prev) => [...prev, outgoing.optimistic]);
-    setDraft('');
     setError(null);
+    // Keep draft until server acknowledgement (cleared in send on success).
     await send(outgoing.clientMessageId, normalized.body);
   };
 
   const onRetryMessage = async (message: LocalMessagingMessage) => {
-    if (sendLockRef.current.held) return;
+    if (!sendLockRef.current.acquire()) return;
     setMessages((prev) =>
       prev.map((row) =>
         row.clientMessageId === message.clientMessageId

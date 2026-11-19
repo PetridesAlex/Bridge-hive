@@ -10,7 +10,11 @@ import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { NEW_SHIFTS_CHANNEL, ORG_MESSAGES_CHANNEL } from '@/lib/push/channel';
+import {
+  BILLING_REMINDERS_CHANNEL,
+  NEW_SHIFTS_CHANNEL,
+  ORG_MESSAGES_CHANNEL,
+} from '@/lib/push/channel';
 import { supabase } from '@/lib/supabase';
 
 let currentToken: string | null = null;
@@ -60,9 +64,22 @@ async function ensureOrgMessagesChannel() {
   });
 }
 
+async function ensureBillingRemindersChannel() {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync(BILLING_REMINDERS_CHANNEL.id, {
+    name: BILLING_REMINDERS_CHANNEL.name,
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    enableVibrate: BILLING_REMINDERS_CHANNEL.vibration,
+    lightColor: BILLING_REMINDERS_CHANNEL.lightColor,
+    sound: null,
+  });
+}
+
 async function ensurePushChannels() {
   await ensureNewShiftsChannel();
   await ensureOrgMessagesChannel();
+  await ensureBillingRemindersChannel();
 }
 
 export async function syncPushPreferredLocale(locale: PushLocale): Promise<void> {

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import {
+  buildInvoiceDueSoonNotification,
   buildOrgWorkerMessageNotification,
   buildShiftPublishedNotification,
   openPositionsLabel,
@@ -9,6 +10,7 @@ import {
 } from '@bridge-hive/domain';
 
 import {
+  BILLING_REMINDERS_CHANNEL_ID,
   buildExpoPushMessage,
   ORG_MESSAGES_CHANNEL_ID,
   outcomeFromExpoTicket,
@@ -17,7 +19,11 @@ import {
   receiptFromExpo,
   type ClaimedPushDelivery,
 } from '../expo-api';
-import { isWorkerPushDispatchEnabled } from '../env';
+import {
+  isWorkerCommissionDueDatesCronEnabled,
+  isWorkerPushDispatchEnabled,
+  workerCommissionDueDatesCronRefusalReason,
+} from '../env';
 
 const shiftId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 
@@ -166,12 +172,48 @@ describe('org_worker_message push payload', () => {
   });
 });
 
+describe('invoice_due_soon push payload', () => {
+  const invoiceId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+  it('uses billing-reminders channel and omits financial details', () => {
+    const message = buildExpoPushMessage({
+      deliveryId: claimed.deliveryId,
+      expoPushToken: claimed.expoPushToken,
+      eventType: 'invoice_due_soon',
+      invoiceId,
+      preferredLocale: 'en',
+      openPositions: 0,
+      payload: { invoiceId },
+      shiftId: null,
+      status: 'n/a',
+      startsAt: null,
+      endsAt: null,
+      timeZone: null,
+      place: null,
+      requiredRole: null,
+      rateMinor: null,
+      currency: null,
+    });
+    expect(message?.channelId).toBe(BILLING_REMINDERS_CHANNEL_ID);
+    expect(message?.title).toBe('Bridge Hive reminder');
+    expect(message?.body).toContain('Open Bridge Hive');
+    expect(message?.data).toEqual(
+      buildInvoiceDueSoonNotification({ invoiceId })?.data,
+    );
+    const serialized = JSON.stringify(message);
+    expect(serialized).not.toMatch(/€|EUR|WH-|IBAN|tax/i);
+  });
+});
+
 describe('preview isolation', () => {
   const original = process.env.VERCEL_ENV;
+  const originalCron = process.env.WORKER_COMMISSION_DUE_DATES_CRON;
   afterEach(() => {
     if (original === undefined) delete process.env.VERCEL_ENV;
     else process.env.VERCEL_ENV = original;
     delete process.env.WORKER_PUSH_DISABLE;
+    if (originalCron === undefined) delete process.env.WORKER_COMMISSION_DUE_DATES_CRON;
+    else process.env.WORKER_COMMISSION_DUE_DATES_CRON = originalCron;
   });
 
   it('disables Expo dispatch on Vercel Preview', () => {
@@ -184,6 +226,25 @@ describe('preview isolation', () => {
     expect(isWorkerPushDispatchEnabled()).toBe(true);
     process.env.WORKER_PUSH_DISABLE = '1';
     expect(isWorkerPushDispatchEnabled()).toBe(false);
+  });
+
+  it('never enables commission due-dates cron on Vercel Preview', () => {
+    process.env.VERCEL_ENV = 'preview';
+    process.env.WORKER_COMMISSION_DUE_DATES_CRON = '1';
+    expect(isWorkerCommissionDueDatesCronEnabled()).toBe(false);
+    expect(workerCommissionDueDatesCronRefusalReason()).toBe('preview_isolation');
+  });
+
+  it('requires explicit flag outside Preview for commission due-dates cron', () => {
+    process.env.VERCEL_ENV = 'production';
+    delete process.env.WORKER_COMMISSION_DUE_DATES_CRON;
+    expect(isWorkerCommissionDueDatesCronEnabled()).toBe(false);
+    expect(workerCommissionDueDatesCronRefusalReason()).toBe(
+      'WORKER_COMMISSION_DUE_DATES_CRON not enabled',
+    );
+    process.env.WORKER_COMMISSION_DUE_DATES_CRON = '1';
+    expect(isWorkerCommissionDueDatesCronEnabled()).toBe(true);
+    expect(workerCommissionDueDatesCronRefusalReason()).toBeNull();
   });
 });
 

@@ -57,3 +57,29 @@ export const WORKER_COMMISSION_EXPLAINER =
 
 export const PAYMENT_CONFIRMATION_PENDING =
   'Payment confirmation pending';
+
+/** Three calendar days before due_at — matches server warning window. */
+export const INVOICE_DUE_SOON_WARNING_DAYS = 3;
+
+/** True when an open invoice is inside the durable three-day reminder window. */
+export function isInvoiceDueSoonWarningWindow(
+  dueAt: string | Date,
+  from: Date = new Date(),
+): boolean {
+  const due = typeof dueAt === 'string' ? new Date(dueAt) : dueAt;
+  if (Number.isNaN(due.getTime())) return false;
+  const ms = due.getTime() - from.getTime();
+  return ms > 0 && ms <= INVOICE_DUE_SOON_WARNING_DAYS * 24 * 60 * 60 * 1000;
+}
+
+/** UTC deadline label for authenticated in-app reminder copy. */
+export function formatInvoiceDeadlineUtc(dueAt: string | Date): string {
+  const due = typeof dueAt === 'string' ? new Date(dueAt) : dueAt;
+  if (Number.isNaN(due.getTime())) return '';
+  const y = due.getUTCFullYear();
+  const m = String(due.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(due.getUTCDate()).padStart(2, '0');
+  const hh = String(due.getUTCHours()).padStart(2, '0');
+  const mm = String(due.getUTCMinutes()).padStart(2, '0');
+  return `${y}-${m}-${d} ${hh}:${mm} UTC`;
+}

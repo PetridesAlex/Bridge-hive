@@ -12,6 +12,7 @@ export const SHIFT_PUBLISHED_BATCH_PUSH_TYPE = 'shift_published_batch' as const;
 export const SHIFT_CANCELLED_PUSH_TYPE = 'shift_cancelled' as const;
 export const ASSIGNMENT_CANCELLED_PUSH_TYPE = 'assignment_cancelled' as const;
 export const ORG_WORKER_MESSAGE_PUSH_TYPE = 'org_worker_message' as const;
+export const INVOICE_DUE_SOON_PUSH_TYPE = 'invoice_due_soon' as const;
 
 export type PushLocale = 'en' | 'el';
 
@@ -55,12 +56,19 @@ export type OrgWorkerMessagePushData = {
   url: string;
 };
 
+export type InvoiceDueSoonPushData = {
+  type: typeof INVOICE_DUE_SOON_PUSH_TYPE;
+  invoiceId: string;
+  url: string;
+};
+
 export type WorkerPushData =
   | ShiftPublishedPushData
   | ShiftPublishedBatchPushData
   | ShiftCancelledPushData
   | AssignmentCancelledPushData
-  | OrgWorkerMessagePushData;
+  | OrgWorkerMessagePushData
+  | InvoiceDueSoonPushData;
 
 export type ShiftPublishedMessageInput = {
   shiftId: string;
@@ -127,6 +135,21 @@ export function messageNotificationPath(conversationId: string): string | null {
   return `/messages/${conversationId.toLowerCase()}`;
 }
 
+export function isInvoiceUuid(value: string): boolean {
+  return SHIFT_ID_RE.test(value);
+}
+
+/** Internal Bridge Hive invoice route (tabs invoices detail). */
+export function invoiceNotificationUrl(invoiceId: string): string | null {
+  if (!isInvoiceUuid(invoiceId)) return null;
+  return `bridgehive://invoices/${invoiceId.toLowerCase()}`;
+}
+
+export function invoiceNotificationPath(invoiceId: string): string | null {
+  if (!isInvoiceUuid(invoiceId)) return null;
+  return `/invoices/${invoiceId.toLowerCase()}`;
+}
+
 /**
  * Accept only internal BridgeHive routes. Query strings only for the batch list
  * filter. Other schemes and arbitrary URLs are rejected.
@@ -180,9 +203,43 @@ export function messageRouteFromPushData(data: unknown): string | null {
   return path;
 }
 
-/** Shift or message deep link from a notification payload. */
+/** Secure deep link for invoice_due_soon push / in-app notification taps. */
+export function invoiceRouteFromPushData(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null;
+  const record = data as Record<string, unknown>;
+  const invoiceIdRaw =
+    typeof record.invoiceId === 'string'
+      ? record.invoiceId
+      : typeof record.invoice_id === 'string'
+        ? record.invoice_id
+        : null;
+  if (!invoiceIdRaw || !isInvoiceUuid(invoiceIdRaw)) return null;
+
+  const type = record.type;
+  if (type === INVOICE_DUE_SOON_PUSH_TYPE || type === 'invoice_due_soon') {
+    const url = record.url;
+    if (typeof url === 'string') {
+      const expectedUrl = invoiceNotificationUrl(invoiceIdRaw);
+      if (!expectedUrl || url !== expectedUrl) return null;
+    }
+    return invoiceNotificationPath(invoiceIdRaw);
+  }
+
+  // In-app billing rows may omit type but still carry invoice_id.
+  if (type == null && (record.invoice_id || record.invoiceId)) {
+    return invoiceNotificationPath(invoiceIdRaw);
+  }
+
+  return null;
+}
+
+/** Shift, message, or invoice deep link from a notification payload. */
 export function appRouteFromPushData(data: unknown): string | null {
-  return messageRouteFromPushData(data) ?? shiftRouteFromPushData(data);
+  return (
+    invoiceRouteFromPushData(data) ??
+    messageRouteFromPushData(data) ??
+    shiftRouteFromPushData(data)
+  );
 }
 
 export function shiftPublishedPushData(shiftId: string): ShiftPublishedPushData | null {
@@ -211,6 +268,16 @@ export function assertSafeShiftPushData(data: Record<string, unknown>): WorkerPu
     return {
       type: ORG_WORKER_MESSAGE_PUSH_TYPE,
       conversationId: String(data.conversationId).toLowerCase(),
+      url: String(data.url),
+    };
+  }
+
+  if (data.type === INVOICE_DUE_SOON_PUSH_TYPE) {
+    const route = invoiceRouteFromPushData(data);
+    if (!route) throw new Error('PUSH_DATA_ROUTE');
+    return {
+      type: INVOICE_DUE_SOON_PUSH_TYPE,
+      invoiceId: String(data.invoiceId).toLowerCase(),
       url: String(data.url),
     };
   }
@@ -284,6 +351,35 @@ export function buildOrgWorkerMessageNotification(
     data: {
       type: ORG_WORKER_MESSAGE_PUSH_TYPE,
       conversationId: input.conversationId.toLowerCase(),
+      url,
+    },
+  };
+}
+
+export type InvoiceDueSoonPushInput = {
+  invoiceId: string;
+  locale?: PushLocale | null;
+};
+
+/**
+ * Lock-screen copy for the three-day invoice reminder.
+ * No amount, invoice number, tax ID, bank details, or debt accusation.
+ */
+export function buildInvoiceDueSoonNotification(
+  input: InvoiceDueSoonPushInput,
+): { title: string; body: string; data: InvoiceDueSoonPushData } | null {
+  const locale = normalizePushLocale(input.locale);
+  const url = invoiceNotificationUrl(input.invoiceId);
+  if (!url) return null;
+  return {
+    title: locale === 'el' ? 'Υπενθύμιση Bridge Hive' : 'Bridge Hive reminder',
+    body:
+      locale === 'el'
+        ? 'Ένα τιμολόγιο χρειάζεται την προσοχή σας. Ανοίξτε το Bridge Hive για να δείτε την προθεσμία.'
+        : 'An invoice needs your attention. Open Bridge Hive to review the deadline.',
+    data: {
+      type: INVOICE_DUE_SOON_PUSH_TYPE,
+      invoiceId: input.invoiceId.toLowerCase(),
       url,
     },
   };

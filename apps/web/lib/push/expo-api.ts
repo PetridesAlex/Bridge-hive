@@ -1,6 +1,7 @@
 import {
   assertSafeShiftPushData,
   buildAssignmentCancelledNotification,
+  buildInvoiceDueSoonNotification,
   buildOrgWorkerMessageNotification,
   buildShiftCancelledNotification,
   buildShiftPublishedBatchNotification,
@@ -13,6 +14,7 @@ export const EXPO_PUSH_SEND_URL = 'https://exp.host/--/api/v2/push/send';
 export const EXPO_PUSH_RECEIPTS_URL = 'https://exp.host/--/api/v2/push/getReceipts';
 export const NEW_SHIFTS_CHANNEL_ID = 'new-shifts';
 export const ORG_MESSAGES_CHANNEL_ID = 'org-messages';
+export const BILLING_REMINDERS_CHANNEL_ID = 'billing-reminders';
 
 export type ClaimedPushDelivery = {
   deliveryId: string;
@@ -24,6 +26,7 @@ export type ClaimedPushDelivery = {
   batchId?: string | null;
   assignmentId?: string | null;
   conversationId?: string | null;
+  invoiceId?: string | null;
   openPositions: number;
   status: string;
   startsAt?: string | null;
@@ -42,7 +45,10 @@ export type ExpoPushMessage = {
   body: string;
   sound: 'default';
   priority: 'high';
-  channelId: typeof NEW_SHIFTS_CHANNEL_ID | typeof ORG_MESSAGES_CHANNEL_ID;
+  channelId:
+    | typeof NEW_SHIFTS_CHANNEL_ID
+    | typeof ORG_MESSAGES_CHANNEL_ID
+    | typeof BILLING_REMINDERS_CHANNEL_ID;
   data: WorkerPushData;
 };
 
@@ -93,6 +99,13 @@ export function buildExpoPushMessage(row: ClaimedPushDelivery): ExpoPushMessage 
       locale,
     });
     channelId = ORG_MESSAGES_CHANNEL_ID;
+  } else if (eventType === 'invoice_due_soon') {
+    const invoiceId =
+      row.invoiceId ??
+      (typeof row.payload?.invoiceId === 'string' ? row.payload.invoiceId : null);
+    if (!invoiceId) return null;
+    message = buildInvoiceDueSoonNotification({ invoiceId, locale });
+    channelId = BILLING_REMINDERS_CHANNEL_ID;
   } else if (eventType === 'shift_published_batch') {
     const batchId = row.batchId ?? (typeof row.payload?.batchId === 'string' ? row.payload.batchId : null);
     if (!batchId) return null;

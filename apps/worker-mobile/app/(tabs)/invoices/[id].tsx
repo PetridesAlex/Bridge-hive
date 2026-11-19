@@ -14,7 +14,7 @@ import {
 } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, usePathname } from 'expo-router';
 import * as Linking from 'expo-linking';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -57,6 +57,8 @@ import {
   startWorkerInvoiceCheckout,
   startWorkerInvoicePaymentSheet,
 } from '@/lib/invoices';
+import { invoiceListHref } from '@/lib/invoice-load';
+import { navigateBack } from '@/lib/navigation';
 import { useStripe } from '@/lib/stripe-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatDate, formatMoney, formatShortDate } from '@/utils/format';
@@ -157,6 +159,11 @@ function invoiceStateLine(
 
 export default function InvoiceDetailScreen() {
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
+  const pathname = usePathname();
+  const listHref = invoiceListHref(pathname);
+  const goBackToList = useCallback(() => {
+    navigateBack(listHref);
+  }, [listHref]);
   const params = useLocalSearchParams<{
     id: string | string[];
     payment_status?: string | string[];
@@ -386,7 +393,7 @@ export default function InvoiceDetailScreen() {
   if (uiState === 'auth_loading' || uiState === 'invoice_loading') {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={goBackToList} />
         <ActivityIndicator color={colors.navy} style={{ marginTop: spacing.xl }} />
       </AppScreen>
     );
@@ -395,7 +402,7 @@ export default function InvoiceDetailScreen() {
   if (uiState === 'sign_in_required') {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={goBackToList} />
         <EmptyState
           title="Sign in again"
           description="Your session is not available on this page. Sign in to view your invoice and payment status."
@@ -409,7 +416,7 @@ export default function InvoiceDetailScreen() {
   if (uiState === 'query_error' || uiState === 'offline') {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={goBackToList} />
         <EmptyState
           title="Could not load invoice"
           description={error ?? 'Check your connection and try again.'}
@@ -427,12 +434,12 @@ export default function InvoiceDetailScreen() {
   ) {
     return (
       <AppScreen edges={['top']} contentKind="detail">
-        <ScreenHeader title="Invoice details" showBack onBack={() => router.back()} />
+        <ScreenHeader title="Invoice details" showBack onBack={goBackToList} />
         <EmptyState
           title="Invoice not found"
           description="This invoice is unavailable."
           actionLabel="Back to invoices"
-          onAction={() => router.replace('/(tabs)/invoices')}
+          onAction={() => router.replace(listHref)}
         />
       </AppScreen>
     );
@@ -506,7 +513,7 @@ export default function InvoiceDetailScreen() {
         title="Invoice details"
         subtitle={invoice.invoice_number}
         showBack
-        onBack={() => router.back()}
+        onBack={goBackToList}
         titleSize="detail"
       />
 
@@ -549,7 +556,7 @@ export default function InvoiceDetailScreen() {
             onAction={() => void refresh()}
             secondaryActionLabel={pollTimedOut ? 'Back to invoices' : undefined}
             onSecondaryAction={
-              pollTimedOut ? () => router.replace('/(tabs)/invoices') : undefined
+              pollTimedOut ? () => router.replace(listHref) : undefined
             }
           />
         ) : null}

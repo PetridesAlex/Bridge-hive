@@ -350,7 +350,7 @@ export function ThreadView({
               <View>
                 {error ? (
                   <Pressable onPress={onRetryLoad} style={styles.inlineNote} accessibilityRole="button">
-                    <Text style={styles.inlineNoteText}>{copy.loadError}</Text>
+                    <Text style={styles.inlineNoteText}>{error}</Text>
                   </Pressable>
                 ) : null}
                 {hasOlder ? (
@@ -604,6 +604,7 @@ export function ThreadView({
                 sendPress.value = withSpring(1, { damping: 14, stiffness: 320 });
               }}
               disabled={!canSend}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.sendHit}
               accessibilityRole="button"
               accessibilityLabel={copy.sendMessage}
@@ -1055,10 +1056,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   send: {
-    width: 36,
-    height: 36,
-    marginBottom: 2,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    marginBottom: 0,
+    borderRadius: 22,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1067,6 +1068,8 @@ const styles = StyleSheet.create({
   sendHit: {
     width: '100%',
     height: '100%',
+    minWidth: 44,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

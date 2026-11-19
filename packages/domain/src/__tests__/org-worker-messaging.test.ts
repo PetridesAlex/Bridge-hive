@@ -1,20 +1,26 @@
 import {
   advanceReadCursor,
+  applyAcceptedSend,
+  applyFailedSend,
   applyOptimisticReaction,
+  beginOutgoingMessage,
   canOrgStaffMessage,
   canReactToMessage,
   clampMessageDraft,
+  createSendLock,
   filterConversationsByQuery,
   insertTextAtSelection,
   isMessageAfter,
   isMessagingEligible,
   isMessagingReactionsUnavailableError,
+  isMessagingUuid,
   isOrgWorkerReactionKey,
   mergeMessagePage,
   mergeReactionSummaries,
   messagePreview,
   messageWorkerHref,
   messagingChannelName,
+  newClientMessageId,
   normalizeMessageBody,
   ORG_WORKER_MESSAGE_MAX_LENGTH,
   ORG_WORKER_REACTIONS_BROADCAST_EVENT,
@@ -452,5 +458,68 @@ describe('org worker message push', () => {
         url: 'https://evil.example/messages',
       }),
     ).toBeNull();
+  });
+});
+
+describe('client message ids and send lock', () => {
+  const validId = '11111111-1111-4111-8111-111111111111';
+
+  it('accepts only UUID client message ids from factories', () => {
+    expect(newClientMessageId(() => validId)).toBe(validId);
+    expect(newClientMessageId(() => 'not-a-uuid')).toBeNull();
+    expect(newClientMessageId(() => null)).toBeNull();
+    expect(newClientMessageId(() => {
+      throw new Error('crypto unavailable');
+    })).toBeNull();
+  });
+
+  it('blocks a second send and retries with the same client id', () => {
+    const lock = createSendLock();
+    expect(lock.acquire()).toBe(true);
+    expect(lock.acquire()).toBe(false);
+    lock.release();
+    expect(lock.acquire()).toBe(true);
+    lock.release();
+
+    const started = beginOutgoingMessage({
+      conversationId: '22222222-2222-4222-8222-222222222222',
+      senderUserId: '33333333-3333-4333-8333-333333333333',
+      senderKind: 'worker',
+      body: 'Hello',
+      clientMessageId: validId,
+      senderName: 'You',
+    });
+    expect('error' in started).toBe(false);
+    if ('error' in started) return;
+    expect(started.clientMessageId).toBe(validId);
+    expect(isMessagingUuid(started.clientMessageId)).toBe(true);
+
+    const failed = applyFailedSend([started.optimistic], validId);
+    expect(failed[0]?.localStatus).toBe('failed');
+    const accepted = applyAcceptedSend(
+      failed,
+      {
+        ...started.optimistic,
+        id: validId,
+        localStatus: 'sent',
+      },
+      started.optimistic.conversationId,
+    );
+    expect(accepted.some((row) => row.clientMessageId === validId && row.localStatus === 'sent')).toBe(
+      true,
+    );
+  });
+
+  it('rejects beginOutgoingMessage without a UUID', () => {
+    expect(
+      beginOutgoingMessage({
+        conversationId: '22222222-2222-4222-8222-222222222222',
+        senderUserId: '33333333-3333-4333-8333-333333333333',
+        senderKind: 'worker',
+        body: 'Hello',
+        clientMessageId: null,
+        senderName: 'You',
+      }),
+    ).toEqual({ error: 'missing-id' });
   });
 });

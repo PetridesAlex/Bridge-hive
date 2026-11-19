@@ -34,6 +34,11 @@ import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { type InvoiceFilter, useInvoices } from '@/hooks/useInvoices';
 import { useTranslation } from '@/i18n/locale-provider';
+import {
+  invoiceDetailBase,
+  invoiceListBackFallback,
+  invoiceTotalsUsable,
+} from '@/lib/invoice-load';
 import { useAuth } from '@/providers/AuthProvider';
 
 export default function InvoicesScreen() {
@@ -41,13 +46,25 @@ export default function InvoicesScreen() {
   const { t } = useTranslation();
   const pathname = usePathname();
   const fromAccount = pathname.includes('/profile/');
-  const invoiceBase = fromAccount ? '/profile/invoices' : '/invoices';
+  const invoiceBase = invoiceDetailBase(pathname);
   const tabScrollInset = useTabBarScrollInset(spacing.xl);
   const reduced = useReducedMotion();
-  const { invoices, allInvoices, loading, error, refresh, filter, setFilter } =
-    useInvoices(user?.id);
+  const {
+    invoices,
+    allInvoices,
+    loading,
+    loadStatus,
+    errorCode,
+    refresh,
+    filter,
+    setFilter,
+  } = useInvoices(user?.id);
+  const totalsReady = invoiceTotalsUsable(loadStatus);
 
   const totals = useMemo(() => {
+    if (!totalsReady) {
+      return { open: 0, pastDue: 0, paid: 0 };
+    }
     const open = allInvoices
       .filter((i) => i.status === 'open' || i.status === 'payment_processing')
       .reduce((sum, i) => sum + i.commission_amount_minor, 0);
@@ -58,7 +75,7 @@ export default function InvoicesScreen() {
       .filter((i) => i.status === 'paid')
       .reduce((sum, i) => sum + i.commission_amount_minor, 0);
     return { open, pastDue, paid };
-  }, [allInvoices]);
+  }, [allInvoices, totalsReady]);
 
   const filterTabs = useMemo(
     () => [
@@ -91,6 +108,7 @@ export default function InvoicesScreen() {
         title={t('invoices.title')}
         subtitle={t('invoices.subtitle')}
         showBack={fromAccount}
+        backFallback={invoiceListBackFallback(pathname)}
         titleSize={fromAccount ? 'detail' : 'page'}
       />
       {isAppReviewDemo ? <AppReviewDemoBanner /> : null}
@@ -107,39 +125,43 @@ export default function InvoicesScreen() {
               body={t('invoices.separateBody')}
               reduced={reduced}
             />
-            <View style={styles.metrics}>
-              <MetricTile
-                label={t('invoices.open')}
-                amountMinor={totals.open}
-                icon="document-text"
-                tone="open"
-                delay={40}
-                reduced={reduced}
-                active={filter === 'open'}
-                onPress={() => setFilter('open')}
-              />
-              <MetricTile
-                label={t('invoices.pastDue')}
-                amountMinor={totals.pastDue}
-                icon="alert-circle"
-                tone="danger"
-                delay={90}
-                reduced={reduced}
-                active={filter === 'past_due'}
-                onPress={() => setFilter('past_due')}
-                emphasize={totals.pastDue > 0}
-              />
-              <MetricTile
-                label={t('invoices.paid')}
-                amountMinor={totals.paid}
-                icon="checkmark-circle"
-                tone="paid"
-                delay={140}
-                reduced={reduced}
-                active={filter === 'paid'}
-                onPress={() => setFilter('paid')}
-              />
-            </View>
+            {totalsReady ? (
+              <View style={styles.metrics}>
+                <MetricTile
+                  label={t('invoices.open')}
+                  amountMinor={totals.open}
+                  icon="document-text"
+                  tone="open"
+                  delay={40}
+                  reduced={reduced}
+                  active={filter === 'open'}
+                  onPress={() => setFilter('open')}
+                />
+                <MetricTile
+                  label={t('invoices.pastDue')}
+                  amountMinor={totals.pastDue}
+                  icon="alert-circle"
+                  tone="danger"
+                  delay={90}
+                  reduced={reduced}
+                  active={filter === 'past_due'}
+                  onPress={() => setFilter('past_due')}
+                  emphasize={totals.pastDue > 0}
+                />
+                <MetricTile
+                  label={t('invoices.paid')}
+                  amountMinor={totals.paid}
+                  icon="checkmark-circle"
+                  tone="paid"
+                  delay={140}
+                  reduced={reduced}
+                  active={filter === 'paid'}
+                  onPress={() => setFilter('paid')}
+                />
+              </View>
+            ) : (
+              <Text style={styles.totalsUnavailable}>{t('invoices.totalsUnavailable')}</Text>
+            )}
             <SegmentedTabs
               tabs={filterTabs}
               activeKey={filter}
@@ -153,7 +175,13 @@ export default function InvoicesScreen() {
               <SkeletonCard />
               <SkeletonCard />
             </View>
-          ) : error ? (
+          ) : errorCode === 'denied' ? (
+            <ErrorState
+              title={t('invoices.sandboxDeniedTitle')}
+              description={t('invoices.sandboxDeniedBody')}
+              onRetry={refresh}
+            />
+          ) : errorCode === 'failed' ? (
             <ErrorState title={t('invoices.loadError')} onRetry={refresh} />
           ) : (
             <EmptyState
@@ -346,6 +374,12 @@ const styles = StyleSheet.create({
   list: {
     gap: spacing.md,
     paddingTop: spacing.xs,
+  },
+  totalsUnavailable: {
+    marginBottom: spacing.md,
+    fontFamily: typography.fonts.semibold,
+    fontSize: 22,
+    color: colors.textMuted,
   },
   headerBlock: {
     gap: spacing.md,

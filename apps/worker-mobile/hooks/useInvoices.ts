@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   fetchAppReviewDemoCatalog,
@@ -8,6 +8,7 @@ import {
   getMyCommissionInvoices,
   type WorkerInvoiceListItem,
 } from '@/lib/invoices';
+import type { InvoiceLoadStatus } from '@/lib/invoice-load';
 import { useAuth } from '@/providers/AuthProvider';
 
 export type InvoiceFilter = 'all' | 'open' | 'past_due' | 'paid';
@@ -15,38 +16,61 @@ export type InvoiceFilter = 'all' | 'open' | 'past_due' | 'paid';
 export function useInvoices(workerId?: string | null) {
   const { isAppReviewDemo } = useAuth();
   const [invoices, setInvoices] = useState<WorkerInvoiceListItem[]>([]);
-  const [loading, setLoading] = useState(Boolean(workerId));
-  const [error, setError] = useState<string>();
+  const [loadStatus, setLoadStatus] = useState<InvoiceLoadStatus>(
+    workerId ? 'loading' : 'idle',
+  );
+  const [errorCode, setErrorCode] = useState<'denied' | 'failed' | undefined>();
   const [filter, setFilter] = useState<InvoiceFilter>('all');
+  const requestIdRef = useRef(0);
+  const invoicesRef = useRef(invoices);
+  invoicesRef.current = invoices;
 
   const refresh = useCallback(async () => {
     if (!workerId) {
       setInvoices([]);
-      setLoading(false);
+      setLoadStatus('idle');
+      setErrorCode(undefined);
       return;
     }
-    setLoading(true);
-    setError(undefined);
+    const requestId = ++requestIdRef.current;
+    setLoadStatus('loading');
+    setErrorCode(undefined);
 
-    if (isAppReviewDemo) {
-      const result = await fetchAppReviewDemoCatalog();
-      if (result.error || !result.data) {
-        setError(result.error ?? 'Could not load demonstration catalog.');
-        setInvoices([]);
-      } else {
-        setInvoices([invoiceListItemFromDemoCatalog(result.data, workerId)]);
+    try {
+      if (isAppReviewDemo) {
+        const result = await fetchAppReviewDemoCatalog();
+        if (requestId !== requestIdRef.current) return;
+        if (result.error || !result.data) {
+          setErrorCode('failed');
+          setLoadStatus('failed');
+          if (invoicesRef.current.length === 0) setInvoices([]);
+        } else {
+          setInvoices([invoiceListItemFromDemoCatalog(result.data, workerId)]);
+          setLoadStatus('success');
+        }
+        return;
       }
-      setLoading(false);
-      return;
-    }
 
-    const result = await getMyCommissionInvoices(workerId);
-    if (result.error) {
-      setError(result.error);
-    } else {
+      const result = await getMyCommissionInvoices(workerId);
+      if (requestId !== requestIdRef.current) return;
+
+      if (result.status === 'denied' || result.status === 'failed') {
+        setErrorCode(result.code);
+        setLoadStatus(result.status);
+        if (invoicesRef.current.length === 0) {
+          setInvoices([]);
+        }
+        return;
+      }
+
       setInvoices(result.data);
+      setLoadStatus(result.status);
+      setErrorCode(undefined);
+    } catch {
+      if (requestId !== requestIdRef.current) return;
+      setErrorCode('failed');
+      setLoadStatus('failed');
     }
-    setLoading(false);
   }, [workerId, isAppReviewDemo]);
 
   useEffect(() => {
@@ -64,8 +88,11 @@ export function useInvoices(workerId?: string | null) {
   return {
     invoices: filtered,
     allInvoices: invoices,
-    loading,
-    error,
+    loading: loadStatus === 'loading',
+    loadStatus,
+    errorCode,
+    /** @deprecated Prefer errorCode + loadStatus */
+    error: errorCode,
     refresh,
     filter,
     setFilter,

@@ -20,6 +20,8 @@ import { useReducedMotion } from '@/hooks/useReducedMotion';
 type Props = {
   label: string;
   amountMinor: number;
+  /** When set, replaces the formatted money (e.g. em dash while totals are unavailable). */
+  amountLabel?: string;
   hint: string;
   icon: keyof typeof Ionicons.glyphMap;
   selected: boolean;
@@ -36,6 +38,7 @@ type Props = {
 export function MoneySummaryTile({
   label,
   amountMinor,
+  amountLabel,
   hint,
   icon,
   selected,
@@ -186,11 +189,20 @@ export function MoneySummaryTile({
         </View>
 
         <View style={styles.amountBlock}>
-          <MoneyAmount
-            amountMinor={amountMinor}
-            emphasize
-            style={[styles.amount, alert && styles.amountAlert]}
-          />
+          {amountLabel != null ? (
+            <Text
+              style={[styles.amount, styles.amountLabel, alert && styles.amountAlert]}
+              accessibilityLabel={amountLabel}
+            >
+              {amountLabel}
+            </Text>
+          ) : (
+            <MoneyAmount
+              amountMinor={amountMinor}
+              emphasize
+              style={[styles.amount, alert && styles.amountAlert]}
+            />
+          )}
           <Text style={[styles.hint, selected && styles.hintSelected]} numberOfLines={2}>
             {hint}
           </Text>
@@ -283,6 +295,12 @@ const styles = StyleSheet.create({
   },
   amountBlock: {
     gap: 6,
+  },
+  amountLabel: {
+    fontFamily: typography.fonts.bold,
+    fontSize: 26,
+    lineHeight: 30,
+    color: colors.white,
   },
   amount: {
     fontFamily: typography.fonts.display,

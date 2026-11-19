@@ -446,13 +446,28 @@ export function canOfferCompletedWorkMessage(input: {
   );
 }
 
+/** Optional secure UUID source (e.g. expo-crypto on native). Must return a UUID or null. */
+export type ClientMessageIdFactory = () => string | null;
+
 /** UUID v4 for send idempotency. Never returns a non-UUID placeholder. */
-export function newClientMessageId(): string | null {
+export function newClientMessageId(createId?: ClientMessageIdFactory): string | null {
+  if (createId) {
+    try {
+      const id = createId();
+      return id && isMessagingUuid(id) ? id : null;
+    } catch {
+      return null;
+    }
+  }
   const cryptoObj = globalThis.crypto;
   if (!cryptoObj) return null;
   if (typeof cryptoObj.randomUUID === 'function') {
-    const id = cryptoObj.randomUUID();
-    return isMessagingUuid(id) ? id : null;
+    try {
+      const id = cryptoObj.randomUUID();
+      return isMessagingUuid(id) ? id : null;
+    } catch {
+      return null;
+    }
   }
   if (typeof cryptoObj.getRandomValues !== 'function') return null;
   const bytes = new Uint8Array(16);

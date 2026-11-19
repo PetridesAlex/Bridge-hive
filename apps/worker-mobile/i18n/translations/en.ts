@@ -402,6 +402,11 @@ export const en = {
       'Approved timesheets create payout snapshots here. Paid only after reconciliation.',
     loadEarningsError: 'Could not load earnings',
     loadInvoicesError: 'Could not load invoices',
+    sandboxDeniedTitle: 'Sandbox invoices unavailable',
+    sandboxDeniedBody:
+      'This TestFlight build uses the Stripe sandbox lane. Your account is not a sandbox tester, so TEST invoices cannot be listed. This does not clear or change any production balance.',
+    totalsUnavailable: '—',
+    sandboxTestLabel: 'TEST · sandbox',
     emptyInvoicesBody:
       'When an organization approves your timesheet, a Bridge Hive commission invoice appears here.',
     openFullList: 'Open full invoice list',
@@ -424,6 +429,10 @@ export const en = {
     emptyBody:
       'When an organization approves your timesheet, a Bridge Hive commission invoice appears here. Due in 10 calendar days.',
     loadError: 'Could not load invoices',
+    sandboxDeniedTitle: 'Sandbox invoices unavailable',
+    sandboxDeniedBody:
+      'This TestFlight build uses the Stripe sandbox lane. Your account is not a sandbox tester, so TEST invoices cannot be listed. This does not clear or change any production balance.',
+    totalsUnavailable: '—',
     filterAll: 'All',
     filterOpen: 'Open',
     filterPastDue: 'Past due',
@@ -461,6 +470,8 @@ export const en = {
     emptyInboxBody:
       'Messaging unlocks after an organization approves your completed timesheet.',
     loadError: 'Could not load messages',
+    sendUnavailable: 'Could not prepare this message. Please try again.',
+    sendFailed: 'Could not send. Please try again.',
     loading: 'Loading messages…',
     composerPlaceholder: 'Write a message…',
     send: 'Send',

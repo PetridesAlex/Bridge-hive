@@ -30,6 +30,7 @@ import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ListGroup } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
+import { isSandboxPaymentsBuild } from '@/constants/stripe';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useCredentials } from '@/hooks/useCredentials';
@@ -265,13 +266,23 @@ export default function AccountHubScreen() {
             pulse: workerProfile?.verification_status === 'verified',
           },
           {
-            label: billingStandingLabel(billing?.standing),
+            // Sandbox builds synthesize good_standing so live debt never blocks
+            // payment tests — the chip must not read as a verified live clearance.
+            label: isSandboxPaymentsBuild()
+              ? t('payments.sandboxStandingLabel')
+              : billingStandingLabel(billing?.standing),
             icon: 'card-outline',
-            tone: billing?.standing === 'restricted' ? 'danger' : 'success',
+            tone: isSandboxPaymentsBuild()
+              ? 'info'
+              : billing?.standing === 'restricted'
+                ? 'danger'
+                : 'success',
             solid:
-              billing?.standing === 'restricted' ||
-              billing?.standing === 'good_standing',
-            pulse: billing?.standing === 'good_standing',
+              !isSandboxPaymentsBuild() &&
+              (billing?.standing === 'restricted' ||
+                billing?.standing === 'good_standing'),
+            pulse:
+              !isSandboxPaymentsBuild() && billing?.standing === 'good_standing',
           },
         ]}
       />

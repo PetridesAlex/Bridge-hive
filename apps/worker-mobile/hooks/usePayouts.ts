@@ -22,17 +22,23 @@ export function usePayouts(workerId?: string | null) {
     }
     setLoading(true);
     setError(undefined);
-    const [payoutResult, accountResult] = await Promise.all([
-      getMyPayouts(workerId),
-      getMyPayoutAccount(workerId),
-    ]);
-    if (payoutResult.error || accountResult.error) {
-      setError(payoutResult.error ?? accountResult.error);
-    } else {
-      setPayouts(payoutResult.data);
-      setAccount(accountResult.data);
+    try {
+      const [payoutResult, accountResult] = await Promise.all([
+        getMyPayouts(workerId),
+        getMyPayoutAccount(workerId),
+      ]);
+      if (payoutResult.error || accountResult.error) {
+        setError(payoutResult.error ?? accountResult.error);
+      } else {
+        setPayouts(payoutResult.data);
+        setAccount(accountResult.data);
+      }
+    } catch (e) {
+      // A thrown read is a failed read, never a permanent spinner or a verified €0.00.
+      setError(e instanceof Error ? e.message : 'PAYOUTS_FAILED');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [workerId]);
 
   useEffect(() => {

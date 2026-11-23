@@ -334,6 +334,8 @@ export const el: TranslationCatalog = {
     openTitle: 'Ανοιχτές βάρδιες',
     subtitle: 'Βρείτε ευέλικτες βάρδιες που ταιριάζουν στον ρόλο σας.',
     openCalendar: 'Άνοιγμα ημερολογίου βαρδιών',
+    newFilterTitle: 'Νέες δημοσιεύσεις',
+    newFilterBody: 'Εμφανίζονται πρώτα οι πιο πρόσφατες ανοιχτές βάρδιες από την ειδοποίησή σας.',
     offlineTitle: 'Φαίνεται ότι είστε εκτός σύνδεσης',
     offlineBody: 'Τραβήξτε για ανανέωση όταν επανέλθει η σύνδεση.',
     loadError: 'Δεν μπορέσαμε να φορτώσουμε βάρδιες',
@@ -409,6 +411,7 @@ export const el: TranslationCatalog = {
       'Αυτό το TestFlight build χρησιμοποιεί τη λωρίδα Stripe sandbox. Ο λογαριασμός σας δεν είναι sandbox tester, γι’ αυτό δεν εμφανίζονται TEST τιμολόγια. Αυτό δεν μηδενίζει ούτε αλλάζει κανένα πραγματικό υπόλοιπο.',
     totalsUnavailable: '—',
     sandboxTestLabel: 'TEST · sandbox',
+    sandboxStandingLabel: 'Sandbox · όχι πραγματική κατάσταση',
     emptyInvoicesBody:
       'Όταν ένας οργανισμός εγκρίνει το φύλλο ωρών σας, εμφανίζεται εδώ τιμολόγιο προμήθειας Bridge Hive.',
     openFullList: 'Άνοιγμα πλήρους λίστας τιμολογίων',

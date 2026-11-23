@@ -6,8 +6,9 @@ import {
   getDevProvenance,
 } from '../../../../packages/dev-provenance';
 
-/** Dev-only marker; hidden when BH_DEV_BASE_SHA is unset. */
+/** Dev-only marker; never rendered in release builds, hidden when BH_DEV_BASE_SHA is unset. */
 export function DevProvenanceBadge() {
+  if (typeof __DEV__ !== 'undefined' && !__DEV__) return null;
   const p = getDevProvenance();
   if (!p) return null;
 

@@ -65,7 +65,9 @@ export default function MessageThreadScreen() {
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  // Load errors (tap = retry load) are kept separate from send errors.
   const [error, setError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [reactionSummaries, setReactionSummaries] = useState<
     Record<string, OrgWorkerMessageReactionSummary>
   >({});
@@ -73,6 +75,9 @@ export default function MessageThreadScreen() {
   const [deletesEnabled, setDeletesEnabled] = useState(true);
   const activeRef = useRef(true);
   const sendLockRef = useRef(createSendLock());
+  // The one logical send awaiting server acknowledgement. A retry (bubble or
+  // re-pressing send with the same text) reuses this UUID so the server dedupes.
+  const logicalSendRef = useRef<{ clientMessageId: string; body: string } | null>(null);
   const guardRef = useRef(createThreadRequestGuard());
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -94,16 +99,20 @@ export default function MessageThreadScreen() {
         .filter((row) => canReactToMessage(row))
         .map((row) => row.id);
       if (!ids.length) return;
-      const result = await listMessageReactionSummaries(ids);
-      if (result.unavailable) {
-        setReactionsEnabled(false);
-        return;
+      try {
+        const result = await listMessageReactionSummaries(ids);
+        if (result.unavailable) {
+          setReactionsEnabled(false);
+          return;
+        }
+        if (result.error) return;
+        setReactionSummaries((prev) => ({
+          ...prev,
+          ...summariesToMap(mergeReactionSummaries(Object.values(prev), result.data)),
+        }));
+      } catch {
+        // Reactions are optional: never surface or throw into plain-text messaging.
       }
-      if (result.error) return;
-      setReactionSummaries((prev) => ({
-        ...prev,
-        ...summariesToMap(mergeReactionSummaries(Object.values(prev), result.data)),
-      }));
     },
     [reactionsEnabled],
   );
@@ -209,6 +218,8 @@ export default function MessageThreadScreen() {
     setReactionSummaries({});
     setHasOlder(false);
     setError(null);
+    setSendError(null);
+    logicalSendRef.current = null;
     setLoading(true);
   }, [conversationId]);
 
@@ -239,20 +250,23 @@ export default function MessageThreadScreen() {
     };
   }, [conversationId, isAppReviewDemo, load, refreshReactions, session]);
 
-  const send = async (clientMessageId: string, body: string) => {
+  const send = async (clientMessageId: string, body: string, draftAtSend: string) => {
     setSending(true);
     try {
       const result = await sendConversationMessage(conversationId, body, clientMessageId);
       if (result.error || !result.data) {
         setMessages((prev) => applyFailedSend(prev, clientMessageId));
+        setSendError(t('messages.sendFailed'));
         return;
       }
+      logicalSendRef.current = null;
       setMessages((prev) => applyAcceptedSend(prev, result.data!, conversationId));
-      setDraft('');
-      setError(null);
+      // Only clear the composer if the user has not started typing something new.
+      setDraft((current) => (current === draftAtSend ? '' : current));
+      setSendError(null);
     } catch {
       setMessages((prev) => applyFailedSend(prev, clientMessageId));
-      setError(t('messages.sendFailed'));
+      setSendError(t('messages.sendFailed'));
     } finally {
       sendLockRef.current.release();
       setSending(false);
@@ -264,7 +278,23 @@ export default function MessageThreadScreen() {
     const normalized = normalizeMessageBody(draft);
     if (!normalized.ok || !user?.id) {
       sendLockRef.current.release();
-      if (!normalized.ok && normalized.error === 'too_long') setError(t('messages.tooLong'));
+      if (!normalized.ok && normalized.error === 'too_long') setSendError(t('messages.tooLong'));
+      return;
+    }
+    const draftAtSend = draft;
+    const pendingLogical = logicalSendRef.current;
+    if (pendingLogical && pendingLogical.body === normalized.body) {
+      // Same text as a send that was not acknowledged: retry it, same UUID.
+      const { clientMessageId } = pendingLogical;
+      setMessages((prev) =>
+        prev.map((row) =>
+          row.clientMessageId === clientMessageId
+            ? { ...row, localStatus: 'pending' }
+            : row,
+        ),
+      );
+      setSendError(null);
+      await send(clientMessageId, normalized.body, draftAtSend);
       return;
     }
     const outgoing = beginOutgoingMessage({
@@ -277,17 +307,22 @@ export default function MessageThreadScreen() {
     });
     if ('error' in outgoing) {
       sendLockRef.current.release();
-      setError(t('messages.sendUnavailable'));
+      setSendError(t('messages.sendUnavailable'));
       return;
     }
+    logicalSendRef.current = {
+      clientMessageId: outgoing.clientMessageId,
+      body: normalized.body,
+    };
     setMessages((prev) => [...prev, outgoing.optimistic]);
-    setError(null);
-    // Keep draft until server acknowledgement (cleared in send on success).
-    await send(outgoing.clientMessageId, normalized.body);
+    setSendError(null);
+    // Keep the draft until server acknowledgement (cleared in send on success).
+    await send(outgoing.clientMessageId, normalized.body, draftAtSend);
   };
 
   const onRetryMessage = async (message: LocalMessagingMessage) => {
     if (!sendLockRef.current.acquire()) return;
+    setSendError(null);
     setMessages((prev) =>
       prev.map((row) =>
         row.clientMessageId === message.clientMessageId
@@ -295,7 +330,8 @@ export default function MessageThreadScreen() {
           : row,
       ),
     );
-    await send(message.clientMessageId, message.body);
+    // Same clientMessageId + body: one logical send, deduped server-side.
+    await send(message.clientMessageId, message.body, message.body);
   };
 
   const onToggleReaction = async (messageId: string, key: OrgWorkerReactionKey) => {
@@ -317,10 +353,15 @@ export default function MessageThreadScreen() {
       [messageId]: applyOptimisticReaction(prev[messageId], messageId, desired),
     }));
 
-    const result =
-      desired == null
-        ? await clearMessageReaction(messageId)
-        : await setMessageReaction(messageId, desired);
+    let result: { error: string | null; unavailable: boolean };
+    try {
+      result =
+        desired == null
+          ? await clearMessageReaction(messageId)
+          : await setMessageReaction(messageId, desired);
+    } catch {
+      result = { error: 'REACTION_FAILED', unavailable: false };
+    }
 
     if (reactionGenRef.current[messageId] !== generation) return;
 
@@ -380,6 +421,7 @@ export default function MessageThreadScreen() {
     }
     if (result.error) return result.error;
     setMessages([]);
+    logicalSendRef.current = null;
     navigateBack('/messages');
     return null;
   };
@@ -402,6 +444,7 @@ export default function MessageThreadScreen() {
         sending={sending}
         loading={isAppReviewDemo ? false : loading}
         error={isAppReviewDemo ? null : error}
+        sendError={isAppReviewDemo ? null : sendError}
         onRetryLoad={() => {
           setLoading(messages.length === 0);
           void load();

@@ -1,5 +1,6 @@
 import { Redirect, router, Tabs } from 'expo-router';
 import React from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import {
   AnimatedTabButton,
@@ -9,6 +10,8 @@ import {
   TabBarBackground,
   useAdaptiveTabBarStyle,
 } from '@/components/navigation/AnimatedTabBar';
+import { HiveFlowBackground } from '@/components/brand/HiveFlowBackground';
+import { colors } from '@/constants/theme';
 import { useTranslation } from '@/i18n/locale-provider';
 import { useAuth } from '@/providers/AuthProvider';
 
@@ -23,19 +26,27 @@ export default function TabsLayout() {
   const { t } = useTranslation();
   const tabBarStyle = useAdaptiveTabBarStyle();
 
+  // Wait for auth hydrate before bouncing unsigned users. Redirecting while
+  // session is still null drops cold deep links (e.g. /profile/…) into login,
+  // which then replaces to home and loses the intended route.
+  if (loading) {
+    return (
+      <View style={styles.boot} accessibilityState={{ busy: true }}>
+        <HiveFlowBackground />
+        <ActivityIndicator color={colors.teal} />
+      </View>
+    );
+  }
+
   if (!session) {
     return <Redirect href="/auth/worker/login" />;
   }
 
-  // Show the workspace shell immediately after login. Profile hydrate may still
-  // be in flight — only redirect away once the bundle has settled.
-  if (!loading) {
-    if (accountRejectionReason) {
-      return <Redirect href="/auth/worker/rejected" />;
-    }
-    if (!canAccessWorkerShell) {
-      return <Redirect href={homeRoute as never} />;
-    }
+  if (accountRejectionReason) {
+    return <Redirect href="/auth/worker/rejected" />;
+  }
+  if (!canAccessWorkerShell) {
+    return <Redirect href={homeRoute as never} />;
   }
 
   return (
@@ -169,3 +180,12 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  boot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
+});

@@ -332,6 +332,8 @@ export const en = {
     openTitle: 'Open shifts',
     subtitle: 'Find flexible shifts that match your role.',
     openCalendar: 'Open shift calendar',
+    newFilterTitle: 'Newly published',
+    newFilterBody: 'Showing the newest open shifts first from your notification.',
     offlineTitle: 'You appear to be offline',
     offlineBody: 'Pull to refresh when your connection returns.',
     loadError: 'We couldn’t load shifts',
@@ -407,6 +409,7 @@ export const en = {
       'This TestFlight build uses the Stripe sandbox lane. Your account is not a sandbox tester, so TEST invoices cannot be listed. This does not clear or change any production balance.',
     totalsUnavailable: '—',
     sandboxTestLabel: 'TEST · sandbox',
+    sandboxStandingLabel: 'Sandbox · not live standing',
     emptyInvoicesBody:
       'When an organization approves your timesheet, a Bridge Hive commission invoice appears here.',
     openFullList: 'Open full invoice list',

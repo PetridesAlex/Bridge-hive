@@ -30,9 +30,11 @@ import { Button } from '@/components/ui/Button';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { TextInput } from '@/components/ui/TextInput';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
+import { isSandboxPaymentsBuild } from '@/constants/stripe';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
+import { useTranslation } from '@/i18n/locale-provider';
 import {
   getAvatarSignedUrl,
   pickAvatarFromCamera,
@@ -175,7 +177,9 @@ function SupportLink() {
 
 export default function PersonalInformationScreen() {
   const { user, profile, workerProfile, isVerified, refreshProfile } = useAuth();
+  const { t } = useTranslation();
   const { summary: billing } = useBillingRestriction(Boolean(user?.id));
+  const sandboxBuild = isSandboxPaymentsBuild();
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
@@ -534,8 +538,12 @@ export default function PersonalInformationScreen() {
           index={4}
           icon="card-outline"
           label="Billing standing"
-          value={billingStandingLabel(billing?.standing)}
-          tone={statusTone(billing?.standing)}
+          value={
+            sandboxBuild
+              ? t('payments.sandboxStandingLabel')
+              : billingStandingLabel(billing?.standing)
+          }
+          tone={sandboxBuild ? 'info' : statusTone(billing?.standing)}
         />
 
         <Button

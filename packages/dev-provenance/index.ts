@@ -41,6 +41,17 @@ export function getDevProvenance(): DevProvenance | null {
   };
 }
 
+/** Bridge-Hive-Test staging project ref (dev-only label; not a secret). */
+const STAGING_SUPABASE_REF = 'egtpiprwqgmkogthkmew';
+
+/** Bridge-Hive production project ref (dev-only label; not a secret). */
+const PRODUCTION_SUPABASE_REF = 'hfnymqjrbppculcofaag';
+
 export function formatDevProvenanceLine(p: DevProvenance): string {
-  return `BH-RC ${p.branch}@${p.baseSha.slice(0, 7)} dirty=${p.dirtyFingerprint.slice(0, 12)} stripe=${p.stripeMode} sb=${p.supabaseHost}`;
+  const env = p.supabaseHost.includes(STAGING_SUPABASE_REF)
+    ? 'STAGING (Bridge-Hive-Test) '
+    : p.supabaseHost.includes(PRODUCTION_SUPABASE_REF)
+      ? 'PRODUCTION DATA (Bridge-Hive) '
+      : '';
+  return `${env}BH-RC ${p.branch}@${p.baseSha.slice(0, 7)} dirty=${p.dirtyFingerprint.slice(0, 12)} stripe=${p.stripeMode} sb=${p.supabaseHost}`;
 }

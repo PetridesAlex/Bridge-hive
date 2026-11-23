@@ -9,6 +9,7 @@ set -euo pipefail
 DEFAULT_ROOT="/Users/petridesaalex/Desktop/Bridge-Hive-release-candidate"
 DEFAULT_EXPECTED_BRANCH="integrate/release-candidate-2026-11-16"
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
 CANONICAL_ROOT="$(cd "${BH_DEV_ROOT:-$DEFAULT_ROOT}" && pwd -P)"
 EXPECTED_BRANCH="${BH_DEV_ALLOW_BRANCH:-$DEFAULT_EXPECTED_BRANCH}"
 WEB_PORT="${BH_WEB_PORT:-3000}"
@@ -74,6 +75,20 @@ print(host or "missing")
 PY
 }
 
+web_supabase_host() {
+  local f="$CANONICAL_ROOT/apps/web/.env.local"
+  [[ -f "$f" ]] || { echo "missing"; return; }
+  python3 - <<'PY' "$f"
+import re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+m = re.search(r"^NEXT_PUBLIC_SUPABASE_URL=(.+)$", text, re.M)
+if not m:
+    print("missing"); raise SystemExit
+url = m.group(1).strip().strip('"').strip("'")
+print(url.split("//")[-1].split("/")[0] or "missing")
+PY
+}
+
 stripe_mode_effective() {
   local f="$CANONICAL_ROOT/apps/worker-mobile/.env"
   if [[ -f "$f" ]] && grep -q '^EXPO_PUBLIC_STRIPE_PAYMENTS_MODE=sandbox' "$f"; then
@@ -94,8 +109,24 @@ assert_safe_backend() {
   [[ "$branch" == "$EXPECTED_BRANCH" ]] \
     || die "Refuse unexpected branch: $branch (expected $EXPECTED_BRANCH; set BH_DEV_ALLOW_BRANCH to override)"
 
-  [[ "$host" == *hfnymqjrbppculcofaag* || "$host" == "127.0.0.1:54321" || "$host" == "localhost:54321" ]] \
+  # Explicit, exact-match opt-in for one named project ref (e.g. Bridge-Hive-Test staging):
+  #   BH_DEV_ALLOW_SUPABASE_REF=egtpiprwqgmkogthkmew
+  # Does not relax the guard for any other host.
+  local opt_in_host=""
+  if [[ -n "${BH_DEV_ALLOW_SUPABASE_REF:-}" ]]; then
+    [[ "$BH_DEV_ALLOW_SUPABASE_REF" =~ ^[a-z0-9]{20}$ ]] \
+      || die "Refuse: BH_DEV_ALLOW_SUPABASE_REF must be a 20-char project ref"
+    opt_in_host="${BH_DEV_ALLOW_SUPABASE_REF}.supabase.co"
+  fi
+  [[ "$host" == *hfnymqjrbppculcofaag* || "$host" == "127.0.0.1:54321" || "$host" == "localhost:54321" \
+    || ( -n "$opt_in_host" && "$host" == "$opt_in_host" ) ]] \
     || die "Refuse unexpected Supabase host: $host"
+
+  # Web and mobile clients must target the same project.
+  local web_host
+  web_host="$(web_supabase_host)"
+  [[ "$web_host" == "$host" ]] \
+    || die "Refuse: web ($web_host) and mobile ($host) Supabase hosts differ"
 
   if [[ -n "${BH_DEV_REQUIRE_STRIPE_MODE:-}" && "$mode" != "$BH_DEV_REQUIRE_STRIPE_MODE" ]]; then
     die "Refuse unexpected Stripe mode: $mode (required $BH_DEV_REQUIRE_STRIPE_MODE)"
@@ -314,13 +345,9 @@ start_web() {
   mkdir -p "$LOG_DIR" "$PID_DIR"
   (
     cd "$CANONICAL_ROOT/apps/web"
-    # setsid detaches from launcher TTY/process group so Next survives shell exit
-    if command -v setsid >/dev/null 2>&1; then
-      setsid npx next dev -p "$WEB_PORT" >"$LOG_DIR/web.log" 2>&1 &
-    else
-      nohup npx next dev -p "$WEB_PORT" >"$LOG_DIR/web.log" 2>&1 &
-    fi
-    echo $! >"$WEB_PID_FILE.wrap"
+    # Double-fork (macOS has no setsid) so Next survives launcher/shell exit.
+    python3 "$SCRIPT_DIR/bh-dev-daemonize.py" "$CANONICAL_ROOT/apps/web" "$LOG_DIR/web.log" \
+      npx next dev -p "$WEB_PORT"
   )
   wait_http "http://127.0.0.1:$WEB_PORT" "web"
   record_listener_pid "$WEB_PORT" "$WEB_PID_FILE"
@@ -335,12 +362,9 @@ start_metro() {
   mkdir -p "$LOG_DIR" "$PID_DIR"
   (
     cd "$CANONICAL_ROOT/apps/worker-mobile"
-    if command -v setsid >/dev/null 2>&1; then
-      setsid npx expo start --lan --port "$METRO_PORT" >"$LOG_DIR/metro.log" 2>&1 &
-    else
-      nohup npx expo start --lan --port "$METRO_PORT" >"$LOG_DIR/metro.log" 2>&1 &
-    fi
-    echo $! >"$METRO_PID_FILE.wrap"
+    # --clear: Metro must re-inline EXPO_PUBLIC_* from .env on every start.
+    python3 "$SCRIPT_DIR/bh-dev-daemonize.py" "$CANONICAL_ROOT/apps/worker-mobile" "$LOG_DIR/metro.log" \
+      npx expo start --lan --clear --port "$METRO_PORT"
   )
   wait_http "http://127.0.0.1:$METRO_PORT/status" "metro"
   record_listener_pid "$METRO_PORT" "$METRO_PID_FILE"

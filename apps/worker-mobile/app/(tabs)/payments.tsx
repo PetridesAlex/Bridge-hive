@@ -346,6 +346,9 @@ export default function MoneyScreen() {
     return { open, pastDue };
   }, [allInvoices, invoiceTotalsReady]);
 
+  // A failed or still-loading earnings read must never present a verified €0.00.
+  const earningsReady = !payoutError && !(payoutLoading && payouts.length === 0);
+
   const earningsTotal = useMemo(
     () => payouts.reduce((sum, p) => sum + (p.gross_amount_minor ?? 0), 0),
     [payouts],
@@ -399,12 +402,15 @@ export default function MoneyScreen() {
         <MoneySummaryTile
           label={t('payments.title')}
           amountMinor={earningsTotal}
-          hint={t('payments.paidByOrgs')}
+          amountLabel={earningsReady ? undefined : t('payments.totalsUnavailable')}
+          hint={payoutError ? t('payments.loadEarningsError') : t('payments.paidByOrgs')}
           icon="wallet-outline"
           selected={segment === 'earnings'}
           delayMs={40}
           onPress={() => setSegment('earnings')}
-          accessibilityLabel={`${t('payments.title')}. ${t('payments.paidByOrgs')}`}
+          accessibilityLabel={`${t('payments.title')}. ${
+            payoutError ? t('payments.loadEarningsError') : t('payments.paidByOrgs')
+          }`}
         />
         <MoneySummaryTile
           label={t('invoices.title')}

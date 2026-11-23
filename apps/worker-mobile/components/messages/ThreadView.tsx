@@ -106,7 +106,10 @@ type Props = {
   onRetryMessage: (message: LocalMessagingMessage) => void;
   sending: boolean;
   loading: boolean;
+  /** Load error only (tap = retry load). Send errors use `sendError`. */
   error: string | null;
+  /** Send failure note shown by the composer; the failed bubble owns retry. */
+  sendError?: string | null;
   onRetryLoad: () => void;
   hasOlder: boolean;
   loadingOlder: boolean;
@@ -133,6 +136,7 @@ export function ThreadView({
   sending,
   loading,
   error,
+  sendError,
   onRetryLoad,
   hasOlder,
   loadingOlder,
@@ -517,6 +521,15 @@ export function ThreadView({
         </View>
       )}
       <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+        {sendError ? (
+          <Text
+            style={styles.sendErrorText}
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite"
+          >
+            {sendError}
+          </Text>
+        ) : null}
         <Animated.View
           style={[
             styles.composerShell,
@@ -840,6 +853,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.errorLight,
   },
   inlineNoteText: { fontFamily: typography.fonts.medium, fontSize: 13, color: colors.error },
+  sendErrorText: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
+    color: colors.error,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xs,
+  },
   earlier: { alignSelf: 'center', paddingVertical: spacing.sm },
   earlierText: { fontFamily: typography.fonts.semibold, fontSize: 13, color: colors.tealStrong },
   empty: {

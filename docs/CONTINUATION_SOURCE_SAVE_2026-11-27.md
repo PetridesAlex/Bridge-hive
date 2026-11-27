@@ -9,7 +9,7 @@ This document is **not** a production release approval and **does not** authoriz
 |------|--------|
 | Folder | `/Users/petridesaalex/src/Bridge-Hive-build7-validate` |
 | Branch | `fix/ios-build7-regressions` |
-| HEAD | `31084f74fd3e34f852bde26474cfd9081cd6e253` |
+| HEAD | `ccd220c584d120bc26975f19bad200ff193196ad` |
 | PR | https://github.com/PetridesAlex/Bridge-hive/pull/60 |
 | Remote | `https://github.com/PetridesAlex/Bridge-hive.git` |
 | Preview backend | Production Bridge-Hive Supabase `hfnymqjrbppculcofaag` |

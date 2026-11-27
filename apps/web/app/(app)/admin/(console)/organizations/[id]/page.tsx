@@ -16,6 +16,7 @@ import {
   Users,
   type LucideIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import { AdminBackLink } from '@/components/admin/admin-back-link';
 import {
@@ -297,6 +298,14 @@ export default async function OrganizationDetailPage({
           />
           <Metric label="Shifts" icon={CalendarDays} value={shiftTotal} />
         </dl>
+        <div className="mt-4">
+          <Link
+            href={`/admin/shifts?org=${org.id}`}
+            className="inline-flex h-10 items-center rounded-full border border-bh-border bg-white px-4 text-sm font-semibold text-bh-text shadow-sm transition hover:-translate-y-0.5 hover:border-bh-teal/40 hover:bg-bh-teal-soft/40 hover:text-bh-teal-strong"
+          >
+            View shifts
+          </Link>
+        </div>
       </Panel>
 
       <Panel

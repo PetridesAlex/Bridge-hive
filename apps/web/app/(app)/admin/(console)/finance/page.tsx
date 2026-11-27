@@ -134,7 +134,7 @@ export default async function AdminFinancePage({
         />
       </div>
 
-      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 bg-white p-4">
+      <form className="flex flex-wrap items-end gap-3 rounded-lg border border-bh-border/80 bg-bh-surface p-4">
         <label className="text-sm text-slate-700">
           Status
           <select
@@ -188,7 +188,7 @@ export default async function AdminFinancePage({
           description="Invoices appear after organizations approve timesheets."
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-lg border border-bh-border/80 bg-bh-surface">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-slate-600">
               <tr>
@@ -258,7 +258,7 @@ function MetricCard({
       ? 'border-amber-200 bg-amber-50'
       : tone === 'success'
         ? 'border-emerald-200 bg-emerald-50'
-        : 'border-slate-200 bg-white';
+        : 'border-bh-border/80 bg-bh-surface';
 
   return (
     <div className={`rounded-lg border p-4 ${toneClass}`}>

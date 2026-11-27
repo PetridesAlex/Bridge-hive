@@ -15,6 +15,8 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
+  FadeInDown,
+  interpolate,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -202,20 +204,48 @@ function AccountStatusCard({
   summary: string;
 }) {
   const { t } = useTranslation();
+  const reduced = useReducedMotion();
   const tone = accountStatusTone(status);
+  const pulse = useSharedValue(reduced ? 1 : 0);
+
+  useEffect(() => {
+    if (reduced) {
+      pulse.value = 1;
+      return;
+    }
+    pulse.value = withRepeat(
+      withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+  }, [pulse, reduced]);
+
+  const railStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.45, 1]),
+    transform: [{ scaleY: interpolate(pulse.value, [0, 1], [0.88, 1]) }],
+  }));
+
   return (
-    <View accessibilityRole="summary" style={styles.accountCard}>
-      <View style={styles.accountTop}>
-        <Ionicons name={tone.icon} size={22} color={tone.accent} style={styles.accountIcon} />
-        <View style={styles.accountCopy}>
-          <Text style={styles.accountEyebrow}>{t('auth.accountStatus')}</Text>
-          <Text style={styles.accountLabel}>{label}</Text>
-          <Text style={styles.accountSummary}>{summary}</Text>
+    <Animated.View
+      entering={reduced ? undefined : FadeInDown.duration(380)}
+      accessibilityRole="summary"
+      style={styles.accountCard}
+    >
+      <Animated.View style={[styles.accountRail, { backgroundColor: tone.accent }, railStyle]} />
+      <View style={styles.accountBody}>
+        <View style={styles.accountTop}>
+          <View style={[styles.accountIconWrap, { borderColor: `${tone.accent}33` }]}>
+            <Ionicons name={tone.icon} size={18} color={tone.accent} />
+          </View>
+          <View style={styles.accountCopy}>
+            <Text style={styles.accountEyebrow}>{t('auth.accountStatus')}</Text>
+            <Text style={styles.accountLabel}>{label}</Text>
+            <Text style={styles.accountSummary}>{summary}</Text>
+          </View>
         </View>
+        <Text style={styles.accountFootText}>{t('auth.accountStatusFoot')}</Text>
       </View>
-      <View style={styles.accountDivider} />
-      <Text style={styles.accountFootText}>{t('auth.accountStatusFoot')}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -818,25 +848,39 @@ export default function WorkerAccountSetupScreen() {
 }
 
 const styles = StyleSheet.create({
-  /** Flat navy surface — no border or gradient; hierarchy comes from type and one hairline. */
+  /** Open status strip — no fill; hierarchy from rail, type, and tone. */
   accountCard: {
-    borderRadius: radii.xl,
-    padding: spacing.lg,
-    gap: spacing.md,
-    backgroundColor: colors.navy,
-    ...shadows.md,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 14,
+    backgroundColor: 'transparent',
+    paddingVertical: 4,
+  },
+  accountRail: {
+    width: 2.5,
+    borderRadius: 2,
+    alignSelf: 'stretch',
+    minHeight: 72,
+  },
+  accountBody: {
+    flex: 1,
+    minWidth: 0,
+    gap: 12,
   },
   accountTop: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
   },
-  accountIcon: {
+  accountIconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: StyleSheet.hairlineWidth,
     marginTop: 2,
-  },
-  accountDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.16)',
   },
   accountCopy: {
     flex: 1,
@@ -845,28 +889,32 @@ const styles = StyleSheet.create({
   },
   accountEyebrow: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 11,
-    letterSpacing: 1.1,
+    fontSize: 10,
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
-    color: colors.yellow,
+    color: colors.tealStrong,
   },
   accountLabel: {
     fontFamily: typography.fonts.displaySemibold,
     fontSize: 18,
+    lineHeight: 23,
     letterSpacing: -0.3,
-    color: colors.white,
+    color: colors.navy,
   },
   accountSummary: {
     fontFamily: typography.fonts.regular,
-    fontSize: 13,
-    lineHeight: 18,
-    color: 'rgba(255,255,255,0.88)',
+    fontSize: 13.5,
+    lineHeight: 20,
+    letterSpacing: 0.1,
+    color: 'rgba(11, 42, 67, 0.68)',
   },
   accountFootText: {
-    fontFamily: typography.fonts.regular,
+    fontFamily: typography.fonts.medium,
     fontSize: 12,
-    lineHeight: 17,
-    color: 'rgba(255,255,255,0.68)',
+    lineHeight: 18,
+    letterSpacing: 0.1,
+    color: 'rgba(11, 42, 67, 0.48)',
+    paddingLeft: 46,
   },
   laterBox: {
     flexDirection: 'row',

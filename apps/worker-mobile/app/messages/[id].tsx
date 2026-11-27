@@ -8,6 +8,7 @@ import {
   canReactToMessage,
   createSendLock,
   createThreadRequestGuard,
+  isMessagingRealtimeCatchUpStatus,
   isMessagingUuid,
   mergeReactionSummaries,
   messagingChannelName,
@@ -21,9 +22,9 @@ import {
   type OrgWorkerMessageRow,
   type OrgWorkerReactionKey,
 } from '@bridge-hive/domain';
-import { Redirect, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThreadView } from '@/components/messages/ThreadView';
@@ -43,8 +44,12 @@ import {
   setMessageReaction,
 } from '@/lib/messaging';
 import { navigateBack } from '@/lib/navigation';
+import { createSecureClientMessageId } from '@/lib/secure-uuid';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
+
+/** Coalesce realtime INSERT/UPDATE bursts; matches org web (~180ms). */
+const REALTIME_LOAD_DEBOUNCE_MS = 180;
 
 function summariesToMap(
   rows: OrgWorkerMessageReactionSummary[],
@@ -64,7 +69,9 @@ export default function MessageThreadScreen() {
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  // Load errors (tap = retry load) are kept separate from send errors.
   const [error, setError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [reactionSummaries, setReactionSummaries] = useState<
     Record<string, OrgWorkerMessageReactionSummary>
   >({});
@@ -72,6 +79,9 @@ export default function MessageThreadScreen() {
   const [deletesEnabled, setDeletesEnabled] = useState(true);
   const activeRef = useRef(true);
   const sendLockRef = useRef(createSendLock());
+  // The one logical send awaiting server acknowledgement. A retry (bubble or
+  // re-pressing send with the same text) reuses this UUID so the server dedupes.
+  const logicalSendRef = useRef<{ clientMessageId: string; body: string } | null>(null);
   const guardRef = useRef(createThreadRequestGuard());
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -93,16 +103,20 @@ export default function MessageThreadScreen() {
         .filter((row) => canReactToMessage(row))
         .map((row) => row.id);
       if (!ids.length) return;
-      const result = await listMessageReactionSummaries(ids);
-      if (result.unavailable) {
-        setReactionsEnabled(false);
-        return;
+      try {
+        const result = await listMessageReactionSummaries(ids);
+        if (result.unavailable) {
+          setReactionsEnabled(false);
+          return;
+        }
+        if (result.error) return;
+        setReactionSummaries((prev) => ({
+          ...prev,
+          ...summariesToMap(mergeReactionSummaries(Object.values(prev), result.data)),
+        }));
+      } catch {
+        // Reactions are optional: never surface or throw into plain-text messaging.
       }
-      if (result.error) return;
-      setReactionSummaries((prev) => ({
-        ...prev,
-        ...summariesToMap(mergeReactionSummaries(Object.values(prev), result.data)),
-      }));
     },
     [reactionsEnabled],
   );
@@ -126,27 +140,36 @@ export default function MessageThreadScreen() {
     guardRef.current.setScope({ conversationId, organizationId: null });
     guardRef.current.setActive(activeRef.current);
     const requestId = guardRef.current.start();
-    const [thread, inbox] = await Promise.all([
-      listConversationMessages(conversationId),
-      listMyMessagingConversations(),
-    ]);
-    if (!guardRef.current.isCurrent(requestId, { conversationId })) return;
-    if (thread.error) setError(thread.error);
-    else setError(null);
-    applyPage(thread.data);
-    const conv = inbox.data.find((c) => c.id === conversationId);
-    if (conv?.organizationName) setTitle(conv.organizationName);
-    const latest = thread.data[thread.data.length - 1];
-    if (
-      latest &&
-      !thread.error &&
-      guardRef.current.shouldMarkRead(requestId, { conversationId })
-    ) {
-      await markConversationRead(conversationId, latest.id);
+    try {
+      const [thread, inbox] = await Promise.all([
+        listConversationMessages(conversationId),
+        listMyMessagingConversations(),
+      ]);
+      if (!guardRef.current.isCurrent(requestId, { conversationId })) return;
+      if (thread.error) setError(t('messages.loadError'));
+      else setError(null);
+      applyPage(thread.data);
+      const conv = inbox.data.find((c) => c.id === conversationId);
+      if (conv?.organizationName) setTitle(conv.organizationName);
+      const latest = thread.data[thread.data.length - 1];
+      if (
+        latest &&
+        !thread.error &&
+        guardRef.current.shouldMarkRead(requestId, { conversationId })
+      ) {
+        await markConversationRead(conversationId, latest.id);
+      }
+      loadedOnceRef.current = true;
+    } catch {
+      if (guardRef.current.isCurrent(requestId, { conversationId })) {
+        setError(t('messages.loadError'));
+      }
+    } finally {
+      if (guardRef.current.isCurrent(requestId, { conversationId })) {
+        setLoading(false);
+      }
     }
-    loadedOnceRef.current = true;
-    setLoading(false);
-  }, [applyPage, conversationId, isAppReviewDemo, session]);
+  }, [applyPage, conversationId, isAppReviewDemo, session, t]);
 
   const loadOlder = useCallback(async () => {
     if (!conversationId || loadingOlder) return;
@@ -189,29 +212,77 @@ export default function MessageThreadScreen() {
     }, [load]),
   );
 
+  // Expo web: AppState often stays "active" while the tab is hidden/focused.
+  // Mirror org workspace visibility catch-up so an open thread refetches quietly.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    if (!isMessagingUuid(conversationId) || isAppReviewDemo || !session) return;
+    const quietCatchUp = () => {
+      if (document.visibilityState !== 'visible') return;
+      void load();
+    };
+    const onFocus = () => void load();
+    document.addEventListener('visibilitychange', quietCatchUp);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', quietCatchUp);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [conversationId, isAppReviewDemo, load, session]);
+
   const priorConversationRef = useRef(conversationId);
+  const [realtimeEpoch, setRealtimeEpoch] = useState(0);
+  const realtimeResubscribedRef = useRef(false);
 
   useEffect(() => {
     if (priorConversationRef.current === conversationId) return;
     priorConversationRef.current = conversationId;
     loadedOnceRef.current = false;
+    realtimeResubscribedRef.current = false;
+    setRealtimeEpoch(0);
     setMessages([]);
     setReactionSummaries({});
     setHasOlder(false);
     setError(null);
+    setSendError(null);
+    logicalSendRef.current = null;
     setLoading(true);
   }, [conversationId]);
 
   useEffect(() => {
     if (!isMessagingUuid(conversationId) || isAppReviewDemo || !session) return;
+    let cancelled = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleDebouncedLoad = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (!cancelled) void load();
+      }, REALTIME_LOAD_DEBOUNCE_MS);
+    };
     const messagesSub = subscribeMessagingRealtime({
       client: supabase,
       channelName: messagingChannelName('worker-thread', { conversationId }),
       table: 'organization_worker_messages',
       filter: `conversation_id=eq.${conversationId}`,
       event: '*',
-      onChange: () => void load(),
-      onSubscribed: () => void load(),
+      onChange: scheduleDebouncedLoad,
+      onSubscribed: () => {
+        if (!cancelled) void load();
+      },
+      onStatus: (status) => {
+        if (cancelled) return;
+        if (__DEV__) {
+          // Sanitized lifecycle only — never log bodies, tokens, or headers.
+          console.debug('[worker-thread-realtime]', { status, conversationId });
+        }
+        if (!isMessagingRealtimeCatchUpStatus(status)) return;
+        void load();
+        // One remount/resubscribe per conversation mount — not a poll loop.
+        if (!realtimeResubscribedRef.current) {
+          realtimeResubscribedRef.current = true;
+          setRealtimeEpoch((n) => n + 1);
+        }
+      },
     });
     const reactionsSub = subscribeReactionBroadcast({
       client: supabase,
@@ -224,29 +295,58 @@ export default function MessageThreadScreen() {
       },
     });
     return () => {
+      cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
       messagesSub.unsubscribe();
       reactionsSub.unsubscribe();
     };
-  }, [conversationId, isAppReviewDemo, load, refreshReactions, session]);
+  }, [conversationId, isAppReviewDemo, load, realtimeEpoch, refreshReactions, session]);
 
-  const send = async (clientMessageId: string, body: string) => {
-    if (!sendLockRef.current.acquire()) return;
+  const send = async (clientMessageId: string, body: string, draftAtSend: string) => {
     setSending(true);
-    const result = await sendConversationMessage(conversationId, body, clientMessageId);
-    sendLockRef.current.release();
-    setSending(false);
-    if (result.error || !result.data) {
+    try {
+      const result = await sendConversationMessage(conversationId, body, clientMessageId);
+      if (result.error || !result.data) {
+        setMessages((prev) => applyFailedSend(prev, clientMessageId));
+        setSendError(t('messages.sendFailed'));
+        return;
+      }
+      logicalSendRef.current = null;
+      setMessages((prev) => applyAcceptedSend(prev, result.data!, conversationId));
+      // Only clear the composer if the user has not started typing something new.
+      setDraft((current) => (current === draftAtSend ? '' : current));
+      setSendError(null);
+    } catch {
       setMessages((prev) => applyFailedSend(prev, clientMessageId));
-      return;
+      setSendError(t('messages.sendFailed'));
+    } finally {
+      sendLockRef.current.release();
+      setSending(false);
     }
-    setMessages((prev) => applyAcceptedSend(prev, result.data!, conversationId));
   };
 
   const onSend = async () => {
-    if (sendLockRef.current.held) return;
+    if (!sendLockRef.current.acquire()) return;
     const normalized = normalizeMessageBody(draft);
     if (!normalized.ok || !user?.id) {
-      if (!normalized.ok && normalized.error === 'too_long') setError(t('messages.tooLong'));
+      sendLockRef.current.release();
+      if (!normalized.ok && normalized.error === 'too_long') setSendError(t('messages.tooLong'));
+      return;
+    }
+    const draftAtSend = draft;
+    const pendingLogical = logicalSendRef.current;
+    if (pendingLogical && pendingLogical.body === normalized.body) {
+      // Same text as a send that was not acknowledged: retry it, same UUID.
+      const { clientMessageId } = pendingLogical;
+      setMessages((prev) =>
+        prev.map((row) =>
+          row.clientMessageId === clientMessageId
+            ? { ...row, localStatus: 'pending' }
+            : row,
+        ),
+      );
+      setSendError(null);
+      await send(clientMessageId, normalized.body, draftAtSend);
       return;
     }
     const outgoing = beginOutgoingMessage({
@@ -254,21 +354,27 @@ export default function MessageThreadScreen() {
       senderUserId: user.id,
       senderKind: 'worker',
       body: normalized.body,
-      clientMessageId: newClientMessageId(),
+      clientMessageId: newClientMessageId(createSecureClientMessageId),
       senderName: t('messages.you'),
     });
     if ('error' in outgoing) {
-      setError(t('messages.loadError'));
+      sendLockRef.current.release();
+      setSendError(t('messages.sendUnavailable'));
       return;
     }
+    logicalSendRef.current = {
+      clientMessageId: outgoing.clientMessageId,
+      body: normalized.body,
+    };
     setMessages((prev) => [...prev, outgoing.optimistic]);
-    setDraft('');
-    setError(null);
-    await send(outgoing.clientMessageId, normalized.body);
+    setSendError(null);
+    // Keep the draft until server acknowledgement (cleared in send on success).
+    await send(outgoing.clientMessageId, normalized.body, draftAtSend);
   };
 
   const onRetryMessage = async (message: LocalMessagingMessage) => {
-    if (sendLockRef.current.held) return;
+    if (!sendLockRef.current.acquire()) return;
+    setSendError(null);
     setMessages((prev) =>
       prev.map((row) =>
         row.clientMessageId === message.clientMessageId
@@ -276,7 +382,8 @@ export default function MessageThreadScreen() {
           : row,
       ),
     );
-    await send(message.clientMessageId, message.body);
+    // Same clientMessageId + body: one logical send, deduped server-side.
+    await send(message.clientMessageId, message.body, message.body);
   };
 
   const onToggleReaction = async (messageId: string, key: OrgWorkerReactionKey) => {
@@ -298,10 +405,15 @@ export default function MessageThreadScreen() {
       [messageId]: applyOptimisticReaction(prev[messageId], messageId, desired),
     }));
 
-    const result =
-      desired == null
-        ? await clearMessageReaction(messageId)
-        : await setMessageReaction(messageId, desired);
+    let result: { error: string | null; unavailable: boolean };
+    try {
+      result =
+        desired == null
+          ? await clearMessageReaction(messageId)
+          : await setMessageReaction(messageId, desired);
+    } catch {
+      result = { error: 'REACTION_FAILED', unavailable: false };
+    }
 
     if (reactionGenRef.current[messageId] !== generation) return;
 
@@ -361,6 +473,7 @@ export default function MessageThreadScreen() {
     }
     if (result.error) return result.error;
     setMessages([]);
+    logicalSendRef.current = null;
     navigateBack('/messages');
     return null;
   };
@@ -383,6 +496,7 @@ export default function MessageThreadScreen() {
         sending={sending}
         loading={isAppReviewDemo ? false : loading}
         error={isAppReviewDemo ? null : error}
+        sendError={isAppReviewDemo ? null : sendError}
         onRetryLoad={() => {
           setLoading(messages.length === 0);
           void load();

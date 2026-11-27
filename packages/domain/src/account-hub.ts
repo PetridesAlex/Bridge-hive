@@ -13,7 +13,7 @@ import {
   type CredentialSummary,
   type PayoutAccountStatusInput,
 } from './credential-requirements';
-import type { WorkerRole } from './types';
+import type { WorkerBillingStanding, WorkerRole } from './types';
 
 const OWNED_AVATAR_PATH =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[A-Za-z0-9._-]+\.(jpg|jpeg)$/i;
@@ -146,9 +146,118 @@ export function accountSetupMenuTrailingStatus(params: {
   });
 }
 
+export type BillingStandingPresentationKind =
+  | 'loading'
+  | 'unavailable'
+  | 'restricted'
+  | 'good_standing'
+  | 'sandbox_restricted'
+  | 'sandbox_good_standing';
+
+export type BillingStandingPresentation = {
+  kind: BillingStandingPresentationKind;
+  label: string;
+  tone: 'success' | 'danger' | 'info' | 'neutral';
+  solid: boolean;
+  pulse: boolean;
+};
+
+export function normalizeWorkerBillingStanding(
+  standing: string | null | undefined,
+): WorkerBillingStanding | null {
+  if (standing === 'good_standing' || standing === 'restricted') return standing;
+  return null;
+}
+
+/**
+ * Live marketplace pause follows the authorized standing RPC — including when
+ * the client payment lane is sandbox. Never invent good_standing to hide debt.
+ */
+export function marketplacePausedForLiveBillingStanding(
+  standing: string | null | undefined,
+): boolean {
+  return normalizeWorkerBillingStanding(standing) === 'restricted';
+}
+
+/**
+ * Sandbox TEST invoice payment eligibility is independent of live standing.
+ * Paying a sandbox invoice never clears a production commission obligation.
+ */
+export function sandboxPaymentEligibilityIndependentOfLiveStanding(): boolean {
+  return true;
+}
+
+/**
+ * Present worker billing standing for profile / account surfaces.
+ * Sandbox payment mode must still show real live standing (or unavailable) —
+ * never an unqualified "Good standing" that implies production debt is cleared.
+ */
+export function presentWorkerBillingStanding(input: {
+  paymentsMode: 'sandbox' | 'live';
+  standing: string | null | undefined;
+  readFailed?: boolean;
+  loading?: boolean;
+}): BillingStandingPresentation {
+  const standing = normalizeWorkerBillingStanding(input.standing);
+  if (input.loading && !standing && !input.readFailed) {
+    return {
+      kind: 'loading',
+      label: 'Checking billing…',
+      tone: 'neutral',
+      solid: false,
+      pulse: false,
+    };
+  }
+  if (input.readFailed || !standing) {
+    return {
+      kind: 'unavailable',
+      label: 'Billing status unavailable',
+      tone: 'neutral',
+      solid: false,
+      pulse: false,
+    };
+  }
+  if (input.paymentsMode === 'sandbox') {
+    if (standing === 'restricted') {
+      return {
+        kind: 'sandbox_restricted',
+        label: 'Live standing · restricted',
+        tone: 'danger',
+        solid: true,
+        pulse: false,
+      };
+    }
+    return {
+      kind: 'sandbox_good_standing',
+      label: 'Live standing clear · sandbox payments',
+      tone: 'info',
+      solid: false,
+      pulse: false,
+    };
+  }
+  if (standing === 'restricted') {
+    return {
+      kind: 'restricted',
+      label: 'Billing restricted',
+      tone: 'danger',
+      solid: true,
+      pulse: false,
+    };
+  }
+  return {
+    kind: 'good_standing',
+    label: 'Good standing',
+    tone: 'success',
+    solid: true,
+    pulse: true,
+  };
+}
+
 export function billingStandingLabel(
   standing: 'good_standing' | 'restricted' | string | null | undefined,
 ): string {
-  if (standing === 'restricted') return 'Billing restricted';
-  return 'Good standing';
+  return presentWorkerBillingStanding({
+    paymentsMode: 'live',
+    standing,
+  }).label;
 }

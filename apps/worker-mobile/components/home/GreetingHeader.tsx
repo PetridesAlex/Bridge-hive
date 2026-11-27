@@ -7,7 +7,6 @@ import Animated, {
   Easing,
   FadeIn,
   FadeInDown,
-  FadeInRight,
   ZoomIn,
   interpolate,
   interpolateColor,
@@ -24,7 +23,7 @@ import Animated, {
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { AppMenuDrawer } from '@/components/navigation/AppMenuDrawer';
 import { Avatar } from '@/components/ui/Avatar';
-import { colors, motion, spacing, typography } from '@/constants/theme';
+import { colors, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useTranslation } from '@/i18n/locale-provider';
 import { formatDate, greetingForNow } from '@/utils/format';
@@ -54,12 +53,57 @@ const GREETING_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   'Good evening': 'moon',
 };
 
+/** Staggered letters on load — skipped when Reduce Motion is on. */
+function StaggeredDisplayName({
+  text,
+  style,
+  reduced,
+  delay = 140,
+  step = 28,
+  a11yRole = true,
+}: {
+  text: string;
+  style: object;
+  reduced: boolean;
+  delay?: number;
+  step?: number;
+  a11yRole?: boolean;
+}) {
+  if (reduced || !text) {
+    return (
+      <Text style={style} numberOfLines={1}>
+        {text}
+      </Text>
+    );
+  }
+  return (
+    <View
+      style={styles.nameRow}
+      accessibilityRole={a11yRole ? 'text' : undefined}
+      accessibilityLabel={text}
+    >
+      {text.split('').map((ch, i) => (
+        <Animated.Text
+          key={`n-${i}-${ch}`}
+          entering={FadeInDown.delay(delay + i * step)
+            .springify()
+            .damping(15)
+            .stiffness(180)}
+          style={style}
+        >
+          {ch === ' ' ? '\u00A0' : ch}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
+
 type HeaderButtonProps = {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
   count?: number;
-  tone?: 'default' | 'money' | 'danger';
+  tone?: 'default' | 'money' | 'danger' | 'messages';
   /** Gently rings the icon on mount and every few seconds (alerts only). */
   ring?: boolean;
 };
@@ -128,7 +172,16 @@ function HeaderButton({
     transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.55]) }],
   }));
 
-  const tint = hasAlert ? styles.chromeBtnAlert : null;
+  const tint = hasAlert
+    ? styles.chromeBtnAlert
+    : tone === 'messages'
+      ? styles.chromeBtnMessages
+      : null;
+  const iconColor = hasAlert
+    ? colors.navy
+    : tone === 'messages'
+      ? '#B8F0EC'
+      : colors.white;
 
   return (
     <Animated.View style={shell}>
@@ -154,11 +207,7 @@ function HeaderButton({
         style={[styles.chromeBtn, tint]}
       >
         <Animated.View style={iconStyle}>
-          <Ionicons
-            name={icon}
-            size={20}
-            color={hasAlert ? colors.navy : colors.white}
-          />
+          <Ionicons name={icon} size={20} color={iconColor} />
         </Animated.View>
         {hasAlert ? (
           <Animated.View
@@ -205,6 +254,10 @@ export function GreetingHeader({
   const greetingReveal = useSharedValue(reduced ? 1 : 0);
   const nameReveal = useSharedValue(reduced ? 1 : 0);
   const nameRule = useSharedValue(reduced ? 1 : 0);
+  const brandLogo = useSharedValue(reduced ? 1 : 0);
+  const brandNameReveal = useSharedValue(reduced ? 1 : 0);
+  const brandTagReveal = useSharedValue(reduced ? 1 : 0);
+  const logoIdle = useSharedValue(0);
   const wash = useSharedValue(0);
   const orb = useSharedValue(0);
   const localScroll = useSharedValue(0);
@@ -256,30 +309,77 @@ export function GreetingHeader({
 
   useEffect(() => {
     if (reduced) {
+      brandLogo.value = 1;
+      brandNameReveal.value = 1;
+      brandTagReveal.value = 1;
+      logoIdle.value = 0;
       greetingReveal.value = 1;
       nameReveal.value = 1;
       nameRule.value = 1;
       return;
     }
+    brandLogo.value = 0;
+    brandNameReveal.value = 0;
+    brandTagReveal.value = 0;
+    logoIdle.value = 0;
     greetingReveal.value = 0;
     nameReveal.value = 0;
     nameRule.value = 0;
-    greetingReveal.value = withTiming(1, {
-      duration: motion.duration.normal,
-      easing: Easing.out(Easing.cubic),
-    });
-    nameReveal.value = withDelay(
-      90,
-      withSpring(1, { damping: 16, stiffness: 160 }),
+
+    // Brand bar leads the page: logo pops, wordmark letters stagger, tag fades in.
+    brandLogo.value = withSpring(1, { damping: 12, stiffness: 200 });
+    brandNameReveal.value = withDelay(
+      60,
+      withTiming(1, { duration: 380, easing: Easing.out(Easing.cubic) }),
     );
-    nameRule.value = withDelay(
-      220,
+    brandTagReveal.value = withDelay(
+      280,
+      withTiming(1, { duration: 360, easing: Easing.out(Easing.cubic) }),
+    );
+    logoIdle.value = withDelay(
+      520,
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+          withTiming(0, { duration: 2400, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
+        false,
+      ),
+    );
+
+    // Greeting line leads; name letters stagger via entering; rule finishes the beat.
+    greetingReveal.value = withDelay(
+      180,
       withTiming(1, {
-        duration: motion.duration.normal,
+        duration: 520,
         easing: Easing.out(Easing.cubic),
       }),
     );
-  }, [firstName, greeting, greetingReveal, nameReveal, nameRule, reduced]);
+    nameReveal.value = withDelay(
+      290,
+      withSpring(1, { damping: 15, stiffness: 150 }),
+    );
+    const ruleDelay = 360 + Math.min(firstName.length, 14) * 28;
+    nameRule.value = withDelay(
+      ruleDelay,
+      withTiming(1, {
+        duration: 420,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
+  }, [
+    brandLogo,
+    brandNameReveal,
+    brandTagReveal,
+    firstName,
+    greeting,
+    greetingReveal,
+    logoIdle,
+    nameReveal,
+    nameRule,
+    reduced,
+  ]);
 
   const haloStyle = useAnimatedStyle(() => ({
     opacity: reduced ? 0.7 : interpolate(glow.value, [0, 1], [0.45, 0.95]),
@@ -293,20 +393,22 @@ export function GreetingHeader({
   const greetingTextStyle = useAnimatedStyle(() => ({
     opacity: greetingReveal.value,
     transform: [
-      { translateX: interpolate(greetingReveal.value, [0, 1], [-10, 0]) },
-      { translateY: interpolate(greetingReveal.value, [0, 1], [4, 0]) },
+      { translateX: interpolate(greetingReveal.value, [0, 1], [-16, 0]) },
+      { translateY: interpolate(greetingReveal.value, [0, 1], [8, 0]) },
     ],
   }));
-  const nameTextStyle = useAnimatedStyle(() => ({
+  const greetingLabelStyle = useAnimatedStyle(() => ({
+    opacity: greetingReveal.value,
+    letterSpacing: interpolate(greetingReveal.value, [0, 1], [1.4, 0]),
+    transform: [{ translateY: interpolate(greetingReveal.value, [0, 1], [6, 0]) }],
+  }));
+  const nameShellStyle = useAnimatedStyle(() => ({
     opacity: nameReveal.value,
-    transform: [
-      { translateY: interpolate(nameReveal.value, [0, 1], [14, 0]) },
-      { scale: interpolate(nameReveal.value, [0, 1], [0.96, 1]) },
-    ],
+    transform: [{ translateY: interpolate(nameReveal.value, [0, 1], [10, 0]) }],
   }));
   const nameRuleStyle = useAnimatedStyle(() => ({
     opacity: nameRule.value,
-    transform: [{ scaleX: interpolate(nameRule.value, [0, 1], [0.2, 1]) }],
+    transform: [{ scaleX: interpolate(nameRule.value, [0, 1], [0.15, 1]) }],
   }));
   const washStyle = useAnimatedStyle(() => ({
     opacity: interpolate(wash.value, [0, 1], [0.18, 0.42]),
@@ -369,6 +471,37 @@ export function GreetingHeader({
     };
   });
 
+  const brandLogoStyle = useAnimatedStyle(() => {
+    const enter = brandLogo.value;
+    const idle = reduced ? 0 : logoIdle.value;
+    return {
+      opacity: enter,
+      transform: [
+        {
+          scale:
+            interpolate(enter, [0, 1], [0.55, 1]) *
+            interpolate(idle, [0, 1], [1, 1.045]),
+        },
+        { rotate: `${interpolate(enter, [0, 1], [-12, 0])}deg` },
+      ],
+    };
+  });
+
+  const brandNameShellStyle = useAnimatedStyle(() => ({
+    opacity: brandNameReveal.value,
+    transform: [
+      { translateX: interpolate(brandNameReveal.value, [0, 1], [-10, 0]) },
+      { translateY: interpolate(brandNameReveal.value, [0, 1], [4, 0]) },
+    ],
+  }));
+
+  const brandTagRevealStyle = useAnimatedStyle(() => ({
+    opacity: brandTagReveal.value,
+    transform: [
+      { translateY: interpolate(brandTagReveal.value, [0, 1], [6, 0]) },
+    ],
+  }));
+
   return (
     <View style={styles.wrap}>
       <Animated.View
@@ -393,10 +526,20 @@ export function GreetingHeader({
         </Animated.View>
 
         <View style={styles.brandBlock}>
-          <BridgeHiveMark size={48} />
+          <Animated.View style={brandLogoStyle}>
+            <BridgeHiveMark size={48} />
+          </Animated.View>
           <View style={styles.brandCopy}>
-            <Text style={styles.brandName}>Bridge Hive</Text>
-            <Animated.Text style={[styles.brandTag, brandTagStyle]}>
+            <Animated.View style={brandNameShellStyle}>
+              <StaggeredDisplayName
+                text="Bridge Hive"
+                style={styles.brandName}
+                reduced={reduced}
+                delay={40}
+                step={22}
+              />
+            </Animated.View>
+            <Animated.Text style={[styles.brandTag, brandTagStyle, brandTagRevealStyle]}>
               Worker workspace
             </Animated.Text>
           </View>
@@ -413,6 +556,7 @@ export function GreetingHeader({
               }
               onPress={() => router.push('/messages')}
               count={messageUnreadCount}
+              tone="messages"
               ring={messageUnreadCount > 0}
             />
           ) : null}
@@ -492,20 +636,31 @@ export function GreetingHeader({
             <View style={styles.textCol}>
               <Animated.View style={[styles.greetingRow, greetingTextStyle]}>
                 <Animated.View
-                  entering={reduced ? undefined : FadeInRight.delay(40).duration(320)}
+                  entering={reduced ? undefined : ZoomIn.delay(30).springify().damping(14)}
                 >
                   <Ionicons name={greetingIcon} size={15} color={colors.yellow} />
                 </Animated.View>
-                <Animated.Text style={styles.greeting} numberOfLines={1}>
+                <Animated.Text
+                  style={[styles.greeting, greetingLabelStyle]}
+                  numberOfLines={1}
+                >
                   {greeting},
                 </Animated.Text>
               </Animated.View>
-              <Animated.Text style={[styles.name, nameTextStyle]} numberOfLines={1}>
-                {firstName}
-              </Animated.Text>
+              <Animated.View style={[styles.nameShell, nameShellStyle]}>
+                <StaggeredDisplayName
+                  text={firstName}
+                  style={styles.name}
+                  reduced={reduced}
+                />
+              </Animated.View>
               <Animated.View style={[styles.nameRule, nameRuleStyle]} />
               <Animated.View
-                entering={reduced ? undefined : FadeInDown.delay(260).duration(360)}
+                entering={
+                  reduced
+                    ? undefined
+                    : FadeInDown.delay(220 + Math.min(firstName.length, 14) * 28).duration(380)
+                }
                 style={styles.metaRow}
               >
                 <View style={styles.roleStack}>
@@ -621,6 +776,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.14)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  chromeBtnMessages: {
+    backgroundColor: 'rgba(45, 168, 168, 0.28)',
+    borderColor: 'rgba(184, 240, 236, 0.35)',
   },
   chromeBtnAlert: {
     backgroundColor: colors.yellow,
@@ -814,6 +973,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 20,
     color: 'rgba(255,255,255,0.72)',
+  },
+  nameShell: {
+    maxWidth: '100%',
+    overflow: 'hidden',
+  },
+  nameRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'baseline',
+    maxWidth: '100%',
+    overflow: 'hidden',
   },
   name: {
     fontFamily: typography.fonts.displayExtra,

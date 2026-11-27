@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { isShiftUuid } from '@bridge-hive/domain';
+import { isRestorablePendingPushRoute } from '@bridge-hive/domain';
 
 const PENDING_KEY = 'bridgehive.push.pendingShiftRoute';
 const handledResponseIds = new Set<string>();
@@ -29,8 +29,11 @@ export function clearPendingShiftRoute() {
 export async function hydratePendingShiftRoute(): Promise<void> {
   const stored = await AsyncStorage.getItem(PENDING_KEY);
   if (!stored) return;
-  const shiftId = stored.replace(/^\/shifts\//, '');
-  if (stored.startsWith('/shifts/') && isShiftUuid(shiftId)) {
+  // Restore every push target (shift, batch list, message, invoice) — not only
+  // `/shifts/:uuid`. Drop arbitrary/foreign paths that may linger in storage.
+  if (isRestorablePendingPushRoute(stored)) {
     pendingRoute = stored;
+  } else {
+    void AsyncStorage.removeItem(PENDING_KEY);
   }
 }

@@ -484,9 +484,14 @@ export function privacyPolicyIsPublishable(): boolean {
   return PRIVACY_POLICY_PUBLISH_APPROVED;
 }
 
+function defaultProcessEnv(): Record<string, string | undefined> {
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
+  return proc?.env ?? {};
+}
+
 /** Hosted production must not serve the page while publication is turned off. */
 export function privacyPolicyIsBlockedHere(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = defaultProcessEnv(),
 ): boolean {
   return env.VERCEL_ENV === 'production' && !privacyPolicyIsPublishable();
 }

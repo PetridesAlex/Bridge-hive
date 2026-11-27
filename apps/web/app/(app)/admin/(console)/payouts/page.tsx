@@ -61,7 +61,7 @@ export default async function AdminPayoutReviewsPage() {
           {cards.map((card) => (
             <article
               key={card.workerId}
-              className="rounded-lg border border-slate-200 bg-white p-4"
+              className="rounded-lg border border-bh-border/80 bg-bh-surface p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>

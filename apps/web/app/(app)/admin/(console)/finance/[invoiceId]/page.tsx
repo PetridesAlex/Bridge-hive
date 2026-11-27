@@ -164,7 +164,7 @@ export default async function AdminFinanceInvoiceDetailPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="rounded-lg border border-bh-border/80 bg-bh-surface p-4">
           <h3 className="font-semibold text-slate-900">Context</h3>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
@@ -190,7 +190,7 @@ export default async function AdminFinanceInvoiceDetailPage({
           </dl>
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-4">
+        <section className="rounded-lg border border-bh-border/80 bg-bh-surface p-4">
           <h3 className="font-semibold text-slate-900">Financial snapshot</h3>
           <dl className="mt-3 space-y-2 text-sm">
             <div className="flex justify-between gap-4">
@@ -217,7 +217,7 @@ export default async function AdminFinanceInvoiceDetailPage({
         </section>
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-lg border border-bh-border/80 bg-bh-surface p-4">
         <h3 className="font-semibold text-slate-900">Provider references</h3>
         <p className="mt-1 text-xs text-slate-500">
           Visible only to authorized finance roles. Secrets and card data are never shown.
@@ -246,7 +246,7 @@ export default async function AdminFinanceInvoiceDetailPage({
         </dl>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-lg border border-bh-border/80 bg-bh-surface p-4">
         <h3 className="font-semibold text-slate-900">Provider events</h3>
         {(events ?? []).length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">No provider events yet.</p>
@@ -269,7 +269,7 @@ export default async function AdminFinanceInvoiceDetailPage({
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-lg border border-bh-border/80 bg-bh-surface p-4">
         <h3 className="font-semibold text-slate-900">Audit history</h3>
         {(audits ?? []).length === 0 ? (
           <p className="mt-2 text-sm text-slate-500">No audit events yet.</p>

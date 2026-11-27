@@ -306,7 +306,7 @@ export default async function VerificationApplicationWorkspacePage({
     <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <AdminBackLink href={backHref} label={backLabel} />
-        <header className="mt-4 overflow-hidden rounded-2xl border border-bh-border bg-bh-surface shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
+        <header className="mt-4 overflow-hidden rounded-2xl border border-bh-border bg-gradient-to-b from-bh-surface to-bh-subtle/25 shadow-[0_8px_28px_rgba(7,29,48,0.06)]">
           <div
             aria-hidden
             className="h-1 bg-gradient-to-r from-bh-sidebar via-bh-honey to-bh-sidebar"
@@ -329,11 +329,23 @@ export default async function VerificationApplicationWorkspacePage({
                 </h2>
                 <ApplicationStatusBadge status={applicationStatus} />
               </div>
-              <p className="mt-1 text-sm text-bh-text-secondary">
-                {role ? roleLabel(role) : 'Role not set'} · Ref{' '}
-                {workerId.replaceAll('-', '').slice(0, 8)}
-              </p>
-              <p className="mt-0.5 text-sm text-bh-text-muted">
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium tracking-tight text-bh-text">
+                  {role ? roleLabel(role) : 'Role not set'}
+                </span>
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-bh-sidebar/15 bg-gradient-to-b from-white to-bh-subtle/80 px-2.5 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]"
+                  title={`Worker reference ${workerId}`}
+                >
+                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-bh-honey-strong">
+                    Ref
+                  </span>
+                  <span className="font-mono text-[11px] font-semibold tracking-[0.12em] text-bh-sidebar">
+                    {workerId.replaceAll('-', '').slice(0, 8).toUpperCase()}
+                  </span>
+                </span>
+              </div>
+              <p className="mt-1 text-sm text-bh-text-muted">
                 {[profile?.phone].filter(Boolean).join(' · ') || 'No phone on file'}
               </p>
             </div>
@@ -377,7 +389,7 @@ export default async function VerificationApplicationWorkspacePage({
       </div>
 
       <Panel kicker="Status" title="Application header">
-        <dl className="grid gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border sm:grid-cols-2">
+        <dl className="grid gap-px overflow-hidden rounded-[1.1rem] border border-bh-border/80 bg-bh-border/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] sm:grid-cols-2">
           <StatusCell label="Account">
             <AccountStatusBadge status={profile?.account_status ?? 'active'} />
           </StatusCell>
@@ -391,36 +403,52 @@ export default async function VerificationApplicationWorkspacePage({
             <ApplicationStatusBadge status={applicationStatus} />
           </StatusCell>
           <StatusCell label="Payout account">
-            <span className="text-sm font-medium text-bh-text">
+            <StatusValue
+              tone={payoutAccount?.status === 'verified' ? 'success' : 'warning'}
+            >
               {payoutSummaryLabel(payoutAccount?.status as never)}
-            </span>
+            </StatusValue>
           </StatusCell>
           <StatusCell label="Last activity">
-            <span className="text-sm font-medium text-bh-text">
+            <time
+              dateTime={expectedLastActivity ?? undefined}
+              className="inline-flex items-center rounded-full border border-bh-sidebar/10 bg-bh-subtle/70 px-2.5 py-1 font-mono text-[12px] font-semibold tracking-wide text-bh-sidebar"
+            >
               {expectedLastActivity ? formatDateTime(expectedLastActivity) : '—'}
-            </span>
+            </time>
           </StatusCell>
         </dl>
       </Panel>
 
       <Panel kicker="Progress" title="Review progress">
-        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-bh-border bg-bh-border sm:grid-cols-3">
-          <Metric label="Required documents" value={requiredTotal} />
-          <Metric label="Approved" value={approved} />
-          <Metric label="Rejected" value={rejected} />
-          <Metric label="Awaiting review" value={awaiting} />
-          <Metric label="Optional documents" value={optionalCount} />
-          <div className="bg-bh-surface px-4 py-4">
-            <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[1.1rem] border border-bh-border/80 bg-bh-border/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] sm:grid-cols-3">
+          <Metric label="Required documents" value={requiredTotal} tone="navy" />
+          <Metric label="Approved" value={approved} tone="success" />
+          <Metric label="Rejected" value={rejected} tone="danger" />
+          <Metric label="Awaiting review" value={awaiting} tone="warning" />
+          <Metric label="Optional documents" value={optionalCount} tone="info" />
+          <div className="group relative overflow-hidden bg-gradient-to-b from-bh-surface to-bh-subtle/40 px-4 py-4 transition duration-300 hover:to-bh-honey-soft/30 motion-reduce:transition-none">
+            <span
+              aria-hidden
+              className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-bh-honey opacity-80 transition group-hover:opacity-100"
+            />
+            <dt className="pl-2 text-[10px] font-bold uppercase tracking-[0.14em] text-bh-text-muted">
               Payout
             </dt>
-            <dd className="mt-1 text-sm font-semibold text-bh-text">
-              {payoutAccountStatusLabel(payoutAccount?.status)}
+            <dd className="mt-2 pl-2">
+              <StatusValue
+                tone={payoutAccount?.status === 'verified' ? 'success' : 'warning'}
+              >
+                {payoutAccountStatusLabel(payoutAccount?.status)}
+              </StatusValue>
             </dd>
           </div>
         </dl>
-        <p className="mt-3 text-xs text-bh-text-muted">
-          Last refreshed {formatDateTime(refreshedAt)}
+        <p className="mt-3 text-[11px] font-medium tracking-wide text-bh-text-muted">
+          Last refreshed{' '}
+          <span className="font-mono text-bh-text-secondary">
+            {formatDateTime(refreshedAt)}
+          </span>
         </p>
       </Panel>
 
@@ -1416,6 +1444,33 @@ function checklistVisual(status: DocumentChecklistItemStatus): {
   }
 }
 
+function StatusValue({
+  children,
+  tone = 'muted',
+}: {
+  children: React.ReactNode;
+  tone?: 'success' | 'warning' | 'danger' | 'info' | 'muted';
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em]',
+        tone === 'success' &&
+          'border-emerald-700/35 bg-emerald-700 text-white shadow-[0_1px_0_rgba(255,255,255,0.14)_inset]',
+        tone === 'warning' &&
+          'border-amber-700/40 bg-[#C47A00] text-white shadow-[0_1px_0_rgba(255,255,255,0.16)_inset]',
+        tone === 'danger' &&
+          'border-red-800/35 bg-[#B42318] text-white shadow-[0_1px_0_rgba(255,255,255,0.12)_inset]',
+        tone === 'info' &&
+          'border-sky-800/30 bg-[#0C5EAE] text-white shadow-[0_1px_0_rgba(255,255,255,0.14)_inset]',
+        tone === 'muted' && 'border-bh-sidebar/12 bg-bh-subtle text-bh-sidebar',
+      )}
+    >
+      <span className="truncate">{children}</span>
+    </span>
+  );
+}
+
 function StatusCell({
   label,
   children,
@@ -1424,22 +1479,52 @@ function StatusCell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-bh-surface px-4 py-3">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+    <div className="group bg-gradient-to-b from-bh-surface to-bh-subtle/25 px-4 py-3.5 transition duration-300 hover:to-bh-teal-soft/20 motion-reduce:transition-none">
+      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-bh-text-muted transition group-hover:text-bh-teal-strong">
         {label}
       </p>
-      <div className="mt-1.5">{children}</div>
+      <div className="mt-2">{children}</div>
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({
+  label,
+  value,
+  tone = 'navy',
+}: {
+  label: string;
+  value: number;
+  tone?: 'navy' | 'success' | 'warning' | 'danger' | 'info';
+}) {
   return (
-    <div className="bg-bh-surface px-4 py-4">
-      <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-bh-text-muted">
+    <div className="group relative overflow-hidden bg-gradient-to-b from-bh-surface to-bh-subtle/35 px-4 py-4 transition duration-300 hover:to-bh-teal-soft/25 motion-reduce:transition-none">
+      <span
+        aria-hidden
+        className={cn(
+          'absolute inset-y-3 left-0 w-0.5 rounded-full opacity-80 transition group-hover:opacity-100',
+          tone === 'navy' && 'bg-bh-sidebar',
+          tone === 'success' && 'bg-emerald-600',
+          tone === 'warning' && 'bg-[#C47A00]',
+          tone === 'danger' && 'bg-[#B42318]',
+          tone === 'info' && 'bg-[#0C5EAE]',
+        )}
+      />
+      <dt className="pl-2 text-[10px] font-bold uppercase tracking-[0.14em] text-bh-text-muted">
         {label}
       </dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums text-bh-text">{value}</dd>
+      <dd
+        className={cn(
+          'mt-1.5 pl-2 text-[1.65rem] font-semibold tabular-nums tracking-tight transition duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0',
+          tone === 'navy' && 'text-bh-sidebar',
+          tone === 'success' && 'text-emerald-700',
+          tone === 'warning' && 'text-[#9A5F00]',
+          tone === 'danger' && 'text-[#B42318]',
+          tone === 'info' && 'text-[#0C5EAE]',
+        )}
+      >
+        {value}
+      </dd>
     </div>
   );
 }

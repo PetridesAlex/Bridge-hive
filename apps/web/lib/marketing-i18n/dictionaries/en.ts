@@ -11,6 +11,7 @@ export const en = {
     organizations: 'Organizations',
     professionals: 'Professionals',
     recruitment: 'Recruitment',
+    recruitmentKicker: 'Featured pathway',
     howItWorks: 'How it works',
     about: 'About',
     contact: 'Contact',
@@ -210,7 +211,7 @@ export const en = {
     },
     hiw: {
       eyebrow: 'How it works',
-      title: 'From opening to settlement',
+      title: 'From opening to',
       titleAccent: 'settlement',
       lede:
         'A concise view of the shared operational loop — then the two detailed paths below.',

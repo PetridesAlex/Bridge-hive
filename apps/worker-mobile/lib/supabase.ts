@@ -5,19 +5,14 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@bridge-hive/supabase-types';
 import { AppState, Platform, type AppStateStatus } from 'react-native';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
-const supabasePublishableKey =
-  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-  // Placeholder allows Metro/typecheck without local secrets; real calls need a valid key.
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid';
+// No localhost, placeholder-key or production fallback: a missing project config
+// must fail loudly instead of silently pointing the app at the wrong backend.
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-if (
-  !process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY &&
-  typeof __DEV__ !== 'undefined' &&
-  __DEV__
-) {
-  console.warn(
-    '[supabase] EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY is missing. Auth and data calls will fail until it is set in apps/worker-mobile/.env',
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error(
+    '[supabase] EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY missing. Set them in apps/worker-mobile/.env (gitignored) and restart Metro with --clear.',
   );
 }
 

@@ -436,20 +436,20 @@ describe('worker password recovery — source contracts', () => {
     expect(src).toMatch(/workerRecoveryResendCooldown/);
     expect(src).toMatch(/accessibilityLabel/);
     expect(src).toMatch(/accessibilityLiveRegion/);
-    expect(src).toMatch(/Back to sign in/);
+    expect(src).toMatch(/auth\.backToSignIn/);
     expect(src).not.toMatch(/console\.(log|debug|info)/);
   });
 
   it('mobile reset requires explicit confirm before verifyOtp', async () => {
     const screen = await read(mobileRoot, 'app/auth/worker/reset-password.tsx');
     const auth = await read(mobileRoot, 'providers/AuthProvider.tsx');
-    expect(screen).toMatch(/Continue password reset/);
+    expect(screen).toMatch(/auth\.continuePasswordReset/);
     expect(screen).toMatch(/confirmRecoveryOtp/);
-    expect(screen).toMatch(/Use at least \$\{WORKER_RECOVERY_PASSWORD_MIN_LENGTH\} characters/);
-    expect(screen).toMatch(/Passwords match/);
-    expect(screen).toMatch(/Back to sign in/);
-    expect(screen).toMatch(/Request a new reset link/);
-    expect(screen).toMatch(/Continue to sign in/);
+    expect(screen).toMatch(/auth\.passwordMinChars/);
+    expect(screen).toMatch(/auth\.passwordsMatch/);
+    expect(screen).toMatch(/auth\.backToSignIn/);
+    expect(screen).toMatch(/auth\.requestNewResetLink/);
+    expect(screen).toMatch(/auth\.continueToSignIn/);
     expect(auth).toMatch(/verifyOtp/);
     expect(auth).toMatch(/type:\s*['"]recovery['"]/);
     expect(auth).toMatch(/parseWorkerRecoveryUrl/);

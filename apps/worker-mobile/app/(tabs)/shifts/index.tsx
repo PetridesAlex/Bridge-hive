@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { WORKER_ROLE_LABELS, WORKER_ROLE_LABELS_EL } from '@bridge-hive/domain';
 
 import { BillingRestrictionBanner } from '@/components/invoices/BillingRestrictionBanner';
@@ -40,6 +40,9 @@ export default function ShiftsScreen() {
     isAppReviewDemo,
   } = useShifts();
   const { t, language } = useTranslation();
+  const params = useLocalSearchParams<{ filter?: string | string[] }>();
+  const filterRaw = Array.isArray(params.filter) ? params.filter[0] : params.filter;
+  const showNewFilter = filterRaw === 'new';
   const { summary, isRestricted, refresh: refreshBilling } = useBillingRestriction(
     isVerified && !isAppReviewDemo,
   );
@@ -52,15 +55,36 @@ export default function ShiftsScreen() {
       : t('roles.worker');
 
   const rows = useMemo(() => {
+    const ordered = showNewFilter
+      ? [...shifts].sort((a, b) => {
+          const aCreated = a.created_at ? Date.parse(a.created_at) : 0;
+          const bCreated = b.created_at ? Date.parse(b.created_at) : 0;
+          if (bCreated !== aCreated) return bCreated - aCreated;
+          return Date.parse(a.starts_at) - Date.parse(b.starts_at);
+        })
+      : shifts;
+
     const byDate = new Map<string, MarketplaceShift[]>();
-    for (const shift of shifts) {
+    for (const shift of ordered) {
       const key = isoDateFromTimestamp(shift.starts_at);
       const list = byDate.get(key) ?? [];
       list.push(shift);
       byDate.set(key, list);
     }
     const out: Row[] = [];
-    const dates = [...byDate.keys()].sort();
+    // Newest-published batches: day groups ordered by the newest created_at in
+    // each day. Default marketplace: chronological start dates.
+    const dates = showNewFilter
+      ? [...byDate.keys()].sort((a, b) => {
+          const newest = (iso: string) =>
+            Math.max(
+              ...(byDate.get(iso) ?? []).map((s) =>
+                s.created_at ? Date.parse(s.created_at) : 0,
+              ),
+            );
+          return newest(b) - newest(a);
+        })
+      : [...byDate.keys()].sort();
     dates.forEach((iso, group) => {
       const list = byDate.get(iso) ?? [];
       out.push({ type: 'header', key: `h-${iso}`, iso, count: list.length, group });
@@ -75,7 +99,7 @@ export default function ShiftsScreen() {
       });
     });
     return out;
-  }, [shifts]);
+  }, [shifts, showNewFilter]);
 
   const onRefresh = () => {
     void refresh();
@@ -123,6 +147,14 @@ export default function ShiftsScreen() {
             <AppReviewDemoBanner />
           </View>
         ) : null}
+        {showNewFilter ? (
+          <Banner
+            variant="info"
+            title={t('shifts.newFilterTitle')}
+            body={t('shifts.newFilterBody')}
+            style={styles.banner}
+          />
+        ) : null}
         {offline ? (
           <Banner
             variant="warning"
@@ -138,7 +170,7 @@ export default function ShiftsScreen() {
         ) : null}
       </View>
     ),
-    [isAppReviewDemo, isRestricted, isVerified, offline, summary, t],
+    [isAppReviewDemo, isRestricted, isVerified, offline, showNewFilter, summary, t],
   );
 
   return (

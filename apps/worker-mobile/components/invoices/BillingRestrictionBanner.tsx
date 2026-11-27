@@ -3,7 +3,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -18,6 +23,59 @@ const SIDEBAR_MUTED = '#91A8B5';
 type Props = {
   summary: BillingRestrictionSummary;
 };
+
+function ActionButton({
+  label,
+  icon,
+  onPress,
+  variant,
+  reduced,
+}: {
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  variant: 'primary' | 'ghost';
+  reduced: boolean;
+}) {
+  const scale = useSharedValue(1);
+  const shell = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={shell}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={onPress}
+        onPressIn={() => {
+          if (!reduced) scale.value = withSpring(0.96, { damping: 16, stiffness: 420 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 280 });
+        }}
+        style={variant === 'primary' ? styles.actionPrimary : styles.actionGhost}
+      >
+        {variant === 'primary' ? (
+          <LinearGradient
+            colors={[colors.yellow, '#F0C14D']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.actionPrimaryFill}
+          >
+            <Ionicons name={icon} size={14} color={colors.navy} />
+            <Text style={styles.actionPrimaryText}>{label}</Text>
+          </LinearGradient>
+        ) : (
+          <>
+            <Ionicons name={icon} size={14} color={SIDEBAR_TEXT} />
+            <Text style={styles.actionGhostText}>{label}</Text>
+          </>
+        )}
+      </Pressable>
+    </Animated.View>
+  );
+}
 
 /**
  * High-priority billing restriction bar.
@@ -76,32 +134,31 @@ export function BillingRestrictionBanner({ summary }: Props) {
       </Pressable>
 
       {open ? (
-        <View style={styles.panel}>
+        <Animated.View
+          entering={reduced ? undefined : FadeInDown.duration(240)}
+          style={styles.panel}
+        >
           <Text style={styles.body}>
-            Outstanding invoices must be settled before claiming new shifts. Your
-            current assignments remain unaffected.
+            Settle invoices — then claim new shifts.{'\n'}
+            Current assignments — unaffected.
           </Text>
           <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="View invoices"
+            <ActionButton
+              label="Pay now"
+              icon="card-outline"
               onPress={goInvoices}
-              style={({ pressed }) => [styles.actionPrimary, pressed && styles.actionPressed]}
-            >
-              <Ionicons name="document-text-outline" size={15} color={colors.navy} />
-              <Text style={styles.actionPrimaryText}>View invoices</Text>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Pay now"
+              variant="primary"
+              reduced={reduced}
+            />
+            <ActionButton
+              label="View invoices"
+              icon="document-text-outline"
               onPress={goInvoices}
-              style={({ pressed }) => [styles.actionSecondary, pressed && styles.actionPressed]}
-            >
-              <Ionicons name="card-outline" size={15} color={colors.white} />
-              <Text style={styles.actionSecondaryText}>Pay now</Text>
-            </Pressable>
+              variant="ghost"
+              reduced={reduced}
+            />
           </View>
-        </View>
+        </Animated.View>
       ) : null}
     </Animated.View>
   );
@@ -115,7 +172,7 @@ const styles = StyleSheet.create({
     backgroundColor: SIDEBAR,
   },
   accentBar: {
-    height: 4,
+    height: 3,
   },
   bar: {
     flexDirection: 'row',
@@ -155,54 +212,60 @@ const styles = StyleSheet.create({
   panel: {
     paddingHorizontal: 14,
     paddingBottom: 14,
-    paddingTop: 12,
-    gap: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    paddingTop: 10,
+    gap: 14,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
   body: {
     fontFamily: typography.fonts.regular,
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 20,
+    letterSpacing: 0.1,
     color: SIDEBAR_TEXT,
     paddingLeft: 48,
   },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
     paddingLeft: 48,
   },
   actionPrimary: {
-    minHeight: 40,
     borderRadius: radii.full,
+    overflow: 'hidden',
+  },
+  actionPrimaryFill: {
+    minHeight: 38,
     paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.yellow,
+    gap: 7,
   },
   actionPrimaryText: {
     fontFamily: typography.fonts.semibold,
     fontSize: 13,
+    letterSpacing: 0.2,
     color: colors.navy,
   },
-  actionSecondary: {
-    minHeight: 40,
+  actionGhost: {
+    minHeight: 38,
     borderRadius: radii.full,
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    gap: 7,
+    backgroundColor: 'transparent',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(220, 232, 238, 0.28)',
   },
-  actionSecondaryText: {
-    fontFamily: typography.fonts.semibold,
+  actionGhostText: {
+    fontFamily: typography.fonts.medium,
     fontSize: 13,
-    color: colors.white,
-  },
-  actionPressed: {
-    opacity: 0.88,
+    letterSpacing: 0.15,
+    color: SIDEBAR_TEXT,
   },
 });

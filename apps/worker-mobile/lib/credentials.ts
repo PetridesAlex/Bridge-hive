@@ -1,6 +1,7 @@
 import {
   canWorkerEditCredentialFile,
   credentialExpiryIsValid,
+  credentialExtensionForMime,
   credentialPayloadPresent,
   credentialRequiresKnownExpiry,
   credentialRequirementsForRole,
@@ -19,6 +20,12 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 
+import {
+  classifyCredentialUploadError,
+  prepareCredentialFile,
+  type CredentialUploadFailureCode,
+  type PreparedCredentialFile,
+} from '@/lib/credential-file';
 import { supabase } from '@/lib/supabase';
 
 export type Credential = Tables<'credentials'>;
@@ -33,6 +40,32 @@ export type ChecklistRow = CredentialRequirement & {
   hasFile: boolean;
   inputKind: 'file' | 'text';
 };
+
+export type CredentialPickResult =
+  | {
+      ok: true;
+      uri: string;
+      mimeType: string;
+      sizeBytes: number;
+      fileName: string;
+      prepared: PreparedCredentialFile;
+    }
+  | {
+      ok: false;
+      error: string;
+      cancelled?: boolean;
+      code?: CredentialUploadFailureCode;
+    };
+
+export type CredentialUploadStage =
+  | 'idle'
+  | 'selecting'
+  | 'validating'
+  | 'preparing'
+  | 'uploading'
+  | 'saving'
+  | 'done'
+  | 'failed';
 
 export function hasStoredFile(credential: Credential | null): boolean {
   if (!credential) return false;
@@ -72,6 +105,20 @@ function pickPreferredCredential(
   return [...matches].sort((a, b) => rank(b.status) - rank(a.status))[0] ?? null;
 }
 
+/**
+ * Pending checklist rows with a saved payload that should go in a batch submit.
+ * Includes optional credentials such as CV when the worker uploaded them.
+ */
+export function credentialsReadyForBatchSubmit<T extends {
+  credential: ChecklistRow['credential'];
+  itemStatus: ChecklistRow['itemStatus'];
+}>(rows: T[]): T[] {
+  return rows.filter(
+    (row) =>
+      row.credential?.status === 'pending' && row.itemStatus === 'draft',
+  );
+}
+
 export function buildCredentialChecklist(params: {
   role: WorkerRole | null | undefined;
   credentials: Credential[];
@@ -106,12 +153,6 @@ export function buildCredentialChecklist(params: {
       inputKind,
     };
   });
-}
-
-function extensionForMime(mime: string): string {
-  if (mime === 'application/pdf') return 'pdf';
-  if (mime === 'image/png') return 'png';
-  return 'jpg';
 }
 
 function randomObjectId(): string {
@@ -161,102 +202,151 @@ export function resolveCredentialExpiresAt(params: {
   return { expiresAt };
 }
 
-async function readFileAsArrayBuffer(uri: string): Promise<ArrayBuffer> {
-  const response = await fetch(uri);
-  if (!response.ok) {
-    throw new Error('Could not read the selected file.');
+const DOCUMENT_PICKER_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+] as const;
+
+async function finalizePick(params: {
+  uri: string;
+  mimeType?: string | null;
+  sizeBytes?: number | null;
+  fileName?: string | null;
+}): Promise<CredentialPickResult> {
+  const prepared = await prepareCredentialFile(params);
+  if (!prepared.ok) {
+    return {
+      ok: false,
+      error: prepared.error,
+      code: prepared.code,
+    };
   }
-  return response.arrayBuffer();
-}
-
-export async function pickCredentialFile(): Promise<
-  | {
-      ok: true;
-      uri: string;
-      mimeType: string;
-      sizeBytes: number;
-      fileName: string;
-    }
-  | { ok: false; error: string; cancelled?: boolean }
-> {
-  const result = await DocumentPicker.getDocumentAsync({
-    type: ['application/pdf', 'image/jpeg', 'image/png'],
-    copyToCacheDirectory: true,
-    multiple: false,
-  });
-
-  if (result.canceled || !result.assets?.[0]) {
-    return { ok: false, error: 'Selection cancelled', cancelled: true };
-  }
-
-  const asset = result.assets[0];
-  const mimeType = asset.mimeType ?? 'application/octet-stream';
-  const sizeBytes = asset.size ?? 0;
-  const validation = validateCredentialUpload({ mimeType, sizeBytes });
-  if (!validation.ok) {
-    return { ok: false, error: validation.error };
-  }
-
+  const ext = credentialExtensionForMime(prepared.file.mimeType);
+  const base = prepared.file.displayName.replace(/\.[^.]+$/, '');
   return {
     ok: true,
-    uri: asset.uri,
-    mimeType,
-    sizeBytes,
-    fileName: asset.name || `document.${extensionForMime(mimeType)}`,
+    uri: prepared.file.uri,
+    mimeType: prepared.file.mimeType,
+    sizeBytes: prepared.file.sizeBytes,
+    fileName: `${base || 'document'}.${ext}`,
+    prepared: prepared.file,
   };
 }
 
-export async function pickCredentialImage(): Promise<
-  | {
-      ok: true;
-      uri: string;
-      mimeType: string;
-      sizeBytes: number;
-      fileName: string;
+export async function pickCredentialFile(): Promise<CredentialPickResult> {
+  try {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: [...DOCUMENT_PICKER_TYPES],
+      copyToCacheDirectory: true,
+      multiple: false,
+    });
+
+    if (result.canceled || !result.assets?.[0]) {
+      return { ok: false, error: 'Selection cancelled', cancelled: true, code: 'cancelled' };
     }
-  | { ok: false; error: string; cancelled?: boolean }
-> {
-  // Web uses a file input; native needs an explicit media-library grant.
-  if (Platform.OS !== 'web') {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    const asset = result.assets[0];
+    return finalizePick({
+      uri: asset.uri,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.size,
+      fileName: asset.name,
+    });
+  } catch (err) {
+    const classified = classifyCredentialUploadError(err);
+    return { ok: false, error: classified.message, code: classified.code };
+  }
+}
+
+export async function pickCredentialImage(): Promise<CredentialPickResult> {
+  try {
+    if (Platform.OS !== 'web') {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        return {
+          ok: false,
+          error: 'Photo library permission is required.',
+          code: 'permission',
+        };
+      }
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+      allowsMultipleSelection: false,
+    });
+
+    if (result.canceled || !result.assets?.[0]) {
+      return { ok: false, error: 'Selection cancelled', cancelled: true, code: 'cancelled' };
+    }
+
+    const asset = result.assets[0];
+    return finalizePick({
+      uri: asset.uri,
+      mimeType: asset.mimeType,
+      sizeBytes: asset.fileSize,
+      fileName: asset.fileName ?? `photo.${credentialExtensionForMime(asset.mimeType ?? 'image/jpeg')}`,
+    });
+  } catch (err) {
+    const classified = classifyCredentialUploadError(err);
+    return { ok: false, error: classified.message, code: classified.code };
+  }
+}
+
+export async function pickCredentialCamera(): Promise<CredentialPickResult> {
+  if (Platform.OS === 'web') {
+    return {
+      ok: false,
+      error: 'Camera capture is not available on web. Choose a photo or upload a file.',
+      code: 'unsupported_type',
+    };
+  }
+
+  try {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      return { ok: false, error: 'Photo library permission is required.' };
+      return {
+        ok: false,
+        error: 'Camera permission is required.',
+        code: 'permission',
+      };
     }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+      allowsEditing: false,
+    });
+
+    if (result.canceled || !result.assets?.[0]) {
+      return { ok: false, error: 'Selection cancelled', cancelled: true, code: 'cancelled' };
+    }
+
+    const asset = result.assets[0];
+    return finalizePick({
+      uri: asset.uri,
+      mimeType: asset.mimeType ?? 'image/jpeg',
+      sizeBytes: asset.fileSize,
+      fileName: asset.fileName ?? 'camera.jpg',
+    });
+  } catch (err) {
+    const classified = classifyCredentialUploadError(err);
+    return { ok: false, error: classified.message, code: classified.code };
   }
-
-  const result = await ImagePicker.launchImageLibraryAsync({
-    mediaTypes: ['images'],
-    quality: 1,
-    allowsMultipleSelection: false,
-  });
-
-  if (result.canceled || !result.assets?.[0]) {
-    return { ok: false, error: 'Selection cancelled', cancelled: true };
-  }
-
-  const asset = result.assets[0];
-  const mimeType = asset.mimeType ?? 'image/jpeg';
-  const sizeBytes = asset.fileSize ?? 0;
-  const validation = validateCredentialUpload({
-    mimeType,
-    sizeBytes: sizeBytes || 1,
-  });
-  if (!validation.ok) {
-    return { ok: false, error: validation.error };
-  }
-
-  return {
-    ok: true,
-    uri: asset.uri,
-    mimeType,
-    sizeBytes: sizeBytes || 1,
-    fileName: asset.fileName || `image.${extensionForMime(mimeType)}`,
-  };
 }
 
 /**
  * Upload a credential document for the authenticated worker.
  * Authorization uses auth.uid() at Storage/RLS — never trust a client worker ID.
+ *
+ * Replacement uploads a new unique object first; metadata switches only after
+ * upload succeeds. On metadata failure the new object is removed and the prior
+ * reference is retained.
  */
 export async function uploadCredentialDocument(params: {
   credentialType: string;
@@ -266,28 +356,56 @@ export async function uploadCredentialDocument(params: {
   fileName: string;
   existingCredential?: Credential | null;
   expiresAtYmd?: string | null;
-}): Promise<{ data: Credential | null; error?: string }> {
+  /** Optional pre-read body from prepareCredentialFile to avoid a second read. */
+  prepared?: PreparedCredentialFile | null;
+  onStage?: (stage: CredentialUploadStage) => void;
+}): Promise<{ data: Credential | null; error?: string; code?: CredentialUploadFailureCode }> {
+  const report = (stage: CredentialUploadStage) => {
+    params.onStage?.(stage);
+  };
+
   if (isTextCredentialType(params.credentialType)) {
     return {
       data: null,
       error: 'This requirement is entered as text, not a file upload.',
+      code: 'unsupported_type',
     };
   }
 
-  const validation = validateCredentialUpload({
-    mimeType: params.mimeType,
-    sizeBytes: params.sizeBytes,
-  });
-  if (!validation.ok) {
-    return { data: null, error: validation.error };
-  }
+  report('validating');
 
   const expiry = resolveCredentialExpiresAt({
     credentialType: params.credentialType,
     expiresAtYmd: params.expiresAtYmd,
   });
   if ('error' in expiry) {
-    return { data: null, error: expiry.error };
+    return { data: null, error: expiry.error, code: 'unknown' };
+  }
+
+  let file = params.prepared ?? null;
+  if (!file) {
+    report('preparing');
+    const prepared = await prepareCredentialFile({
+      uri: params.uri,
+      mimeType: params.mimeType,
+      sizeBytes: params.sizeBytes,
+      fileName: params.fileName,
+    });
+    if (!prepared.ok) {
+      report('failed');
+      return { data: null, error: prepared.error, code: prepared.code };
+    }
+    file = prepared.file;
+  } else {
+    const validation = validateCredentialUpload({
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+      fileName: params.fileName,
+    });
+    if (!validation.ok) {
+      report('failed');
+      return { data: null, error: validation.error, code: 'unsupported_type' };
+    }
   }
 
   const {
@@ -295,14 +413,17 @@ export async function uploadCredentialDocument(params: {
     error: userError,
   } = await supabase.auth.getUser();
   if (userError || !user) {
-    return { data: null, error: 'You must be signed in.' };
+    report('failed');
+    return { data: null, error: 'You must be signed in.', code: 'session' };
   }
 
   const existing = params.existingCredential;
   if (existing && !canWorkerEditCredentialFile(existing.status)) {
+    report('failed');
     return {
       data: null,
       error: 'Submitted documents cannot be replaced until rejected.',
+      code: 'unknown',
     };
   }
 
@@ -322,39 +443,35 @@ export async function uploadCredentialDocument(params: {
       .single();
 
     if (createError || !created) {
+      report('failed');
       return {
         data: null,
         error: createError?.message ?? 'Could not create credential record.',
+        code: 'metadata',
       };
     }
     credential = created;
   }
 
-  const objectName = `${user.id}/${params.credentialType}/${randomObjectId()}.${extensionForMime(params.mimeType)}`;
+  const ext = credentialExtensionForMime(file.mimeType);
+  const objectName = `${user.id}/${params.credentialType}/${randomObjectId()}.${ext}`;
 
-  let bytes: ArrayBuffer;
-  try {
-    bytes = await readFileAsArrayBuffer(params.uri);
-  } catch (err) {
-    return {
-      data: null,
-      error: err instanceof Error ? err.message : 'Could not read file.',
-    };
-  }
-
-  if (bytes.byteLength > 10 * 1024 * 1024) {
-    return { data: null, error: 'File must be 10 MB or smaller.' };
-  }
-
+  report('uploading');
   const { error: uploadError } = await supabase.storage
     .from('credentials')
-    .upload(objectName, bytes, {
-      contentType: params.mimeType,
+    .upload(objectName, file.bytes, {
+      contentType: file.mimeType,
       upsert: false,
     });
 
   if (uploadError) {
-    return { data: null, error: uploadError.message };
+    report('failed');
+    const classified = classifyCredentialUploadError(uploadError.message);
+    return {
+      data: null,
+      error: classified.message,
+      code: classified.code === 'unknown' ? 'storage' : classified.code,
+    };
   }
 
   const previousPath = credential.storage_path;
@@ -371,6 +488,7 @@ export async function uploadCredentialDocument(params: {
     metadataPatch.expires_at = expiry.expiresAt;
   }
 
+  report('saving');
   const { data: updated, error: updateError } = await supabase
     .from('credentials')
     .update(metadataPatch as never)
@@ -380,11 +498,13 @@ export async function uploadCredentialDocument(params: {
     .single();
 
   if (updateError || !updated) {
-    // Best-effort cleanup of the newly uploaded object.
+    // Best-effort cleanup of the newly uploaded object only — keep prior file.
     await supabase.storage.from('credentials').remove([objectName]);
+    report('failed');
     return {
       data: null,
       error: updateError?.message ?? 'Could not save upload metadata.',
+      code: 'metadata',
     };
   }
 
@@ -392,6 +512,7 @@ export async function uploadCredentialDocument(params: {
     await supabase.storage.from('credentials').remove([previousPath]);
   }
 
+  report('done');
   return { data: updated };
 }
 
@@ -426,7 +547,6 @@ export async function deletePendingCredentialFile(params: {
 
   return {};
 }
-
 
 /**
  * Save a text credential value for the authenticated worker via RPC.

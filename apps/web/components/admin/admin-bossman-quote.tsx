@@ -1,7 +1,7 @@
 'use client';
 
 import { Instrument_Serif } from 'next/font/google';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -14,6 +14,9 @@ const quoteFont = Instrument_Serif({
 });
 
 const QUOTE = 'Hello Bossman, How do you feel today?';
+const LETTER_IN_MS = 720;
+const STAGGER_MS = 42;
+const ENTRANCE_BASE_MS = 60;
 
 export function AdminBossmanQuote() {
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -27,6 +30,8 @@ export function AdminBossmanQuote() {
     media.addEventListener('change', onChange);
     return () => media.removeEventListener('change', onChange);
   }, []);
+
+  const animate = ready && !reduceMotion;
 
   return (
     <aside
@@ -56,49 +61,78 @@ export function AdminBossmanQuote() {
       />
 
       <div className="relative flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="bh-bossman-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-bh-honey via-[#f0c24a] to-bh-honey-strong text-bh-sidebar shadow-[0_8px_18px_rgba(224,170,24,0.4)] ring-1 ring-white/25">
+        <div className="flex min-w-0 items-center gap-3.5">
+          <span className="bh-bossman-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-bh-honey via-[#f0c24a] to-bh-honey-strong text-bh-sidebar shadow-[0_8px_18px_rgba(224,170,24,0.4)] ring-1 ring-white/25">
             <DollarSign className="h-[18px] w-[18px]" strokeWidth={2.6} aria-hidden />
           </span>
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-bh-honey">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-bh-honey">
               Bossman desk
             </p>
             <p
               className={cn(
                 quoteFont.className,
-                'mt-1 text-[1.15rem] italic leading-snug tracking-[-0.01em] text-[#f7f1e3] sm:text-[1.3rem]',
+                'mt-1 text-[1.2rem] italic leading-snug tracking-[-0.01em] text-[#f7f1e3] sm:text-[1.35rem]',
               )}
             >
-              <span className="mr-1 text-bh-honey" aria-hidden>
+              <span
+                className={cn('mr-1 text-bh-honey', animate && 'bh-bossman-mark')}
+                aria-hidden
+              >
                 “
               </span>
               <span className="sr-only">{QUOTE}</span>
               <span aria-hidden className="inline">
-                {QUOTE.split('').map((char, index) => (
-                  <span
-                    key={`${char}-${index}`}
-                    className={cn(
-                      'bh-bossman-letter inline-block whitespace-pre',
-                      ready && !reduceMotion && 'is-animate',
-                    )}
-                    style={
-                      ready && !reduceMotion
-                        ? { animationDelay: `${80 + index * 38}ms` }
-                        : undefined
-                    }
-                  >
-                    {char}
-                  </span>
-                ))}
+                {QUOTE.split('').map((char, index) => {
+                  const entranceDelay = ENTRANCE_BASE_MS + index * STAGGER_MS;
+                  const waveDelay = entranceDelay + LETTER_IN_MS + index * 55;
+                  return (
+                    <span
+                      key={`${char}-${index}`}
+                      className={cn(
+                        'bh-bossman-letter-wave',
+                        animate && 'is-animate',
+                      )}
+                      style={
+                        animate
+                          ? { animationDelay: `${waveDelay}ms` }
+                          : undefined
+                      }
+                    >
+                      <span
+                        className={cn(
+                          'bh-bossman-letter inline-block whitespace-pre',
+                          animate && 'is-animate',
+                        )}
+                        style={
+                          animate
+                            ? { animationDelay: `${entranceDelay}ms` }
+                            : undefined
+                        }
+                      >
+                        {char}
+                      </span>
+                    </span>
+                  );
+                })}
               </span>
-              <span className="ml-1 text-bh-honey" aria-hidden>
+              <span
+                className={cn('ml-1 text-bh-honey', animate && 'bh-bossman-mark')}
+                aria-hidden
+                style={animate ? { animationDelay: '0.4s' } : undefined}
+              >
                 ”
               </span>
             </p>
           </div>
         </div>
-        <span className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold tracking-wide text-white/80 backdrop-blur-sm">
+        <span
+          className={cn(
+            'inline-flex items-center gap-1.5 rounded-full border border-bh-honey/30 bg-white/10 px-3 py-1.5 text-[11px] font-semibold tracking-wide text-[#f7f1e3] backdrop-blur-sm',
+            animate && 'bh-bossman-chip',
+          )}
+        >
+          <Sparkles className="h-3.5 w-3.5 text-bh-honey" aria-hidden />
           Premium daily check-in
         </span>
       </div>

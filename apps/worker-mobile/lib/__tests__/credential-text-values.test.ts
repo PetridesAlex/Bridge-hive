@@ -22,7 +22,10 @@ import {
   validateCredentialTextValue,
 } from '@bridge-hive/domain';
 
-import { buildCredentialChecklist } from '@/lib/credentials';
+import {
+  buildCredentialChecklist,
+  credentialsReadyForBatchSubmit,
+} from '@/lib/credentials';
 
 describe('mobile credential text values', () => {
   it('builds text checklist rows without upload file names for tax/social', () => {
@@ -79,5 +82,54 @@ describe('mobile credential text values', () => {
     expect(licence?.fileName).toBe('a.pdf');
     expect(credentialInputKind('social_insurance_proof')).toBe('text');
     expect(validateCredentialTextValue('n/a').ok).toBe(false);
+  });
+
+  it('includes optional CV drafts in batch submit selection', () => {
+    const checklist = buildCredentialChecklist({
+      role: 'registered_nurse',
+      credentials: [
+        {
+          id: 'cv-1',
+          worker_id: 'w',
+          credential_type: 'cv',
+          status: 'pending',
+          expires_at: null,
+          storage_path: 'w/cv/1795773528198_446m6h9x.jpg',
+          storage_paths: ['w/cv/1795773528198_446m6h9x.jpg'],
+          text_value: null,
+          has_text_value: false,
+          verified_by: null,
+          verified_at: null,
+          rejection_reason: null,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        } as never,
+        {
+          id: 'id-1',
+          worker_id: 'w',
+          credential_type: 'identity_document_front',
+          status: 'pending',
+          expires_at: null,
+          storage_path: 'w/identity_document_front/a.jpg',
+          storage_paths: ['w/identity_document_front/a.jpg'],
+          text_value: null,
+          has_text_value: false,
+          verified_by: null,
+          verified_at: null,
+          rejection_reason: null,
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        } as never,
+      ],
+    });
+
+    const cv = checklist.find((row) => row.credentialType === 'cv');
+    expect(cv?.isRequired).toBe(false);
+    expect(cv?.itemStatus).toBe('draft');
+
+    const ready = credentialsReadyForBatchSubmit(checklist);
+    expect(ready.map((row) => row.credential?.id)).toEqual(
+      expect.arrayContaining(['cv-1', 'id-1']),
+    );
   });
 });

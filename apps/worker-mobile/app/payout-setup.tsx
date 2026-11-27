@@ -27,6 +27,7 @@ import { APP_CONFIG } from '@/constants/config';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { usePayouts } from '@/hooks/usePayouts';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
+import { navigateBack } from '@/lib/navigation';
 import {
   canEditPayoutAccount,
   payoutAccountScreenStatusLabel,
@@ -200,11 +201,8 @@ export default function PayoutSetupScreen() {
       router.replace('/auth/worker/pending');
       return;
     }
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/profile');
+    // Always return to the More settings list (not Home / a stale nested screen).
+    navigateBack('/(tabs)/profile');
   };
 
   // Resubmit only when unset or correction required — pending/verified stay view-only.

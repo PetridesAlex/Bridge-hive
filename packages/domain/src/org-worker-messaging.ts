@@ -446,13 +446,28 @@ export function canOfferCompletedWorkMessage(input: {
   );
 }
 
+/** Optional secure UUID source (e.g. expo-crypto on native). Must return a UUID or null. */
+export type ClientMessageIdFactory = () => string | null;
+
 /** UUID v4 for send idempotency. Never returns a non-UUID placeholder. */
-export function newClientMessageId(): string | null {
+export function newClientMessageId(createId?: ClientMessageIdFactory): string | null {
+  if (createId) {
+    try {
+      const id = createId();
+      return id && isMessagingUuid(id) ? id : null;
+    } catch {
+      return null;
+    }
+  }
   const cryptoObj = globalThis.crypto;
   if (!cryptoObj) return null;
   if (typeof cryptoObj.randomUUID === 'function') {
-    const id = cryptoObj.randomUUID();
-    return isMessagingUuid(id) ? id : null;
+    try {
+      const id = cryptoObj.randomUUID();
+      return isMessagingUuid(id) ? id : null;
+    } catch {
+      return null;
+    }
   }
   if (typeof cryptoObj.getRandomValues !== 'function') return null;
   const bytes = new Uint8Array(16);
@@ -780,12 +795,37 @@ function nextMessagingRealtimeTopic(baseName: string): string {
 }
 
 /**
+ * Realtime channel statuses that mean live postgres_changes may be unavailable.
+ * Callers should run one catch-up fetch (and at most one remount/resubscribe).
+ * Do not treat these as a cue to start an interval poller.
+ */
+export const MESSAGING_REALTIME_CATCH_UP_STATUSES = [
+  'CHANNEL_ERROR',
+  'TIMED_OUT',
+  'CLOSED',
+] as const;
+
+export type MessagingRealtimeCatchUpStatus =
+  (typeof MESSAGING_REALTIME_CATCH_UP_STATUSES)[number];
+
+export function isMessagingRealtimeCatchUpStatus(
+  status: string,
+): status is MessagingRealtimeCatchUpStatus {
+  return (MESSAGING_REALTIME_CATCH_UP_STATUSES as readonly string[]).includes(
+    status,
+  );
+}
+
+/**
  * One shared Supabase client owns every realtime channel.
  * Sign-out must remove them all. The next signed-in screen creates new ones.
  * Shift lists are not channels; they refetch while a session is in the foreground.
  *
  * Channel topics are unique per subscribe call so overlapping screens
  * (home badge + inbox) never call `.on()` after an existing `subscribe()`.
+ *
+ * `onStatus` is sanitized lifecycle only (status string) — never log tokens,
+ * headers, or message bodies from callers.
  */
 export function subscribeMessagingRealtime(input: {
   client: {
@@ -798,6 +838,8 @@ export function subscribeMessagingRealtime(input: {
   event?: string;
   onChange: () => void;
   onSubscribed: () => void;
+  /** Optional lifecycle hook for SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED / … */
+  onStatus?: (status: string) => void;
 }): { unsubscribe: () => void } {
   if (!input.channelName) return { unsubscribe() {} };
   const topic = nextMessagingRealtimeTopic(input.channelName);
@@ -813,6 +855,7 @@ export function subscribeMessagingRealtime(input: {
       () => input.onChange(),
     )
     .subscribe((status) => {
+      input.onStatus?.(status);
       if (status === 'SUBSCRIBED') input.onSubscribed();
     });
   return {

@@ -36,7 +36,8 @@
       "environment": "preview",
       "channel": "preview",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "autoIncrement": true
       },
       "env": {
         "EXPO_PUBLIC_WEB_APP_URL": "https://bridgehive.app",

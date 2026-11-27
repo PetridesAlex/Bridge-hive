@@ -12,12 +12,14 @@ import {
   ActivityIndicator,
   FlatList,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   TextInput,
   View,
+  type ViewStyle,
 } from 'react-native';
 import Animated, {
   Easing,
@@ -159,24 +161,10 @@ function ConversationRow({
             {when ? (
               <Text style={[styles.time, unread && styles.timeUnread]}>{when}</Text>
             ) : null}
-            {onRequestDelete ? (
-              <Pressable
-                onPress={() => onRequestDelete(item.id)}
-                hitSlop={10}
-                style={styles.rowDelete}
-                accessibilityRole="button"
-                accessibilityLabel={copy.deleteChat}
-              >
-                <Ionicons name="trash-outline" size={16} color={colors.error} />
-              </Pressable>
-            ) : null}
           </View>
-          <Text style={styles.orgMeta} numberOfLines={1}>
-            {copy.organization}
-          </Text>
           {preview || unread ? (
             <View style={styles.rowBottom}>
-              <Text style={[styles.preview, unread && styles.previewUnread]} numberOfLines={2}>
+              <Text style={[styles.preview, unread && styles.previewUnread]} numberOfLines={1}>
                 {preview || copy.newMessages}
               </Text>
               {unread ? (
@@ -185,14 +173,23 @@ function ConversationRow({
                     {item.unreadCount > 99 ? '99+' : item.unreadCount}
                   </Text>
                 </View>
-              ) : (
-                <Ionicons name="chevron-forward" size={14} color="rgba(11,42,67,0.28)" />
-              )}
+              ) : null}
             </View>
           ) : (
             <Text style={styles.previewQuiet}>{copy.noMessagesYet}</Text>
           )}
         </View>
+        {onRequestDelete ? (
+          <Pressable
+            onPress={() => onRequestDelete(item.id)}
+            hitSlop={12}
+            style={({ pressed }) => [styles.rowDelete, pressed && styles.rowDeletePressed]}
+            accessibilityRole="button"
+            accessibilityLabel={copy.deleteChat}
+          >
+            <Ionicons name="trash-outline" size={15} color="rgba(11, 42, 67, 0.34)" />
+          </Pressable>
+        ) : null}
       </Pressable>
     </Animated.View>
   );
@@ -331,6 +328,7 @@ export function InboxView({
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={styles.rowSep} />}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.teal} />
           }
@@ -386,7 +384,7 @@ export function InboxView({
         <Pressable style={styles.deleteBackdrop} onPress={closeDelete}>
           <Pressable style={styles.deleteCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.deleteIcon}>
-              <Ionicons name="trash-outline" size={20} color={colors.error} />
+              <Ionicons name="trash-outline" size={18} color="rgba(11, 42, 67, 0.55)" />
             </View>
             <Text style={styles.deleteTitle}>{copy.deleteChatTitle}</Text>
             <Text style={styles.deleteBody}>{copy.deleteChatBody}</Text>
@@ -395,7 +393,11 @@ export function InboxView({
               <Pressable
                 onPress={closeDelete}
                 disabled={deleteBusy}
-                style={[styles.deleteBtn, styles.deleteBtnQuiet]}
+                style={({ pressed }) => [
+                  styles.deleteBtn,
+                  styles.deleteBtnQuiet,
+                  pressed && styles.deleteBtnPressed,
+                ]}
                 accessibilityRole="button"
               >
                 <Text style={styles.deleteBtnQuietText}>{copy.cancel}</Text>
@@ -403,7 +405,12 @@ export function InboxView({
               <Pressable
                 onPress={() => void confirmDelete()}
                 disabled={deleteBusy}
-                style={[styles.deleteBtn, styles.deleteBtnDanger, deleteBusy && { opacity: 0.6 }]}
+                style={({ pressed }) => [
+                  styles.deleteBtn,
+                  styles.deleteBtnDanger,
+                  deleteBusy && { opacity: 0.55 },
+                  pressed && !deleteBusy && styles.deleteBtnPressed,
+                ]}
                 accessibilityRole="button"
               >
                 <Text style={styles.deleteBtnDangerText}>
@@ -418,84 +425,114 @@ export function InboxView({
   );
 }
 
+/** Frosted confirm card — denser wash on native where blur is unavailable. */
+const deleteGlass: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        backgroundColor: 'rgba(255, 255, 255, 0.42)',
+        backdropFilter: 'blur(22px) saturate(1.4)',
+      } as ViewStyle)
+    : { backgroundColor: 'rgba(255, 255, 255, 0.88)' };
+
 const styles = StyleSheet.create({
   rowDelete: {
-    marginLeft: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.errorLight,
+    backgroundColor: 'transparent',
+    flexShrink: 0,
+  },
+  rowDeletePressed: {
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
   },
   deleteBackdrop: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
-    backgroundColor: 'rgba(7,29,48,0.55)',
+    backgroundColor: 'rgba(7, 29, 48, 0.28)',
   },
   deleteCard: {
     width: '100%',
-    maxWidth: 380,
-    padding: spacing.lg,
-    borderRadius: radii.xl,
-    backgroundColor: colors.white,
-    gap: spacing.sm,
+    maxWidth: 360,
+    paddingVertical: 22,
+    paddingHorizontal: 22,
+    borderRadius: 22,
+    ...deleteGlass,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.55)',
+    gap: 10,
+    ...shadows.sm,
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
   },
   deleteIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.errorLight,
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.08)',
   },
   deleteTitle: {
+    fontFamily: typography.fonts.displaySemibold,
     fontSize: 17,
-    fontWeight: '700',
+    lineHeight: 22,
+    letterSpacing: -0.2,
     color: colors.navy,
   },
   deleteBody: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.textSecondary,
+    fontFamily: typography.fonts.regular,
+    fontSize: 13.5,
+    lineHeight: 20,
+    letterSpacing: 0.1,
+    color: 'rgba(11, 42, 67, 0.62)',
   },
   deleteErrorText: {
+    fontFamily: typography.fonts.semibold,
     fontSize: 13,
-    fontWeight: '600',
     color: colors.error,
   },
   deleteActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: 8,
+    marginTop: 8,
   },
   deleteBtn: {
-    minHeight: 44,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.lg,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
   deleteBtnQuiet: {
-    borderWidth: 1,
-    borderColor: 'rgba(11,42,67,0.14)',
-    backgroundColor: colors.white,
+    backgroundColor: 'transparent',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.14)',
   },
   deleteBtnQuietText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
+    letterSpacing: 0.15,
     color: colors.navy,
   },
   deleteBtnDanger: {
-    backgroundColor: colors.error,
+    backgroundColor: 'rgba(180, 35, 24, 0.92)',
   },
   deleteBtnDangerText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0.15,
+    color: colors.white,
+  },
+  deleteBtnPressed: {
+    opacity: 0.82,
   },
   screen: {
     flex: 1,
@@ -585,6 +622,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.huge,
     flexGrow: 1,
   },
+  rowSep: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 54,
+    backgroundColor: 'rgba(11, 42, 67, 0.08)',
+  },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -649,82 +691,74 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
-    minHeight: 88,
-    marginBottom: spacing.sm + 2,
-    paddingHorizontal: spacing.md + 2,
-    paddingVertical: spacing.md,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.92)',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(11, 42, 67, 0.10)',
+    gap: 12,
+    minHeight: 72,
+    marginBottom: 2,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
-    ...shadows.sm,
-    shadowOpacity: 0.05,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
   },
   rowUnread: {
-    backgroundColor: 'rgba(255,255,255,0.97)',
-    borderColor: 'rgba(11, 42, 67, 0.14)',
+    backgroundColor: 'rgba(255,255,255,0.55)',
   },
   rowPressed: {
-    opacity: 0.96,
+    backgroundColor: 'rgba(255,255,255,0.72)',
   },
   unreadRail: {
     position: 'absolute',
     left: 0,
-    top: 14,
-    bottom: 14,
-    width: 3,
+    top: 16,
+    bottom: 16,
+    width: 2.5,
     borderRadius: 2,
-    backgroundColor: colors.yellow,
+    backgroundColor: colors.tealStrong,
   },
   avatarWrap: {
-    width: 48,
-    height: 48,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarPulse: {
     position: 'absolute',
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 210, 90, 0.35)',
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(14, 116, 128, 0.22)',
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
   },
   avatarUnread: {
-    borderColor: 'rgba(255, 210, 90, 0.45)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(14, 116, 128, 0.35)',
   },
   avatarText: {
     fontFamily: typography.fonts.semibold,
-    fontSize: 15,
+    fontSize: 13,
     color: colors.white,
   },
   rowBody: {
     flex: 1,
     minWidth: 0,
-    gap: 3,
+    gap: 2,
   },
   rowTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'baseline',
     gap: spacing.sm,
   },
   name: {
     flex: 1,
     fontFamily: typography.fonts.displaySemibold,
-    fontSize: 16,
-    lineHeight: 21,
+    fontSize: 15,
+    lineHeight: 20,
     letterSpacing: -0.2,
     color: colors.navy,
   },
@@ -733,57 +767,47 @@ const styles = StyleSheet.create({
   },
   time: {
     fontFamily: typography.fonts.medium,
-    fontSize: 11.5,
-    color: colors.textSecondary,
+    fontSize: 11,
+    color: colors.textMuted,
+    flexShrink: 0,
   },
   timeUnread: {
     color: colors.tealStrong,
-  },
-  orgMeta: {
-    fontFamily: typography.fonts.medium,
-    fontSize: 11,
-    letterSpacing: 0.2,
-    textTransform: 'uppercase',
-    color: 'rgba(11, 42, 67, 0.42)',
   },
   rowBottom: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: 1,
   },
   preview: {
     flex: 1,
     fontFamily: typography.fonts.regular,
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.textSecondary,
   },
   previewUnread: {
     fontFamily: typography.fonts.medium,
-    color: colors.navy,
+    color: 'rgba(11, 42, 67, 0.78)',
   },
   previewQuiet: {
     fontFamily: typography.fonts.regular,
-    fontSize: 13.5,
-    lineHeight: 19,
+    fontSize: 13,
+    lineHeight: 18,
     color: colors.textMuted,
-    marginTop: 1,
   },
   badge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
     backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255, 210, 90, 0.35)',
+    paddingHorizontal: 5,
   },
   badgeText: {
     fontFamily: typography.fonts.bold,
-    fontSize: 11,
-    color: colors.yellow,
+    fontSize: 10,
+    color: colors.white,
   },
 });

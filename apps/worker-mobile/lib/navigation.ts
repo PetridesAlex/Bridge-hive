@@ -15,12 +15,14 @@ export function navigateBack(fallback: Href = '/(tabs)') {
   if (router.canGoBack()) {
     router.back();
     if (before) {
-      requestAnimationFrame(() => {
+      // History updates asynchronously on web; one animation frame is too early and
+      // would replace() right after a successful pop (double navigation).
+      setTimeout(() => {
         const after = `${window.location.pathname}${window.location.search}`;
         if (after === before) {
           router.replace(fallback);
         }
-      });
+      }, 300);
     }
     return;
   }

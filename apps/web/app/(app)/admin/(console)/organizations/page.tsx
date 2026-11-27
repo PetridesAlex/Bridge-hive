@@ -202,7 +202,7 @@ export default async function OrganizationsPage({
                 <ArrowRight className="h-3.5 w-3.5" aria-hidden />
               </Link>
             </div>
-            <ul className="divide-y divide-bh-border/70 overflow-hidden rounded-2xl border border-bh-border/80 bg-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+            <ul className="divide-y divide-bh-border/70 overflow-hidden rounded-2xl border border-bh-border/80 bg-bh-surface shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
               {awaitingRows.map((row) => (
                 <li
                   key={row.id}

@@ -5,6 +5,10 @@ import {
   getPaymentSheetFunctionName,
   isSandboxPaymentsBuild,
 } from '@/constants/stripe';
+import {
+  classifyInvoiceListError,
+  type InvoiceListResult,
+} from '@/lib/invoice-load';
 import { supabase } from '@/lib/supabase';
 
 export type WorkerCommissionInvoice = Tables<'worker_commission_invoices'>;
@@ -89,17 +93,30 @@ async function rpcSandbox(name: string, args?: Record<string, unknown>) {
   }).rpc(name, args);
 }
 
-export async function getMyCommissionInvoices(workerId: string) {
+function invoiceListErrorResult(message: string): Extract<
+  InvoiceListResult<never>,
+  { status: 'denied' | 'failed' }
+> {
+  const code = classifyInvoiceListError(message);
+  if (code === 'denied') {
+    return { status: 'denied', data: [], code: 'denied', message };
+  }
+  return { status: 'failed', data: [], code: 'failed', message };
+}
+
+export async function getMyCommissionInvoices(
+  workerId: string,
+): Promise<InvoiceListResult<WorkerInvoiceListItem>> {
   if (isSandboxPaymentsBuild()) {
     const { data, error } = await rpcSandbox('list_my_sandbox_commission_invoices');
     if (error) {
-      return { data: [] as WorkerInvoiceListItem[], error: error.message };
+      return invoiceListErrorResult(error.message);
     }
     const rows = (data ?? []) as WorkerSandboxCommissionInvoice[];
-    return {
-      data: rows.map(asSandboxListItem),
-      error: undefined as string | undefined,
-    };
+    if (rows.length === 0) {
+      return { status: 'empty', data: [] };
+    }
+    return { status: 'success', data: rows.map(asSandboxListItem) };
   }
 
   const { data, error } = await supabase
@@ -116,10 +133,14 @@ export async function getMyCommissionInvoices(workerId: string) {
     .eq('worker_id', workerId)
     .order('due_at', { ascending: true });
 
-  return {
-    data: (data ?? []) as WorkerInvoiceListItem[],
-    error: error?.message,
-  };
+  if (error) {
+    return invoiceListErrorResult(error.message);
+  }
+  const rows = (data ?? []) as WorkerInvoiceListItem[];
+  if (rows.length === 0) {
+    return { status: 'empty', data: [] };
+  }
+  return { status: 'success', data: rows };
 }
 
 export async function getMyCommissionInvoice(invoiceId: string, workerId: string) {
@@ -162,19 +183,9 @@ export async function getMyCommissionInvoice(invoiceId: string, workerId: string
 }
 
 export async function getMyBillingRestrictionSummary() {
-  // Sandbox builds must not surface live debt standing as payment-test state.
-  if (isSandboxPaymentsBuild()) {
-    return {
-      data: {
-        standing: 'good_standing',
-        overdue_count: 0,
-        overdue_amount_minor: 0,
-        oldest_due_at: null,
-      } satisfies BillingRestrictionSummary,
-      error: undefined as string | undefined,
-    };
-  }
-
+  // Always use the authorized live standing RPC. Sandbox payment mode lists /
+  // pays TEST invoices separately — it must not synthesize good_standing, which
+  // would imply a production commission obligation is cleared.
   const { data, error } = await supabase.rpc('get_my_billing_restriction_summary');
   if (error) {
     return { data: null as BillingRestrictionSummary | null, error: error.message };

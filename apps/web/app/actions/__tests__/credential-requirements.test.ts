@@ -223,6 +223,12 @@ describe('credential requirements', () => {
         sizeBytes: 1024,
       }).ok,
     ).toBe(true);
+    expect(
+      validateCredentialUpload({
+        mimeType: 'image/webp',
+        sizeBytes: 1024,
+      }).ok,
+    ).toBe(true);
   });
 
   it('labels draft workers without credentials as awaiting documents', () => {

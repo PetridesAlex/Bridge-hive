@@ -35,7 +35,9 @@ import { useCredentials } from '@/hooks/useCredentials';
 import { usePayouts } from '@/hooks/usePayouts';
 import {
   buildCredentialChecklist,
+  credentialsReadyForBatchSubmit,
   deletePendingCredentialFile,
+  pickCredentialCamera,
   pickCredentialFile,
   pickCredentialImage,
   saveCredentialTextValue,
@@ -43,7 +45,9 @@ import {
   resolveCredentialExpiresAt,
   uploadCredentialDocument,
   type ChecklistRow,
+  type CredentialUploadStage,
 } from '@/lib/credentials';
+import { navigateBack } from '@/lib/navigation';
 import {
   buildWorkerJourneySnapshot,
   type WorkerJourneyAccountStatus,
@@ -54,8 +58,29 @@ import { useAuth } from '@/providers/AuthProvider';
 type UploadState = {
   type: string | null;
   uploading: boolean;
+  stage: CredentialUploadStage;
   error: string | null;
 };
+
+function uploadStageLabel(
+  stage: CredentialUploadStage,
+  t: (key: string) => string,
+): string {
+  switch (stage) {
+    case 'selecting':
+      return t('documents.stageSelecting');
+    case 'validating':
+      return t('documents.stageValidating');
+    case 'preparing':
+      return t('documents.stagePreparing');
+    case 'uploading':
+      return t('documents.stageUploading');
+    case 'saving':
+      return t('documents.stageSaving');
+    default:
+      return t('documents.uploading');
+  }
+}
 
 function statusLabel(
   status: ChecklistRow['itemStatus'],
@@ -168,6 +193,7 @@ export default function DocumentsScreen() {
   const [uploadState, setUploadState] = useState<UploadState>({
     type: null,
     uploading: false,
+    stage: 'idle',
     error: null,
   });
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -222,12 +248,8 @@ export default function DocumentsScreen() {
     [credentials],
   );
 
-  const readyToSubmit = checklist.filter(
-    (row) =>
-      row.isRequired &&
-      row.credential?.status === 'pending' &&
-      row.itemStatus === 'draft',
-  );
+  // Include optional items (e.g. CV) that already have a pending payload.
+  const readyToSubmit = credentialsReadyForBatchSubmit(checklist);
   const requiredRows = checklist.filter((row) => row.isRequired);
   const verifiedRequired = requiredRows.filter((row) => row.itemStatus === 'verified').length;
   const reviewRequired = requiredRows.filter(
@@ -267,16 +289,19 @@ export default function DocumentsScreen() {
       router.replace('/auth/worker/pending');
       return;
     }
-    if (router.canGoBack()) {
-      router.back();
-      return;
-    }
-    router.replace('/(tabs)/profile');
+    navigateBack('/(tabs)/profile');
   };
 
   const handlePick = useCallback(
-    async (row: ChecklistRow, mode: 'document' | 'image') => {
-      setUploadState({ type: row.credentialType, uploading: false, error: null });
+    async (row: ChecklistRow, mode: 'document' | 'image' | 'camera') => {
+      if (uploadState.uploading) return;
+
+      setUploadState({
+        type: row.credentialType,
+        uploading: false,
+        stage: 'selecting',
+        error: null,
+      });
 
       const expiryYmd = credentialRequiresKnownExpiry(row.credentialType)
         ? practisingLicenceExpiryYmd
@@ -289,48 +314,75 @@ export default function DocumentsScreen() {
         setUploadState({
           type: row.credentialType,
           uploading: false,
+          stage: 'failed',
           error: expiryCheck.error,
         });
         return;
       }
 
       const picked =
-        mode === 'image' ? await pickCredentialImage() : await pickCredentialFile();
+        mode === 'camera'
+          ? await pickCredentialCamera()
+          : mode === 'image'
+            ? await pickCredentialImage()
+            : await pickCredentialFile();
       if (!picked.ok) {
-        if (!picked.cancelled) {
+        if (picked.cancelled) {
           setUploadState({
-            type: row.credentialType,
+            type: null,
             uploading: false,
-            error: picked.error,
+            stage: 'idle',
+            error: null,
           });
+          return;
         }
+        setUploadState({
+          type: row.credentialType,
+          uploading: false,
+          stage: 'failed',
+          error: picked.error,
+        });
         return;
       }
 
-      setUploadState({ type: row.credentialType, uploading: true, error: null });
+      setUploadState({
+        type: row.credentialType,
+        uploading: true,
+        stage: 'validating',
+        error: null,
+      });
       const result = await uploadCredentialDocument({
         credentialType: row.credentialType,
         uri: picked.uri,
         mimeType: picked.mimeType,
         sizeBytes: picked.sizeBytes,
         fileName: picked.fileName,
+        prepared: picked.prepared,
         existingCredential: row.credential,
         expiresAtYmd: expiryYmd,
+        onStage: (stage) => {
+          setUploadState((prev) =>
+            prev.type === row.credentialType && prev.uploading
+              ? { ...prev, stage }
+              : prev,
+          );
+        },
       });
 
       if (result.error) {
         setUploadState({
           type: row.credentialType,
           uploading: false,
+          stage: 'failed',
           error: result.error,
         });
         return;
       }
 
-      setUploadState({ type: null, uploading: false, error: null });
+      setUploadState({ type: null, uploading: false, stage: 'done', error: null });
       await refresh();
     },
-    [practisingLicenceExpiryYmd, refresh],
+    [practisingLicenceExpiryYmd, refresh, uploadState.uploading],
   );
 
   const handleSaveText = useCallback(
@@ -614,6 +666,11 @@ export default function DocumentsScreen() {
                 {row.credential?.rejection_reason ? (
                   <Text style={styles.reject}>{row.credential.rejection_reason}</Text>
                 ) : null}
+                {uploadState.type === row.credentialType && uploadState.uploading ? (
+                  <Text style={styles.meta} accessibilityLiveRegion="polite">
+                    {uploadStageLabel(uploadState.stage, t)}
+                  </Text>
+                ) : null}
                 {uploadState.type === row.credentialType && uploadState.error ? (
                   <Text style={styles.reject} accessibilityLiveRegion="polite">
                     {uploadState.error}
@@ -691,12 +748,29 @@ export default function DocumentsScreen() {
                         {expiryGate.error}
                       </Text>
                     ) : null}
+                    <Text style={styles.formatHint}>{t('documents.fileFormatHint')}</Text>
+                    {Platform.OS !== 'web' ? (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('documents.takePhoto')}
+                        accessibilityHint={
+                          requiresExpiry && !expiryReady
+                            ? 'Enter the licence expiry date first'
+                            : undefined
+                        }
+                        style={[styles.linkBtn, uploadDisabled && styles.btnDisabled]}
+                        onPress={() => void handlePick(row, 'camera')}
+                        disabled={uploadDisabled}
+                      >
+                        <Text style={styles.linkBtnText}>{t('documents.takePhoto')}</Text>
+                      </Pressable>
+                    ) : null}
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={
                         row.fileName
                           ? t('documents.replacePhoto')
-                          : t('documents.uploadPhoto')
+                          : t('documents.choosePhoto')
                       }
                       accessibilityHint={
                         requiresExpiry && !expiryReady
@@ -708,13 +782,15 @@ export default function DocumentsScreen() {
                       disabled={uploadDisabled}
                     >
                       <Text style={styles.linkBtnText}>
-                        {row.fileName ? t('documents.replacePhoto') : t('documents.uploadPhoto')}
+                        {row.fileName
+                          ? t('documents.replacePhoto')
+                          : t('documents.choosePhoto')}
                       </Text>
                     </Pressable>
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={
-                        row.fileName ? t('documents.replacePdf') : t('documents.uploadPdf')
+                        row.fileName ? t('documents.replaceFile') : t('documents.uploadFile')
                       }
                       accessibilityHint={
                         requiresExpiry && !expiryReady
@@ -726,7 +802,7 @@ export default function DocumentsScreen() {
                       disabled={uploadDisabled}
                     >
                       <Text style={styles.linkBtnText}>
-                        {row.fileName ? t('documents.replacePdf') : t('documents.uploadPdf')}
+                        {row.fileName ? t('documents.replaceFile') : t('documents.uploadFile')}
                       </Text>
                     </Pressable>
                     {row.credential?.status === 'pending' && row.fileName ? (
@@ -1137,6 +1213,16 @@ const styles = StyleSheet.create({
     fontFamily: typography.fonts.regular,
     fontSize: 12,
     color: colors.textMuted,
+  },
+  formatHint: {
+    width: '100%',
+    flexBasis: '100%',
+    fontFamily: typography.fonts.medium,
+    fontSize: 11,
+    lineHeight: 15,
+    letterSpacing: 0.1,
+    color: 'rgba(11, 42, 67, 0.48)',
+    marginBottom: 2,
   },
   reject: {
     fontFamily: typography.fonts.medium,

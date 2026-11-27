@@ -685,6 +685,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: friendlyRpcError(error.message) };
     }
 
+    // Package RPC only advances required types. Also submit optional pending
+    // items with a payload (e.g. CV) so they enter admin review together.
+    const { data: optionalPending } = await supabase
+      .from('credentials')
+      .select('id, status, storage_path, text_value, has_text_value')
+      .eq('worker_id', session.user.id)
+      .eq('status', 'pending');
+
+    for (const row of optionalPending ?? []) {
+      const hasFile = Boolean(row.storage_path);
+      const hasText =
+        typeof row.has_text_value === 'boolean'
+          ? row.has_text_value
+          : Boolean(row.text_value?.trim());
+      if (!hasFile && !hasText) continue;
+      const submitted = await supabase.rpc('submit_credential_for_review', {
+        p_credential_id: row.id,
+      });
+      if (submitted.error) {
+        return { error: friendlyRpcError(submitted.error.message) };
+      }
+    }
+
     if (data) {
       setWorkerProfile(data as WorkerProfile);
     } else {

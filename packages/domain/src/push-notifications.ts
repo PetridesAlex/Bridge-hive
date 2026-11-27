@@ -151,6 +151,22 @@ export function invoiceNotificationPath(invoiceId: string): string | null {
 }
 
 /**
+ * Routes safe to restore after login / cold start from AsyncStorage.
+ * Matches every path `appRouteFromPushData` can emit — not only shift detail.
+ */
+export function isRestorablePendingPushRoute(route: string): boolean {
+  if (!route || typeof route !== 'string') return false;
+  if (route === BATCH_SHIFTS_PATH) return true;
+  const shiftMatch = /^\/shifts\/([0-9a-f-]{36})$/i.exec(route);
+  if (shiftMatch && isShiftUuid(shiftMatch[1])) return true;
+  const messageMatch = /^\/messages\/([0-9a-f-]{36})$/i.exec(route);
+  if (messageMatch && isShiftUuid(messageMatch[1])) return true;
+  const invoiceMatch = /^\/invoices\/([0-9a-f-]{36})$/i.exec(route);
+  if (invoiceMatch && isInvoiceUuid(invoiceMatch[1])) return true;
+  return false;
+}
+
+/**
  * Accept only internal BridgeHive routes. Query strings only for the batch list
  * filter. Other schemes and arbitrary URLs are rejected.
  */

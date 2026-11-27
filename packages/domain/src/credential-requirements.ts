@@ -131,14 +131,208 @@ const PHYSIOTHERAPIST_REQUIREMENTS: CredentialRequirement[] = [
 
 export const MAX_CREDENTIAL_FILE_BYTES = 10 * 1024 * 1024;
 
+/**
+ * Final Storage-uploadable MIME types for worker credentials.
+ * Must stay aligned with the private `credentials` bucket allowlist.
+ */
 export const ALLOWED_CREDENTIAL_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
   'image/png',
+  'image/webp',
 ] as const;
 
 export type AllowedCredentialMimeType =
   (typeof ALLOWED_CREDENTIAL_MIME_TYPES)[number];
+
+/**
+ * Common iPhone camera formats accepted at pick time only.
+ * These must be converted to JPEG/PNG before Storage upload — never renamed.
+ */
+export const CREDENTIAL_CONVERTIBLE_MIME_TYPES = [
+  'image/heic',
+  'image/heif',
+] as const;
+
+export type CredentialConvertibleMimeType =
+  (typeof CREDENTIAL_CONVERTIBLE_MIME_TYPES)[number];
+
+const CREDENTIAL_MIME_ALIASES: Record<string, string> = {
+  'image/jpg': 'image/jpeg',
+  'image/pjpeg': 'image/jpeg',
+  'image/x-png': 'image/png',
+  'image/heic-sequence': 'image/heic',
+  'image/heif-sequence': 'image/heif',
+  'application/x-pdf': 'application/pdf',
+};
+
+const CREDENTIAL_EXTENSION_TO_MIME: Record<string, string> = {
+  pdf: 'application/pdf',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  jpe: 'image/jpeg',
+  jfif: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+};
+
+const CREDENTIAL_MIME_TO_EXTENSION: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+};
+
+/** Short EN hint for credential file actions (no Office formats advertised). */
+export const CREDENTIAL_FILE_FORMAT_HINT_EN =
+  'PDF, JPEG, PNG, or WebP · max 10 MB';
+
+/** Short EL hint for credential file actions. */
+export const CREDENTIAL_FILE_FORMAT_HINT_EL =
+  'PDF, JPEG, PNG ή WebP · έως 10 MB';
+
+export function normalizeCredentialMime(mime: string): string {
+  const base = (mime.split(';')[0] ?? '').trim().toLowerCase();
+  return CREDENTIAL_MIME_ALIASES[base] ?? base;
+}
+
+export function extensionFromFileName(fileName?: string | null): string {
+  if (!fileName) return '';
+  const base = fileName.split(/[/\\]/).pop() ?? fileName;
+  const dot = base.lastIndexOf('.');
+  if (dot < 0) return '';
+  return base.slice(dot + 1).trim().toLowerCase();
+}
+
+/**
+ * Resolve canonical MIME from picker metadata + filename.
+ * Prefer a real allowlisted/convertible type; fall back to extension when the
+ * provider reports empty or application/octet-stream.
+ */
+export function resolveCredentialUploadMime(params: {
+  mimeType?: string | null;
+  fileName?: string | null;
+}): string {
+  const reported = normalizeCredentialMime(params.mimeType ?? '');
+  if (
+    ALLOWED_CREDENTIAL_MIME_TYPES.includes(reported as AllowedCredentialMimeType) ||
+    CREDENTIAL_CONVERTIBLE_MIME_TYPES.includes(
+      reported as CredentialConvertibleMimeType,
+    )
+  ) {
+    return reported;
+  }
+  const ext = extensionFromFileName(params.fileName);
+  return CREDENTIAL_EXTENSION_TO_MIME[ext] ?? reported;
+}
+
+export function credentialExtensionForMime(mime: string): string {
+  const normalized = normalizeCredentialMime(mime);
+  return CREDENTIAL_MIME_TO_EXTENSION[normalized] ?? 'bin';
+}
+
+export function isUploadableCredentialMime(mime: string): boolean {
+  return ALLOWED_CREDENTIAL_MIME_TYPES.includes(
+    normalizeCredentialMime(mime) as AllowedCredentialMimeType,
+  );
+}
+
+export function isConvertibleCredentialMime(mime: string): boolean {
+  return CREDENTIAL_CONVERTIBLE_MIME_TYPES.includes(
+    normalizeCredentialMime(mime) as CredentialConvertibleMimeType,
+  );
+}
+
+/**
+ * Lightweight magic-byte sniff for early feedback.
+ * Not malware scanning and not complete PDF validation.
+ */
+export function sniffCredentialMimeFromBytes(
+  bytes: ArrayBuffer | Uint8Array,
+): string | null {
+  const view =
+    bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  if (view.byteLength < 12) return null;
+
+  // %PDF
+  if (
+    view[0] === 0x25 &&
+    view[1] === 0x50 &&
+    view[2] === 0x44 &&
+    view[3] === 0x46
+  ) {
+    return 'application/pdf';
+  }
+  // JPEG SOI
+  if (view[0] === 0xff && view[1] === 0xd8 && view[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  // PNG
+  if (
+    view[0] === 0x89 &&
+    view[1] === 0x50 &&
+    view[2] === 0x4e &&
+    view[3] === 0x47
+  ) {
+    return 'image/png';
+  }
+  // RIFF....WEBP
+  if (
+    view[0] === 0x52 &&
+    view[1] === 0x49 &&
+    view[2] === 0x46 &&
+    view[3] === 0x46 &&
+    view[8] === 0x57 &&
+    view[9] === 0x45 &&
+    view[10] === 0x42 &&
+    view[11] === 0x50
+  ) {
+    return 'image/webp';
+  }
+  // ISO BMFF ftyp — HEIC/HEIF brands
+  if (
+    view[4] === 0x66 &&
+    view[5] === 0x74 &&
+    view[6] === 0x79 &&
+    view[7] === 0x70
+  ) {
+    const brand = String.fromCharCode(
+      view[8] ?? 0,
+      view[9] ?? 0,
+      view[10] ?? 0,
+      view[11] ?? 0,
+    ).toLowerCase();
+    if (
+      brand === 'heic' ||
+      brand === 'heix' ||
+      brand === 'hevc' ||
+      brand === 'hevx' ||
+      brand === 'mif1' ||
+      brand === 'msf1' ||
+      brand === 'heif'
+    ) {
+      return brand.startsWith('hei') || brand === 'heif'
+        ? 'image/heic'
+        : 'image/heif';
+    }
+  }
+  return null;
+}
+
+export function sanitizeCredentialDisplayName(fileName?: string | null): string {
+  const raw = (fileName ?? '').trim() || 'document';
+  const base = raw.split(/[/\\]/).pop() ?? raw;
+  const cleaned = base
+    .replace(/[^\p{L}\p{N}._\- ()[+]/gu, '_')
+    .replace(/\s+/g, ' ')
+    .slice(0, 120)
+    .trim();
+  return cleaned || 'document';
+}
 
 /**
  * Credential types collected as required text values (not Storage uploads).
@@ -331,29 +525,53 @@ export function credentialTypeLabel(
 export function validateCredentialUpload(params: {
   mimeType?: string | null;
   sizeBytes?: number | null;
-}): { ok: true } | { ok: false; error: string } {
-  const mime = params.mimeType?.toLowerCase() ?? '';
-  if (
-    !ALLOWED_CREDENTIAL_MIME_TYPES.includes(
-      mime as AllowedCredentialMimeType,
-    )
-  ) {
+  fileName?: string | null;
+  /**
+   * When true, HEIC/HEIF may pass as a picker selection that still requires
+   * conversion before Storage upload. Final uploads must leave this false.
+   */
+  allowConvertible?: boolean;
+  /** When true, missing size is deferred (re-check after reading bytes). */
+  allowUnknownSize?: boolean;
+}): { ok: true; mimeType: string } | { ok: false; error: string } {
+  const mime = resolveCredentialUploadMime({
+    mimeType: params.mimeType,
+    fileName: params.fileName,
+  });
+
+  const uploadable = isUploadableCredentialMime(mime);
+  const convertible =
+    Boolean(params.allowConvertible) && isConvertibleCredentialMime(mime);
+
+  if (!uploadable && !convertible) {
     return {
       ok: false,
-      error: 'Unsupported file type. Use PDF, JPEG, or PNG.',
+      error:
+        'Unsupported file type. Use PDF, JPEG, PNG, or WebP. On iPhone you can also pick a HEIC photo — we convert it before upload.',
     };
   }
-  if (
-    params.sizeBytes == null ||
-    params.sizeBytes <= 0 ||
-    params.sizeBytes > MAX_CREDENTIAL_FILE_BYTES
-  ) {
+
+  if (params.sizeBytes != null) {
+    if (params.sizeBytes <= 0) {
+      return {
+        ok: false,
+        error: 'That file is empty or unreadable. Choose another PDF, JPEG, PNG, or WebP.',
+      };
+    }
+    if (params.sizeBytes > MAX_CREDENTIAL_FILE_BYTES) {
+      return {
+        ok: false,
+        error: 'File must be 10 MB or smaller.',
+      };
+    }
+  } else if (!params.allowUnknownSize) {
     return {
       ok: false,
       error: 'File must be between 1 byte and 10 MB.',
     };
   }
-  return { ok: true };
+
+  return { ok: true, mimeType: mime };
 }
 
 export type DocumentChecklistItemStatus =

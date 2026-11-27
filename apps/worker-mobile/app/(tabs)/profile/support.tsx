@@ -161,6 +161,7 @@ export default function SupportScreen() {
       <ScreenHeader
         title={t('support.title')}
         showBack
+        backFallback="/(tabs)/profile"
         titleSize="detail"
         eyebrow={t('support.eyebrow')}
         subtitle={t('support.subtitle')}

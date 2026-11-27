@@ -103,7 +103,7 @@ type HeaderButtonProps = {
   label: string;
   onPress: () => void;
   count?: number;
-  tone?: 'default' | 'money' | 'danger';
+  tone?: 'default' | 'money' | 'danger' | 'messages';
   /** Gently rings the icon on mount and every few seconds (alerts only). */
   ring?: boolean;
 };
@@ -172,7 +172,16 @@ function HeaderButton({
     transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.55]) }],
   }));
 
-  const tint = hasAlert ? styles.chromeBtnAlert : null;
+  const tint = hasAlert
+    ? styles.chromeBtnAlert
+    : tone === 'messages'
+      ? styles.chromeBtnMessages
+      : null;
+  const iconColor = hasAlert
+    ? colors.navy
+    : tone === 'messages'
+      ? '#B8F0EC'
+      : colors.white;
 
   return (
     <Animated.View style={shell}>
@@ -198,11 +207,7 @@ function HeaderButton({
         style={[styles.chromeBtn, tint]}
       >
         <Animated.View style={iconStyle}>
-          <Ionicons
-            name={icon}
-            size={20}
-            color={hasAlert ? colors.navy : colors.white}
-          />
+          <Ionicons name={icon} size={20} color={iconColor} />
         </Animated.View>
         {hasAlert ? (
           <Animated.View
@@ -551,6 +556,7 @@ export function GreetingHeader({
               }
               onPress={() => router.push('/messages')}
               count={messageUnreadCount}
+              tone="messages"
               ring={messageUnreadCount > 0}
             />
           ) : null}
@@ -770,6 +776,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.14)',
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  chromeBtnMessages: {
+    backgroundColor: 'rgba(45, 168, 168, 0.28)',
+    borderColor: 'rgba(184, 240, 236, 0.35)',
   },
   chromeBtnAlert: {
     backgroundColor: colors.yellow,

@@ -157,6 +157,13 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="profile"
+        listeners={({ navigation }) => ({
+          tabPress: () => {
+            // Always land on the More settings list — not a stale nested
+            // screen (payout, documents, etc.) left from a prior visit.
+            navigation.navigate('profile', { screen: 'index' });
+          },
+        })}
         options={{
           title: t('tabs.more'),
           tabBarAccessibilityLabel: t('tabs.more'),

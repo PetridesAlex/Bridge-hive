@@ -69,6 +69,18 @@ describe('navigation QA contracts', () => {
     expect(source('app/(tabs)/support.tsx')).toContain('href="/profile/support"');
   });
 
+  it('More tab always returns to the settings list', () => {
+    const tabs = source('app/(tabs)/_layout.tsx');
+    expect(tabs).toContain('name="profile"');
+    expect(tabs).toContain("navigation.navigate('profile', { screen: 'index' })");
+    expect(source('app/(tabs)/profile/_layout.tsx')).toContain(
+      'initialRouteName="index"',
+    );
+    expect(source('app/payout-setup.tsx')).toContain(
+      "navigateBack('/(tabs)/profile')",
+    );
+  });
+
   it('invoice list back is profile-only; detail always has back', () => {
     const list = source('app/(tabs)/invoices/index.tsx');
     expect(list).toContain('showBack={fromAccount}');

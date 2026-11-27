@@ -59,7 +59,7 @@ const ACCOUNT_LABELS: Record<WorkerJourneyAccountStatus, string> = {
 
 const ACCOUNT_SUMMARIES: Record<WorkerJourneyAccountStatus, string> = {
   setup_in_progress:
-    'Finish required documents and payout details. Individual document “Accepted” status does not unlock shifts yet.',
+    'Finish required documents and payout details — individual “Accepted” does not unlock shifts yet.',
   ready_to_submit:
     'Your required documents are uploaded. Submit the full package from Account Setup so BridgeHive can review your application.',
   submitted:

@@ -7,6 +7,7 @@ import { colors } from '@/constants/theme';
 export default function ProfileStackLayout() {
   return (
     <Stack
+      initialRouteName="index"
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },

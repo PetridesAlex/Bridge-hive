@@ -36,9 +36,11 @@ import {
   View,
   type NativeSyntheticEvent,
   type TextInputSelectionChangeEventData,
+  type ViewStyle,
 } from 'react-native';
 import Animated, {
   Easing,
+  FadeInDown,
   interpolate,
   interpolateColor,
   useAnimatedStyle,
@@ -278,13 +280,18 @@ export function ThreadView({
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
     >
-      <View style={styles.header}>
+      <Animated.View
+        entering={reducedMotion ? undefined : FadeInDown.duration(320)}
+        style={styles.header}
+      >
         <IconButton
           icon="chevron-back"
           accessibilityLabel={copy.back}
           onPress={onBack}
-          size={20}
-          backgroundColor={colors.surfaceSubdued}
+          size={18}
+          color={colors.navy}
+          backgroundColor="rgba(11, 42, 67, 0.05)"
+          style={styles.headerAction}
         />
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{messagingInitials(name)}</Text>
@@ -305,11 +312,13 @@ export function ThreadView({
               setDeleteError(null);
               setDeleteConfirm({ kind: 'chat' });
             }}
-            size={18}
-            backgroundColor={colors.errorLight}
+            size={16}
+            color="rgba(11, 42, 67, 0.42)"
+            backgroundColor="transparent"
+            style={styles.headerDelete}
           />
         ) : null}
-      </View>
+      </Animated.View>
       <View style={styles.privacy} accessibilityRole="text">
         <Ionicons name="shield-checkmark" size={15} color={colors.tealStrong} />
         <Text style={styles.privacyText}>{copy.privacy}</Text>
@@ -398,7 +407,15 @@ export function ThreadView({
               const canDelete = deletesEnabled && canDeleteMessage(item, currentUserId);
               return (
                 <View>
-                  {day ? <Text style={styles.day}>{day}</Text> : null}
+                  {day ? (
+                    <View style={styles.dayRow} accessibilityRole="header">
+                      <View style={styles.dayRule} />
+                      <View style={styles.dayChip}>
+                        <Text style={styles.dayText}>{day}</Text>
+                      </View>
+                      <View style={styles.dayRule} />
+                    </View>
+                  ) : null}
                   <View style={[styles.bubbleRow, mine ? styles.mine : styles.theirs]}>
                     {canDelete ? (
                       <Pressable
@@ -406,12 +423,16 @@ export function ThreadView({
                           setDeleteError(null);
                           setDeleteConfirm({ kind: 'message', message: item });
                         }}
-                        style={[styles.reactBtn, styles.deleteMsgBtn]}
+                        style={({ pressed }) => [
+                          styles.reactBtn,
+                          styles.deleteMsgBtn,
+                          pressed && styles.deleteMsgBtnPressed,
+                        ]}
                         accessibilityRole="button"
                         accessibilityLabel={copy.deleteMessage}
                         hitSlop={8}
                       >
-                        <Ionicons name="trash-outline" size={16} color={colors.error} />
+                        <Ionicons name="trash-outline" size={14} color="rgba(11, 42, 67, 0.38)" />
                       </Pressable>
                     ) : null}
                     <Pressable
@@ -743,7 +764,7 @@ export function ThreadView({
         <Pressable style={styles.confirmBackdrop} onPress={closeDeleteConfirm}>
           <Pressable style={styles.confirmCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.confirmIcon}>
-              <Ionicons name="trash-outline" size={20} color={colors.error} />
+              <Ionicons name="trash-outline" size={18} color="rgba(11, 42, 67, 0.55)" />
             </View>
             <Text style={styles.confirmTitle}>
               {deleteConfirm?.kind === 'chat' ? copy.deleteChatTitle : copy.deleteMessageTitle}
@@ -756,7 +777,11 @@ export function ThreadView({
               <Pressable
                 onPress={closeDeleteConfirm}
                 disabled={deleteBusy}
-                style={[styles.confirmBtn, styles.confirmBtnQuiet]}
+                style={({ pressed }) => [
+                  styles.confirmBtn,
+                  styles.confirmBtnQuiet,
+                  pressed && styles.confirmBtnPressed,
+                ]}
                 accessibilityRole="button"
               >
                 <Text style={styles.confirmBtnQuietText}>{copy.cancel}</Text>
@@ -764,7 +789,12 @@ export function ThreadView({
               <Pressable
                 onPress={() => void runDelete()}
                 disabled={deleteBusy}
-                style={[styles.confirmBtn, styles.confirmBtnDanger, deleteBusy && { opacity: 0.6 }]}
+                style={({ pressed }) => [
+                  styles.confirmBtn,
+                  styles.confirmBtnDanger,
+                  deleteBusy && { opacity: 0.55 },
+                  pressed && !deleteBusy && styles.confirmBtnPressed,
+                ]}
                 accessibilityRole="button"
               >
                 <Text style={styles.confirmBtnDangerText}>
@@ -779,47 +809,71 @@ export function ThreadView({
   );
 }
 
+/** Frosted confirm card — denser wash on native where blur is unavailable. */
+const confirmGlass: ViewStyle =
+  Platform.OS === 'web'
+    ? ({
+        backgroundColor: 'rgba(255, 255, 255, 0.42)',
+        backdropFilter: 'blur(22px) saturate(1.4)',
+      } as ViewStyle)
+    : { backgroundColor: 'rgba(255, 255, 255, 0.88)' };
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1, position: 'relative' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: 10,
     paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.white,
+    paddingTop: spacing.sm + 2,
+    paddingBottom: spacing.sm + 2,
+    minHeight: 56,
+    backgroundColor: 'rgba(255,255,255,0.94)',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-    ...shadows.sm,
+    borderBottomColor: 'rgba(11, 42, 67, 0.08)',
+  },
+  headerAction: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  headerDelete: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.10)',
   },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontFamily: typography.fonts.displaySemibold,
-    fontSize: 15,
+    fontSize: 12,
+    letterSpacing: 0.2,
     color: colors.white,
   },
-  headerText: { flex: 1, minWidth: 0, gap: 2 },
+  headerText: { flex: 1, minWidth: 0, gap: 1 },
   title: {
     fontFamily: typography.fonts.displaySemibold,
-    fontSize: 18,
-    lineHeight: 23,
-    letterSpacing: -0.3,
+    fontSize: 16,
+    lineHeight: 20,
+    letterSpacing: -0.25,
     color: colors.navy,
   },
   subtitle: {
     fontFamily: typography.fonts.medium,
-    fontSize: 13,
-    lineHeight: 17,
-    color: colors.tealStrong,
+    fontSize: 11,
+    lineHeight: 14,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+    color: 'rgba(11, 42, 67, 0.45)',
   },
   privacy: {
     flexDirection: 'row',
@@ -882,17 +936,37 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
   },
-  day: {
-    alignSelf: 'center',
-    marginVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
+  dayRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.md,
+    paddingHorizontal: spacing.xs,
+  },
+  dayRule: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: 'rgba(11, 42, 67, 0.14)',
+  },
+  dayChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: radii.full,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(11, 42, 67, 0.08)',
-    fontFamily: typography.fonts.medium,
+    backgroundColor: colors.white,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.12)',
+    ...shadows.sm,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  dayText: {
+    fontFamily: typography.fonts.semibold,
     fontSize: 11,
-    color: colors.textSecondary,
+    lineHeight: 14,
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    color: colors.navy,
   },
   bubbleRow: {
     flexDirection: 'row',
@@ -941,7 +1015,13 @@ const styles = StyleSheet.create({
   },
   reactBtnMine: {},
   reactBtnTheirs: {},
-  deleteMsgBtn: { backgroundColor: colors.errorLight, borderColor: 'transparent' },
+  deleteMsgBtn: {
+    backgroundColor: 'transparent',
+    borderColor: 'rgba(11, 42, 67, 0.10)',
+  },
+  deleteMsgBtnPressed: {
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
+  },
   bubbleDeleted: { opacity: 0.8 },
   bodyDeleted: { fontStyle: 'italic', opacity: 0.85 },
   sheetDelete: {
@@ -961,49 +1041,84 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.lg,
-    backgroundColor: 'rgba(7,29,48,0.55)',
+    backgroundColor: 'rgba(7, 29, 48, 0.28)',
   },
   confirmCard: {
     width: '100%',
-    maxWidth: 380,
-    padding: spacing.lg,
-    borderRadius: radii.xl,
-    backgroundColor: colors.white,
-    gap: spacing.sm,
+    maxWidth: 360,
+    paddingVertical: 22,
+    paddingHorizontal: 22,
+    borderRadius: 22,
+    ...confirmGlass,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255, 255, 255, 0.55)',
+    gap: 10,
+    ...shadows.sm,
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
   },
   confirmIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.errorLight,
+    backgroundColor: 'rgba(11, 42, 67, 0.06)',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.08)',
   },
-  confirmTitle: { fontFamily: typography.fonts.semibold, fontSize: 17, color: colors.navy },
+  confirmTitle: {
+    fontFamily: typography.fonts.displaySemibold,
+    fontSize: 17,
+    lineHeight: 22,
+    letterSpacing: -0.2,
+    color: colors.navy,
+  },
   confirmBody: {
     fontFamily: typography.fonts.regular,
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.textSecondary,
+    fontSize: 13.5,
+    lineHeight: 20,
+    letterSpacing: 0.1,
+    color: 'rgba(11, 42, 67, 0.62)',
   },
   confirmError: { fontFamily: typography.fonts.semibold, fontSize: 13, color: colors.error },
   confirmActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
+    gap: 8,
+    marginTop: 8,
   },
   confirmBtn: {
-    minHeight: 44,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radii.lg,
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: radii.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  confirmBtnQuiet: { borderWidth: 1, borderColor: colors.border, backgroundColor: colors.white },
-  confirmBtnQuietText: { fontFamily: typography.fonts.semibold, fontSize: 14, color: colors.navy },
-  confirmBtnDanger: { backgroundColor: colors.error },
-  confirmBtnDangerText: { fontFamily: typography.fonts.semibold, fontSize: 14, color: colors.white },
+  confirmBtnQuiet: {
+    backgroundColor: 'transparent',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(11, 42, 67, 0.14)',
+  },
+  confirmBtnQuietText: {
+    fontFamily: typography.fonts.medium,
+    fontSize: 13,
+    letterSpacing: 0.15,
+    color: colors.navy,
+  },
+  confirmBtnDanger: {
+    backgroundColor: 'rgba(180, 35, 24, 0.92)',
+  },
+  confirmBtnDangerText: {
+    fontFamily: typography.fonts.semibold,
+    fontSize: 13,
+    letterSpacing: 0.15,
+    color: colors.white,
+  },
+  confirmBtnPressed: {
+    opacity: 0.82,
+  },
   chipRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

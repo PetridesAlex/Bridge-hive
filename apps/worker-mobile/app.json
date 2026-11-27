@@ -74,6 +74,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "BridgeHive needs photo access so you can upload credential documents.",
+          "cameraPermission": "BridgeHive needs camera access so you can photograph credential documents."
+        }
+      ],
+      [
         "@stripe/stripe-react-native",
         {
           "merchantIdentifier": "merchant.com.bridgehive.worker",

@@ -338,6 +338,7 @@ export default function PersonalInformationScreen() {
       <ScreenHeader
         title="Personal information"
         showBack
+        backFallback="/(tabs)/profile"
         titleSize="detail"
         subtitle="Update your contact details and optional profile photo."
       />

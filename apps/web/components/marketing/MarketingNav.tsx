@@ -295,14 +295,15 @@ export function MarketingNav({ locale, dictionary }: MarketingNavProps) {
                   : null;
               const localizedHref = localizePath(item.href, locale);
               const current = pathname === localizedHref;
+              const isRecruitment = item.key === 'recruitment';
               return (
                 <Link
                   key={item.key}
                   href={localizedHref}
-                  className="m-nav-link"
+                  className={`m-nav-link${isRecruitment ? ' m-nav-link--recruitment' : ''}`}
                   aria-current={current ? 'page' : undefined}
                 >
-                  {item.key === 'recruitment' ? (
+                  {isRecruitment ? (
                     <RecruitmentNavIcon
                       className="m-nav-link-icon"
                       size={18}
@@ -315,7 +316,9 @@ export function MarketingNav({ locale, dictionary }: MarketingNavProps) {
                       aria-hidden="true"
                     />
                   ) : null}
-                  <span>{nav[item.key]}</span>
+                  <span className={isRecruitment ? 'm-nav-link-label' : undefined}>
+                    {nav[item.key]}
+                  </span>
                 </Link>
               );
             })}
@@ -372,20 +375,39 @@ export function MarketingNav({ locale, dictionary }: MarketingNavProps) {
                     ? NAV_ICONS[item.key as keyof typeof NAV_ICONS]
                     : null;
                 const localizedHref = localizePath(item.href, locale);
+                const isRecruitment = item.key === 'recruitment';
                 return (
                   <Link
                     key={item.key}
                     href={localizedHref}
-                    className="m-mobile-link"
+                    className={`m-mobile-link${isRecruitment ? ' m-mobile-link--recruitment' : ''}`}
                     aria-current={pathname === localizedHref ? 'page' : undefined}
                     onClick={() => setOpen(false)}
                   >
-                    {item.key === 'recruitment' ? (
-                      <RecruitmentNavIcon size={18} />
-                    ) : Icon ? (
-                      <Icon size={18} strokeWidth={1.85} aria-hidden="true" />
-                    ) : null}
-                    {nav[item.key]}
+                    {isRecruitment ? (
+                      <>
+                        <span className="m-mobile-recruitment-glow" aria-hidden="true" />
+                        <RecruitmentNavIcon size={20} />
+                        <span className="m-mobile-recruitment-copy">
+                          <span className="m-mobile-recruitment-kicker">
+                            {nav.recruitmentKicker}
+                          </span>
+                          <span className="m-mobile-recruitment-label">
+                            {nav[item.key]}
+                          </span>
+                        </span>
+                        <span className="m-mobile-recruitment-chevron" aria-hidden="true">
+                          →
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        {Icon ? (
+                          <Icon size={18} strokeWidth={1.85} aria-hidden="true" />
+                        ) : null}
+                        {nav[item.key]}
+                      </>
+                    )}
                   </Link>
                 );
               })}

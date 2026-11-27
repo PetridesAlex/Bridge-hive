@@ -13,6 +13,7 @@ export const el: MarketingDictionary = {
     organizations: 'Οργανισμοί',
     professionals: 'Επαγγελματίες',
     recruitment: 'Προσλήψεις',
+    recruitmentKicker: 'Προτεινόμενη διαδρομή',
     howItWorks: 'Πώς λειτουργεί',
     about: 'Σχετικά',
     contact: 'Επικοινωνία',
@@ -214,7 +215,7 @@ export const el: MarketingDictionary = {
     },
     hiw: {
       eyebrow: 'Πώς λειτουργεί',
-      title: 'Από το άνοιγμα μέχρι την εξόφληση',
+      title: 'Από το άνοιγμα μέχρι την',
       titleAccent: 'εξόφληση',
       lede:
         'Μια συνοπτική εικόνα του κοινού επιχειρησιακού κύκλου — και, στη συνέχεια, οι δύο αναλυτικές διαδρομές παρακάτω.',

@@ -46,17 +46,25 @@ describe('worker mobile auth recovery and package submit contracts', () => {
 
   it('check-email uses request-accepted copy and resend with cooldown', async () => {
     const src = await readMobile('app/auth/worker/check-email.tsx');
-    expect(src).toMatch(/workerConfirmRequestAcceptedCopy/);
+    const en = await readMobile('i18n/translations/en.ts');
     expect(src).toMatch(/resendSignupConfirmation/);
     expect(src).toMatch(/WORKER_CONFIRM_RESEND_COOLDOWN_MS/);
-    expect(src).toMatch(/Wrong email/);
+    expect(src).toMatch(/auth\.wrongEmailEdit/);
+    expect(src).toMatch(/auth\.invitationDeliveryNote/);
     expect(src).not.toMatch(/We sent a confirmation link/);
+    expect(en).toMatch(/Delivery is not confirmed on this screen/);
+    expect(en).toMatch(/Edit email/);
   });
 
   it('pending screen exposes Submit for review from server eligibility', async () => {
     const src = await readMobile('app/auth/worker/pending.tsx');
-    expect(src).toMatch(/canSubmitWorkerVerificationPackage/);
-    expect(src).toMatch(/Submit for review/);
-    expect(src).toMatch(/Final platform review/);
+    const journey = await readMobile('lib/worker-journey.ts');
+    const en = await readMobile('i18n/translations/en.ts');
+    expect(journey).toMatch(/canSubmitWorkerVerificationPackage/);
+    expect(src).toMatch(/canSubmitPackage/);
+    expect(src).toMatch(/auth\.submitForReview/);
+    expect(src).toMatch(/auth\.finalReview/);
+    expect(en).toMatch(/submitForReview: 'Submit for review'/);
+    expect(en).toMatch(/finalReview: 'Final review'/);
   });
 });

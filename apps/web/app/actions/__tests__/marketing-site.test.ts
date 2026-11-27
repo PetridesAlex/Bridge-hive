@@ -45,6 +45,19 @@ const readEn = () => readWeb('lib/marketing-i18n/dictionaries/en.ts');
 
 describe('marketing site contracts', () => {
 
+  it('does not repeat the how-it-works accent already contained in the title', async () => {
+    const { en } = await import('@/lib/marketing-i18n/dictionaries/en');
+    const { el } = await import('@/lib/marketing-i18n/dictionaries/el');
+    for (const dict of [en, el]) {
+      const heading = `${dict.home.hiw.title} ${dict.home.hiw.titleAccent}`.replace(/\s+/g, ' ').trim();
+      const accent = dict.home.hiw.titleAccent;
+      const first = heading.indexOf(accent);
+      expect(first).toBeGreaterThanOrEqual(0);
+      expect(heading.indexOf(accent, first + accent.length)).toBe(-1);
+    }
+  });
+
+
   it('keeps audience card mark in a mobile reflow header and avoids 100vw overflow calcs', async () => {
     const audience = await readWeb('components/marketing/AudienceJourney.tsx');
     const css = await readWeb('app/marketing.css');

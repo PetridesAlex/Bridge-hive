@@ -3,6 +3,7 @@
 import {
   Fragment,
   useActionState,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -153,9 +154,16 @@ export function PackageReviewPanel({
       ),
     [credentials],
   );
-  const [selected, setSelected] = useState<string[]>([]);
+  const eligibleKey = eligibleIds.join(',');
+  const [selected, setSelected] = useState<string[]>(eligibleIds);
   const [confirmReviewed, setConfirmReviewed] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
+
+  // Keep bulk selection aligned with every eligible pending/under-review item
+  // so package approve covers the full document set together.
+  useEffect(() => {
+    setSelected(eligibleIds);
+  }, [eligibleKey, eligibleIds]);
 
   const [approveState, approveAction, approvePending] = useActionState(
     approveReviewedCredentialsAction,
@@ -183,6 +191,21 @@ export function PackageReviewPanel({
   const allEligibleSelected =
     eligibleIds.length > 0 &&
     eligibleIds.every((id) => selected.includes(id));
+
+  // Hosted mark_credentials_under_review still requires a file object; text-only
+  // rows are covered by package approve instead.
+  const markableIds = useMemo(
+    () =>
+      credentials
+        .filter(
+          (c) =>
+            c.status === 'pending' &&
+            c.hasFile &&
+            eligibleIds.includes(c.id),
+        )
+        .map((c) => c.id),
+    [credentials, eligibleIds],
+  );
 
   const actionError =
     approveState.error ||
@@ -252,12 +275,37 @@ export function PackageReviewPanel({
                 <input
                   type="hidden"
                   name="credentialIds"
-                  value={selected.join(',')}
+                  value={markableIds.join(',')}
                 />
-                <PremiumActionButton
-                  disabled={markPending || selected.length === 0}
+                <button
+                  type="submit"
+                  disabled={markPending || markableIds.length === 0}
+                  className="inline-flex h-9 items-center rounded-full border border-bh-border/80 bg-white px-3.5 text-xs font-semibold text-bh-text shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-bh-teal/40 hover:bg-bh-teal-soft/40 hover:text-bh-teal-strong disabled:pointer-events-none disabled:opacity-50 motion-reduce:transition-none motion-reduce:hover:translate-y-0"
                 >
-                  {markPending ? 'Marking…' : 'Mark under review'}
+                  {markPending ? 'Marking…' : 'Mark all under review'}
+                </button>
+              </form>
+              <form action={approveAction}>
+                <input type="hidden" name="workerId" value={workerId} />
+                <input
+                  type="hidden"
+                  name="credentialIds"
+                  value={eligibleIds.join(',')}
+                />
+                <input type="hidden" name="confirmReviewed" value="true" />
+                {expectedLastActivity ? (
+                  <input
+                    type="hidden"
+                    name="expectedLastActivity"
+                    value={expectedLastActivity}
+                  />
+                ) : null}
+                <PremiumActionButton
+                  disabled={approvePending || eligibleIds.length === 0}
+                >
+                  {approvePending
+                    ? 'Approving…'
+                    : `Approve all together (${eligibleIds.length})`}
                   <ArrowRight className="h-3.5 w-3.5 transition duration-300 group-hover/btn:translate-x-0.5" />
                 </PremiumActionButton>
               </form>
@@ -604,12 +652,12 @@ export function PackageReviewPanel({
                     Package decision
                   </p>
                   <p className="mt-1 text-base font-semibold tracking-tight text-bh-text">
-                    Approve selected reviewed documents
+                    Approve documents together
                   </p>
                   <p className="mt-1 max-w-xl text-xs leading-5 text-bh-text-secondary">
-                    Only eligible pending or under-review items with a saved
-                    file or text value for this worker. This does not grant
-                    marketplace access.
+                    Approves every selected eligible pending or under-review
+                    item with a saved file or text value. Defaults to the full
+                    eligible set. Does not grant marketplace access.
                   </p>
                 </div>
               </div>
@@ -660,7 +708,7 @@ export function PackageReviewPanel({
               >
                 {approvePending
                   ? 'Approving…'
-                  : 'Approve selected reviewed documents'}
+                  : `Approve ${selected.length || eligibleIds.length} together`}
                 <ArrowRight className="h-3.5 w-3.5 transition duration-300 group-hover/btn:translate-x-0.5" />
               </PremiumActionButton>
             </div>

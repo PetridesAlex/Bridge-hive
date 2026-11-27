@@ -17,7 +17,10 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-screen overflow-x-clip bg-[#d8e3eb]">
+    <div
+      data-bh-admin="shell"
+      className="relative flex min-h-screen overflow-x-clip bg-[#d8e3eb]"
+    >
       {/* Soft brand atmosphere — cool slate base + navy/teal washes so white cards lift */}
       <div
         aria-hidden

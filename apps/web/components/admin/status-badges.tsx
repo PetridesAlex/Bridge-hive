@@ -84,7 +84,7 @@ export function VerificationStatusBadge({ status }: { status: string }) {
   if (status === 'verified') {
     return (
       <span
-        className="inline-flex items-center gap-1.5 rounded-full border border-bh-success/30 bg-bh-success-soft px-2.5 py-1 text-[11px] font-semibold text-bh-success shadow-[0_0_0_3px_rgba(25,135,84,0.10)]"
+        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-700/40 bg-emerald-700 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-white shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_0_0_3px_rgba(15,107,69,0.16)]"
         title="Worker passed full verification"
       >
         <BadgeCheck className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -131,7 +131,7 @@ export function ApplicationStatusBadge({
     return (
       <span
         className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border border-bh-success/25 bg-bh-success-soft/80 px-2.5 py-1 text-[11px] font-semibold tracking-tight text-bh-success',
+          'inline-flex items-center gap-1.5 rounded-full border border-emerald-700/40 bg-emerald-700 px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em] text-white shadow-[0_1px_0_rgba(255,255,255,0.14)_inset]',
           className,
         )}
         title="Fully verified — marketplace access approved"
@@ -145,12 +145,16 @@ export function ApplicationStatusBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold',
-        tone === 'warning' && 'bg-bh-honey-soft text-bh-warning',
-        tone === 'danger' && 'bg-bh-danger-soft text-bh-danger',
-        tone === 'info' && 'bg-bh-info-soft text-bh-info',
-        tone === 'muted' && 'bg-bh-subtle text-bh-text-secondary',
-        tone === 'success' && 'bg-bh-success-soft text-bh-success',
+        'inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.02em]',
+        tone === 'warning' &&
+          'border-amber-700/40 bg-[#C47A00] text-white shadow-[0_1px_0_rgba(255,255,255,0.16)_inset]',
+        tone === 'danger' &&
+          'border-red-800/35 bg-[#B42318] text-white shadow-[0_1px_0_rgba(255,255,255,0.12)_inset]',
+        tone === 'info' &&
+          'border-sky-800/30 bg-[#0C5EAE] text-white shadow-[0_1px_0_rgba(255,255,255,0.14)_inset]',
+        tone === 'muted' && 'border-[#0B2A43]/12 bg-[#0B2A43]/08 text-[#0B2A43]',
+        tone === 'success' &&
+          'border-emerald-700/35 bg-emerald-700 text-white shadow-[0_1px_0_rgba(255,255,255,0.14)_inset]',
         className,
       )}
     >

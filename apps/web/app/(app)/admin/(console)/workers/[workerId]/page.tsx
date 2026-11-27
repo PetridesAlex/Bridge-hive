@@ -493,7 +493,7 @@ export default async function AdminWorkerDetailPage({
         <h3 className="text-lg font-medium text-slate-900">
           Role checklist
         </h3>
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-bh-border/80 bg-bh-surface">
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -551,7 +551,7 @@ export default async function AdminWorkerDetailPage({
         {!credentials?.length ? (
           <EmptyState title="No credentials" description="This worker has not submitted credentials yet." />
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto rounded-xl border border-bh-border/80 bg-bh-surface">
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
@@ -599,7 +599,7 @@ export default async function AdminWorkerDetailPage({
             description="Future accepted assignments will appear here."
           />
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-100 rounded-xl border border-bh-border/80 bg-bh-surface">
             {futureAssignments.map((row) => (
               <li key={row.id} className="px-4 py-3 text-sm">
                 <p className="font-medium text-slate-900">
@@ -619,7 +619,7 @@ export default async function AdminWorkerDetailPage({
         {!audits?.length ? (
           <EmptyState title="No audit events" />
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+          <ul className="divide-y divide-slate-100 rounded-xl border border-bh-border/80 bg-bh-surface">
             {audits.map((event) => (
               <li key={event.id} className="flex flex-wrap justify-between gap-2 px-4 py-3 text-sm">
                 <div>

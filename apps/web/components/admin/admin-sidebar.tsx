@@ -3,6 +3,7 @@
 import {
   Briefcase,
   Building2,
+  CalendarDays,
   ClipboardCheck,
   FileSearch,
   Headphones,
@@ -10,6 +11,7 @@ import {
   LogOut,
   Receipt,
   ScrollText,
+  ShieldCheck,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -20,6 +22,7 @@ import { signOutAction } from '@/app/actions/auth';
 import { BridgeHiveMark } from '@/components/brand/BridgeHiveMark';
 import { Button } from '@/components/ui/button';
 import type { PlatformCapabilities } from '@/lib/admin/capabilities';
+import { platformRoleLabel } from '@/lib/admin/labels';
 import { cn } from '@/lib/utils';
 
 export type AdminQueueCounts = {
@@ -51,6 +54,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Organizations',
     icon: Building2,
     badgeKey: 'organizations',
+    visible: (c) => c.canManageOrganizations,
+  },
+  {
+    href: '/admin/shifts',
+    label: 'Shifts',
+    icon: CalendarDays,
     visible: (c) => c.canManageOrganizations,
   },
   {
@@ -99,10 +108,6 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-function roleLabel(role: string): string {
-  return role.replaceAll('_', ' ');
-}
-
 export function AdminSidebar({
   capabilities,
   displayName,
@@ -120,6 +125,7 @@ export function AdminSidebar({
 }) {
   const pathname = usePathname();
   const items = NAV_ITEMS.filter((item) => item.visible(capabilities));
+  const isSuperAdmin = capabilities.role === 'platform_super_admin';
   const initials = (displayName || 'A')
     .split(/\s+/)
     .map((p) => p[0])
@@ -267,27 +273,59 @@ export function AdminSidebar({
           </div>
         </div>
 
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#071d30]/55 p-[1px] shadow-[0_10px_24px_rgba(0,0,0,0.22)]">
-          <div className="relative flex items-center gap-3 rounded-[15px] bg-gradient-to-br from-white/[0.07] to-transparent px-3 py-2.5">
-            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-bh-honey to-[#c9920f] text-sm font-bold tracking-wide text-bh-sidebar shadow-[0_6px_14px_rgba(224,170,24,0.35)] ring-1 ring-white/20">
-              {initials}
-              <span
-                aria-hidden
-                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-bh-success ring-2 ring-[#071d30]"
-              />
-            </span>
-            <div className="min-w-0">
-              <p className="truncate text-[15px] font-semibold text-white">
-                {displayName}
-              </p>
-              <p className="mt-0.5 truncate text-[11px] font-bold uppercase tracking-[0.12em] text-bh-honey">
-                {roleLabel(capabilities.role)}
-              </p>
-              {email ? (
-                <p className="mt-0.5 truncate text-xs text-bh-sidebar-muted">
-                  {email}
-                </p>
-              ) : null}
+        <div className="bh-admin-account-shell relative overflow-hidden rounded-2xl p-[1.5px] shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
+          <div className="bh-admin-account-mesh relative overflow-hidden rounded-[14px]">
+            <span
+              aria-hidden
+              className="bh-orb-drift pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-bh-teal/35 blur-2xl"
+            />
+            <span
+              aria-hidden
+              className="bh-orb-drift pointer-events-none absolute -bottom-10 -left-6 h-20 w-20 rounded-full bg-bh-honey/30 blur-2xl"
+              style={{ animationDelay: '-4s' }}
+            />
+            <span
+              aria-hidden
+              className="bh-admin-account-sheen pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+            />
+
+            <div className="relative flex items-center gap-3 px-3 py-3">
+              <span className="bh-admin-account-avatar relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-bh-honey via-[#f0c24a] to-[#c9920f] text-sm font-bold tracking-wide text-bh-sidebar ring-1 ring-white/25">
+                {initials}
+                <span
+                  aria-hidden
+                  className="bh-admin-account-live absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-[#071d30]"
+                />
+              </span>
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-[14px] font-bold tracking-tight text-white">
+                    {displayName}
+                  </p>
+                  {isSuperAdmin ? (
+                    <ShieldCheck
+                      className="h-3.5 w-3.5 shrink-0 text-bh-honey"
+                      aria-hidden
+                    />
+                  ) : null}
+                </div>
+                {email ? (
+                  <p className="mt-0.5 truncate text-[11px] font-medium text-white/65">
+                    {email}
+                  </p>
+                ) : null}
+                <span
+                  className={cn(
+                    'mt-1.5 inline-flex max-w-full items-center gap-1 truncate rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em]',
+                    isSuperAdmin
+                      ? 'border-bh-honey/45 bg-bh-honey/20 text-bh-honey'
+                      : 'border-white/15 bg-white/10 text-white/85',
+                  )}
+                >
+                  {platformRoleLabel(capabilities.role)}
+                </span>
+              </div>
             </div>
           </div>
         </div>

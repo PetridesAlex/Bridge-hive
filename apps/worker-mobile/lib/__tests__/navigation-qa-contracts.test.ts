@@ -29,12 +29,37 @@ describe('navigation QA contracts', () => {
     expect(payments).toContain('payoutError ? t(\'payments.loadEarningsError\')');
   });
 
-  it('sandbox standing chip is labeled as not live', () => {
+  it('presents live standing on sandbox payment builds without synthesizing good_standing', () => {
     const profile = source('app/(tabs)/profile/index.tsx');
-    expect(profile).toContain('sandboxStandingLabel');
-    expect(profile).toContain('isSandboxPaymentsBuild()');
+    const personal = source('app/(tabs)/profile/personal-information.tsx');
+    const invoices = source('lib/invoices.ts');
+    const hook = source('hooks/useBillingRestriction.ts');
     const en = source('i18n/translations/en.ts');
-    expect(en).toContain("sandboxStandingLabel: 'Sandbox · not live standing'");
+
+    expect(invoices).toContain("rpc('get_my_billing_restriction_summary')");
+    expect(invoices).not.toMatch(
+      /isSandboxPaymentsBuild\(\)[\s\S]{0,120}standing:\s*'good_standing'/,
+    );
+    expect(hook).toContain('marketplacePausedForLiveBillingStanding');
+    expect(profile).toContain('presentWorkerBillingStanding');
+    expect(profile).toContain('billingStatusUnavailable');
+    expect(profile).toContain('sandboxLiveStandingClear');
+    expect(personal).toContain('presentWorkerBillingStanding');
+    expect(en).toContain("billingStatusUnavailable: 'Billing status unavailable'");
+    expect(en).toContain(
+      "sandboxLiveStandingClear: 'Live standing clear · sandbox payments'",
+    );
+    expect(en).toContain("sandboxLiveStandingRestricted: 'Live standing · restricted'");
+  });
+
+  it('keeps sandbox invoice listing separate from live standing RPC', () => {
+    const invoices = source('lib/invoices.ts');
+    expect(invoices).toContain('list_my_sandbox_commission_invoices');
+    expect(invoices).toContain('get_my_billing_restriction_summary');
+    // Sandbox invoice lane remains gated by payments mode; standing is not.
+    expect(invoices).toMatch(
+      /getMyCommissionInvoices[\s\S]*isSandboxPaymentsBuild\(\)[\s\S]*list_my_sandbox_commission_invoices/,
+    );
   });
 
   it('legacy account and support routes redirect', () => {

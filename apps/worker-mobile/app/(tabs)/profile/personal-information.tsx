@@ -1,5 +1,5 @@
 import {
-  billingStandingLabel,
+  presentWorkerBillingStanding,
   profileInitials,
 } from '@bridge-hive/domain';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/Button';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
 import { TextInput } from '@/components/ui/TextInput';
 import { WORKER_ROLE_LABELS } from '@/constants/config';
-import { isSandboxPaymentsBuild } from '@/constants/stripe';
+import { getStripePaymentsMode } from '@/constants/stripe';
 import { colors, radii, shadows, spacing, typography } from '@/constants/theme';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
@@ -178,8 +178,17 @@ function SupportLink() {
 export default function PersonalInformationScreen() {
   const { user, profile, workerProfile, isVerified, refreshProfile } = useAuth();
   const { t } = useTranslation();
-  const { summary: billing } = useBillingRestriction(Boolean(user?.id));
-  const sandboxBuild = isSandboxPaymentsBuild();
+  const {
+    summary: billing,
+    error: billingError,
+    loading: billingLoading,
+  } = useBillingRestriction(Boolean(user?.id));
+  const billingPresentation = presentWorkerBillingStanding({
+    paymentsMode: getStripePaymentsMode(),
+    standing: billing?.standing,
+    readFailed: Boolean(billingError),
+    loading: billingLoading,
+  });
 
   const [fullName, setFullName] = useState(profile?.full_name ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
@@ -539,11 +548,17 @@ export default function PersonalInformationScreen() {
           icon="card-outline"
           label="Billing standing"
           value={
-            sandboxBuild
-              ? t('payments.sandboxStandingLabel')
-              : billingStandingLabel(billing?.standing)
+            billingPresentation.kind === 'unavailable'
+              ? t('payments.billingStatusUnavailable')
+              : billingPresentation.kind === 'sandbox_good_standing'
+                ? t('payments.sandboxLiveStandingClear')
+                : billingPresentation.kind === 'sandbox_restricted'
+                  ? t('payments.sandboxLiveStandingRestricted')
+                  : billingPresentation.kind === 'loading'
+                    ? t('payments.billingStatusChecking')
+                    : billingPresentation.label
           }
-          tone={sandboxBuild ? 'info' : statusTone(billing?.standing)}
+          tone={billingPresentation.tone}
         />
 
         <Button

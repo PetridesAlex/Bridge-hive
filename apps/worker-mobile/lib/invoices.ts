@@ -183,19 +183,9 @@ export async function getMyCommissionInvoice(invoiceId: string, workerId: string
 }
 
 export async function getMyBillingRestrictionSummary() {
-  // Sandbox builds must not surface live debt standing as payment-test state.
-  if (isSandboxPaymentsBuild()) {
-    return {
-      data: {
-        standing: 'good_standing',
-        overdue_count: 0,
-        overdue_amount_minor: 0,
-        oldest_due_at: null,
-      } satisfies BillingRestrictionSummary,
-      error: undefined as string | undefined,
-    };
-  }
-
+  // Always use the authorized live standing RPC. Sandbox payment mode lists /
+  // pays TEST invoices separately — it must not synthesize good_standing, which
+  // would imply a production commission obligation is cleared.
   const { data, error } = await supabase.rpc('get_my_billing_restriction_summary');
   if (error) {
     return { data: null as BillingRestrictionSummary | null, error: error.message };

@@ -1,4 +1,5 @@
 import {
+  isMessagingRealtimeCatchUpStatus,
   isMessagingUuid,
   messagingChannelName,
   subscribeMessagingRealtime,
@@ -6,7 +7,7 @@ import {
 } from '@bridge-hive/domain';
 import { Redirect, router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { InboxView } from '@/components/messages/InboxView';
 import { AppScreen } from '@/components/ui/AppScreen';
@@ -20,6 +21,9 @@ import { navigateBack } from '@/lib/navigation';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 
+/** Coalesce realtime conversation-row bursts; matches org / thread (~180ms). */
+const REALTIME_LOAD_DEBOUNCE_MS = 180;
+
 export default function MessagesInboxScreen() {
   const { t, language } = useTranslation();
   const { isAppReviewDemo, session, loading: authLoading } = useAuth();
@@ -29,6 +33,9 @@ export default function MessagesInboxScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const loadedOnceRef = useRef(false);
   const requestRef = useRef(0);
+  const [realtimeEpoch, setRealtimeEpoch] = useState(0);
+  const realtimeResubscribedRef = useRef(false);
+  const priorInboxUserRef = useRef<string | null>(null);
 
   const load = useCallback(async () => {
     if (isAppReviewDemo || !session) {
@@ -60,19 +67,67 @@ export default function MessagesInboxScreen() {
     }, [load]),
   );
 
+  // Expo web: AppState is unreliable while the tab stays focused/hidden.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    if (isAppReviewDemo || !session) return;
+    const quietCatchUp = () => {
+      if (document.visibilityState !== 'visible') return;
+      void load();
+    };
+    const onFocus = () => void load();
+    document.addEventListener('visibilitychange', quietCatchUp);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', quietCatchUp);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [isAppReviewDemo, load, session]);
+
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId || !isMessagingUuid(userId) || isAppReviewDemo) return;
+    if (priorInboxUserRef.current !== userId) {
+      priorInboxUserRef.current = userId;
+      // userId dependency already remounts this effect; only reset the one-shot flag.
+      realtimeResubscribedRef.current = false;
+    }
+    let cancelled = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleDebouncedLoad = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (!cancelled) void load();
+      }, REALTIME_LOAD_DEBOUNCE_MS);
+    };
     const subscription = subscribeMessagingRealtime({
       client: supabase,
       channelName: messagingChannelName('worker-inbox', { userId }),
       table: 'organization_worker_conversations',
       filter: `worker_id=eq.${userId}`,
-      onChange: () => void load(),
-      onSubscribed: () => void load(),
+      onChange: scheduleDebouncedLoad,
+      onSubscribed: () => {
+        if (!cancelled) void load();
+      },
+      onStatus: (status) => {
+        if (cancelled) return;
+        if (__DEV__) {
+          console.debug('[worker-inbox-realtime]', { status, userId });
+        }
+        if (!isMessagingRealtimeCatchUpStatus(status)) return;
+        void load();
+        if (!realtimeResubscribedRef.current) {
+          realtimeResubscribedRef.current = true;
+          setRealtimeEpoch((n) => n + 1);
+        }
+      },
     });
-    return () => subscription.unsubscribe();
-  }, [isAppReviewDemo, load, session?.user?.id]);
+    return () => {
+      cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      subscription.unsubscribe();
+    };
+  }, [isAppReviewDemo, load, realtimeEpoch, session?.user?.id]);
 
   if (!authLoading && !session) {
     return <Redirect href="/auth/worker/login" />;

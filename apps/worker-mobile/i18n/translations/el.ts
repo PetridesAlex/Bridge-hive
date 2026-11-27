@@ -112,20 +112,20 @@ export const el: TranslationCatalog = {
     checkEmailTitle: 'Ελέγξτε το email σας',
     checkEmailBody: 'Αν υπάρχει λογαριασμός για αυτό το email, θα λάβετε σύντομα μήνυμα.',
     confirmEmailTitle: 'Επιβεβαιώστε το email σας',
-    confirmEmailSubtitle:
-      'Ο λογαριασμός εργαζομένου δημιουργήθηκε. Επιβεβαιώστε την πρόσκληση που έστειλε το BridgeHive πριν συνδεθείτε.',
+    confirmEmailSubtitle: 'Επιβεβαιώστε την πρόσκληση που στείλαμε και μετά συνδεθείτε.',
     invitationSent: 'Η πρόσκληση στάλθηκε',
-    invitationBodyWithEmail:
-      'Το BridgeHive έστειλε πρόσκληση στο %{email} για επιβεβαίωση της διεύθυνσης email. Ανοίξτε το μήνυμα και επιβεβαιώστε.',
-    invitationBody:
-      'Το BridgeHive έστειλε πρόσκληση για επιβεβαίωση της διεύθυνσης email. Ανοίξτε το μήνυμα και επιβεβαιώστε.',
+    invitationBodyWithEmail: 'Επιβεβαιώστε το email που στείλαμε για να συνεχίσετε.',
+    invitationBody: 'Επιβεβαιώστε το email που στείλαμε για να συνεχίσετε.',
+    invitationNextStep: 'Έπειτα επιστρέψτε εδώ και συνδεθείτε.',
+    invitationWaitingLabel: 'Αναμονή επιβεβαίωσης',
+    invitationDeliveryNote: 'Ελέγξτε εισερχόμενα και ανεπιθύμητα. Η παράδοση δεν επιβεβαιώνεται εδώ.',
     requestAssociatedWith: 'Αίτημα συνδεδεμένο με: %{email}',
     enterRegisterEmail:
       'Εισαγάγετε τη διεύθυνση εγγραφής αν χρειάζεστε επαναποστολή επιβεβαίωσης.',
     saveAddress: 'Αποθήκευση διεύθυνσης',
     addressUpdated: 'Η διεύθυνση ενημερώθηκε. Μπορείτε να επαναστείλετε επιβεβαίωση.',
     resendConfirmation: 'Επαναποστολή επιβεβαίωσης',
-    wrongEmailEdit: 'Λάθος email; Επεξεργασία διεύθυνσης',
+    wrongEmailEdit: 'Επεξεργασία email',
     continueToSignIn: 'Συνέχεια στη σύνδεση',
     backToRegistration: 'Επιστροφή στην εγγραφή',
     confirmEmailAlertTitle: 'Επιβεβαιώστε το email σας',
@@ -412,6 +412,10 @@ export const el: TranslationCatalog = {
     totalsUnavailable: '—',
     sandboxTestLabel: 'TEST · sandbox',
     sandboxStandingLabel: 'Sandbox · όχι πραγματική κατάσταση',
+    sandboxLiveStandingClear: 'Πραγματική κατάσταση εντάξει · sandbox πληρωμές',
+    sandboxLiveStandingRestricted: 'Πραγματική κατάσταση · περιορισμός',
+    billingStatusUnavailable: 'Η κατάσταση χρέωσης δεν είναι διαθέσιμη',
+    billingStatusChecking: 'Έλεγχος χρέωσης…',
     emptyInvoicesBody:
       'Όταν ένας οργανισμός εγκρίνει το φύλλο ωρών σας, εμφανίζεται εδώ τιμολόγιο προμήθειας Bridge Hive.',
     openFullList: 'Άνοιγμα πλήρους λίστας τιμολογίων',

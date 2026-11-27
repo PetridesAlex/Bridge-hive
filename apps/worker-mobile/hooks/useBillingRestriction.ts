@@ -1,3 +1,4 @@
+import { marketplacePausedForLiveBillingStanding } from '@bridge-hive/domain';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
@@ -13,6 +14,7 @@ export function useBillingRestriction(enabled = true) {
   const refresh = useCallback(async () => {
     if (!enabled) {
       setSummary(null);
+      setError(undefined);
       setLoading(false);
       return;
     }
@@ -21,8 +23,10 @@ export function useBillingRestriction(enabled = true) {
     const result = await getMyBillingRestrictionSummary();
     if (result.error) {
       setError(result.error);
+      setSummary(null);
     } else {
       setSummary(result.data);
+      setError(undefined);
     }
     setLoading(false);
   }, [enabled]);
@@ -31,7 +35,9 @@ export function useBillingRestriction(enabled = true) {
     void refresh();
   }, [refresh]);
 
-  const isRestricted = summary?.standing === 'restricted';
+  // Follows live standing even on sandbox payment builds. Sandbox invoice pay
+  // eligibility stays separate in the invoice / checkout paths.
+  const isRestricted = marketplacePausedForLiveBillingStanding(summary?.standing);
 
   return { summary, isRestricted, loading, error, refresh };
 }

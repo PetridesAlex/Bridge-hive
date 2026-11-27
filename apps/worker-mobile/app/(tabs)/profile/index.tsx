@@ -1,12 +1,12 @@
 import {
   accountSetupMenuTrailingStatus,
-  billingStandingLabel,
   credentialsMenuTrailingStatus,
   earningsMenuTrailingStatus,
   invoicesMenuTrailingStatus,
   notificationsMenuTrailingStatus,
   payoutMenuTrailingStatus,
   personalInformationTrailingStatus,
+  presentWorkerBillingStanding,
   profileInitials,
   type CredentialSummary,
 } from '@bridge-hive/domain';
@@ -30,7 +30,7 @@ import { AppReviewDemoBanner } from '@/components/review/AppReviewDemoBanner';
 import { AppScreen } from '@/components/ui/AppScreen';
 import { ListGroup } from '@/components/ui/Card';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
-import { isSandboxPaymentsBuild } from '@/constants/stripe';
+import { getStripePaymentsMode } from '@/constants/stripe';
 import { colors, radii, spacing, typography } from '@/constants/theme';
 import { useBillingRestriction } from '@/hooks/useBillingRestriction';
 import { useCredentials } from '@/hooks/useCredentials';
@@ -114,7 +114,17 @@ export default function AccountHubScreen() {
   const { credentials } = useCredentials(workerId);
   const { account, payouts } = usePayouts(workerId);
   const { allInvoices } = useInvoices(workerId);
-  const { summary: billing } = useBillingRestriction(Boolean(workerId));
+  const {
+    summary: billing,
+    error: billingError,
+    loading: billingLoading,
+  } = useBillingRestriction(Boolean(workerId));
+  const billingPresentation = presentWorkerBillingStanding({
+    paymentsMode: getStripePaymentsMode(),
+    standing: billing?.standing,
+    readFailed: Boolean(billingError),
+    loading: billingLoading,
+  });
 
   const credentialSummaries: CredentialSummary[] = useMemo(
     () =>
@@ -266,23 +276,26 @@ export default function AccountHubScreen() {
             pulse: workerProfile?.verification_status === 'verified',
           },
           {
-            // Sandbox builds synthesize good_standing so live debt never blocks
-            // payment tests — the chip must not read as a verified live clearance.
-            label: isSandboxPaymentsBuild()
-              ? t('payments.sandboxStandingLabel')
-              : billingStandingLabel(billing?.standing),
+            // Sandbox payments stay separate from live standing: never invent
+            // unqualified "Good standing" for a production obligation.
+            label:
+              billingPresentation.kind === 'unavailable'
+                ? t('payments.billingStatusUnavailable')
+                : billingPresentation.kind === 'sandbox_good_standing'
+                  ? t('payments.sandboxLiveStandingClear')
+                  : billingPresentation.kind === 'sandbox_restricted'
+                    ? t('payments.sandboxLiveStandingRestricted')
+                    : billingPresentation.kind === 'loading'
+                      ? t('payments.billingStatusChecking')
+                      : billingPresentation.label,
             icon: 'card-outline',
-            tone: isSandboxPaymentsBuild()
-              ? 'info'
-              : billing?.standing === 'restricted'
-                ? 'danger'
-                : 'success',
-            solid:
-              !isSandboxPaymentsBuild() &&
-              (billing?.standing === 'restricted' ||
-                billing?.standing === 'good_standing'),
-            pulse:
-              !isSandboxPaymentsBuild() && billing?.standing === 'good_standing',
+            // ProfileHero chips have no neutral tone — map unavailable/loading to info.
+            tone:
+              billingPresentation.tone === 'neutral'
+                ? 'info'
+                : billingPresentation.tone,
+            solid: billingPresentation.solid,
+            pulse: billingPresentation.pulse,
           },
         ]}
       />

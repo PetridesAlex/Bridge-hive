@@ -8,6 +8,7 @@ import {
   canReactToMessage,
   createSendLock,
   createThreadRequestGuard,
+  isMessagingRealtimeCatchUpStatus,
   isMessagingUuid,
   mergeReactionSummaries,
   messagingChannelName,
@@ -23,7 +24,7 @@ import {
 } from '@bridge-hive/domain';
 import { Redirect, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThreadView } from '@/components/messages/ThreadView';
@@ -46,6 +47,9 @@ import { navigateBack } from '@/lib/navigation';
 import { createSecureClientMessageId } from '@/lib/secure-uuid';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/providers/AuthProvider';
+
+/** Coalesce realtime INSERT/UPDATE bursts; matches org web (~180ms). */
+const REALTIME_LOAD_DEBOUNCE_MS = 180;
 
 function summariesToMap(
   rows: OrgWorkerMessageReactionSummary[],
@@ -208,12 +212,34 @@ export default function MessageThreadScreen() {
     }, [load]),
   );
 
+  // Expo web: AppState often stays "active" while the tab is hidden/focused.
+  // Mirror org workspace visibility catch-up so an open thread refetches quietly.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    if (!isMessagingUuid(conversationId) || isAppReviewDemo || !session) return;
+    const quietCatchUp = () => {
+      if (document.visibilityState !== 'visible') return;
+      void load();
+    };
+    const onFocus = () => void load();
+    document.addEventListener('visibilitychange', quietCatchUp);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', quietCatchUp);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [conversationId, isAppReviewDemo, load, session]);
+
   const priorConversationRef = useRef(conversationId);
+  const [realtimeEpoch, setRealtimeEpoch] = useState(0);
+  const realtimeResubscribedRef = useRef(false);
 
   useEffect(() => {
     if (priorConversationRef.current === conversationId) return;
     priorConversationRef.current = conversationId;
     loadedOnceRef.current = false;
+    realtimeResubscribedRef.current = false;
+    setRealtimeEpoch(0);
     setMessages([]);
     setReactionSummaries({});
     setHasOlder(false);
@@ -225,14 +251,38 @@ export default function MessageThreadScreen() {
 
   useEffect(() => {
     if (!isMessagingUuid(conversationId) || isAppReviewDemo || !session) return;
+    let cancelled = false;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleDebouncedLoad = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        if (!cancelled) void load();
+      }, REALTIME_LOAD_DEBOUNCE_MS);
+    };
     const messagesSub = subscribeMessagingRealtime({
       client: supabase,
       channelName: messagingChannelName('worker-thread', { conversationId }),
       table: 'organization_worker_messages',
       filter: `conversation_id=eq.${conversationId}`,
       event: '*',
-      onChange: () => void load(),
-      onSubscribed: () => void load(),
+      onChange: scheduleDebouncedLoad,
+      onSubscribed: () => {
+        if (!cancelled) void load();
+      },
+      onStatus: (status) => {
+        if (cancelled) return;
+        if (__DEV__) {
+          // Sanitized lifecycle only — never log bodies, tokens, or headers.
+          console.debug('[worker-thread-realtime]', { status, conversationId });
+        }
+        if (!isMessagingRealtimeCatchUpStatus(status)) return;
+        void load();
+        // One remount/resubscribe per conversation mount — not a poll loop.
+        if (!realtimeResubscribedRef.current) {
+          realtimeResubscribedRef.current = true;
+          setRealtimeEpoch((n) => n + 1);
+        }
+      },
     });
     const reactionsSub = subscribeReactionBroadcast({
       client: supabase,
@@ -245,10 +295,12 @@ export default function MessageThreadScreen() {
       },
     });
     return () => {
+      cancelled = true;
+      if (debounceTimer) clearTimeout(debounceTimer);
       messagesSub.unsubscribe();
       reactionsSub.unsubscribe();
     };
-  }, [conversationId, isAppReviewDemo, load, refreshReactions, session]);
+  }, [conversationId, isAppReviewDemo, load, realtimeEpoch, refreshReactions, session]);
 
   const send = async (clientMessageId: string, body: string, draftAtSend: string) => {
     setSending(true);

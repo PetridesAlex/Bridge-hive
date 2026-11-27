@@ -15,8 +15,11 @@ import {
   isMessagingReactionsUnavailableError,
   isMessagingUuid,
   isOrgWorkerReactionKey,
+  createThreadRequestGuard,
+  isMessagingRealtimeCatchUpStatus,
   mergeMessagePage,
   mergeReactionSummaries,
+  mergeThreadSnapshot,
   messagePreview,
   messageWorkerHref,
   messagingChannelName,
@@ -71,24 +74,46 @@ describe('isMessagingEligible', () => {
 });
 
 describe('subscribeMessagingRealtime', () => {
-  it('uses a unique channel topic per subscribe so callbacks are never added after subscribe', () => {
+  function mockRealtimeClient(input?: {
+    statusOnSubscribe?: string;
+    fireChangeOnSubscribe?: boolean;
+  }) {
     const topics: string[] = [];
+    const removed: unknown[] = [];
+    let lastChange: (() => void) | null = null;
+    let lastStatus: ((status: string) => void) | null = null;
     const client = {
       channel(name: string) {
         topics.push(name);
         const channel = {
-          on() {
+          on(_type: string, _filter: object, cb: () => void) {
+            lastChange = cb;
             return channel;
           },
           subscribe(cb?: (status: string) => void) {
-            cb?.('SUBSCRIBED');
+            lastStatus = cb ?? null;
+            cb?.(input?.statusOnSubscribe ?? 'SUBSCRIBED');
+            if (input?.fireChangeOnSubscribe) lastChange?.();
             return channel;
           },
         };
         return channel;
       },
-      removeChannel() {},
+      removeChannel(channel: never) {
+        removed.push(channel);
+      },
     };
+    return {
+      client,
+      topics,
+      removed,
+      fireChange: () => lastChange?.(),
+      fireStatus: (status: string) => lastStatus?.(status),
+    };
+  }
+
+  it('uses a unique channel topic per subscribe so callbacks are never added after subscribe', () => {
+    const { client, topics } = mockRealtimeClient();
     const base = messagingChannelName('worker-inbox', {
       userId: 'b87a079e-8742-4a37-a17f-4205d858266c',
     });
@@ -115,6 +140,155 @@ describe('subscribeMessagingRealtime', () => {
     expect(topics[1]?.startsWith(`${base}:`)).toBe(true);
     first.unsubscribe();
     second.unsubscribe();
+  });
+
+  it('fires onChange while the thread channel is open (inbound catch-up hook)', () => {
+    const { client, fireChange } = mockRealtimeClient({ fireChangeOnSubscribe: false });
+    let changes = 0;
+    let subscribed = 0;
+    const sub = subscribeMessagingRealtime({
+      client,
+      channelName: messagingChannelName('worker-thread', {
+        conversationId: 'be415eeb-1111-4111-8111-111111111111',
+      }),
+      table: 'organization_worker_messages',
+      filter: 'conversation_id=eq.be415eeb-1111-4111-8111-111111111111',
+      onChange() {
+        changes += 1;
+      },
+      onSubscribed() {
+        subscribed += 1;
+      },
+    });
+    expect(subscribed).toBe(1);
+    expect(changes).toBe(0);
+    fireChange();
+    fireChange();
+    expect(changes).toBe(2);
+    sub.unsubscribe();
+  });
+
+  it('runs onSubscribed catch-up once per subscribe (reconnect remount)', () => {
+    const { client } = mockRealtimeClient();
+    let subscribed = 0;
+    const first = subscribeMessagingRealtime({
+      client,
+      channelName: 'worker-thread:x',
+      table: 'organization_worker_messages',
+      filter: 'conversation_id=eq.x',
+      onChange() {},
+      onSubscribed() {
+        subscribed += 1;
+      },
+    });
+    first.unsubscribe();
+    const second = subscribeMessagingRealtime({
+      client,
+      channelName: 'worker-thread:x',
+      table: 'organization_worker_messages',
+      filter: 'conversation_id=eq.x',
+      onChange() {},
+      onSubscribed() {
+        subscribed += 1;
+      },
+    });
+    expect(subscribed).toBe(2);
+    second.unsubscribe();
+  });
+
+  it('surfaces CHANNEL_ERROR via onStatus without throwing', () => {
+    const { client, fireStatus } = mockRealtimeClient({ statusOnSubscribe: 'SUBSCRIBED' });
+    const statuses: string[] = [];
+    const sub = subscribeMessagingRealtime({
+      client,
+      channelName: 'worker-thread:err',
+      table: 'organization_worker_messages',
+      filter: 'conversation_id=eq.err',
+      onChange() {},
+      onSubscribed() {},
+      onStatus(status) {
+        statuses.push(status);
+      },
+    });
+    expect(() => fireStatus('CHANNEL_ERROR')).not.toThrow();
+    expect(statuses).toEqual(['SUBSCRIBED', 'CHANNEL_ERROR']);
+    expect(isMessagingRealtimeCatchUpStatus('CHANNEL_ERROR')).toBe(true);
+    expect(isMessagingRealtimeCatchUpStatus('TIMED_OUT')).toBe(true);
+    expect(isMessagingRealtimeCatchUpStatus('CLOSED')).toBe(true);
+    expect(isMessagingRealtimeCatchUpStatus('SUBSCRIBED')).toBe(false);
+    sub.unsubscribe();
+  });
+
+  it('removes the channel on unsubscribe (account/thread switch cleanup)', () => {
+    const { client, removed } = mockRealtimeClient();
+    const sub = subscribeMessagingRealtime({
+      client,
+      channelName: 'worker-inbox:cleanup',
+      table: 'organization_worker_conversations',
+      filter: 'worker_id=eq.cleanup',
+      onChange() {},
+      onSubscribed() {},
+    });
+    expect(removed).toHaveLength(0);
+    sub.unsubscribe();
+    expect(removed).toHaveLength(1);
+  });
+});
+
+describe('createThreadRequestGuard / mergeThreadSnapshot', () => {
+  const conversationA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const conversationB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+  function row(
+    id: string,
+    conversationId: string,
+    createdAt: string,
+    body: string,
+  ): OrgWorkerMessageRow {
+    return {
+      id,
+      conversationId,
+      senderUserId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      senderKind: 'organization_staff',
+      body,
+      clientMessageId: id,
+      createdAt,
+    };
+  }
+
+  it('discards a delayed response after conversation switch', () => {
+    const guard = createThreadRequestGuard();
+    guard.setScope({ conversationId: conversationA, organizationId: null });
+    const staleToken = guard.start();
+    guard.setScope({ conversationId: conversationB, organizationId: null });
+    const freshToken = guard.start();
+    expect(guard.isCurrent(staleToken, { conversationId: conversationA })).toBe(false);
+    expect(guard.isCurrent(freshToken, { conversationId: conversationB })).toBe(true);
+    expect(guard.shouldMarkRead(staleToken, { conversationId: conversationA })).toBe(false);
+  });
+
+  it('keeps one logical row when duplicate events reconcile via mergeThreadSnapshot', () => {
+    const newer = row(
+      '22222222-2222-4222-8222-222222222222',
+      conversationA,
+      '2026-01-02T12:00:00.000Z',
+      'org reply',
+    );
+    const older = row(
+      '11111111-1111-4111-8111-111111111111',
+      conversationA,
+      '2026-01-02T11:00:00.000Z',
+      'worker',
+    );
+    const withNewer = mergeThreadSnapshot([older], [newer], conversationA);
+    expect(withNewer.map((m) => m.id)).toEqual([older.id, newer.id]);
+    // Duplicate inbound event / second catch-up page with the same id.
+    const deduped = mergeThreadSnapshot(withNewer, [newer], conversationA);
+    expect(deduped).toHaveLength(2);
+    expect(deduped.filter((m) => m.id === newer.id)).toHaveLength(1);
+    // Stale older-only page must not drop the newer row already on screen.
+    const stalePage = mergeThreadSnapshot(withNewer, [older], conversationA);
+    expect(stalePage.map((m) => m.id)).toEqual([older.id, newer.id]);
   });
 });
 

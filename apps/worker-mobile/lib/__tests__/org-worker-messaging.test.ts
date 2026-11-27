@@ -76,6 +76,18 @@ describe('worker messaging gating', () => {
     expect(thread).toContain('subscribeMessagingRealtime');
     expect(thread).toContain("table: 'organization_worker_messages'");
   });
+
+  it('adds web visibility + debounced realtime catch-up without a poll loop', () => {
+    const thread = source('app/messages/[id].tsx');
+    const inbox = source('app/messages/index.tsx');
+    for (const src of [thread, inbox]) {
+      expect(src).toContain('visibilitychange');
+      expect(src).toContain('isMessagingRealtimeCatchUpStatus');
+      expect(src).toContain('REALTIME_LOAD_DEBOUNCE_MS');
+      expect(src).toContain('onStatus');
+      expect(src).not.toMatch(/setInterval\s*\(/);
+    }
+  });
 });
 
 describe('messages i18n', () => {

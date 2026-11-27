@@ -110,20 +110,20 @@ export const en = {
     checkEmailTitle: 'Check your email',
     checkEmailBody: 'If an account exists for that email, you will receive a message shortly.',
     confirmEmailTitle: 'Confirm your email',
-    confirmEmailSubtitle:
-      'Your worker account is created. Confirm the invitation BridgeHive sent before you sign in.',
+    confirmEmailSubtitle: 'Confirm the invitation we sent, then sign in.',
     invitationSent: 'Invitation sent',
-    invitationBodyWithEmail:
-      'BridgeHive sent an invitation to %{email} to confirm your email address. Open that message and confirm the address.',
-    invitationBody:
-      'BridgeHive sent an invitation to confirm your email address. Open that message and confirm the address.',
+    invitationBodyWithEmail: 'Confirm the email we sent to continue.',
+    invitationBody: 'Confirm the email we sent to continue.',
+    invitationNextStep: 'Then return here and sign in.',
+    invitationWaitingLabel: 'Waiting for confirmation',
+    invitationDeliveryNote: 'Check inbox and spam. Delivery is not confirmed on this screen.',
     requestAssociatedWith: 'Request associated with: %{email}',
     enterRegisterEmail:
       'Enter the address you used to register if you need to resend confirmation.',
     saveAddress: 'Save address',
     addressUpdated: 'Address updated. You can resend confirmation to this address.',
     resendConfirmation: 'Resend confirmation',
-    wrongEmailEdit: 'Wrong email? Edit address',
+    wrongEmailEdit: 'Edit email',
     continueToSignIn: 'Continue to sign in',
     backToRegistration: 'Back to registration',
     confirmEmailAlertTitle: 'Confirm your email',
@@ -410,6 +410,10 @@ export const en = {
     totalsUnavailable: '—',
     sandboxTestLabel: 'TEST · sandbox',
     sandboxStandingLabel: 'Sandbox · not live standing',
+    sandboxLiveStandingClear: 'Live standing clear · sandbox payments',
+    sandboxLiveStandingRestricted: 'Live standing · restricted',
+    billingStatusUnavailable: 'Billing status unavailable',
+    billingStatusChecking: 'Checking billing…',
     emptyInvoicesBody:
       'When an organization approves your timesheet, a Bridge Hive commission invoice appears here.',
     openFullList: 'Open full invoice list',
